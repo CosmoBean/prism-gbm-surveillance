@@ -1,0 +1,15 @@
+.venv/
+__pycache__/
+*.pyc
+mu-glioma-post-raw
+reference-processed/
+SWIN UNetR/embeddings_*/
+SWIN UNetR/pretrained/
+SWIN UNetR/runs/
+glioma_agent/data/embeddings_all
+reproduction/fusion_runs/
+reproduction/fusion_inputs/
+reproduction/shipped_inputs/
+reproduction/agent_reports/
+reproduction/validation/runs/
+logs/

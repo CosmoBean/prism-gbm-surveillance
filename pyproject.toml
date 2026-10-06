@@ -1,0 +1,51 @@
+[project]
+name = "prism-gbm-surveillance"
+version = "0.1.0"
+description = "Postoperative glioblastoma surveillance: radiomics, SwinUNETR, MLP fusion, and reporting agent"
+readme = "radiomics/README.md"
+requires-python = ">=3.11,<3.13"
+dependencies = [
+    # radiomics pipeline (pinned, mirrors radiomics/requirements.txt)
+    "nibabel==5.4.2",
+    "numpy==2.2.6",
+    "pandas==2.3.3",
+    "SimpleITK==2.5.3",
+    "shap==0.49.1",
+    "optuna==4.8.0",
+    "lightgbm==4.6.0",
+    "pyradiomics==3.0.1",
+    "scikit-learn==1.7.2",
+    "matplotlib==3.10.8",
+    # MLP fusion + glioma agent
+    "torch",
+    "scipy",
+    "seaborn",
+    "tqdm",
+    "openai",
+    "python-docx",
+    "gdown",
+    "gpustat>=1.1.1",
+    "datasets>=5.0.1",
+    "openpyxl>=3.1.5",
+    "monai>=1.6.1",
+    "einops>=0.8.2",
+]
+
+[project.optional-dependencies]
+notebook = ["jupyter", "transformers"]
+
+[tool.uv]
+package = false
+
+# pyradiomics 3.0.1 imports numpy in setup.py without declaring it
+[tool.uv.extra-build-dependencies]
+pyradiomics = ["numpy==2.2.6", "versioneer"]
+
+# PyTorch built against CUDA 13.0
+[tool.uv.sources]
+torch = { index = "pytorch-cu130" }
+
+[[tool.uv.index]]
+name = "pytorch-cu130"
+url = "https://download.pytorch.org/whl/cu130"
+explicit = true

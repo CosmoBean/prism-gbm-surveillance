@@ -34,3 +34,4 @@ reports/*.tex
 **/.cache/
 __pycache__/
 *.pyc
+logs/
