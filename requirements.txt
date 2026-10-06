@@ -63,6 +63,8 @@ dill==0.4.1
     #   multiprocess
 docopt==0.6.2
     # via pykwalify
+ecos==2.0.14
+    # via scikit-survival
 einops==0.8.2
     # via prism-gbm-surveillance
 et-xmlfile==2.0.0
@@ -118,13 +120,18 @@ idna==3.20
 importlib-resources==7.1.0 ; python_full_version < '3.12'
     # via nibabel
 jinja2==3.1.6
-    # via torch
+    # via
+    #   osqp
+    #   torch
 jinxed==2.1.0
     # via blessed
 jiter==0.17.0
     # via openai
 joblib==1.6.0
-    # via scikit-learn
+    # via
+    #   osqp
+    #   scikit-learn
+    #   scikit-survival
 kiwisolver==1.5.1
     # via matplotlib
 lightgbm==4.6.0
@@ -161,21 +168,27 @@ nibabel==5.4.2
     # via prism-gbm-surveillance
 numba==0.68.0
     # via shap
+numexpr==2.14.2
+    # via scikit-survival
 numpy==2.2.6
     # via
     #   contourpy
     #   datasets
+    #   ecos
     #   lightgbm
     #   matplotlib
     #   monai
     #   nibabel
     #   numba
+    #   numexpr
     #   optuna
+    #   osqp
     #   pandas
     #   prism-gbm-surveillance
     #   pyradiomics
     #   pywavelets
     #   scikit-learn
+    #   scikit-survival
     #   scipy
     #   seaborn
     #   shap
@@ -228,6 +241,8 @@ openpyxl==3.1.5
     # via prism-gbm-surveillance
 optuna==4.8.0
     # via prism-gbm-surveillance
+osqp==1.1.3
+    # via scikit-survival
 packaging==26.3
     # via
     #   datasets
@@ -240,6 +255,7 @@ pandas==2.3.3
     # via
     #   datasets
     #   prism-gbm-surveillance
+    #   scikit-survival
     #   seaborn
     #   shap
 pillow==12.3.0
@@ -291,23 +307,34 @@ ruamel-yaml==0.19.1
 scikit-learn==1.7.2
     # via
     #   prism-gbm-surveillance
+    #   scikit-survival
     #   shap
+scikit-survival==0.26.0
+    # via prism-gbm-surveillance
 scipy==1.17.1 ; python_full_version < '3.12'
     # via
+    #   ecos
     #   lightgbm
+    #   osqp
     #   prism-gbm-surveillance
     #   scikit-learn
+    #   scikit-survival
     #   shap
 scipy==1.18.1 ; python_full_version >= '3.12'
     # via
+    #   ecos
     #   lightgbm
+    #   osqp
     #   prism-gbm-surveillance
     #   scikit-learn
+    #   scikit-survival
     #   shap
 seaborn==0.13.2
     # via prism-gbm-surveillance
 setuptools==84.0.0
-    # via torch
+    # via
+    #   osqp
+    #   torch
 shap==0.49.1
     # via prism-gbm-surveillance
 simpleitk==2.5.3
