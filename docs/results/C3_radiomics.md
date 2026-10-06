@@ -50,3 +50,18 @@ Median ΔAUC by variant: legacy +0.023, v2_all4 -0.012, v2_compartments -0.015, 
 
 ## Implication
 Within MU-Glioma-Post, conventional radiomics adds at most ~0.02–0.03 AUC over clinical + treatment information, and not significantly. Previously reported radiomics performance (0.80) reflects a favourable split and a missing treatment-aware baseline, not image signal.
+
+## Head-to-head on the published split (127 train / 30 test patients, all gliomas)
+
+Same split as the shipped model (`radiomics/models/calibrated/test_predictions.csv`); our models trained once on its training patients with configurations fixed beforehand from repeated CV (no tuning on this split).
+
+| Model | AUC (original naive label) | AUC IPCW(120 d) |
+|---|---|---|
+| Shipped radiomics model (as published) | 0.802 | 0.811 |
+| Clinical + timing + treatment, ridge | **0.870** | 0.844 |
+| Clinical + timing + treatment, regularised boosting | **0.901** | 0.881 |
+| Baseline + legacy 2-level texture (top-10) | 0.870 | 0.849 |
+| Baseline + legacy radiomics (top-10) | 0.869 | 0.848 |
+| Baseline + corrected compartment radiomics (stacked, ICC) | 0.869 | 0.843 |
+
+On the published split, a model without imaging beats the published radiomics model by +0.07 to +0.10 AUC, and adding radiomics changes it by ≤ +0.005. The same models average 0.72–0.74 under repeated CV, so this split is favourable for every model; the ranking (treatment-aware baseline ≥ baseline + radiomics > radiomics-led model) is consistent across both evaluations.
