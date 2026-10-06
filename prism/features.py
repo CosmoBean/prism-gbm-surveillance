@@ -62,3 +62,27 @@ def feature_set(name: str, cohort: pd.DataFrame) -> tuple[pd.DataFrame, Pipeline
                                                     ("clin", clin_pipe, list(clin.columns))]))])
         return X, pre
     raise ValueError(name)
+
+
+def treatment(cohort: pd.DataFrame) -> pd.DataFrame:
+    """Treatment known at scan time: RT schedule, initial chemo, surgery timing, biopsy first, prior tumour."""
+    from prism.config import EXPERIMENT_INDEX
+    idx = pd.read_csv(EXPERIMENT_INDEX, low_memory=False)
+    idx.index = idx.patient_id + "_" + idx.timepoint
+    d = idx.reindex(cohort.scan_id)
+    num = lambda c: pd.to_numeric(d[c].astype(str).str.extract(r"([-\d.]+)")[0], errors="coerce").to_numpy()
+    rt_start = num("clinical_number_of_days_from_diagnosis_to_radiation_therapy_start_date")
+    rt_end = num("clinical_number_of_days_from_diagnosis_to_radiation_therapy_end_date")
+    fractions = num("clinical_number_of_fractions")
+    return pd.DataFrame({
+        "rt_given": d["clinical_radiation_therapy"].eq("Yes").to_numpy(float),
+        "rt_dose_gy": num("clinical_dose"),
+        "rt_fractions": fractions,
+        "rt_hypofractionated": (fractions <= 15).astype(float),
+        "rt_start_day": rt_start,
+        "rt_duration_days": rt_end - rt_start,
+        "chemo_given": d["clinical_initial_chemo_therapy"].eq("Yes").to_numpy(float),
+        "surgery_day": num("clinical_number_of_days_from_diagnosis_to_first_surgery_or_procedure"),
+        "biopsy_before_resection": num("clinical_stereotactic_biopsy_before_surgical_resection"),
+        "previous_brain_tumor": d["clinical_previous_brain_tumor"].astype(str).str.strip().eq("Yes").to_numpy(float),
+    }, index=cohort.index)
