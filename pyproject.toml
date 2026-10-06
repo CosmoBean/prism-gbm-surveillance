@@ -29,6 +29,7 @@ dependencies = [
     "openpyxl>=3.1.5",
     "monai>=1.6.1",
     "einops>=0.8.2",
+    "scikit-survival>=0.26.0",
 ]
 
 [project.optional-dependencies]
