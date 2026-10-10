@@ -1,0 +1,285 @@
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{amsmath}
+\usepackage{siunitx}
+\usepackage{xcolor}
+\usepackage[hidelinks]{hyperref}
+\usepackage{enumitem}
+\setlist{nosep, leftmargin=*}
+
+\newcommand{\ci}[2]{\,[#1,\,#2]}
+
+\title{Does post-treatment MRI add to clinical information for short-term progression prediction in glioblastoma?\\[0.3em]
+\large A censoring-aware re-evaluation on MU-Glioma-Post with external testing on LUMIERE}
+\author{PRISM project --- internal technical report}
+\date{10 October 2026}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+\noindent\textbf{Aim.} To test whether information from a single post-treatment MRI improves prediction of progression
+within 120 days over information that is available without imaging (clinical, timing and treatment).
+\textbf{Data.} MU-Glioma-Post (University of Missouri; 314 eligible surveillance scans from 157 patients, of which
+253 scans / 128 patients are WHO grade~4) for development, and LUMIERE (132 scans / 61 glioblastoma patients) for
+external testing.
+\textbf{Methods.} Censoring-aware labels; $5\times5$ repeated patient-grouped cross-validation; IPCW AUC at 120 days with
+patient-cluster bootstrap confidence intervals; nested selection over feature groups and over 70 radiomics
+configurations; paired $\Delta$AUC against a non-imaging baseline.
+\textbf{Results.} Demographics and molecular markers alone were weak (AUC 0.56--0.63, grade~4). Adding timing raised
+the AUC to 0.758 (gradient boosting). Imaging-only models reached at most 0.660. Adding imaging to the non-imaging
+model did not improve it reliably; in the honest nested estimate, radiomics changed the AUC by $-0.008$ (grade~4) and
+$+0.013$ (all gliomas), and none of 70 radiomics configurations had a $\Delta$AUC confidence interval above zero.
+On the PRISM report split, a model without imaging scored 0.870--0.901 against 0.802 for the PRISM report radiomics
+model. On LUMIERE, the PRISM report radiomics model dropped to 0.61, while a clinical + timing + volume model reached
+0.72.
+\textbf{Conclusion.} In this setting (conventional MRI, one development centre, short-horizon progression), imaging adds
+no measurable value over clinical and treatment information.
+\end{abstract}
+
+\section{Background}
+Surveillance MRI after treatment of glioblastoma is used to decide when to intervene, and several groups have proposed
+image-based models that predict progression from a follow-up scan. Reported discrimination on MU-Glioma-Post is
+around 0.80, but these figures come from single train/test splits and are rarely compared with a baseline that uses the
+clinical and treatment information already available on the day of the scan. The PRISM report radiomics model
+(AUC 0.802 on a 30-patient test split) is one such model.
+
+This report asks a narrow question: \emph{once clinical, timing and treatment information is in the model, does the
+image add anything?}
+
+\section{Data and endpoint}
+
+\subsection{Development cohort: MU-Glioma-Post}
+The TCIA MU-Glioma-Post collection contains 596 post-treatment timepoints from 203 patients, with T1, T1c, T2 and
+FLAIR images, expert-refined four-label masks (enhancing tumour, non-enhancing core, surrounding FLAIR hyperintensity,
+resection cavity) and a clinical workbook. Eligibility rules were applied in order (Table~\ref{tab:flow}). Index scans
+are surveillance scans taken before first progression and before any late treatment (second-line therapy,
+immunotherapy, or new treatment).
+
+\begin{table}[h]
+\centering
+\caption{Cohort flow (MU-Glioma-Post).}
+\label{tab:flow}
+\begin{tabular}{lrrr}
+\toprule
+Step & Scans & Patients & Excluded \\
+\midrule
+All timepoints & 596 & 203 & -- \\
+All four sequences and mask present & 594 & 203 & 2 \\
+Tumour (labels 1--3) present & 592 & 203 & 2 \\
+MRI day known & 589 & 202 & 3 \\
+Before late treatment & 508 & 199 & 81 \\
+Before first progression (index scans) & \textbf{314} & \textbf{157} & 194 \\
+\quad of which WHO grade 4 & 253 & 128 & \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Endpoint}
+For each index scan, the label at horizon $H = 120$ days is 1 if progression is documented within $H$ days, 0 if
+progression occurs later, the patient died without progression, or progression-free follow-up reaches $H$ days, and
+censored otherwise. Follow-up uses the latest dated MRI or clinical event. At 120 days the cohort has 99 positive,
+178 negative and 37 censored scans (grade~4: 92 / 136 / 25).
+
+\subsection{External cohort: LUMIERE}
+LUMIERE (Suter et al., 2022) provides expert RANO ratings per timepoint for 91 glioblastoma patients. Index scans are
+rated follow-ups (stable disease, partial or complete response, post-operative; at least two weeks after surgery)
+before the first RANO progression. With the same 120-day rule this gives 132 scans from 61 patients (47 positive,
+77 negative, 8 censored). LUMIERE has no treatment fields, so only features available in both cohorts (age, sex,
+IDH/MGMT, time since surgery, early post-radiotherapy flag, compartment volumes) are used externally.
+
+\section{Methods}
+
+\subsection{Feature groups}
+\begin{itemize}
+\item \textbf{Clinical}: age, sex, IDH and MGMT status with an explicit ``unknown'' level.
+\item \textbf{Timing}: days since diagnosis, days since end of radiotherapy, early post-radiotherapy flag
+(within 12 weeks), visit index.
+\item \textbf{Treatment}: radiotherapy given, dose, fractions, hypofractionation, start day and duration; initial
+chemotherapy; day of surgery; biopsy before resection; previous brain tumour.
+\item \textbf{Volumes}: log volumes of each mask compartment.
+\item \textbf{Morphology}: enhancing fraction, multifocality, largest axial enhancing area, distance of enhancement to
+the cavity, intensities relative to normal-appearing brain.
+\item \textbf{Change}: differences from the previous scan and from the nadir, growth rates, a $\geq 40\%$ enhancing-volume
+increase flag, new enhancing component.
+\item \textbf{Radiomics}: the PRISM report features (two grey levels) and corrected PyRadiomics features (whole-brain
+normalisation, 32 bins, per compartment), with 70 configurations of stability filtering, feature selection and
+integration (concatenation or a stacked radiomics score).
+\end{itemize}
+
+\subsection{Models and evaluation}
+Two learners were used: ridge logistic regression with the penalty chosen by inner patient-grouped cross-validation, and
+shallow gradient boosting. All preprocessing and selection were fitted within training folds. Models were evaluated with
+$5\times5$ repeated patient-grouped stratified cross-validation, using inverse-probability-of-censoring-weighted (IPCW)
+cumulative/dynamic AUC at 120 days. Confidence intervals come from a patient-cluster bootstrap (1000 resamples).
+Paired $\Delta$AUC was computed against the ridge non-imaging baseline. Nested selection over feature groups and over
+radiomics configurations gives an estimate that includes the cost of choosing a configuration. A label-permutation
+control returned AUC $\approx 0.50$.
+
+\section{Results}
+
+\subsection{Imaging versus non-imaging information}
+Table~\ref{tab:main} compares models by the information they use.
+
+\begin{table}[h]
+\centering
+\caption{IPCW AUC at 120 days, MU-Glioma-Post grade 4 (253 scans, 128 patients), repeated patient-grouped
+cross-validation, 95\% patient-cluster bootstrap CI.}
+\label{tab:main}
+\small
+\begin{tabular}{lll}
+\toprule
+Information used & Ridge & Boosting \\
+\midrule
+\multicolumn{3}{l}{\emph{Without imaging}} \\
+Clinical only (age, sex, IDH/MGMT) & 0.556\ci{0.456}{0.647} & 0.634\ci{0.545}{0.713} \\
+Clinical + timing & 0.662\ci{0.583}{0.754} & \textbf{0.758}\ci{0.677}{0.838} \\
+Clinical + timing + treatment & 0.694\ci{0.613}{0.775} & 0.723\ci{0.633}{0.806}$^{a}$ \\
+\midrule
+\multicolumn{3}{l}{\emph{Imaging only}} \\
+Volumes + morphology + change & 0.603\ci{0.515}{0.686} & 0.545\ci{0.462}{0.628} \\
+\quad + PRISM report radiomics & 0.660\ci{0.589}{0.736} & 0.652\ci{0.567}{0.730} \\
+\midrule
+\multicolumn{3}{l}{\emph{Non-imaging + imaging}} \\
+Clinical + timing + volumes & 0.681\ci{0.604}{0.768} & 0.733\ci{0.660}{0.805} \\
+Clinical + timing + radiomics & 0.709\ci{0.631}{0.783} & 0.740\ci{0.669}{0.816} \\
+Clinical + timing + all imaging & 0.687\ci{0.610}{0.767} & 0.717\ci{0.643}{0.797} \\
+\bottomrule
+\end{tabular}
+
+\vspace{0.3em}
+\footnotesize $^{a}$ Regularised boosting (depth 2); other boosting rows use depth 3 and overfit more
+(training AUC 0.96--1.00).
+\end{table}
+
+All gliomas (314 scans, 157 patients) show the same pattern: clinical + timing with boosting reaches 0.777; adding
+radiomics gives 0.777, volumes 0.760 and all imaging 0.752; imaging-only models reach at most 0.695.
+
+\subsection{Does radiomics add to the non-imaging baseline?}
+Table~\ref{tab:c3} gives the paired comparison against the clinical + timing + treatment baseline.
+
+\begin{table}[h]
+\centering
+\caption{Radiomics added to the clinical + timing + treatment baseline (ridge). $\Delta$AUC is paired against the
+baseline.}
+\label{tab:c3}
+\footnotesize
+\begin{tabular}{lllll}
+\toprule
+& \multicolumn{2}{c}{Grade 4} & \multicolumn{2}{c}{All gliomas} \\
+\cmidrule(lr){2-3}\cmidrule(lr){4-5}
+Model & AUC & $\Delta$AUC & AUC & $\Delta$AUC \\
+\midrule
+Baseline & 0.694 & -- & 0.719 & -- \\
+Best of 70 configurations (post hoc) & 0.720 & $+0.024$\ci{-0.032}{+0.079} & 0.754 & $+0.034$\ci{-0.018}{+0.082} \\
+Nested choice over 70 (honest) & 0.687 & $-0.008$\ci{-0.046}{+0.026} & 0.733 & $+0.013$\ci{-0.031}{+0.054} \\
+\midrule
+Configurations with $\Delta$AUC CI $> 0$ & \multicolumn{2}{c}{0 / 70} & \multicolumn{2}{c}{0 / 70} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Correcting the radiomics extraction did not help. The small signal in the PRISM report features comes from texture
+computed on two grey levels, which acts as a description of the spatial pattern of bright and dark regions within the
+lesion; the corrected 32-bin features carried no additional signal.
+
+In nested selection over feature groups, clinical + timing was part of the chosen combination in 22 of 25 outer folds
+(grade~4) and 24 of 25 (all gliomas). An imaging group was usually added as well, but a different one from fold to
+fold, which is consistent with imaging contributing noise-level rather than stable signal.
+
+\subsection{PRISM report split}
+On the 30 test patients of the PRISM report split, with configurations fixed beforehand from cross-validation
+(Table~\ref{tab:split}), a model without imaging outperformed the PRISM report radiomics model, and adding radiomics
+changed it by at most $+0.005$. The same models average 0.72--0.74 under repeated cross-validation, so this split is
+favourable to every model.
+
+\begin{table}[h]
+\centering
+\caption{PRISM report split (127 training / 30 test patients, all gliomas).}
+\label{tab:split}
+\small
+\begin{tabular}{lcc}
+\toprule
+Model & AUC (original label) & IPCW AUC (120 d) \\
+\midrule
+PRISM report radiomics model & 0.802 & 0.811 \\
+Clinical + timing + treatment, ridge & 0.870 & 0.844 \\
+Clinical + timing + treatment, boosting & \textbf{0.901} & \textbf{0.881} \\
+\quad + PRISM report radiomics (top 10) & 0.869 & 0.848 \\
+\quad + corrected compartment radiomics (stacked) & 0.869 & 0.843 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{External test on LUMIERE}
+Models trained on all MU grade-4 scans were applied unchanged to LUMIERE (Table~\ref{tab:ext}). The PRISM report
+radiomics model, re-extracted with its original pipeline on 118 of the 132 scans, fell to 0.613. Among shared-feature
+models, volumes helped the boosting model (0.663 to 0.719) but not the ridge model (0.628 to 0.629); the confidence
+intervals overlap. Recalibrating the intercept and slope on other LUMIERE patients brought the observed/expected ratio
+to 0.94--0.98 without changing the ranking.
+
+\begin{table}[h]
+\centering
+\caption{Locked models on LUMIERE (132 scans, 61 patients), pooled IPCW AUC at 120 days.}
+\label{tab:ext}
+\small
+\begin{tabular}{llcc}
+\toprule
+Features & Learner & MU CV & LUMIERE [95\% CI] \\
+\midrule
+PRISM report radiomics model & -- & -- & 0.613\ci{0.500}{0.729} \\
+Clinical & ridge & 0.578 & 0.609\ci{0.479}{0.735} \\
+Clinical + timing & ridge & 0.644 & 0.628\ci{0.521}{0.748} \\
+Clinical + timing & boosting & 0.714 & 0.663\ci{0.513}{0.781} \\
+Volumes & ridge & 0.591 & 0.534\ci{0.427}{0.629} \\
+Clinical + timing + volumes & ridge & 0.695 & 0.629\ci{0.505}{0.753} \\
+Clinical + timing + volumes & boosting & 0.709 & \textbf{0.719}\ci{0.609}{0.832} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Limitations}
+\begin{itemize}
+\item \textbf{Treatment features are not yet restricted to what was known at the scan date.} Radiotherapy dose, duration
+and chemotherapy are used even for scans taken before radiotherapy ended (29 of 215 such scans). A one-off check with
+as-of-scan masking gave a \emph{higher} baseline (grade~4 ridge 0.694 to 0.732), so the conclusion is not driven by this,
+but the tables will be re-run once the masking is in the code.
+\item \textbf{The label is partly shaped by the scan schedule.} Progression is usually declared at an MRI: 61 of 106
+progressing patients have their progression date within three days of an MRI, and the interval to the next MRI alone
+(not available at prediction time) gives AUC 0.64 on grade~4. Part of the timing signal may reflect closer follow-up
+early after radiotherapy rather than tumour biology.
+\item \textbf{Scope.} Conventional MRI only (no perfusion or diffusion), a single development centre, about 130--160
+patients, and a 120-day horizon. The result does not show that imaging is uninformative about progression in general.
+\item \textbf{Multiple comparisons.} Many configurations were evaluated on the same folds. Post-hoc rows are optimistic;
+the nested and paired estimates are the ones to quote. The LUMIERE result of 0.719 is the best of 16 combinations.
+\item \textbf{External cohort differences.} LUMIERE defines progression by expert RANO rating on imaging, uses
+automatic segmentation in atlas space (its necrosis compartment likely includes the resection cavity), and lacks
+treatment fields.
+\end{itemize}
+
+\section{Conclusion}
+A model that uses no imaging --- clinical, timing and treatment information --- performs as well as or better than models
+that also use the MRI, and imaging alone is weaker. No imaging addition reached statistical significance on
+MU-Glioma-Post. The supported claim is that, in this setting, \emph{imaging does not add measurable value over clinical
+and treatment information}; it is not that clinical information beats imaging in general. Image-based progression
+models should be reported against a treatment-aware non-imaging baseline under patient-grouped, censoring-aware
+evaluation.
+
+\section*{Data and code}
+Pipeline: \texttt{prism/} in this repository. Source results: the C2, C3, external LUMIERE and imaging-versus-non-imaging
+write-ups in \texttt{docs/results/}.
+
+\begin{thebibliography}{9}
+\bibitem{mu} MU-Glioma-Post. The Cancer Imaging Archive, \url{https://doi.org/10.7937/7K9K-3C83}; data descriptor Sci Data,
+\url{https://doi.org/10.1038/s41597-025-06011-7}.
+\bibitem{lumiere} Suter Y, et al. The LUMIERE dataset: longitudinal glioblastoma MRI with expert RANO evaluation.
+Sci Data 2022, \url{https://doi.org/10.1038/s41597-022-01881-7}.
+\end{thebibliography}
+
+\end{document}

@@ -64,7 +64,7 @@ PRISM report split = same 30 test patients as the shipped PRISM radiomics model 
 | Baseline + legacy radiomics (top-10) | 0.869 | 0.848 |
 | Baseline + corrected compartment radiomics (stacked, ICC) | 0.869 | 0.843 |
 
-On the PRISM report split, a model without imaging beats the published radiomics model by +0.07 to +0.10 AUC, and adding radiomics changes it by ≤ +0.005. The same models average 0.72–0.74 under repeated CV, so this split is favourable for every model; the ranking (treatment-aware baseline ≥ baseline + radiomics > radiomics-led model) is consistent across both evaluations.
+On the PRISM report split, a model without imaging beats the PRISM report radiomics model by +0.07 to +0.10 AUC, and adding radiomics changes it by ≤ +0.005. The same models average 0.72–0.74 under repeated CV, so this split is favourable for every model; the ranking (treatment-aware baseline ≥ baseline + radiomics > radiomics-led model) is consistent across both evaluations.
 
 _Update 2026-10-09:_ the L1 selector (`liblinear`) now has a fixed `random_state`. Before, it drew from the global
 NumPy random state, so the 15 L1 configurations varied slightly between runs (|ΔAUC| ≤ 0.005). The nested rows

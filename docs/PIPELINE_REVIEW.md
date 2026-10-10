@@ -148,7 +148,7 @@ scan_t → │ A. Clinical + treatment state (age, MGMT/IDH+unknown, RT given/fi
 - Pseudoprogression discrimination (no PsP labels).
 
 ### The gap we can fill (supported by our results + literature)
-1. **No rigorous re-evaluation of MRI-based progression prediction on MU-Glioma-Post exists.** Published/available models report ~0.80 on single splits without treatment-aware baselines.
+1. **No rigorous re-evaluation of MRI-based progression prediction on MU-Glioma-Post exists.** The PRISM report model and published models (Christodoulou 2026) report ~0.80 on single splits without treatment-aware baselines.
 2. **No study quantifies how the surveillance schedule shapes the "progression within H days" label** (L1) — relevant to every scan-level progression dataset where progression is declared at the next MRI.
 3. **No study tests whether conventional post-op MRI adds to clinical + treatment information** for short-term progression under censoring-aware, patient-clustered evaluation.
 

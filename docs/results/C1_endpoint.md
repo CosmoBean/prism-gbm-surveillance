@@ -28,7 +28,7 @@ Full tables (both populations, H = 90/120/180, both feature sets): [C1_full_tabl
 1. **Discrimination is insensitive to the formulation**: ΔAUC CIs include 0 in 23/24 comparisons; the hazard formulation trends +0.01 to +0.03.
 2. **The naive label systematically under-predicts risk**: O/E 1.07–1.12 in all 12 settings vs 0.98–1.00 for verified/IPCW. Censoring-aware formulations fix calibration-in-the-large at no discrimination cost.
 3. **IPCW ≈ verified**: after the follow-up repair, censoring is light (~10% of scans) and not strongly covariate-dependent.
-4. **Honest performance is far below the reported 0.804**: grade 4 AUC 0.64–0.70 under repeated patient-grouped CV (legacy radiomics features + clinical). The single 30-patient split overstated performance.
+4. **Honest performance is far below the PRISM report's 0.804**: grade 4 AUC 0.64–0.70 under repeated patient-grouped CV (legacy radiomics features + clinical). The single 30-patient split overstated performance.
 5. **All gliomas > grade 4 only** (e.g. 0.72 vs 0.67 at 120 d): part of the signal separates tumour types (lower-grade progress less) rather than timing — a confound to audit in C5.
 6. **Hazard model is over-confident** (calibration slope 0.50–0.70): needs stronger/unpenalised-baseline regularisation or post-hoc recalibration.
 

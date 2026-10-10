@@ -64,7 +64,7 @@ Single groups (ridge):
 2. **Average gain from adding a group (ridge, paired over all other combos, grade 4):** radiomics +0.056, timing +0.035, clinical +0.033, morphology +0.012, volumes +0.005, delta −0.004.
 3. **Delta features are informative only where defined**: on the 117 grade-4 scans with a prior, Δ-nadir ET AUC 0.65 and the ≥40 % ET flag 0.67 — but current ET volume alone is 0.69 on the same scans. Half of scans have no prior, so cohort-wide they add nothing.
 4. **Overfitting:** gradient boosting train AUC ≈ 1.00 vs test ≈ 0.73 (gap ~0.3); ridge gap ~0.10–0.14. Nested selection picks clinical+timing in nearly every fold; imaging groups are added inconsistently.
-5. **Honest performance:** nested 0.66 (grade 4) / 0.72 (all gliomas) vs the reported 0.80.
+5. **Honest performance:** nested 0.66 (grade 4) / 0.72 (all gliomas) vs the PRISM report's 0.80.
 
 ## Next
 - Treatment features explicitly (RT dose/fractions, chemo, extent of resection) as a clinical+treatment baseline.
