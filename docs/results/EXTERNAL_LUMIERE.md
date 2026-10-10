@@ -1,6 +1,6 @@
 # External test on LUMIERE — raw and fine-tuned (2026-10-09)
 
-Code: `prism/lumiere.py` (cohort + labels), `prism/experiments/external_lumiere.py` (shared-feature models), `prism/experiments/shipped_on_lumiere.py` (shipped PRISM report radiomics model, legacy extraction unchanged).
+Code: `prism/data/lumiere.py` (cohort + labels), `prism/experiments/external_lumiere.py` (shared-feature models), `legacy/shipped_on_lumiere.py` (shipped PRISM report radiomics model, legacy extraction unchanged).
 Data: LUMIERE (Suter et al., Sci Data 2022; CC0) — 91 GBM patients, expert RANO per timepoint. Stored at `/project/community/sbandred/lumiere/`.
 
 ## Endpoint harmonisation

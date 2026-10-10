@@ -1,16 +1,21 @@
 .venv/
 __pycache__/
 *.pyc
-mu-glioma-post-raw
-reference-processed/
-SWIN UNetR/embeddings_*/
-SWIN UNetR/pretrained/
-SWIN UNetR/runs/
-glioma_agent/data/embeddings_all
-reproduction/fusion_runs/
-reproduction/fusion_inputs/
-reproduction/shipped_inputs/
-reproduction/agent_reports/
-reproduction/validation/runs/
-logs/
-outputs/
+.DS_Store
+
+# datasets and everything the pipeline writes
+/data/
+/outputs/
+/logs/
+/slurm-*.out
+
+# large / generated legacy artifacts
+legacy/swin_unetr/embeddings_*/
+legacy/swin_unetr/pretrained/
+legacy/swin_unetr/runs/
+legacy/glioma_agent/data/embeddings_all
+legacy/reproduction/fusion_runs/
+legacy/reproduction/fusion_inputs/
+legacy/reproduction/shipped_inputs/
+legacy/reproduction/agent_reports/
+legacy/reproduction/validation/runs/

@@ -1,5 +1,7 @@
 # PRISM v2 — Architecture Improvements and Research Contributions
 
+> Paths in this document refer to the layout before the October 2026 restructure: the original code now lives under `legacy/` (e.g. `radiomics/` → `legacy/radiomics/`, `MLPFusion/` → `legacy/mlp_fusion/`, `glioma_agent/` → `legacy/glioma_agent/`, `reproduction/` → `legacy/reproduction/`).
+
 Prepared 2026-10-05. Synthesises [PUBLICATION_PLAN.md](PUBLICATION_PLAN.md), [reproduction/LITERATURE.md](../reproduction/LITERATURE.md), [reproduction/AUDIT.md](../reproduction/AUDIT.md), and new data checks (§1). Purpose: decide *what* to build and *what we can claim* before executing the data-layer fixes.
 
 ---

@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """External test on LUMIERE with features shared by both cohorts.
 
 Arms (same features, H = 120 d, verified labels for training, IPCW AUC for evaluation):
@@ -7,7 +6,7 @@ Arms (same features, H = 120 d, verified labels for training, IPCW AUC for evalu
   recalibrated   locked model + logistic recalibration (intercept, slope) fitted on other LUMIERE patients (grouped CV)
   lumiere_only   model trained and tested within LUMIERE (grouped CV) — the local ceiling
 
-    uv run python -m prism.experiments.external_lumiere
+    python -m prism external   # -> outputs/results/external_lumiere/
 """
 
 from __future__ import annotations
@@ -24,49 +23,32 @@ from sklearn.model_selection import StratifiedGroupKFold
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 
-from prism.config import OUTPUTS
-from prism.features import clinical, treatment
-from prism.formulations import fit as fit_ridge
-from prism.metrics import cluster_bootstrap, point_metrics
+from prism.config import RESULTS
+from prism.data import lumiere, mu
+from prism.features.tabular import SHARED, shared_lumiere, shared_mu
+from prism.models.formulations import fit as fit_ridge
+from prism.models.metrics import cluster_bootstrap, point_metrics
 
 H = 120
-# DeepBraTumIA compartments mapped to MU: enhancing -> ET, necrosis -> NETC, edema -> SNFH.
 FEATURE_SETS = {
-    "clinical": ["age", "male", "idh_mutant", "idh_unknown", "mgmt_methylated", "mgmt_unknown"],
-    "clinical+timing": ["age", "male", "idh_mutant", "idh_unknown", "mgmt_methylated", "mgmt_unknown",
-                        "log_days_since_surgery", "early_post_rt"],
-    "volumes": ["log_et_cc", "log_netc_cc", "log_snfh_cc"],
-    "clinical+timing+volumes": ["age", "male", "idh_mutant", "idh_unknown", "mgmt_methylated", "mgmt_unknown",
-                                "log_days_since_surgery", "early_post_rt", "log_et_cc", "log_netc_cc", "log_snfh_cc"],
+    "clinical": SHARED["clinical"],
+    "clinical+timing": SHARED["clinical"] + SHARED["timing"],
+    "volumes": SHARED["volumes"],
+    "clinical+timing+volumes": SHARED["clinical"] + SHARED["timing"] + SHARED["volumes"],
 }
 GBM = HistGradientBoostingClassifier(max_depth=2, learning_rate=0.03, max_iter=150, min_samples_leaf=20,
                                      l2_regularization=2.0, max_features=0.5, random_state=0)
 PRE = Pipeline([("imp", SimpleImputer(strategy="median", add_indicator=True)), ("sc", StandardScaler())])
 
 
-def mu_table(grade4_only: bool) -> pd.DataFrame:
-    c = pd.read_csv(OUTPUTS / "cohort" / "cohort.csv")
-    if grade4_only:
-        c = c[c.grade4].reset_index(drop=True)
-    m = pd.read_csv(OUTPUTS / "measurements" / "measurements.csv").set_index("scan_id").reindex(c.scan_id)
-    t = treatment(c)
-    X = clinical(c)
-    X["log_days_since_surgery"] = np.log1p((c.days_from_diagnosis_to_mri - t.surgery_day).clip(lower=0))
-    X["early_post_rt"] = c.early_post_rt.astype(float)
-    for k in ("et", "netc", "snfh"):
-        X[f"log_{k}_cc"] = np.log1p(m[f"{k}_cc"].to_numpy())
-    return c, X
+def mu_table(grade4_only: bool) -> tuple[pd.DataFrame, pd.DataFrame]:
+    c = mu.load_cohort("grade4" if grade4_only else "all_glioma")
+    return c, shared_mu(c)
 
 
 def lumiere_table() -> tuple[pd.DataFrame, pd.DataFrame]:
-    c = pd.read_csv(OUTPUTS / "lumiere" / "cohort.csv")
-    X = clinical(c)
-    X["log_days_since_surgery"] = np.log1p(c.days_since_surgery)
-    X["early_post_rt"] = c.early_post_rt.astype(float)
-    vol = {"et": "raw_Enhancing_Core", "netc": "raw_Necrotic_NonEnhancing", "snfh": "raw_Edema_Compartment"}
-    for k, col in vol.items():
-        X[f"log_{k}_cc"] = np.log1p(c[col] / 1000.0) if col in c else np.nan
-    return c, X
+    c = lumiere.load_cohort()
+    return c, shared_lumiere(c)
 
 
 def fit(learner, X, cohort, seed=0, weights=None, return_parts=False):
@@ -163,7 +145,7 @@ def adapt_on_lumiere(learner, cols, mc, MX, lc, LX, n_rep=5):
     return oof, fold_auc
 
 
-def main() -> None:
+def main(argv=None) -> None:
     warnings.filterwarnings("ignore")
     lc, LX = lumiere_table()
     have_vol = not LX["log_et_cc"].isna().all()
@@ -189,7 +171,7 @@ def main() -> None:
                                  "auc_per_fold_sd": float(np.std(fa)) if fa else np.nan})
                 preds[f"{train_pop}|{fs}|{learner}"] = oof["locked"][0]
     res = pd.DataFrame(rows)
-    out = OUTPUTS / "external_lumiere"
+    out = RESULTS / "external_lumiere"
     out.mkdir(parents=True, exist_ok=True)
     res.to_csv(out / "results.csv", index=False)
     pd.DataFrame(preds).assign(scan_id=lc.scan_id).to_csv(out / "locked_predictions.csv", index=False)
@@ -204,6 +186,3 @@ def main() -> None:
     print("Locked model on all of LUMIERE (pooled IPCW AUC, 95% CI):")
     print(res[res.arm == "locked"][["train", "features", "learner", "auc_ipcw", "auc_ipcw_lo", "auc_ipcw_hi"]].round(3).to_string(index=False))
 
-
-if __name__ == "__main__":
-    main()

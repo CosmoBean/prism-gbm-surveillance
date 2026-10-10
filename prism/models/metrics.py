@@ -17,7 +17,7 @@ from sksurv.metrics import brier_score, cumulative_dynamic_auc
 from sksurv.nonparametric import kaplan_meier_estimator
 from sksurv.util import Surv
 
-from prism.formulations import G_FLOOR, _observed_time, censoring_survival
+from prism.models.formulations import G_FLOOR, _observed_time, censoring_survival
 
 
 def _surv(d: pd.DataFrame, horizon: int):

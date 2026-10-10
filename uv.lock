@@ -2315,9 +2315,24 @@ wheels = [
 
 [[package]]
 name = "prism-gbm-surveillance"
-version = "0.1.0"
-source = { virtual = "." }
+version = "0.2.0"
+source = { editable = "." }
 dependencies = [
+    { name = "nibabel" },
+    { name = "numpy" },
+    { name = "openpyxl" },
+    { name = "pandas" },
+    { name = "pyradiomics" },
+    { name = "scikit-learn" },
+    { name = "scikit-survival" },
+    { name = "scipy", version = "1.17.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
+    { name = "scipy", version = "1.18.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
+    { name = "simpleitk" },
+    { name = "threadpoolctl" },
+]
+
+[package.optional-dependencies]
+legacy = [
     { name = "datasets" },
     { name = "einops" },
     { name = "gdown" },
@@ -2325,26 +2340,14 @@ dependencies = [
     { name = "lightgbm" },
     { name = "matplotlib" },
     { name = "monai" },
-    { name = "nibabel" },
-    { name = "numpy" },
     { name = "openai" },
-    { name = "openpyxl" },
     { name = "optuna" },
-    { name = "pandas" },
-    { name = "pyradiomics" },
     { name = "python-docx" },
-    { name = "scikit-learn" },
-    { name = "scikit-survival" },
-    { name = "scipy", version = "1.17.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
-    { name = "scipy", version = "1.18.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
     { name = "seaborn" },
     { name = "shap" },
-    { name = "simpleitk" },
     { name = "torch" },
     { name = "tqdm" },
 ]
-
-[package.optional-dependencies]
 notebook = [
     { name = "jupyter" },
     { name = "transformers" },
@@ -2352,33 +2355,34 @@ notebook = [
 
 [package.metadata]
 requires-dist = [
-    { name = "datasets", specifier = ">=5.0.1" },
-    { name = "einops", specifier = ">=0.8.2" },
-    { name = "gdown" },
-    { name = "gpustat", specifier = ">=1.1.1" },
+    { name = "datasets", marker = "extra == 'legacy'", specifier = ">=5.0.1" },
+    { name = "einops", marker = "extra == 'legacy'", specifier = ">=0.8.2" },
+    { name = "gdown", marker = "extra == 'legacy'" },
+    { name = "gpustat", marker = "extra == 'legacy'", specifier = ">=1.1.1" },
     { name = "jupyter", marker = "extra == 'notebook'" },
-    { name = "lightgbm", specifier = "==4.6.0" },
-    { name = "matplotlib", specifier = "==3.10.8" },
-    { name = "monai", specifier = ">=1.6.1" },
+    { name = "lightgbm", marker = "extra == 'legacy'", specifier = "==4.6.0" },
+    { name = "matplotlib", marker = "extra == 'legacy'", specifier = "==3.10.8" },
+    { name = "monai", marker = "extra == 'legacy'", specifier = ">=1.6.1" },
     { name = "nibabel", specifier = "==5.4.2" },
     { name = "numpy", specifier = "==2.2.6" },
-    { name = "openai" },
+    { name = "openai", marker = "extra == 'legacy'" },
     { name = "openpyxl", specifier = ">=3.1.5" },
-    { name = "optuna", specifier = "==4.8.0" },
+    { name = "optuna", marker = "extra == 'legacy'", specifier = "==4.8.0" },
     { name = "pandas", specifier = "==2.3.3" },
     { name = "pyradiomics", specifier = "==3.0.1" },
-    { name = "python-docx" },
+    { name = "python-docx", marker = "extra == 'legacy'" },
     { name = "scikit-learn", specifier = "==1.7.2" },
     { name = "scikit-survival", specifier = ">=0.26.0" },
     { name = "scipy" },
-    { name = "seaborn" },
-    { name = "shap", specifier = "==0.49.1" },
+    { name = "seaborn", marker = "extra == 'legacy'" },
+    { name = "shap", marker = "extra == 'legacy'", specifier = "==0.49.1" },
     { name = "simpleitk", specifier = "==2.5.3" },
-    { name = "torch", index = "https://download.pytorch.org/whl/cu130" },
-    { name = "tqdm" },
+    { name = "threadpoolctl" },
+    { name = "torch", marker = "extra == 'legacy'", index = "https://download.pytorch.org/whl/cu130" },
+    { name = "tqdm", marker = "extra == 'legacy'" },
     { name = "transformers", marker = "extra == 'notebook'" },
 ]
-provides-extras = ["notebook"]
+provides-extras = ["legacy", "notebook"]
 
 [[package]]
 name = "prometheus-client"

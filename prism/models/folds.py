@@ -1,14 +1,11 @@
-"""Repeated patient-grouped stratified folds (D7). Every model reads the same folds.
-
-    uv run python -m prism.folds   # writes outputs/cohort/folds.csv
-"""
+"""Repeated patient-grouped stratified folds. Every model reads the same folds."""
 
 from __future__ import annotations
 
 import pandas as pd
 from sklearn.model_selection import StratifiedGroupKFold
 
-from prism.config import N_FOLDS, N_REPEATS, OUTPUTS, PRIMARY_HORIZON
+from prism.config import N_FOLDS, N_REPEATS, PRIMARY_HORIZON
 
 
 def make_folds(cohort: pd.DataFrame, n_repeats: int = N_REPEATS, n_folds: int = N_FOLDS) -> pd.DataFrame:
@@ -26,12 +23,6 @@ def make_folds(cohort: pd.DataFrame, n_repeats: int = N_REPEATS, n_folds: int = 
     return folds
 
 
-def main() -> None:
-    cohort = pd.read_csv(OUTPUTS / "cohort" / "cohort.csv")
-    folds = make_folds(cohort)
-    folds.to_csv(OUTPUTS / "cohort" / "folds.csv", index=False)
-    print(folds.groupby(["repeat", "fold"]).size().unstack().to_string())
-
-
-if __name__ == "__main__":
-    main()
+def load_folds() -> pd.DataFrame:
+    from prism.config import FOLDS
+    return pd.read_csv(FOLDS)

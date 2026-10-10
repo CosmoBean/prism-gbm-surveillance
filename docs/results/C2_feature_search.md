@@ -1,7 +1,7 @@
 # C2 — Feature-group search: results (2026-10-06)
 
-Code: `prism/measurements.py` (compartment concepts + past-only deltas), `prism/experiments/c2_feature_search.py`.
-Run: `uv run python -m prism.measurements && uv run python -m prism.experiments.c2_feature_search --population grade4` (~15 min, 64 workers).
+Code: `prism/features/measurements.py` (compartment concepts + past-only deltas), `prism/experiments/c2_feature_search.py`.
+Run: `uv run prism data && uv run prism c2 --population grade4` (~15 min, 64 workers).
 Setup: 63 combinations of 6 groups × 2 learners (ridge logistic with inner-CV penalty; gradient boosting, fixed shallow config); verified 120-d labels; 5×5 repeated patient-grouped CV; all fitting in-fold; IPCW AUC(120 d) with patient-cluster bootstrap CIs.
 
 Groups: **clinical** (age, sex, IDH/MGMT incl. unknown) · **timing** (days since diagnosis, days since RT end, early post-RT, visit index) · **volumes** (ET/NETC/SNFH/RC/tumour/lesion) · **morphology** (ET fraction, multifocality, max axial ET area, ET-to-cavity proximity, intensities vs normal-appearing brain) · **delta** (vs prior scan and nadir, growth rate, ≥40 % ET flag, new component) · **radiomics** (legacy T1c+FLAIR, top-20 in-fold).

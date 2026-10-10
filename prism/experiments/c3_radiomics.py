@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """C3: can (corrected) radiomics improve on a clinical + timing + treatment baseline?
 
 Radiomics variants  legacy (union mask, 2 grey levels) | v2_lesion (corrected, whole lesion, T1c+FLAIR)
@@ -10,7 +9,7 @@ Integration         concat (baseline + selected radiomics, one ridge) | stack (b
 Every step is fitted on the training fold; the radiomics score for stacking comes from inner patient-grouped
 OOF predictions. Nested selection over all radiomics configurations gives the honest "best radiomics" estimate.
 
-    uv run python -m prism.experiments.c3_radiomics --population grade4
+    python -m prism c3 --population grade4   # -> outputs/results/c3/<population>/
 """
 
 from __future__ import annotations
@@ -34,11 +33,12 @@ from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 from threadpoolctl import threadpool_limits
 
-from prism.config import OUTPUTS
-from prism.experiments.c2_feature_search import build_groups
-from prism.features import treatment
-from prism.formulations import fit as fit_ridge
-from prism.metrics import cluster_bootstrap, point_metrics
+from prism.config import RADIOMICS, RADIOMICS_ERODED, RESULTS
+from prism.data.mu import load_cohort
+from prism.features.tabular import groups as feature_groups
+from prism.models.folds import load_folds
+from prism.models.formulations import fit as fit_ridge
+from prism.models.metrics import cluster_bootstrap, point_metrics
 
 H = 120
 VARIANTS = ("legacy", "v2_lesion", "v2_compartments", "v2_all4")
@@ -52,14 +52,12 @@ GBM = HistGradientBoostingClassifier(max_depth=2, learning_rate=0.03, max_iter=1
 
 # ---------------------------------------------------------------- data
 def load(population):
-    cohort = pd.read_csv(OUTPUTS / "cohort" / "cohort.csv")
-    if population == "grade4":
-        cohort = cohort[cohort.grade4].reset_index(drop=True)
-    folds = pd.read_csv(OUTPUTS / "cohort" / "folds.csv")
-    g = build_groups(cohort)
-    base = pd.concat([g["clinical"], g["timing"], treatment(cohort)], axis=1)
-    v2 = pd.read_csv(OUTPUTS / "radiomics_v2" / "features.csv").set_index("scan_id").reindex(cohort.scan_id)
-    er = pd.read_csv(OUTPUTS / "radiomics_v2" / "features_eroded.csv").set_index("scan_id").reindex(cohort.scan_id)
+    cohort = load_cohort(population)
+    folds = load_folds()
+    g = feature_groups(cohort)
+    base = pd.concat([g["clinical"], g["timing"], g["treatment"]], axis=1)
+    v2 = pd.read_csv(RADIOMICS).set_index("scan_id").reindex(cohort.scan_id)
+    er = pd.read_csv(RADIOMICS_ERODED).set_index("scan_id").reindex(cohort.scan_id)
     v2.index = er.index = cohort.index
     pair = lambda s: s.startswith(("t1c_", "flair_"))
     shape_cols = [c for c in v2.columns if not c.startswith(("t1c_", "flair_", "t1_", "t2_"))]
@@ -111,7 +109,7 @@ def selector(name):
     if name.startswith("top"):
         steps.append(("sel", SelectKBest(f_classif, k=int(name[3:]))))
     elif name == "l1":
-        steps.append(("sel", SelectFromModel(LogisticRegression(penalty="l1", C=0.1, solver="liblinear"),
+        steps.append(("sel", SelectFromModel(LogisticRegression(penalty="l1", C=0.1, solver="liblinear", random_state=0),
                                              max_features=30, threshold=-np.inf)))
     elif name == "pca10":
         steps.append(("sel", PCA(n_components=10, random_state=0)))
@@ -212,13 +210,13 @@ def run_nested(job):
     return r, te, fit_predict(best, cohort, base, rad, er, tr, te, seed=r), "|".join(map(str, best))
 
 
-def main() -> None:
-    ap = argparse.ArgumentParser(description=__doc__)
+def main(argv=None) -> None:
+    ap = argparse.ArgumentParser(prog="prism c3", description=__doc__)
     ap.add_argument("--population", default="grade4", choices=["grade4", "all_glioma"])
     ap.add_argument("--workers", type=int, default=96)
     ap.add_argument("--n-boot", type=int, default=1000)
-    a = ap.parse_args()
-    out = OUTPUTS / "c3" / a.population
+    a = ap.parse_args(argv)
+    out = RESULTS / "c3" / a.population
     out.mkdir(parents=True, exist_ok=True)
     cohort, folds, *_ = load(a.population)
 
@@ -254,6 +252,3 @@ def main() -> None:
             f"d_auc_ipcw_vs_{ref_key}", "d_auc_ipcw_lo", "d_auc_ipcw_hi", "cal_slope"]
     print(table[[c for c in cols if c in table]].head(25).round(3).to_string(index=False))
 
-
-if __name__ == "__main__":
-    main()

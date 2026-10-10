@@ -4,7 +4,9 @@ Index scans: rated follow-up MRIs (SD / PR / CR / Post-Op at week >= 2) before t
 Label at horizon H: 1 = first PD within H days; 0 = a later rated scan >= H days after the index with no PD before
 index + H; NaN = censored (no rating far enough ahead). Time is weeks since the first surgery (x 7 days).
 
-    uv run python -m prism.lumiere   # -> outputs/lumiere/cohort.csv
+Volumes are the DeepBraTumIA segmentations shipped with LUMIERE (read straight from the imaging archive).
+
+    python -m prism lumiere   # -> outputs/data/lumiere_cohort.csv
 """
 
 from __future__ import annotations
@@ -17,9 +19,8 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from prism.config import HORIZONS, OUTPUTS
+from prism.config import HORIZONS, LUMIERE_COHORT, LUMIERE_ROOT as ROOT
 
-ROOT = Path("/project/community/sbandred/lumiere")
 NON_PD = {"SD", "PR", "CR", "Post-Op"}
 
 
@@ -80,21 +81,21 @@ def deepbratumia_volumes(zip_path: Path = ROOT / "Imaging-v202211.zip") -> pd.Da
     return pd.DataFrame(rows)
 
 
-def main() -> None:
+def load_cohort() -> pd.DataFrame:
+    return pd.read_csv(LUMIERE_COHORT)
+
+
+def main(argv=None) -> None:
     c = build_cohort()
-    out = OUTPUTS / "lumiere"
-    out.mkdir(parents=True, exist_ok=True)
     zp = ROOT / "Imaging-v202211.zip"
     if zp.exists() and zipfile.is_zipfile(zp):
-        v = deepbratumia_volumes(zp)
-        v.to_csv(out / "deepbratumia_volumes.csv", index=False)
-        c = c.merge(v, on="scan_id", how="left")
-    c.to_csv(out / "cohort.csv", index=False)
+        c = c.merge(deepbratumia_volumes(zp), on="scan_id", how="left")
+    else:
+        print(f"WARNING: {zp} not found - cohort written without volumes")
+    LUMIERE_COHORT.parent.mkdir(parents=True, exist_ok=True)
+    c.to_csv(LUMIERE_COHORT, index=False)
     print(f"{len(c)} index scans / {c.patient_id.nunique()} patients")
     for h in HORIZONS:
         l = c[f"label_{h}"]
         print(f"H={h}: pos {int((l == 1).sum())}, verified neg {int((l == 0).sum())}, censored {int(l.isna().sum())}")
 
-
-if __name__ == "__main__":
-    main()

@@ -9,22 +9,22 @@
 ```
 MU-Glioma-Post (203 pts, 596 timepoints, T1/T1c/T2/FLAIR, refined 4-label masks, EMR clinical sheet)
   │
-  ├─ Cohort (prism/cohort.py): pre-progression scans, before late treatment, image+mask+date present
+  ├─ Cohort (prism/data/mu.py): pre-progression scans, before late treatment, image+mask+date present
   │     → 314 scans / 157 patients (grade 4: 253 / 128)
   ├─ Outcome: progression within H = 90/120/180 d of the scan; verified negatives; censored scans flagged
-  ├─ Folds (prism/folds.py): 5 × 5 repeated, patient-grouped, stratified
+  ├─ Folds (prism/models/folds.py): 5 × 5 repeated, patient-grouped, stratified
   │
   ├─ Features
   │    clinical  (age, sex, IDH/MGMT with explicit unknown)
   │    timing    (days since diagnosis / RT end, ≤12-wk post-RT, visit index)
   │    treatment (RT given/dose/fractions/hypofractionation/start/duration, chemo, surgery day, biopsy-first, prior tumour)
-  │    volumes + morphology (prism/measurements.py: ET/NETC/SNFH/RC volumes, multifocality, ET–cavity proximity, intensity vs normal brain)
+  │    volumes + morphology (prism/features/measurements.py: ET/NETC/SNFH/RC volumes, multifocality, ET–cavity proximity, intensity vs normal brain)
   │    delta     (vs prior scan and nadir, growth rate, ≥40 % ET flag)
-  │    radiomics legacy (2 grey levels) and corrected v2 (prism/radiomics_v2.py: per compartment, 32 bins, ICC filter)
+  │    radiomics legacy (2 grey levels) and corrected v2 (prism/features/radiomics.py: per compartment, 32 bins, ICC filter)
   │
   ├─ Learners: ridge logistic (penalty by inner grouped CV); regularised gradient boosting; stacking for radiomics
-  ├─ Formulations (prism/formulations.py): naive / verified / IPCW / discrete-time landmark hazard
-  └─ Evaluation (prism/metrics.py): IPCW AUC(H), IPCW Brier, O/E, calibration slope, patient-cluster bootstrap,
+  ├─ Formulations (prism/models/formulations.py): naive / verified / IPCW / discrete-time landmark hazard
+  └─ Evaluation (prism/models/metrics.py): IPCW AUC(H), IPCW Brier, O/E, calibration slope, patient-cluster bootstrap,
                                     paired ΔAUC, nested selection, label-permutation control
 ```
 

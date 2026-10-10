@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """C2: which feature groups predict 120-day progression? All 63 combinations of 6 groups, 2 learners.
 
 Every fitted step (imputation, scaling, radiomics selection, penalty) is inside the training fold.
@@ -6,8 +5,8 @@ Because picking the best of 126 configurations is itself optimistic, the search 
 in each outer fold the combination is chosen by inner patient-grouped CV on training patients only,
 and the outer-fold score of that choice is the honest estimate of "search + model".
 
-    uv run python -m prism.experiments.c2_feature_search [--population grade4] [--n-boot 500]
-    -> outputs/c2/{grid.csv, nested.csv, permutation.csv, summary.md}
+    python -m prism c2 [--population grade4] [--n-boot 500]
+    -> outputs/results/c2/<population>/{grid.csv, nested.csv, nested_choices.csv}
 """
 
 from __future__ import annotations
@@ -30,10 +29,12 @@ from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 from threadpoolctl import threadpool_limits
 
-from prism.config import OUTPUTS
-from prism.features import clinical, legacy_radiomics
-from prism.formulations import fit as fit_logistic
-from prism.metrics import cluster_bootstrap, point_metrics
+from prism.config import RESULTS
+from prism.data.mu import load_cohort
+from prism.features.tabular import groups as feature_groups
+from prism.models.folds import load_folds
+from prism.models.formulations import fit as fit_logistic
+from prism.models.metrics import cluster_bootstrap, point_metrics
 
 H = 120
 GROUPS = ("clinical", "timing", "volumes", "morphology", "delta", "radiomics")
@@ -41,41 +42,7 @@ LEARNERS = ("ridge", "gbm")
 RADIOMICS_K = 20
 
 
-# ---------------------------------------------------------------- feature groups
-def build_groups(cohort: pd.DataFrame) -> dict[str, pd.DataFrame]:
-    m = pd.read_csv(OUTPUTS / "measurements" / "measurements.csv").set_index("scan_id").reindex(cohort.scan_id)
-    m.index = cohort.index
-    log1p = lambda s: np.log1p(s.clip(lower=0))
-    slog = lambda s: np.sign(s) * np.log1p(s.abs())
-    rt = cohort["days_since_rt_end"]
-    groups = {
-        "clinical": clinical(cohort),
-        "timing": pd.DataFrame({"days_from_diagnosis": cohort["days_from_diagnosis_to_mri"],
-                                "days_since_rt_end": rt, "rt_date_unknown": rt.isna().astype(float),
-                                "early_post_rt": cohort["early_post_rt"].astype(float),
-                                "visit_index": cohort["visit_index"]}),
-        "volumes": pd.DataFrame({f"log_{c}": log1p(m[c]) for c in
-                                 ("et_cc", "netc_cc", "snfh_cc", "rc_cc", "tumor_cc", "lesion_cc")}),
-        "morphology": pd.DataFrame({
-            "et_fraction_of_tumor": m.et_fraction_of_tumor, "log_snfh_to_tumor": np.log1p(m.snfh_to_tumor_ratio),
-            "has_cavity": m.has_cavity, "et_n_components": m.et_n_components,
-            "et_largest_component_fraction": m.et_largest_component_fraction,
-            "log_et_max_axial": log1p(m.et_max_axial_mm2), "et_near_cavity_fraction": m.et_near_cavity_fraction,
-            "et_cavity_distance": log1p(m.et_cavity_distance_mm_p50), "t1c_et_rel": m.t1c_et_rel,
-            "t1c_et_p90_rel": m.t1c_et_p90_rel, "t1c_netc_rel": m.t1c_netc_rel,
-            "flair_snfh_rel": m.flair_snfh_rel, "flair_netc_rel": m.flair_netc_rel}),
-        # No prior scan -> change set to 0 and flagged by has_prior.
-        "delta": pd.concat([m[["has_prior", "n_prior_scans"]],
-                            np.log1p(m[["days_since_prior"]].fillna(0)),
-                            m.filter(regex=r"^logratio_").fillna(0),
-                            slog(m.filter(regex=r"^rate_")).fillna(0),
-                            m[["d_et_n_components", "d_t1c_et_rel", "d_flair_snfh_rel",
-                               "vol_pd_flag", "new_et_component"]].fillna(0)], axis=1),
-        "radiomics": legacy_radiomics(cohort).astype(float),
-    }
-    return groups
-
-
+# ---------------------------------------------------------------- models
 def preprocessor(combo: tuple[str, ...], groups: dict[str, pd.DataFrame]) -> ColumnTransformer:
     parts = []
     for g in combo:
@@ -111,11 +78,9 @@ ALL_COMBOS = [c for r in range(1, len(GROUPS) + 1) for c in itertools.combinatio
 
 
 def _context(population):
-    cohort = pd.read_csv(OUTPUTS / "cohort" / "cohort.csv")
-    if population == "grade4":
-        cohort = cohort[cohort.grade4].reset_index(drop=True)
-    folds = pd.read_csv(OUTPUTS / "cohort" / "folds.csv")
-    groups = build_groups(cohort)
+    cohort = load_cohort(population)
+    folds = load_folds()
+    groups = {g: x for g, x in feature_groups(cohort).items() if g in GROUPS}
     X = pd.concat(groups.values(), axis=1)
     return cohort, folds, groups, X
 
@@ -212,16 +177,16 @@ def nested(population, workers, permute_seeds=(None,)):
     return pd.DataFrame(rows), pd.DataFrame(summary)
 
 
-def main() -> None:
-    ap = argparse.ArgumentParser(description=__doc__)
+def main(argv=None) -> None:
+    ap = argparse.ArgumentParser(prog="prism c2", description=__doc__)
     ap.add_argument("--population", default="grade4", choices=["grade4", "all_glioma"])
     ap.add_argument("--n-boot", type=int, default=500)
     ap.add_argument("--workers", type=int, default=64)
     ap.add_argument("--n-permutations", type=int, default=5)
     ap.add_argument("--skip-nested", action="store_true")
     ap.add_argument("--skip-grid", action="store_true")
-    a = ap.parse_args()
-    out = OUTPUTS / "c2" / a.population
+    a = ap.parse_args(argv)
+    out = RESULTS / "c2" / a.population
     out.mkdir(parents=True, exist_ok=True)
 
     if a.skip_grid:
@@ -243,6 +208,3 @@ def main() -> None:
         print(summ.round(3).to_string(index=False))
         print(choices[choices.permute_seed.isna()].chosen.value_counts().to_string())
 
-
-if __name__ == "__main__":
-    main()

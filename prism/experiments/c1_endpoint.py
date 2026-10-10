@@ -1,11 +1,10 @@
-#!/usr/bin/env python3
 """C1: does the outcome formulation change what we learn and report?
 
 Same features, same folds, four formulations (naive / verified / ipcw / hazard), evaluated with
 censoring-aware metrics. Out-of-fold predictions are averaged over the CV repeats.
 
-    uv run python -m prism.experiments.c1_endpoint [--n-boot 1000]
-    -> outputs/c1/{c1_results.csv, c1_oof_predictions.csv, c1_summary.md}
+    python -m prism c1 [--n-boot 1000]
+    -> outputs/results/c1/{c1_results.csv, c1_oof_predictions.csv, c1_summary.md}
 """
 
 from __future__ import annotations
@@ -20,10 +19,12 @@ import pandas as pd
 from sklearn.base import clone
 from threadpoolctl import threadpool_limits
 
-from prism.config import HORIZONS, OUTPUTS, PRIMARY_HORIZON
-from prism.features import feature_set
-from prism.formulations import FORMULATIONS, fit, predict_risk
-from prism.metrics import cluster_bootstrap, point_metrics
+from prism.config import HORIZONS, PRIMARY_HORIZON, RESULTS
+from prism.data.mu import load_cohort
+from prism.features.tabular import feature_set
+from prism.models.folds import load_folds
+from prism.models.formulations import FORMULATIONS, fit, predict_risk
+from prism.models.metrics import cluster_bootstrap, point_metrics
 
 POPULATIONS = {"grade4": lambda c: c["grade4"], "all_glioma": lambda c: pd.Series(True, index=c.index)}
 FEATURE_SETS = ("volumes_clinical", "radiomics_clinical")
@@ -33,8 +34,8 @@ def run_combo(job):
     population, fset, horizon, n_boot = job
     warnings.filterwarnings("ignore")
     threadpool_limits(1)  # many tiny fits per process: BLAS thread pools only oversubscribe the node
-    cohort = pd.read_csv(OUTPUTS / "cohort" / "cohort.csv")
-    folds = pd.read_csv(OUTPUTS / "cohort" / "folds.csv")
+    cohort = load_cohort()
+    folds = load_folds()
     cohort = cohort[POPULATIONS[population](cohort)].reset_index(drop=True)
     X_raw, pre = feature_set(fset, cohort)
     oof = {f: np.zeros((folds.repeat.nunique(), len(cohort))) for f in FORMULATIONS}
@@ -88,17 +89,17 @@ def summary_markdown(res: pd.DataFrame) -> str:
     return "\n".join(lines)
 
 
-def main() -> None:
-    ap = argparse.ArgumentParser(description=__doc__)
+def main(argv=None) -> None:
+    ap = argparse.ArgumentParser(prog="prism c1", description=__doc__)
     ap.add_argument("--n-boot", type=int, default=1000)
     ap.add_argument("--workers", type=int, default=12)
-    a = ap.parse_args()
+    a = ap.parse_args(argv)
     jobs = [(p, f, h, a.n_boot) for p, f, h in itertools.product(POPULATIONS, FEATURE_SETS, HORIZONS)]
     with ProcessPoolExecutor(a.workers) as ex:
         outs = list(ex.map(run_combo, jobs))
     res = pd.concat([o[0] for o in outs], ignore_index=True)
     oof = pd.concat([o[1] for o in outs], ignore_index=True)
-    out = OUTPUTS / "c1"
+    out = RESULTS / "c1"
     out.mkdir(parents=True, exist_ok=True)
     res.to_csv(out / "c1_results.csv", index=False)
     oof.to_csv(out / "c1_oof_predictions.csv", index=False)
@@ -108,6 +109,3 @@ def main() -> None:
     print(prim[["features", "formulation", "auc_ipcw", "d_auc_ipcw_vs_naive", "brier_ipcw", "auc_verified",
                 "auc_naive", "oe_ratio", "cal_slope"]].round(3).to_string(index=False))
 
-
-if __name__ == "__main__":
-    main()

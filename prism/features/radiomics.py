@@ -1,4 +1,4 @@
-"""Corrected, compartment-resolved radiomics (D6).
+"""Stage `radiomics`: corrected, compartment-resolved PyRadiomics features.
 
 Fixes vs the legacy extraction (train.py preprocess_image + binWidth 25):
   * intensity normalised by the whole-brain mean/SD (keeps lesion contrast vs normal brain), not within-lesion;
@@ -7,12 +7,16 @@ Fixes vs the legacy extraction (train.py preprocess_image + binWidth 25):
   * one feature set per compartment: ET, NETC, SNFH, tumour core, whole lesion, 5 mm peri-cavity rim.
 A second pass on 1-voxel-eroded ROIs (T1c + FLAIR) supports a label-free stability (ICC) filter.
 
-    uv run python -m prism.radiomics_v2 [--workers 96]   # -> outputs/radiomics_v2/{features,features_eroded}.csv
+    python -m prism radiomics [--limit N]   # -> outputs/features/{radiomics,radiomics_eroded}.csv
+
+legacy_features() loads the original PRISM extraction (within-lesion z-score, binWidth 25 -> ~2 grey levels)
+from the optional processed download; it is kept only as a comparator.
 """
 
 from __future__ import annotations
 
 import argparse
+import json
 import logging
 from concurrent.futures import ProcessPoolExecutor
 
@@ -23,10 +27,11 @@ import SimpleITK as sitk
 from radiomics import featureextractor
 from scipy import ndimage
 
-from prism.config import EXPERIMENT_INDEX, LABEL_ET, LABEL_NETC, LABEL_RC, LABEL_SNFH, OUTPUTS
-from prism.measurements import RAW
+from prism.config import (LABEL_ET, LABEL_NETC, LABEL_RC, LABEL_SNFH, LEGACY_FEATURES_DIR, RADIOMICS,
+                          RADIOMICS_ERODED, WORKERS, mu_scan_paths)
+from prism.data.mu import load_index
 
-SEQUENCES = {"t1c": "t1c", "flair": "t2f", "t1": "t1n", "t2": "t2w"}
+SEQUENCES = ("t1c", "flair", "t1", "t2")
 PERTURB_SEQUENCES = ("t1c", "flair")
 MIN_VOXELS = 30
 RIM_MM = 5
@@ -62,12 +67,11 @@ def _to_sitk(a: np.ndarray) -> sitk.Image:
 def extract_scan(args) -> tuple[dict, dict]:
     pid, tp = args
     stem = f"{pid}_{tp}"
-    d = RAW / pid / tp
+    paths = mu_scan_paths(pid, tp)
     full, eroded = {"scan_id": stem}, {"scan_id": stem}
     try:
-        mask = np.rint(np.asarray(nib.load(str(d / f"{stem}_tumorMask.nii.gz")).dataobj)).astype(np.uint8)
-        imgs = {s: np.asarray(nib.load(str(d / f"{stem}_brain_{f}.nii.gz")).dataobj).astype(np.float32)
-                for s, f in SEQUENCES.items()}
+        mask = np.rint(np.asarray(nib.load(str(paths["mask"])).dataobj)).astype(np.uint8)
+        imgs = {s: np.asarray(nib.load(str(paths[s])).dataobj).astype(np.float32) for s in SEQUENCES}
     except FileNotFoundError:
         return full, eroded
     brain = np.all([v > 0 for v in imgs.values()], axis=0)
@@ -99,23 +103,31 @@ def extract_scan(args) -> tuple[dict, dict]:
     return full, eroded
 
 
-def main() -> None:
-    ap = argparse.ArgumentParser(description=__doc__)
-    ap.add_argument("--workers", type=int, default=96)
-    ap.add_argument("--limit", type=int)
-    a = ap.parse_args()
-    index = pd.read_csv(EXPERIMENT_INDEX, low_memory=False)
+def legacy_features(cohort: pd.DataFrame, modalities=("t1c", "flair")) -> pd.DataFrame:
+    """Original PRISM PyRadiomics extraction (pre-correction: 2 grey levels for texture) for T1c + FLAIR."""
+    if not LEGACY_FEATURES_DIR.exists():
+        raise FileNotFoundError(f"{LEGACY_FEATURES_DIR} missing: download the optional processed release (README)")
+    rows = []
+    for pid, tp in zip(cohort.patient_id, cohort.timepoint):
+        d = json.loads((LEGACY_FEATURES_DIR / pid / f"{tp}.json").read_text())
+        rows.append({k: v for k, v in d.items() if k.split("_", 1)[0] in modalities and isinstance(v, (int, float))
+                     and not isinstance(v, bool) and not k.endswith(("_mask_mean", "_mask_std", "_mask_voxels"))})
+    return pd.DataFrame(rows, index=cohort.index)
+
+
+def main(argv=None) -> None:
+    ap = argparse.ArgumentParser(prog="prism radiomics", description=__doc__)
+    ap.add_argument("--workers", type=int, default=WORKERS)
+    ap.add_argument("--limit", type=int, help="first N timepoints only (smoke test)")
+    a = ap.parse_args(argv)
+    index = load_index()
     jobs = list(zip(index.patient_id, index.timepoint))[: a.limit]
     with ProcessPoolExecutor(a.workers) as ex:
         res = list(ex.map(extract_scan, jobs, chunksize=1))
-    out = OUTPUTS / "radiomics_v2"
-    out.mkdir(parents=True, exist_ok=True)
+    RADIOMICS.parent.mkdir(parents=True, exist_ok=True)
     full = pd.DataFrame([r[0] for r in res])
     eroded = pd.DataFrame([r[1] for r in res])
-    full.to_csv(out / "features.csv", index=False)
-    eroded.to_csv(out / "features_eroded.csv", index=False)
+    full.to_csv(RADIOMICS, index=False)
+    eroded.to_csv(RADIOMICS_ERODED, index=False)
     print(f"{len(full)} scans, {full.shape[1] - 1} features; eroded {eroded.shape[1] - 1}")
 
-
-if __name__ == "__main__":
-    main()

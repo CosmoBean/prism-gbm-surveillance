@@ -7,9 +7,9 @@ import unittest
 import numpy as np
 import pandas as pd
 
-from prism.cohort import add_outcomes, idh_status, mgmt_status
-from prism.folds import make_folds
-from prism.formulations import person_period, predict_risk
+from prism.data.mu import add_outcomes, idh_status, mgmt_status
+from prism.models.folds import make_folds
+from prism.models.formulations import person_period, predict_risk
 
 
 def scans(rows):

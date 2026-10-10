@@ -1,5 +1,7 @@
 # Action Items: Reproduce First, Then Improve
 
+> Paths in this document refer to the layout before the October 2026 restructure: the original code now lives under `legacy/` (e.g. `radiomics/` → `legacy/radiomics/`, `MLPFusion/` → `legacy/mlp_fusion/`, `glioma_agent/` → `legacy/glioma_agent/`, `reproduction/` → `legacy/reproduction/`).
+
 Created: 2026-09-26. Companion to [PUBLICATION_PLAN.md](PUBLICATION_PLAN.md) and [CURRENT_STATE_AND_NEXT_STEPS.md](CURRENT_STATE_AND_NEXT_STEPS.md).
 
 Rule for this phase: **no new modeling ideas until Stage 1 is done.** Each item has a "done when" so progress is unambiguous.

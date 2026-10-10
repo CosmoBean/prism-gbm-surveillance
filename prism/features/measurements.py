@@ -1,43 +1,39 @@
-"""Measurement table (D5): compartment concepts per timepoint + past-only longitudinal deltas.
+"""Stage `measurements`: compartment concepts per timepoint + past-only longitudinal deltas.
 
 Computed for every MU timepoint (not only eligible scans) so that priors/nadir can use all earlier MRIs.
 Images are FeTS-preprocessed, skull-stripped, 1 mm isotropic (BraTS space), so voxels = mm^3.
 
-    uv run python -m prism.measurements   # -> outputs/measurements/{concepts.csv, measurements.csv}
+    python -m prism measurements   # -> outputs/features/measurements.csv
 """
 
 from __future__ import annotations
 
 from concurrent.futures import ProcessPoolExecutor
-from pathlib import Path
-
 import nibabel as nib
 import numpy as np
 import pandas as pd
 from scipy import ndimage
 
-from prism.config import EXPERIMENT_INDEX, LABEL_ET, LABEL_NETC, LABEL_RC, LABEL_SNFH, OUTPUTS, REPO
-
-RAW = REPO / "mu-glioma-post-raw" / "MU-Glioma-Post"
+from prism.config import LABEL_ET, LABEL_NETC, LABEL_RC, LABEL_SNFH, MEASUREMENTS, WORKERS, mu_scan_paths
+from prism.data.mu import load_index
 NEAR_CAVITY_MM = 5
 NAWM_MARGIN_MM = 10
 DELTA_SOURCES = ("et_cc", "netc_cc", "snfh_cc", "tumor_cc", "lesion_cc", "et_n_components", "et_max_axial_mm2",
                  "t1c_et_rel", "flair_snfh_rel")
 
 
-def _load(path: Path) -> np.ndarray:
+def _load(path) -> np.ndarray:
     return np.asarray(nib.load(str(path)).dataobj)
 
 
 def scan_concepts(args: tuple[str, str]) -> dict:
     pid, tp = args
-    d = RAW / pid / tp
-    stem = f"{pid}_{tp}"
+    paths = mu_scan_paths(pid, tp)
     row = {"scan_id": f"{pid}_{tp}", "patient_id": pid, "timepoint": tp}
     try:
-        mask = np.rint(_load(d / f"{stem}_tumorMask.nii.gz")).astype(np.uint8)
-        t1c = _load(d / f"{stem}_brain_t1c.nii.gz").astype(np.float32)
-        flair = _load(d / f"{stem}_brain_t2f.nii.gz").astype(np.float32)
+        mask = np.rint(_load(paths["mask"])).astype(np.uint8)
+        t1c = _load(paths["t1c"]).astype(np.float32)
+        flair = _load(paths["flair"]).astype(np.float32)
     except FileNotFoundError:
         return row
     et, netc, snfh, rc = (mask == LABEL_ET), (mask == LABEL_NETC), (mask == LABEL_SNFH), (mask == LABEL_RC)
@@ -110,21 +106,21 @@ def add_deltas(concepts: pd.DataFrame) -> pd.DataFrame:
     return pd.DataFrame(out)
 
 
-def main() -> None:
-    index = pd.read_csv(EXPERIMENT_INDEX, low_memory=False)
+def load_measurements(scan_ids) -> pd.DataFrame:
+    """Measurement rows aligned to `scan_ids` (positional index)."""
+    return pd.read_csv(MEASUREMENTS).set_index("scan_id").reindex(scan_ids).reset_index(drop=True)
+
+
+def main(argv=None) -> None:
+    index = load_index()
     jobs = list(zip(index.patient_id, index.timepoint))
-    with ProcessPoolExecutor(48) as ex:
+    with ProcessPoolExecutor(min(WORKERS, 48)) as ex:
         concepts = pd.DataFrame(list(ex.map(scan_concepts, jobs, chunksize=4)))
     concepts["mri_day"] = pd.to_numeric(index["days_from_diagnosis_to_mri"], errors="coerce").to_numpy()
     concepts = concepts[concepts.mri_day.notna() & concepts.et_cc.notna()]
     meas = concepts.merge(add_deltas(concepts), on="scan_id", how="left")
-    out = OUTPUTS / "measurements"
-    out.mkdir(parents=True, exist_ok=True)
-    concepts.to_csv(out / "concepts.csv", index=False)
-    meas.to_csv(out / "measurements.csv", index=False)
+    MEASUREMENTS.parent.mkdir(parents=True, exist_ok=True)
+    meas.to_csv(MEASUREMENTS, index=False)
     print(f"{len(meas)} timepoints, {meas.shape[1]} columns; has_prior {int(meas.has_prior.sum())}")
     print(meas.describe().T[["count", "mean", "50%"]].round(3).head(45).to_string())
 
-
-if __name__ == "__main__":
-    main()

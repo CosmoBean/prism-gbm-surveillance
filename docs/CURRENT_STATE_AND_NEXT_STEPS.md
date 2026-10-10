@@ -1,5 +1,7 @@
 # PRISM: Current State and Next Steps
 
+> Paths in this document refer to the layout before the October 2026 restructure: the original code now lives under `legacy/` (e.g. `radiomics/` → `legacy/radiomics/`, `MLPFusion/` → `legacy/mlp_fusion/`, `glioma_agent/` → `legacy/glioma_agent/`, `reproduction/` → `legacy/reproduction/`).
+
 Audit date: September 14, 2026  
 Inspected baseline commit: `21c154080b09f1185c370896218e9fa6c957449b`  
 Scope: local source files, notebook source, metadata, prediction CSVs, and example Markdown reports.

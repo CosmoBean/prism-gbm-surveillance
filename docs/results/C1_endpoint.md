@@ -1,7 +1,7 @@
 # C1 — Censoring-aware endpoint: results (2026-10-06)
 
 Code: `prism/` (cohort, folds, features, formulations, metrics), `prism/experiments/c1_endpoint.py`; tests: `tests/test_prism_cohort.py`.
-Run: `uv run python -m prism.cohort && uv run python -m prism.folds && uv run python -m prism.experiments.c1_endpoint` (~1 min).
+Run: `uv run prism mu && uv run prism c1` (~1 min).
 Full tables (both populations, H = 90/120/180, both feature sets): [C1_full_tables.md](C1_full_tables.md). Cohort flow: [cohort_flow.csv](cohort_flow.csv).
 
 ## Data layer delivered (D1, D2, D3, D4, D7)

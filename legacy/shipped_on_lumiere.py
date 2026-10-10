@@ -7,7 +7,7 @@ The model's six MU-specific clinical code columns have no LUMIERE equivalent; tw
   codes_as_unknown  IDH1/IDH2 "2" and MGMT "4" set when status is unknown, ATRX / 1p19q columns 0
   codes_zero        all six clinical columns 0
 
-    uv run python -m prism.experiments.shipped_on_lumiere
+    python legacy/shipped_on_lumiere.py   # needs `prism lumiere` first and the legacy extra
 """
 
 from __future__ import annotations
@@ -24,11 +24,10 @@ import nibabel as nib
 import numpy as np
 import pandas as pd
 
-from prism.config import OUTPUTS, REPO
-from prism.lumiere import ROOT
-from prism.metrics import cluster_bootstrap, point_metrics
+from prism.config import LUMIERE_COHORT, LUMIERE_ROOT as ROOT, OUTPUTS, REPO, RESULTS
+from prism.models.metrics import cluster_bootstrap, point_metrics
 
-RAD = REPO / "radiomics"
+RAD = REPO / "legacy" / "radiomics"
 sys.path.insert(0, str(RAD))
 from radiomics_pipeline.workflows import train as surv  # noqa: E402
 
@@ -75,13 +74,13 @@ def extract(scan_id: str) -> dict:
 
 def main() -> None:
     zp = ROOT / "Imaging-v202211.zip"
-    cohort = pd.read_csv(OUTPUTS / "lumiere" / "cohort.csv")
+    cohort = pd.read_csv(LUMIERE_COHORT)
     if not EXTRACT.exists():
         wanted = {f"{p}/{d}" for p, d in zip(cohort.patient_id, cohort.date)}
         with zipfile.ZipFile(zp) as z:
             members = [m for m in z.namelist() if "DeepBraTumIA" in m and any(w in m for w in wanted)]
             z.extractall(EXTRACT, members)
-    feats_path = OUTPUTS / "lumiere" / "legacy_radiomics.csv"
+    feats_path = OUTPUTS / "features" / "lumiere_legacy_radiomics.csv"
     if not feats_path.exists():
         with ProcessPoolExecutor(64) as ex:
             feats = pd.DataFrame(list(ex.map(extract, cohort.scan_id)))
@@ -113,7 +112,7 @@ def main() -> None:
         rows.append({"variant": variant, "n_scans": int(ok.sum()), **pm, "auc_ipcw_lo": b.auc_ipcw_lo,
                      "auc_ipcw_hi": b.auc_ipcw_hi})
     res = pd.DataFrame(rows)
-    res.to_csv(OUTPUTS / "external_lumiere" / "shipped_model.csv", index=False)
+    res.to_csv(RESULTS / "external_lumiere" / "shipped_model.csv", index=False)
     print(res.round(3).to_string(index=False))
 
 
@@ -128,8 +127,8 @@ def adapt() -> None:
     from sklearn.model_selection import StratifiedGroupKFold
     from prism.experiments.external_lumiere import SHRINK_LAMBDAS, shrink_fit
 
-    cohort = pd.read_csv(OUTPUTS / "lumiere" / "cohort.csv")
-    feats = pd.read_csv(OUTPUTS / "lumiere" / "legacy_radiomics.csv").set_index("scan_id").reindex(cohort.scan_id)
+    cohort = pd.read_csv(LUMIERE_COHORT)
+    feats = pd.read_csv(OUTPUTS / "features" / "lumiere_legacy_radiomics.csv").set_index("scan_id").reindex(cohort.scan_id)
     bundle = pickle.load(open(RAD / "models" / "calibrated" / "model_bundle.pkl", "rb"))
     cols = bundle["selected_columns"]
     ok = feats[[c for c in cols if not c.startswith("clin_")]].notna().all(axis=1).to_numpy()
@@ -176,5 +175,5 @@ def adapt() -> None:
                      "auc_per_fold_sd": np.std(fold_auc[a]), "auc_ipcw_pooled": pm["auc_ipcw"], "oe_ratio": pm["oe_ratio"],
                      "brier_ipcw": pm["brier_ipcw"]})
     res = pd.DataFrame(rows)
-    res.to_csv(OUTPUTS / "external_lumiere" / "shipped_model_adaptation.csv", index=False)
+    res.to_csv(RESULTS / "external_lumiere" / "shipped_model_adaptation.csv", index=False)
     print(res.round(3).to_string(index=False))
