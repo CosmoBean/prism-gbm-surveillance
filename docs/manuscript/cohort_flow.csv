@@ -1,0 +1,15 @@
+step,scans,patients,excluded,cohort
+all timepoints,596,203,0,MU-Glioma-Post
+all four sequences and mask present,594,203,2,MU-Glioma-Post
+tumour (labels 1-3) present,592,203,2,MU-Glioma-Post
+MRI day known,589,202,3,MU-Glioma-Post
+"MRI day plausible (>= -365 d, not before an earlier timepoint)",588,202,1,MU-Glioma-Post
+progression date known for progressors,588,202,0,MU-Glioma-Post
+MRI not after recorded death,580,202,8,MU-Glioma-Post
+"before late treatment (2nd-line, immunotherapy, new treatment)",501,199,79,MU-Glioma-Post
+before first progression (index scans only),308,155,193,MU-Glioma-Post
+all rated studies,616,91,0,LUMIERE
+post-operative (week >= 2),456,81,160,LUMIERE
+"rated SD / PR / CR / Post-Op (not PD, not pre-op, not unrated)",199,70,257,LUMIERE
+before first progression (PD),132,61,67,LUMIERE
+not after recorded death (index scans),132,61,0,LUMIERE

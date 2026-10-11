@@ -1,0 +1,32 @@
+level,characteristic,MU all gliomas,MU grade 4,LUMIERE
+Size,Patients,155,126,61
+Size,Index scans,308,249,132
+Size,"Index scans per patient, median (range)",2 (1–6),2 (1–6),2 (1–10)
+Patient,"Age, years, median [IQR]",61 [47–69],62 [53–70],62 [53–70]
+Patient,Male sex,80 (52%),66 (52%),32 (52%)
+Patient,IDH wildtype,120 (77%),112 (89%),38 (62%)
+Patient,IDH mutant,22 (14%),8 (6%),1 (2%)
+Patient,IDH unknown,13 (8%),6 (5%),22 (36%)
+Patient,MGMT methylated,53 (34%),45 (36%),26 (43%)
+Patient,MGMT unmethylated,73 (47%),62 (49%),28 (46%)
+Patient,MGMT unknown,29 (19%),19 (15%),7 (11%)
+Patient,WHO grade 1,3 (2%),0,0
+Patient,WHO grade 2,23 (15%),0,0
+Patient,WHO grade 3,2 (1%),0,0
+Patient,WHO grade 3 vs 4,1 (1%),0,0
+Patient,WHO grade 4,126 (81%),126 (100%),61 (100%)
+Patient,"Radiotherapy (any, documented)",102 (66%),89 (71%),not recorded
+Patient,Initial chemotherapy (documented),96 (62%),88 (70%),not recorded
+Patient,  of which temozolomide,95 (61%),87 (69%),not recorded
+Scan,"Days from origin to scan, median [IQR]",97 [46–186],96 [54–182],119 [82–226]
+Scan,RT completed by scan day,185 (60%),167 (67%),not recorded
+Scan,Early post-RT window,104 (34%); unknown 94,98 (39%); unknown 65,27 (20%)
+Scan,"Gap to next MRI, days, median [IQR]",77 [50–103],74 [49–98],91 [77–117]
+Scan,"Last documented follow-up after scan, days, median [IQR]",275 [107–471],285 [112–478],462 [238–721]
+Scan,"Time to progression or censoring, days, median [IQR]",125 [50–237],111 [48–208],168 [91–287]
+Scan,Progression documented after scan (any time),220 (71%),190 (76%),122 (92%)
+Scan,Death without documented progression,22 (7%),20 (8%),7 (5%)
+Scan,Field strength (T1c) 1.5 T / 3 T / other or missing,not distributed,not distributed,81 (61%) / 44 (33%) / 7
+Outcome,90 d: progression / no progression / censored,65 / 195 / 48,62 / 152 / 35,24 / 101 / 7
+Outcome,120 d: progression / no progression / censored,100 / 156 / 52,93 / 117 / 39,47 / 76 / 9
+Outcome,180 d: progression / no progression / censored,144 / 105 / 59,131 / 75 / 43,62 / 61 / 9
