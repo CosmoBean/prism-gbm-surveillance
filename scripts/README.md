@@ -26,6 +26,7 @@ scripts/setup_env.sh --all      # legacy + notebook extras
 | `07_head_to_head.sh` | C3 pipelines vs the PRISM report radiomics model on the PRISM report split (+ masking-only ablation) | steps 1–2 | ~1 min |
 | `08_split_variance.sh` | the PRISM report split's AUC among 500 random splits of the same design | step 1, reference features | CPU-bound |
 | `09_deep_features.sh` | optional: deep-encoder features vs the C3 baseline; analysis only — the GPU extraction (`python -m prism.features.deep`) is manual, the step is skipped when no `outputs/features/deep_*.parquet` exist | GPU features | |
+| `10_analyses.sh [step ...]` | manuscript analyses: literature baselines + nested grid, schedule coupling, sensitivity, calibration/decision curves/NRI/sample size, Table 1 + flow, split-variance replot | steps 5–9 | ~30 min |
 | `run_all.sh [--skip-radiomics] [--from STEP] [--to STEP]` | all of the above in order | | |
 
 C2 cost is dominated by the permutation control: 100 permutations x 25 outer folds x 126 candidate configurations

@@ -17,6 +17,11 @@ Analyses (read the prepared tables, write to $PRISM_OUTPUTS/results):
     head2head     C3 pipelines vs the PRISM report radiomics model on the PRISM report split (30 test patients)
     splitvar      where the PRISM report split's AUC sits among random splits of the same design
     deep          frozen deep-encoder features vs the C3 baseline (needs features from GPU extraction; see scripts/)
+    baselines     literature baselines (persistence, volumetric RANO-style rule, Cox) and a nested hyperparameter grid
+    schedule      is the signal a proxy for the surveillance schedule (gap to next scan)?
+    utility       calibration, decision curves, NRI/IDI, sample size
+    sensitivity   primary comparison under other horizons, labels and subsets
+    tables        Table 1, cohort flow, manuscript tables
 
 Every stage takes -h for its options.
 """
@@ -38,6 +43,11 @@ STAGES = {
     "head2head": "prism.analyses.head_to_head",
     "splitvar": "prism.analyses.split_variance",
     "deep": "prism.analyses.deep_features",
+    "baselines": "prism.analyses.baselines",
+    "schedule": "prism.analyses.schedule",
+    "utility": "prism.analyses.utility",
+    "sensitivity": "prism.analyses.sensitivity",
+    "tables": "prism.analyses.tables",
 }
 PIPELINES = {"data": ("mu", "lumiere", "measurements")}
 

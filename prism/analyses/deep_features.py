@@ -181,6 +181,8 @@ def evaluate(population, workers, n_boot):
                                                            "DV" if a.startswith("base+vol|") else a.split("NESTED_")[-1] if "NESTED" in a else "baseline")))
     table.sort_values("auc_ipcw", ascending=False).to_csv(out / "results.csv", index=False)
     pd.DataFrame(preds).assign(scan_id=cohort.scan_id).to_csv(out / "oof.csv", index=False)
+    pd.concat([pd.DataFrame(o.T, columns=[f"{k}#r{r}" for r in range(len(o))]) for k, o in res.items()], axis=1
+              ).assign(scan_id=cohort.scan_id).to_csv(out / "oof_repeats.csv.gz", index=False)
 
     # Diagnostics: image-only stacked score of the most-chosen nested config per family vs volume and baseline.
     vols = feature_groups(cohort, legacy_radiomics=False)["volumes"]
