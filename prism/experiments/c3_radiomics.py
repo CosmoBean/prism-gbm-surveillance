@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import argparse
 import itertools
+import warnings
 from concurrent.futures import ProcessPoolExecutor
 
 import numpy as np
@@ -107,6 +108,26 @@ class Decorrelate(BaseEstimator, TransformerMixin):
         return X[:, self.keep_]
 
 
+class QuantileClip(BaseEstimator, TransformerMixin):
+    """Clip each feature to its training [q, 1-q] order statistics (NaN kept). Guards against extreme values such as
+    the PyRadiomics 1e6 sentinel (NGTDM Coarseness of a flat ROI) dominating scaling, PCA and the stacked score."""
+
+    def __init__(self, q=0.01):
+        self.q = q
+
+    def fit(self, X, y=None):
+        X = np.asarray(X, float)
+        with np.errstate(all="ignore"), warnings.catch_warnings():
+            warnings.simplefilter("ignore", RuntimeWarning)
+            self.lo_ = np.nanquantile(X, self.q, axis=0, method="higher")
+            self.hi_ = np.nanquantile(X, 1 - self.q, axis=0, method="lower")
+        return self
+
+    def transform(self, X):
+        X = np.asarray(X, float)
+        return np.where(np.isnan(X), X, np.clip(X, np.nan_to_num(self.lo_, nan=-np.inf), np.nan_to_num(self.hi_, nan=np.inf)))
+
+
 class ImputeWithFlags(BaseEstimator, TransformerMixin):
     """Median imputation + one 0/1 missingness flag per distinct missingness pattern in training (e.g. 'no ET ROI'
     flags all ET features at once instead of one duplicate indicator per feature)."""
@@ -154,7 +175,7 @@ def f_classif_quiet(X, y):
 
 
 def selector(name):
-    steps = [("imp", ImputeWithFlags()), ("var", VarianceThreshold(1e-8)), ("sc", StandardScaler())]
+    steps = [("clip", QuantileClip()), ("imp", ImputeWithFlags()), ("var", VarianceThreshold(1e-8)), ("sc", StandardScaler())]
     if name.startswith("top"):
         steps.append(("sel", SelectKBest(f_classif_quiet, k=int(name[3:]))))
     elif name == "l1":
