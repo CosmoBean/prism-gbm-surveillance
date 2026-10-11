@@ -25,13 +25,15 @@ class LabelTests(unittest.TestCase):
             ("p_late", 100, 1, 400, 0),    # progresses 300 d after scan -> verified negative at 120
             ("n_short", 100, 0, np.nan, 0),  # follow-up 60 d, alive -> censored
             ("n_long", 100, 0, np.nan, 0),   # follow-up 200 d -> verified negative
-            ("n_dead", 100, 0, np.nan, 1),   # died at 130 without progression -> verified negative
-        ]), pd.Series({"p_pos": 150, "p_late": 400, "n_short": 160, "n_long": 300, "n_dead": 130}), horizons=(120,))
+            ("n_dead", 100, 0, np.nan, 1),   # died at 130 without progression -> censored at death (30 d)
+        ]).assign(death_day=[np.nan] * 4 + [130.0]),
+            pd.Series({"p_pos": 150, "p_late": 400, "n_short": 160, "n_long": 300, "n_dead": 130}), horizons=(120,))
 
     def test_labels(self):
         self.assertEqual(self.d["label_120"].tolist()[:2], [1.0, 0.0])
         self.assertTrue(np.isnan(self.d["label_120"].iat[2]))
-        self.assertEqual(self.d["label_120"].tolist()[3:], [0.0, 0.0])
+        self.assertEqual(self.d["label_120"].iat[3], 0.0)
+        self.assertTrue(np.isnan(self.d["label_120"].iat[4]))  # death without progression censors at death
 
     def test_naive_counts_censored_as_negative(self):
         self.assertEqual(self.d["naive_label_120"].tolist(), [1, 0, 0, 0, 0])
@@ -43,7 +45,7 @@ class LabelTests(unittest.TestCase):
         self.assertEqual(per.loc["p_pos"].tolist(), [2, 1])   # event in 2nd 30-d interval
         self.assertEqual(per.loc["n_short"].tolist(), [2, 0])  # at risk for 60 d
         self.assertEqual(per.loc["n_long"].tolist(), [4, 0])
-        self.assertEqual(per.loc["n_dead"].tolist(), [4, 0])   # death = non-event, full window
+        self.assertEqual(per.loc["n_dead"].tolist(), [1, 0])   # censored at death after 30 d
 
 
 class CodebookTests(unittest.TestCase):

@@ -4,7 +4,8 @@ naive     legacy: censored-before-H scans labelled 0
 verified  censored-before-H scans dropped
 ipcw      verified scans weighted by 1 / G, G = Kaplan-Meier survival of the censoring time (Vock 2016)
 hazard    discrete-time landmark hazard on person-period data (van Houwelingen 2007; Suresh 2022):
-          censored scans contribute their observed at-risk intervals
+          censored scans contribute only the intervals they were observed through in full (a scan censored
+          mid-interval is not counted as surviving that interval)
 """
 
 from __future__ import annotations
@@ -22,7 +23,8 @@ G_FLOOR = 0.1
 
 
 def _observed_time(d: pd.DataFrame, horizon: int) -> np.ndarray:
-    """Follow-up used for survival bookkeeping; death without progression = never censored."""
+    """Follow-up used for survival bookkeeping; rows flagged status_known_indefinitely are never censored (none in
+    the current cohorts: death without progression censors at death)."""
     t = d["time_to_event"].to_numpy(float)
     return np.where(d["status_known_indefinitely"].to_numpy(), np.maximum(t, horizon + 1.0), t)
 
@@ -72,9 +74,9 @@ def person_period(X: np.ndarray, d: pd.DataFrame, horizon: int):
     rows, ys, gs = [], [], []
     for i in range(len(d)):
         for k in range(N_INTERVALS):
-            if t[i] <= edges[k]:
+            if t[i] <= edges[k] or (not event_by_h[i] and t[i] < edges[k + 1]):
                 break
-            ys.append(int(event_by_h[i] and edges[k] < t[i] <= edges[k + 1]))
+            ys.append(int(event_by_h[i] and t[i] <= edges[k + 1]))
             rows.append(np.concatenate([X[i], np.eye(N_INTERVALS)[k]]))
             gs.append(d["patient_id"].iat[i])
     return np.asarray(rows), np.asarray(ys), np.ones(len(ys)), np.asarray(gs)

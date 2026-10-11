@@ -9,6 +9,13 @@ A second pass on 1-voxel-eroded ROIs (T1c + FLAIR) supports a label-free stabili
 
     python -m prism radiomics [--limit N]   # -> outputs/features/{radiomics,radiomics_eroded}.csv
 
+Known limitations (docs/results/FIX_FEATURES.md):
+  * discretisation uses a fixed bin COUNT per ROI, not the IBSI-recommended fixed bin WIDTH for (z-scored) MRI: the
+    grey-level width varies with each ROI's intensity range, so texture values mix contrast and range differences;
+  * the eroded-ROI pass covers T1c/FLAIR texture + first-order only (1116 of 2316 columns), so the c3 ICC filter does
+    not screen T1/T2 texture or shape features (those pass unfiltered);
+  * the 5 mm peri-cavity rim is a 5-iteration city-block dilation (L1 <= 5 voxels), thinner than a Euclidean 5 mm.
+
 legacy_features() loads the original PRISM extraction (within-lesion z-score, binWidth 25 -> ~2 grey levels)
 from the optional processed download; it is kept only as a comparator.
 """

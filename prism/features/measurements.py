@@ -17,7 +17,8 @@ from scipy import ndimage
 from prism.config import LABEL_ET, LABEL_NETC, LABEL_RC, LABEL_SNFH, MEASUREMENTS, WORKERS, mu_scan_paths
 from prism.data.mu import load_index
 NEAR_CAVITY_MM = 5
-NAWM_MARGIN_MM = 10
+NAWM_MARGIN_MM = 10  # Euclidean margin around lesion + cavity excluded from the normal-brain reference
+PD_MIN_NADIR_CC = 0.1  # below this the ET nadir is "no measurable enhancement": growth is a new lesion, not a % change
 DELTA_SOURCES = ("et_cc", "netc_cc", "snfh_cc", "tumor_cc", "lesion_cc", "et_n_components", "et_max_axial_mm2",
                  "t1c_et_rel", "flair_snfh_rel")
 
@@ -26,12 +27,22 @@ def _load(path) -> np.ndarray:
     return np.asarray(nib.load(str(path)).dataobj)
 
 
+def reference_mask(brain: np.ndarray, abnormal: np.ndarray, margin_mm: float = NAWM_MARGIN_MM,
+                   spacing=(1.0, 1.0, 1.0)) -> np.ndarray:
+    """Normal-appearing brain: brain voxels at Euclidean distance > margin_mm from any abnormal voxel."""
+    if not abnormal.any():
+        return brain.copy()
+    return brain & (ndimage.distance_transform_edt(~abnormal, sampling=spacing) > margin_mm)
+
+
 def scan_concepts(args: tuple[str, str]) -> dict:
     pid, tp = args
     paths = mu_scan_paths(pid, tp)
     row = {"scan_id": f"{pid}_{tp}", "patient_id": pid, "timepoint": tp}
     try:
-        mask = np.rint(_load(paths["mask"])).astype(np.uint8)
+        img = nib.load(str(paths["mask"]))
+        spacing = tuple(float(z) for z in img.header.get_zooms()[:3])
+        mask = np.rint(np.asarray(img.dataobj)).astype(np.uint8)
         t1c = _load(paths["t1c"]).astype(np.float32)
         flair = _load(paths["flair"]).astype(np.float32)
     except FileNotFoundError:
@@ -60,10 +71,9 @@ def scan_concepts(args: tuple[str, str]) -> dict:
         row["et_near_cavity_fraction"] = np.nan
         row["et_cavity_distance_mm_p50"] = np.nan
 
-    # Intensities relative to normal-appearing brain (brain minus lesion/cavity dilated by 10 mm).
+    # Intensities relative to normal-appearing brain (brain minus everything within 10 mm of lesion/cavity).
     brain = (t1c > 0) & (flair > 0)
-    abnormal = ndimage.binary_dilation(lesion | rc, iterations=NAWM_MARGIN_MM)
-    nab = brain & ~abnormal
+    nab = reference_mask(brain, lesion | rc, NAWM_MARGIN_MM, spacing)
     ref_t1c = np.median(t1c[nab]) if nab.sum() > 1000 else np.nan
     ref_flair = np.median(flair[nab]) if nab.sum() > 1000 else np.nan
     rel = lambda img, m, ref: float(np.median(img[m]) / ref) if m.sum() >= 10 and ref and np.isfinite(ref) else np.nan
@@ -98,12 +108,19 @@ def add_deltas(concepts: pd.DataFrame) -> pd.DataFrame:
                     nadir = prev[s].min()
                     r[f"d_nadir_{s}"] = g[s][i] - nadir
                     r[f"logratio_nadir_{s}"] = np.log((g[s][i] + 0.1) / (nadir + 0.1))
-                # RANO-style volumetric flag (indicative only): >= 40% ET increase from nadir and >= 1 cc absolute
-                nadir_et = prev["et_cc"].min()
-                r["vol_pd_flag"] = float(g.et_cc[i] >= 1.4 * nadir_et and g.et_cc[i] - nadir_et >= 1.0)
+                r.update(volumetric_pd(g.et_cc[i], prev["et_cc"].min()))
                 r["new_et_component"] = float(g.et_n_components[i] > prev.iloc[-1].et_n_components)
             out.append(r)
     return pd.DataFrame(out)
+
+
+def volumetric_pd(et_cc: float, nadir_et_cc: float) -> dict:
+    """RANO-style volumetric flag (indicative only): >= 40% ET increase from a measurable nadir (>= PD_MIN_NADIR_CC)
+    and >= 1 cc absolute. Growth >= 1 cc from a non-measurable (~0 cc) nadir is flagged separately as new enhancement."""
+    grew = et_cc - nadir_et_cc >= 1.0
+    measurable = nadir_et_cc >= PD_MIN_NADIR_CC
+    return {"vol_pd_flag": float(measurable and grew and et_cc >= 1.4 * nadir_et_cc),
+            "et_new_from_zero_nadir": float(not measurable and grew)}
 
 
 def load_measurements(scan_ids) -> pd.DataFrame:
