@@ -11,7 +11,8 @@ tests transport to an external cohort.
 
 ## Install
 
-Python 3.11–3.12 and [uv](https://docs.astral.sh/uv/):
+`scripts/setup_env.sh` (add `--legacy` for `legacy/`) installs uv if needed and builds `.venv` from `uv.lock`; see
+[scripts/README.md](scripts/README.md). By hand: Python 3.11–3.12 and [uv](https://docs.astral.sh/uv/):
 
 ```bash
 uv sync                    # core pipeline
@@ -40,6 +41,9 @@ The optional download is needed only for experiments that compare against the or
 (`c1`, `c2`, `c3`). Outputs go to `outputs/` (`PRISM_OUTPUTS`); image stages use all CPUs (`PRISM_WORKERS`).
 
 ## Run
+
+`scripts/run_all.sh` runs every step below in order, one script per step (`scripts/01_prepare_data.sh` …
+`scripts/06_external_lumiere.sh`), with logs in `outputs/logs/`. Or call the stages directly:
 
 ```bash
 uv run prism data          # = prism mu, prism lumiere, prism measurements   (~1 min on 100 CPUs)
@@ -76,6 +80,7 @@ progression-free follow-up ≥ H; otherwise censored.
 
 ```
 prism/          the pipeline (data → features → models → experiments)
+scripts/        environment setup and one shell script per pipeline step
 tests/          label, censoring and fold invariants
 docs/           reviews, results write-ups, publication plan, literature comparison
 legacy/         original PRISM code (radiomics search, SwinUNETR, MLP fusion, report agent) and reproduction

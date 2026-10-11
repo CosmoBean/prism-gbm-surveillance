@@ -8,6 +8,7 @@ The model's six MU-specific clinical code columns have no LUMIERE equivalent; tw
   codes_zero        all six clinical columns 0
 
     python legacy/shipped_on_lumiere.py   # needs `prism lumiere` first and the legacy extra
+    -> outputs/results/external_lumiere/{shipped_model.csv, shipped_model_adaptation.csv}
 """
 
 from __future__ import annotations
@@ -116,16 +117,13 @@ def main() -> None:
     print(res.round(3).to_string(index=False))
 
 
-if __name__ == "__main__":
-    main()
-
 
 def adapt() -> None:
-    """Raw vs adapted shipped model on held-out LUMIERE patients (grouped CV, per-fold AUC + pooled O/E)."""
-    from sklearn.linear_model import LogisticRegression
-    from sklearn.metrics import roc_auc_score
-    from sklearn.model_selection import StratifiedGroupKFold
-    from prism.experiments.external_lumiere import SHRINK_LAMBDAS, shrink_fit
+    """Raw vs adapted shipped model on held-out LUMIERE patients. Every arm (raw included) is scored with the same
+    per-fold estimator over identical patient folds (IPCW AUC with cohort-level censoring weights, O/E, slope per
+    fold, then averaged); raw is also reported pooled. Recalibration: unpenalised logistic on the logit."""
+    from prism.experiments.external_lumiere import choose_shrink, lumiere_fold_ids, recalibrate, shrink_fit
+    from prism.models.metrics import fold_mean_bootstrap, fold_mean_metrics
 
     cohort = pd.read_csv(LUMIERE_COHORT)
     feats = pd.read_csv(OUTPUTS / "features" / "lumiere_legacy_radiomics.csv").set_index("scan_id").reindex(cohort.scan_id)
@@ -142,38 +140,33 @@ def adapt() -> None:
     beta0, b0 = clf.coef_[0], clf.intercept_[0]
     raw = bundle["calibrator"].predict_proba(surv.predict_positive_probability(clf, Xs).reshape(-1, 1))[:, 1]
     y = c[f"label_{H}"].to_numpy()
-    strata = pd.Series(y).map({1.0: "p", 0.0: "n"}).fillna("c")
-    lg = lambda p: np.log(np.clip(p, 1e-6, 1 - 1e-6) / (1 - np.clip(p, 1e-6, 1 - 1e-6)))
+    ids = lumiere_fold_ids(c)
     arms = ("raw", "recalibrated", "finetune_shrink")
-    oof = {a: np.zeros((5, len(c))) for a in arms}
-    fold_auc = {a: [] for a in arms}
-    for r in range(5):
-        for tr, te in StratifiedGroupKFold(5, shuffle=True, random_state=r).split(Xs, strata, c.patient_id):
+    oof = {a: np.zeros(ids.shape) for a in arms}
+    for r, f in enumerate(ids):
+        for fk in np.unique(f):
+            tr, te = np.where(f != fk)[0], np.where(f == fk)[0]
             k = tr[~np.isnan(y[tr])]
             oof["raw"][r, te] = raw[te]
-            cal = LogisticRegression(C=1.0).fit(lg(raw[k])[:, None], y[k].astype(int))
-            oof["recalibrated"][r, te] = 1 / (1 + np.exp(-(max(cal.coef_[0][0], 0.05) * lg(raw[te]) + cal.intercept_[0])))
-            best, best_loss = SHRINK_LAMBDAS[-1], np.inf
-            for lam in SHRINK_LAMBDAS:
-                losses = []
-                for itr, ite in StratifiedGroupKFold(3, shuffle=True, random_state=r).split(k, y[k], c.patient_id.iloc[k]):
-                    bb, be = shrink_fit(Xs[k[itr]], y[k[itr]], beta0, b0, lam)
-                    pz = 1 / (1 + np.exp(-(bb + Xs[k[ite]] @ be)))
-                    losses.append(-np.mean(y[k[ite]] * np.log(pz + 1e-9) + (1 - y[k[ite]]) * np.log(1 - pz + 1e-9)))
-                if np.mean(losses) < best_loss:
-                    best, best_loss = lam, np.mean(losses)
-            bb, be = shrink_fit(Xs[k], y[k], beta0, b0, best)
+            oof["recalibrated"][r, te], _ = recalibrate(raw[k], y[k], raw[te])
+            bb, be = shrink_fit(Xs[k], y[k], beta0, b0, choose_shrink(Xs, y, k, c.patient_id, beta0, b0, r))
             oof["finetune_shrink"][r, te] = 1 / (1 + np.exp(-(bb + Xs[te] @ be)))
-            kt = te[~np.isnan(y[te])]
-            if len(np.unique(y[kt])) == 2:
-                for a in arms:
-                    fold_auc[a].append(roc_auc_score(y[kt], oof[a][r, kt]))
+    fb = fold_mean_bootstrap(c, oof, ids, H, reference="raw", n_boot=1000).set_index("arm")
     rows = []
     for a in arms:
-        pm = point_metrics(c, oof[a].mean(0), H)
-        rows.append({"model": "PRISM report radiomics (shipped)", "arm": a, "auc_per_fold_mean": np.mean(fold_auc[a]),
-                     "auc_per_fold_sd": np.std(fold_auc[a]), "auc_ipcw_pooled": pm["auc_ipcw"], "oe_ratio": pm["oe_ratio"],
-                     "brier_ipcw": pm["brier_ipcw"]})
+        row = {"model": "PRISM report radiomics (shipped)", "arm": a, "n_scans": len(c),
+               **fold_mean_metrics(c, oof[a], ids, H), **fb.loc[a].dropna().to_dict()}
+        if a == "raw":
+            pm = point_metrics(c, raw, H)
+            b = cluster_bootstrap(c, {"m": raw}, H, reference="m", n_boot=1000).iloc[0]
+            row.update({f"{m}_pooled": v for m, v in pm.items()}, auc_ipcw_pooled_lo=b.auc_ipcw_lo,
+                       auc_ipcw_pooled_hi=b.auc_ipcw_hi)
+        rows.append(row)
     res = pd.DataFrame(rows)
     res.to_csv(RESULTS / "external_lumiere" / "shipped_model_adaptation.csv", index=False)
     print(res.round(3).to_string(index=False))
+
+
+if __name__ == "__main__":
+    main()
+    adapt()

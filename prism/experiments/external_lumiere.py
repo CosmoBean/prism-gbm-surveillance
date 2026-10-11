@@ -1,17 +1,27 @@
 """External test on LUMIERE with features shared by both cohorts.
 
 Arms (same features, H = 120 d, verified labels for training, IPCW AUC for evaluation):
-  mu_cv          MU repeated patient-grouped CV (internal reference)
-  locked         model trained on all MU scans, applied once to LUMIERE
-  recalibrated   locked model + logistic recalibration (intercept, slope) fitted on other LUMIERE patients (grouped CV)
-  lumiere_only   model trained and tested within LUMIERE (grouped CV) — the local ceiling
+  mu_cv            MU repeated patient-grouped CV on the shared folds (outputs/data/folds.csv; internal reference)
+  locked           model trained on all MU scans, applied once to LUMIERE
+  recalibrated     locked model + unpenalised logistic recalibration on the logit (intercept, slope; slope floored at
+                   0.05 so it never reverses the ranking), fitted on the training LUMIERE patients of each fold
+  finetune_shrink  ridge refit on training LUMIERE patients, penalised towards the MU coefficients
+  finetune_pooled  refit on MU + training LUMIERE patients (LUMIERE weight 3)
+  lumiere_only     model trained and tested within LUMIERE — the local ceiling
 
-    python -m prism external   # -> outputs/results/external_lumiere/
+Estimator: every LUMIERE arm, locked included, is scored on the same 5x5 patient-grouped LUMIERE folds: IPCW AUC(H)
+per held-out fold (cases/controls of the fold, censoring weights from the whole LUMIERE cohort), Brier, O/E and IPCW
+calibration slope per fold, then averaged over the 25 folds; 95% CIs from a patient-cluster bootstrap in which
+patients keep their folds (paired vs locked). Pooling out-of-fold predictions across differently adapted folds is not
+a valid estimate, so adapted arms have no pooled metrics. The locked model is also reported pooled on all of LUMIERE.
+MU CV is reported as the mean over repeats of the pooled-OOF AUC (as in c1-c3) and per fold.
+
+    python -m prism external   # -> outputs/results/external_lumiere/{results.csv, locked_predictions.csv}
 """
 
 from __future__ import annotations
 
-import warnings
+from concurrent.futures import ProcessPoolExecutor
 
 import numpy as np
 import pandas as pd
@@ -27,7 +37,9 @@ from prism.config import RESULTS
 from prism.data import lumiere, mu
 from prism.features.tabular import SHARED, shared_lumiere, shared_mu
 from prism.models.formulations import fit as fit_ridge
-from prism.models.metrics import cluster_bootstrap, point_metrics
+from prism.models.folds import load_folds
+from prism.models.metrics import (cluster_bootstrap, counted_warnings, fold_mean_bootstrap, fold_mean_metrics,
+                                  point_metrics, repeated_bootstrap, repeated_point_metrics)
 
 H = 120
 FEATURE_SETS = {
@@ -69,13 +81,29 @@ def fit(learner, X, cohort, seed=0, weights=None, return_parts=False):
     return (predict, pre, model) if return_parts else predict
 
 
-def grouped_cv_predict(learner, X, cohort, n_rep=5):
-    """Repeated patient-grouped CV within one cohort (MU internal reference)."""
-    y = cohort[f"label_{H}"].to_numpy()
-    strata = pd.Series(y).map({1.0: "p", 0.0: "n"}).fillna("c")
-    oof = np.zeros((n_rep, len(cohort)))
+def mu_fold_ids(cohort):
+    """(n_repeats x n_scans) fold ids of the shared MU folds (outputs/data/folds.csv)."""
+    folds = load_folds()
+    return np.array([cohort.scan_id.map(f.set_index("scan_id").fold).to_numpy() for _, f in folds.groupby("repeat")])
+
+
+def lumiere_fold_ids(lc, n_rep=5):
+    """(n_repeats x n_scans) patient-grouped LUMIERE folds, stratified on 120-d status; shared by every arm."""
+    strata = lc[f"label_{H}"].map({1.0: "p", 0.0: "n"}).fillna("c")
+    ids = np.zeros((n_rep, len(lc)), int)
     for r in range(n_rep):
-        for tr, te in StratifiedGroupKFold(5, shuffle=True, random_state=r).split(X, strata, cohort.patient_id):
+        for k, (_, te) in enumerate(StratifiedGroupKFold(5, shuffle=True, random_state=r).split(lc, strata, lc.patient_id)):
+            ids[r, te] = k
+    return ids
+
+
+def grouped_cv_predict(learner, X, cohort, fold_ids=None):
+    """Repeated patient-grouped CV within one cohort (MU internal reference) on the given fold ids."""
+    fold_ids = mu_fold_ids(cohort) if fold_ids is None else fold_ids
+    oof = np.zeros(fold_ids.shape)
+    for r, f in enumerate(fold_ids):
+        for k in np.unique(f):
+            tr, te = np.where(f != k)[0], np.where(f == k)[0]
             oof[r, te] = fit(learner, X.iloc[tr], cohort.iloc[tr].reset_index(drop=True), seed=r)(X.iloc[te])
     return oof
 
@@ -101,23 +129,44 @@ def _logit(p):
     return np.log(p / (1 - p))
 
 
-def adapt_on_lumiere(learner, cols, mc, MX, lc, LX, n_rep=5):
-    """Grouped CV over LUMIERE patients. Each arm is adapted on training patients and scored on held-out ones."""
-    from sklearn.metrics import roc_auc_score
+def recalibrate(p_train, y_train, p_test, min_slope=0.05):
+    """Unpenalised logistic recalibration on the logit; returns (recalibrated test risk, slope before flooring)."""
+    cal = LogisticRegression(penalty=None, max_iter=1000).fit(_logit(p_train)[:, None], y_train.astype(int))
+    a, b = cal.coef_[0][0], cal.intercept_[0]
+    return 1 / (1 + np.exp(-(max(a, min_slope) * _logit(p_test) + b))), float(a)
+
+
+def choose_shrink(Xs, y, k, groups, beta0, b0, seed):
+    """Shrinkage strength towards the MU coefficients by inner grouped CV (log-loss) on training rows k."""
+    best, best_loss = SHRINK_LAMBDAS[-1], np.inf
+    for lam in SHRINK_LAMBDAS:
+        losses = []
+        for itr, ite in StratifiedGroupKFold(3, shuffle=True, random_state=seed).split(k, y[k], groups.iloc[k]):
+            bb, be = shrink_fit(Xs[k[itr]], y[k[itr]], beta0, b0, lam)
+            pz = 1 / (1 + np.exp(-(bb + Xs[k[ite]] @ be)))
+            losses.append(-np.mean(y[k[ite]] * np.log(pz + 1e-9) + (1 - y[k[ite]]) * np.log(1 - pz + 1e-9)))
+        if np.mean(losses) < best_loss:
+            best, best_loss = lam, np.mean(losses)
+    return best
+
+
+def adapt_on_lumiere(learner, cols, mc, MX, lc, LX, fold_ids=None):
+    """Every arm adapted on the training LUMIERE patients of each fold and scored on the held-out ones.
+    Returns ({arm: (n_repeats x n_scans) held-out predictions}, fold_ids, recalibration slopes)."""
     y = lc[f"label_{H}"].to_numpy()
-    strata = pd.Series(y).map({1.0: "p", 0.0: "n"}).fillna("c")
+    fold_ids = lumiere_fold_ids(lc) if fold_ids is None else fold_ids
     locked_fn, mu_pre, mu_model = fit(learner, MX[cols], mc, return_parts=True)
     locked = locked_fn(LX[cols])
     arms = ["locked", "recalibrated", "finetune_pooled", "lumiere_only"] + (["finetune_shrink"] if learner == "ridge" else [])
-    oof = {a: np.zeros((n_rep, len(lc))) for a in arms}
-    fold_auc = {a: [] for a in arms}
-    for r in range(n_rep):
-        for tr, te in StratifiedGroupKFold(5, shuffle=True, random_state=r).split(LX, strata, lc.patient_id):
+    oof = {a: np.zeros(fold_ids.shape) for a in arms}
+    slopes = []
+    for r, f in enumerate(fold_ids):
+        for fk in np.unique(f):
+            tr, te = np.where(f != fk)[0], np.where(f == fk)[0]
             k = tr[~np.isnan(y[tr])]
             oof["locked"][r, te] = locked[te]
-            cal = LogisticRegression(C=1.0).fit(_logit(locked[k])[:, None], y[k].astype(int))
-            a, b = max(cal.coef_[0][0], 0.05), cal.intercept_[0]
-            oof["recalibrated"][r, te] = 1 / (1 + np.exp(-(a * _logit(locked[te]) + b)))
+            oof["recalibrated"][r, te], sl = recalibrate(locked[k], y[k], locked[te])
+            slopes.append(sl)
             pooled_X = pd.concat([MX[cols], LX[cols].iloc[tr]], ignore_index=True)
             pooled_c = pd.concat([mc, lc.iloc[tr]], ignore_index=True)
             wts = np.r_[np.ones(len(mc)), np.full(len(tr), 3.0)]
@@ -126,63 +175,85 @@ def adapt_on_lumiere(learner, cols, mc, MX, lc, LX, n_rep=5):
             if learner == "ridge":
                 Xs = mu_pre.transform(LX[cols])
                 beta0, b0 = mu_model.coef_[0], mu_model.intercept_[0]
-                # choose the shrinkage strength by inner grouped CV on the training patients
-                best, best_loss = SHRINK_LAMBDAS[-1], np.inf
-                for lam in SHRINK_LAMBDAS:
-                    losses = []
-                    for itr, ite in StratifiedGroupKFold(3, shuffle=True, random_state=r).split(k, y[k], lc.patient_id.iloc[k]):
-                        bb, be = shrink_fit(Xs[k[itr]], y[k[itr]], beta0, b0, lam)
-                        pz = 1 / (1 + np.exp(-(bb + Xs[k[ite]] @ be)))
-                        losses.append(-np.mean(y[k[ite]] * np.log(pz + 1e-9) + (1 - y[k[ite]]) * np.log(1 - pz + 1e-9)))
-                    if np.mean(losses) < best_loss:
-                        best, best_loss = lam, np.mean(losses)
-                bb, be = shrink_fit(Xs[k], y[k], beta0, b0, best)
+                lam = choose_shrink(Xs, y, k, lc.patient_id, beta0, b0, r)
+                bb, be = shrink_fit(Xs[k], y[k], beta0, b0, lam)
                 oof["finetune_shrink"][r, te] = 1 / (1 + np.exp(-(bb + Xs[te] @ be)))
-            kt = te[~np.isnan(y[te])]
+    return oof, fold_ids, np.asarray(slopes)
+
+
+def verified_fold_auc(lc, P, fold_ids):
+    """Secondary: plain AUC on verified labels per held-out fold, averaged."""
+    from sklearn.metrics import roc_auc_score
+    y = lc[f"label_{H}"].to_numpy()
+    a = []
+    for r, f in enumerate(fold_ids):
+        for k in np.unique(f):
+            kt = (f == k) & ~np.isnan(y)
             if len(np.unique(y[kt])) == 2:
-                for a_ in arms:
-                    fold_auc[a_].append(roc_auc_score(y[kt], oof[a_][r, kt]))
-    return oof, fold_auc
+                a.append(roc_auc_score(y[kt], P[r, kt]))
+    return float(np.mean(a))
+
+
+@counted_warnings
+def run_combo(job):
+    train_pop, fs, learner, n_boot = job
+    from threadpoolctl import threadpool_limits
+    threadpool_limits(1)
+    cols = FEATURE_SETS[fs]
+    lc, LX = lumiere_table()
+    mc, MX = mu_table(train_pop == "grade4")
+    base = {"train": train_pop, "features": fs, "learner": learner}
+    rows = []
+    mu_ids = mu_fold_ids(mc)
+    mu_oof = grouped_cv_predict(learner, MX[cols], mc, mu_ids)
+    b = repeated_bootstrap(mc, {"m": mu_oof}, H, n_boot=n_boot).iloc[0]
+    rows.append({**base, "arm": "mu_cv", "cohort": "MU", **repeated_point_metrics(mc, mu_oof, H),
+                 "auc_ipcw_lo": b.auc_ipcw_lo, "auc_ipcw_hi": b.auc_ipcw_hi, **fold_mean_metrics(mc, mu_oof, mu_ids, H)})
+    oof, ids, slopes = adapt_on_lumiere(learner, cols, mc, MX, lc, LX)
+    fb = fold_mean_bootstrap(lc, oof, ids, H, reference="locked", n_boot=n_boot).set_index("arm")
+    for arm, P in oof.items():
+        row = {**base, "arm": arm, "cohort": "LUMIERE", **fold_mean_metrics(lc, P, ids, H),
+               "auc_verified_fold_mean": verified_fold_auc(lc, P, ids), **fb.loc[arm].dropna().to_dict()}
+        if arm == "locked":  # the one arm with a single prediction per scan: also pooled over all of LUMIERE
+            pm = point_metrics(lc, P[0], H)
+            cb = cluster_bootstrap(lc, {"m": P[0]}, H, reference="m", n_boot=n_boot).iloc[0]
+            row.update({f"{k}_pooled": v for k, v in pm.items()})
+            row.update(auc_ipcw_pooled_lo=cb.auc_ipcw_lo, auc_ipcw_pooled_hi=cb.auc_ipcw_hi)
+        if arm == "recalibrated":
+            row.update(recal_slope_median=float(np.median(slopes)), recal_slope_floored=int((slopes < 0.05).sum()))
+        rows.append(row)
+    return rows, f"{train_pop}|{fs}|{learner}", oof["locked"][0]
 
 
 def main(argv=None) -> None:
-    warnings.filterwarnings("ignore")
+    import argparse
+    ap = argparse.ArgumentParser(prog="prism external", description=__doc__)
+    ap.add_argument("--n-boot", type=int, default=1000)
+    ap.add_argument("--workers", type=int, default=16)
+    a = ap.parse_args(argv)
     lc, LX = lumiere_table()
     have_vol = not LX["log_et_cc"].isna().all()
     if not have_vol:
         print("WARNING: LUMIERE volumes missing — volume feature sets will be skipped")
-    rows, preds = [], {}
-    for train_pop in ("grade4", "all_glioma"):
-        mc, MX = mu_table(train_pop == "grade4")
-        for fs, cols in FEATURE_SETS.items():
-            if "log_et_cc" in cols and not have_vol:
-                continue
-            for learner in ("ridge", "gbm"):
-                mu_oof = grouped_cv_predict(learner, MX[cols], mc)
-                oof, fold_auc = adapt_on_lumiere(learner, cols, mc, MX, lc, LX)
-                arm_preds = {"mu_cv": (mc, mu_oof.mean(0))} | {a: (lc, o.mean(0)) for a, o in oof.items()}
-                for arm, (coh, p) in arm_preds.items():
-                    pm = point_metrics(coh, p, H)
-                    b = cluster_bootstrap(coh, {"m": p}, H, reference="m", n_boot=1000).iloc[0]
-                    fa = fold_auc.get(arm, [])
-                    rows.append({"train": train_pop, "features": fs, "learner": learner, "arm": arm, **pm,
-                                 "auc_ipcw_lo": b.auc_ipcw_lo, "auc_ipcw_hi": b.auc_ipcw_hi,
-                                 "auc_per_fold_mean": float(np.mean(fa)) if fa else np.nan,
-                                 "auc_per_fold_sd": float(np.std(fa)) if fa else np.nan})
-                preds[f"{train_pop}|{fs}|{learner}"] = oof["locked"][0]
-    res = pd.DataFrame(rows)
+    jobs = [(tp, fs, l, a.n_boot) for tp in ("grade4", "all_glioma") for fs, cols in FEATURE_SETS.items()
+            for l in ("ridge", "gbm") if have_vol or "log_et_cc" not in cols]
+    with ProcessPoolExecutor(a.workers) as ex:
+        outs = list(ex.map(run_combo, jobs))
+    res = pd.DataFrame([r for o in outs for r in o[0]])
     out = RESULTS / "external_lumiere"
     out.mkdir(parents=True, exist_ok=True)
     res.to_csv(out / "results.csv", index=False)
-    pd.DataFrame(preds).assign(scan_id=lc.scan_id).to_csv(out / "locked_predictions.csv", index=False)
+    pd.DataFrame({k: p for _, k, p in outs}).assign(scan_id=lc.scan_id).to_csv(out / "locked_predictions.csv", index=False)
     order = ["mu_cv", "locked", "recalibrated", "finetune_shrink", "finetune_pooled", "lumiere_only"]
-    print("AUC: MU internal CV (pooled IPCW) and LUMIERE arms (per-fold mean over held-out LUMIERE patients)")
-    t = res.assign(auc=np.where(res.arm == "mu_cv", res.auc_ipcw, res.auc_per_fold_mean))
-    print(t.pivot_table(index=["train", "features", "learner"], columns="arm", values="auc")
-          .reindex(columns=[o for o in order if o in set(t.arm)]).round(3).to_string())
-    print("Calibration on LUMIERE (O/E | slope):")
+    idx = ["train", "features", "learner"]
+    print("IPCW AUC, mean over held-out folds (MU: shared MU folds; LUMIERE: identical 5x5 patient folds for every arm)")
+    print(res.pivot_table(index=idx, columns="arm", values="auc_ipcw_fold_mean")
+          .reindex(columns=[o for o in order if o in set(res.arm)]).round(3).to_string())
+    print("MU CV, mean over repeats of pooled-OOF AUC:")
+    print(res[res.arm == "mu_cv"][idx + ["auc_ipcw", "auc_ipcw_lo", "auc_ipcw_hi"]].round(3).to_string(index=False))
+    print("Calibration on LUMIERE, per fold then averaged (O/E | slope median):")
     c = res[res.arm != "mu_cv"]
-    print(c.pivot_table(index=["train", "features", "learner"], columns="arm", values=["oe_ratio", "cal_slope"]).round(2).to_string())
-    print("Locked model on all of LUMIERE (pooled IPCW AUC, 95% CI):")
-    print(res[res.arm == "locked"][["train", "features", "learner", "auc_ipcw", "auc_ipcw_lo", "auc_ipcw_hi"]].round(3).to_string(index=False))
-
+    print(c.pivot_table(index=idx, columns="arm", values=["oe_ratio_fold_mean", "cal_slope_fold_median"]).round(2).to_string())
+    print("Locked model on all of LUMIERE (pooled IPCW AUC, 95% CI) and per fold:")
+    print(res[res.arm == "locked"][idx + ["auc_ipcw_pooled", "auc_ipcw_pooled_lo", "auc_ipcw_pooled_hi", "auc_ipcw_fold_mean",
+                                          "auc_ipcw_fold_mean_lo", "auc_ipcw_fold_mean_hi"]].round(3).to_string(index=False))

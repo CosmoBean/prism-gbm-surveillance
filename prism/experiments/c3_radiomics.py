@@ -8,15 +8,18 @@ Integration         concat (baseline + selected radiomics, one ridge) | stack (b
 
 Every step is fitted on the training fold; the radiomics score for stacking comes from inner patient-grouped
 OOF predictions. Nested selection over all radiomics configurations gives the honest "best radiomics" estimate.
+Missing compartments (no ET / NETC / rim ROI) are median-imputed with one presence flag per missingness pattern.
+Headline AUC = mean over repeats of each repeat's pooled-OOF IPCW AUC; ΔAUC vs the ridge baseline is the point
+estimate with a paired patient-cluster bootstrap CI (`*_averaged` = AUC of the repeat-averaged prediction).
 
-    python -m prism c3 --population grade4   # -> outputs/results/c3/<population>/
+    python -m prism c3 --population grade4
+    -> outputs/results/c3/<population>/{results.csv, oof.csv, oof_repeats.csv.gz, nested_choices.csv}
 """
 
 from __future__ import annotations
 
 import argparse
 import itertools
-import warnings
 from concurrent.futures import ProcessPoolExecutor
 
 import numpy as np
@@ -24,7 +27,7 @@ import pandas as pd
 from sklearn.base import BaseEstimator, TransformerMixin, clone
 from sklearn.decomposition import PCA
 from sklearn.ensemble import HistGradientBoostingClassifier
-from sklearn.feature_selection import SelectFromModel, SelectKBest, VarianceThreshold, f_classif
+from sklearn.feature_selection import SelectKBest, VarianceThreshold, f_classif
 from sklearn.impute import SimpleImputer
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import roc_auc_score
@@ -38,7 +41,7 @@ from prism.data.mu import load_cohort
 from prism.features.tabular import groups as feature_groups
 from prism.models.folds import load_folds
 from prism.models.formulations import fit as fit_ridge
-from prism.models.metrics import cluster_bootstrap, point_metrics
+from prism.models.metrics import counted_warnings, evaluate_repeated
 
 H = 120
 VARIANTS = ("legacy", "v2_lesion", "v2_compartments", "v2_all4")
@@ -104,13 +107,51 @@ class Decorrelate(BaseEstimator, TransformerMixin):
         return X[:, self.keep_]
 
 
+class ImputeWithFlags(BaseEstimator, TransformerMixin):
+    """Median imputation + one 0/1 missingness flag per distinct missingness pattern in training (e.g. 'no ET ROI'
+    flags all ET features at once instead of one duplicate indicator per feature)."""
+
+    def fit(self, X, y=None):
+        X = np.asarray(X, float)
+        miss = np.isnan(X)
+        with np.errstate(all="ignore"):
+            self.median_ = np.nan_to_num(np.nanmedian(np.where(miss.all(0), 0.0, X), axis=0))
+        first = {}
+        for j in np.where(miss.any(0) & ~miss.all(0))[0]:
+            first.setdefault(miss[:, j].tobytes(), j)
+        self.flag_cols_ = np.array(sorted(first.values()), int)
+        return self
+
+    def transform(self, X):
+        X = np.asarray(X, float)
+        miss = np.isnan(X)
+        return np.hstack([np.where(miss, self.median_, X), miss[:, self.flag_cols_].astype(float)])
+
+
+class L1Select(BaseEstimator, TransformerMixin):
+    """Features with a nonzero L1-logistic coefficient (largest |coef| first, at most max_features). Unlike
+    SelectFromModel(threshold=-inf) it never pads with zero-coefficient features; if nothing survives, the block
+    is a single zero column (radiomics then contributes nothing)."""
+
+    def __init__(self, C=0.1, max_features=30):
+        self.C, self.max_features = C, max_features
+
+    def fit(self, X, y):
+        coef = np.abs(LogisticRegression(penalty="l1", C=self.C, solver="liblinear", random_state=0).fit(X, y).coef_[0])
+        nz = np.where(coef > 1e-10)[0]
+        self.keep_ = np.sort(nz[np.argsort(-coef[nz])][:self.max_features])
+        return self
+
+    def transform(self, X):
+        return X[:, self.keep_] if len(self.keep_) else np.zeros((len(X), 1))
+
+
 def selector(name):
-    steps = [("imp", SimpleImputer(strategy="median")), ("var", VarianceThreshold(1e-8)), ("sc", StandardScaler())]
+    steps = [("imp", ImputeWithFlags()), ("var", VarianceThreshold(1e-8)), ("sc", StandardScaler())]
     if name.startswith("top"):
         steps.append(("sel", SelectKBest(f_classif, k=int(name[3:]))))
     elif name == "l1":
-        steps.append(("sel", SelectFromModel(LogisticRegression(penalty="l1", C=0.1, solver="liblinear", random_state=0),
-                                             max_features=30, threshold=-np.inf)))
+        steps.append(("sel", L1Select(C=0.1, max_features=30)))
     elif name == "pca10":
         steps.append(("sel", PCA(n_components=10, random_state=0)))
     elif name == "decor20":
@@ -174,9 +215,9 @@ RAD_CONFIGS = [(v, s, sel, i, "ridge") for v, s, sel, i in itertools.product(VAR
 BASELINES = [(None, "none", "none", "none", "ridge"), (None, "none", "none", "none", "gbm")]
 
 
+@counted_warnings
 def run_config(job):
     population, cfg = job
-    warnings.filterwarnings("ignore")
     threadpool_limits(1)
     cohort, folds, base, rad, er = load(population)
     oof = np.zeros((folds.repeat.nunique(), len(cohort)))
@@ -198,16 +239,16 @@ def inner_auc(cfg, cohort, base, rad, er, tr):
     return float(np.mean(aucs))
 
 
+@counted_warnings
 def run_nested(job):
     population, r, k, candidates = job
-    warnings.filterwarnings("ignore")
     threadpool_limits(1)
     cohort, folds, base, rad, er = load(population)
     f = _fold_ids(cohort, folds, r)
     tr, te = np.where(f != k)[0], np.where(f == k)[0]
     scores = {c: inner_auc(c, cohort, base, rad, er, tr) for c in candidates}
     best = max(scores, key=scores.get)
-    return r, te, fit_predict(best, cohort, base, rad, er, tr, te, seed=r), "|".join(map(str, best))
+    return r, k, te, fit_predict(best, cohort, base, rad, er, tr, te, seed=r), "|".join(map(str, best)), scores[best]
 
 
 def main(argv=None) -> None:
@@ -229,26 +270,25 @@ def main(argv=None) -> None:
     with ProcessPoolExecutor(a.workers) as ex:
         nested = list(ex.map(run_nested, jobs))
     nested_oof = np.zeros((folds.repeat.nunique(), len(cohort)))
-    for r, te, p, _ in nested:
+    for r, _, te, p, *_ in nested:
         nested_oof[r, te] = p
     res[("NESTED", "-", "-", "-", "ridge")] = nested_oof
-    pd.DataFrame([{"repeat": r, "chosen": c} for r, _, _, c in nested]).to_csv(out / "nested_choices.csv", index=False)
+    pd.DataFrame([{"repeat": r, "fold": k, "chosen": c, "inner_auc": s} for r, k, _, _, c, s in nested]
+                 ).to_csv(out / "nested_choices.csv", index=False)
 
-    ref = BASELINES[0]
-    preds = {"|".join(map(str, c)): o.mean(0) for c, o in res.items()}
-    ref_key = "|".join(map(str, ref))
-    boot = cluster_bootstrap(cohort, preds, H, reference=ref_key, n_boot=a.n_boot).set_index("formulation")
+    key = lambda c: "|".join(map(str, c))
+    oofs = {key(c): o for c, o in res.items()}
+    ref_key = key(BASELINES[0])
+    ev = evaluate_repeated(cohort, oofs, H, reference=ref_key, n_boot=a.n_boot)
     rows = []
-    for c, o in res.items():
-        key = "|".join(map(str, c))
-        rep = [point_metrics(cohort, o[r], H)["auc_ipcw"] for r in range(o.shape[0])]
+    for c in res:
         rows.append({"variant": c[0], "stability": c[1], "selection": c[2], "integration": c[3], "learner": c[4],
-                     **point_metrics(cohort, preds[key], H), "auc_repeat_mean": float(np.mean(rep)),
-                     "auc_repeat_sd": float(np.std(rep)), **boot.loc[key].dropna().to_dict()})
+                     **ev.loc[key(c)].dropna().to_dict()})
     table = pd.DataFrame(rows).sort_values("auc_ipcw", ascending=False)
     table.to_csv(out / "results.csv", index=False)
-    pd.DataFrame(preds).assign(scan_id=cohort.scan_id).to_csv(out / "oof.csv", index=False)
+    pd.DataFrame({k: o.mean(0) for k, o in oofs.items()}).assign(scan_id=cohort.scan_id).to_csv(out / "oof.csv", index=False)
+    pd.concat([pd.DataFrame(o.T, columns=[f"{k}#r{r}" for r in range(len(o))]) for k, o in oofs.items()], axis=1
+              ).assign(scan_id=cohort.scan_id).to_csv(out / "oof_repeats.csv.gz", index=False)
     cols = ["variant", "stability", "selection", "integration", "learner", "auc_ipcw", "auc_ipcw_lo", "auc_ipcw_hi",
-            f"d_auc_ipcw_vs_{ref_key}", "d_auc_ipcw_lo", "d_auc_ipcw_hi", "cal_slope"]
+            f"d_auc_ipcw_vs_{ref_key}", "d_auc_ipcw_lo", "d_auc_ipcw_hi", "auc_ipcw_averaged", "cal_slope"]
     print(table[[c for c in cols if c in table]].head(25).round(3).to_string(index=False))
-

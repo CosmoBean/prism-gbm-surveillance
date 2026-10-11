@@ -12,6 +12,13 @@ Experiments (read the prepared tables, write to $PRISM_OUTPUTS/results):
     c2            feature-group search with nested selection
     c3            does radiomics add to a clinical + timing + treatment baseline?
     external      train on MU, test on LUMIERE (locked, recalibrated, fine-tuned)
+
+Analyses (read the prepared tables, write to $PRISM_OUTPUTS/results):
+    head2head     C3 pipelines vs the PRISM report radiomics model on the PRISM report split (30 test patients)
+    splitvar      where the PRISM report split's AUC sits among random splits of the same design
+    deep          frozen deep-encoder features vs the C3 baseline (needs features from GPU extraction; see scripts/)
+
+Every stage takes -h for its options.
 """
 
 from __future__ import annotations
@@ -28,6 +35,9 @@ STAGES = {
     "c2": "prism.experiments.c2_feature_search",
     "c3": "prism.experiments.c3_radiomics",
     "external": "prism.experiments.external_lumiere",
+    "head2head": "prism.analyses.head_to_head",
+    "splitvar": "prism.analyses.split_variance",
+    "deep": "prism.analyses.deep_features",
 }
 PIPELINES = {"data": ("mu", "lumiere", "measurements")}
 
