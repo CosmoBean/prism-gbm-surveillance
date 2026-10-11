@@ -4,11 +4,11 @@ Code: `prism/analyses/schedule.py` (`python -m prism.analyses.schedule`), output
 (`strata_and_adjustment.csv`, `stratum_counts.csv`, `gap_combination.csv`, `sensitivity.csv`, `timing_vs_gap.csv`,
 `describe.csv`, `gap_per_scan.csv`).
 
-**Provenance: final numbers** (full re-run, `outputs/results/analyses/schedule/`, 2026-10-11 07:34, HEAD `cc2e3a3`, 1000
-bootstraps). Cohort MU 308 scans / 155 patients (grade 4 249 / 126). All three MU models use the per-repeat OOF of the final
-C3 run (5 repeats); LUMIERE uses the final locked predictions (`outputs/results/external_lumiere/locked_predictions.csv`).
-Compared with the provisional version of this file, the ridge and boosting columns are unchanged; the nested-radiomics
-column now uses the final per-repeat OOF, and the LUMIERE rows changed after the empty-segmentation fix.
+**Provenance: final numbers** (`outputs/results/analyses/schedule/`, re-run 2026-10-11 18:39 after the radiomics clipping
+fix, [FIX_RADIOMICS_CLIP.md](FIX_RADIOMICS_CLIP.md); 1000 bootstraps). Cohort MU 308 scans / 155 patients (grade 4 249 / 126).
+All three MU models use the per-repeat OOF of the C3 run (5 repeats). LUMIERE uses the final locked predictions
+(`outputs/results/external_lumiere/locked_predictions.csv`). Compared with the `cc2e3a3` run, only the nested-radiomics
+column changed. The ridge, boosting and LUMIERE numbers are unchanged.
 
 ## Setup
 gap = days from the index scan to the patient's next MRI (MU: any timepoint; LUMIERE: any rated timepoint). The gap is not
@@ -22,15 +22,15 @@ scan; LUMIERE 0.788 [0.703, 0.868].
 
 | | ridge | boosting | + radiomics (nested) |
 |---|---|---|---|
-| AUC, all scans | 0.698 [0.615, 0.774] (0.720) | 0.687 (0.718) | 0.672 (0.732) |
-| gap tertile 1 / 2 / 3 (≤56 / 56–91 / >91 d) | 0.718 / 0.762 / 0.617 | 0.726 / 0.791 / 0.631 | 0.728 / 0.740 / 0.556 |
-| no next scan (n = 60; 31 censored) | 0.613 | 0.532 | 0.578 |
-| conditional AUC (pairs within gap tertile) | 0.687 [0.595, 0.768] (0.708) | 0.697 (0.723) | 0.659 (0.721) |
-| logit(pred) coef per SD, unadjusted → adjusted for log gap | 0.91 → 0.86 [0.43, 1.41] | 0.83 → 0.87 [0.48, 1.33] | 0.72 → 0.66 [0.30, 1.13] |
-| AUC on scans with a next scan: model / model + log gap (in-fold) | 0.710 / 0.719 | 0.710 / 0.733 | 0.683 / 0.689 |
-| excl. early post-RT (151 scans) | 0.723 | 0.704 (refit 0.753) | 0.709 |
-| next scan ≤ 120 d (161 scans) | 0.727 (refit 0.749) | 0.736 | 0.704 |
-| both exclusions (85 scans) | 0.777 [0.653, 0.891] | 0.778 | 0.766 |
+| AUC, all scans | 0.698 [0.615, 0.774] (0.720) | 0.687 (0.718) | 0.666 (0.747) |
+| gap tertile 1 / 2 / 3 (≤56 / 56–91 / >91 d) | 0.718 / 0.762 / 0.617 | 0.726 / 0.791 / 0.631 | 0.728 / 0.725 / 0.561 |
+| no next scan (n = 60; 31 censored) | 0.613 | 0.532 | 0.549 |
+| conditional AUC (pairs within gap tertile) | 0.687 [0.595, 0.768] (0.708) | 0.697 (0.723) | 0.654 (0.738) |
+| logit(pred) coef per SD, unadjusted → adjusted for log gap | 0.91 → 0.86 [0.43, 1.41] | 0.83 → 0.87 [0.48, 1.33] | 0.78 → 0.71 [0.36, 1.10] |
+| AUC on scans with a next scan: model / model + log gap (in-fold) | 0.710 / 0.719 | 0.710 / 0.733 | 0.681 / 0.695 |
+| excl. early post-RT (151 scans) | 0.723 | 0.704 (refit 0.753) | 0.705 |
+| next scan ≤ 120 d (161 scans) | 0.727 (refit 0.749) | 0.736 | 0.698 |
+| both exclusions (85 scans) | 0.777 [0.653, 0.891] | 0.778 | 0.761 |
 
 Sources: `strata_and_adjustment.csv` (AUCs, conditional AUC, coefficients), `gap_combination.csv` (+ log gap),
 `sensitivity.csv` (subsets), `stratum_counts.csv`, `timing_vs_gap.csv`, `describe.csv`.
@@ -53,7 +53,7 @@ complementary (adding gap in-fold gives +0.01 to +0.02 AUC), so a model using th
 Discrimination is weakest in the longest-gap tertile and in scans without a next scan (0.53–0.62, wide CIs), where labels rely
 on clinical follow-up or censoring. Excluding early post-RT scans or scans with a next scan > 120 d does not lower the baseline AUC
 (0.70–0.78 vs 0.69–0.70), so the result is not driven by pseudoprogression-window scans or by sparsely followed scans.
-The nested radiomics model is weakest in the longest-gap tertile (0.556) and its conditional AUC (0.659) is below the
+The nested radiomics model is weakest in the longest-gap tertile (0.561) and its conditional AUC (0.654) is below the
 baseline's (0.687). In LUMIERE the gap is far more predictive (0.79) than any locked model and the volume-containing model's
 coefficient is no longer distinguishable from 0 after adjustment, so the external AUCs should be read as partly
 schedule-dependent.

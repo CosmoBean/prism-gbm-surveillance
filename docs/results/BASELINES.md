@@ -5,7 +5,9 @@ Outputs: `outputs/results/analyses/baselines/{ladder.csv, lumiere.csv, nested_ch
 oof_repeats.csv.gz, forest.png}`. **Final numbers**: every number below was checked against the final full re-run
 (`outputs/results/analyses/baselines/`, 2026-10-11 07:29, HEAD `cc2e3a3`; MU 308 scans / 155 patients, grade 4 = 249 scans).
 The MU tables were unchanged from the provisional run; the LUMIERE table changed because empty DeepBraTumIA
-segmentations are now missing volumes instead of 0 cc (`cc2e3a3`).
+segmentations are now missing volumes instead of 0 cc (`cc2e3a3`). Re-run again on 2026-10-11 18:35 after the radiomics
+clipping fix ([FIX_RADIOMICS_CLIP.md](FIX_RADIOMICS_CLIP.md)): every number in `ladder.csv` and `lumiere.csv` is unchanged
+(no baseline uses radiomics).
 
 Protocol (same as C3): shared 5x5 patient-grouped folds (`outputs/data/folds.csv`), models fitted on verified 120-d
 labels, headline = mean over repeats of the pooled-OOF IPCW AUC(120 d), 95% CI and paired ΔAUC vs the **C3 ridge

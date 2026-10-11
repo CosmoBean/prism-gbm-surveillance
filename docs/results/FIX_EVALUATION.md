@@ -15,8 +15,8 @@ c2_feature_search,c3_radiomics,external_lumiere}.py`, `prism/analyses/head_to_he
 > | C2 grid best (boosting, clinical + timing) | 0.714 [0.643, 0.785] | `outputs/results/c2/grade4/grid.csv` |
 > | C2 nested (ridge + boosting); permutation p (100) | 0.664 [0.601, 0.722]; null mean 0.548, 95th pct 0.636, p = 0.050 (4 of 100 ≥ observed) | `c2/grade4/{nested,permutation}.csv` |
 > | C3 baseline ridge / boosting | 0.698 [0.615, 0.774] / 0.687 [0.601, 0.768] | `outputs/results/c3/grade4/results.csv` |
-> | **C3 nested radiomics; ΔAUC vs baseline ridge** | **0.672 [0.597, 0.743]; −0.026 [−0.073, +0.017]** | same |
-> | C3 configs with ΔAUC CI > 0 / < 0 (of 70) | 0 / 12 | same |
+> | **C3 nested radiomics; ΔAUC vs baseline ridge** (after the clipping fix, [FIX_RADIOMICS_CLIP.md](FIX_RADIOMICS_CLIP.md); before: 0.672, −0.026 [−0.073, +0.017]) | **0.666 [0.586, 0.739]; −0.032 [−0.084, +0.017]** | same |
+> | C3 configs with ΔAUC CI > 0 / < 0 (of 70) | 0 / 8 (before the clipping fix 0 / 12) | same |
 > | External, grade-4 boosting, clinical + timing + volumes, locked: per fold / pooled | 0.608 [0.493, 0.691] / 0.620 [0.495, 0.733] | `outputs/results/external_lumiere/results.csv` |
 > | Head-to-head (29 test patients, 82 scans): PRISM report model / baseline ridge, naive / IPCW | 0.802 / 0.817 [0.690, 0.920]; 0.871 / 0.851 [0.735, 0.947] | `outputs/results/c3/prism_report_split/head_to_head.csv` |
 >

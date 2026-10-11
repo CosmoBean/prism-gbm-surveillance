@@ -1,10 +1,10 @@
 # Clinical usefulness: calibration, decision curves, added value, sample size (2026-10-11, final)
 
-**Status: final numbers.** Every number below comes from the final full re-run: `outputs/results/analyses/utility/`
-(2026-10-11 07:40, HEAD `cc2e3a3`; `run_info.json`: per-repeat OOF for every MU model including the deep arm, 1000 bootstrap
-resamples, LUMIERE from the final `external_lumiere/locked_predictions.csv`). The provisional version of this file used a
-private C3 run, repeat-averaged deep predictions and pre-fix LUMIERE predictions; the MU baseline and radiomics rows are
-unchanged, the deep and LUMIERE rows changed.
+**Status: final numbers.** Every number below comes from the re-run after the radiomics clipping fix
+(`outputs/results/analyses/utility/`, 2026-10-11 18:50; [FIX_RADIOMICS_CLIP.md](FIX_RADIOMICS_CLIP.md)). `run_info.json`
+records per-repeat OOF for every MU model including the deep arm and 1000 bootstrap resamples. LUMIERE uses
+`external_lumiere/locked_predictions.csv`. Compared with the `cc2e3a3` run, the baseline, boosting and LUMIERE rows are
+unchanged. The nested radiomics and deep rows changed because both use `c3.selector`.
 
 ```bash
 uv run --frozen --no-sync python -m prism.analyses.utility            # ~10 min, 1 CPU, 1000 bootstrap resamples
@@ -36,28 +36,30 @@ Sources: `calibration.csv`, `net_benefit.csv`, `added_value.csv`.
 |---|---|---|---|---|---|
 | Baseline ridge | 0.698 | 0.96 | −0.09 [−0.42, 0.28] | 0.89 [0.50, 1.43] | 0.032 |
 | Baseline boosting | 0.687 | 0.94 | −0.12 [−0.47, 0.23] | 0.82 [0.44, 1.31] | 0.039 |
-| Baseline + radiomics (nested) | 0.672 | 0.94 | −0.13 [−0.48, 0.25] | **0.50 [0.27, 0.86]** | 0.070 |
-| Baseline + deep (nested D1) | 0.704 | 0.95 | −0.14 [−0.51, 0.30] | **0.49 [0.24, 0.87]** | 0.096 |
+| Baseline + radiomics (nested) | 0.666 | 0.94 | −0.13 [−0.46, 0.25] | **0.60 [0.33, 0.93]** | 0.063 |
+| Baseline + deep (nested D1) | 0.694 | 0.94 | −0.15 [−0.52, 0.28] | **0.55 [0.28, 0.91]** | 0.085 |
 
 | Net benefit (IPCW) | 10% | 20% | 30% |
 |---|---|---|---|
 | Treat all | 0.369 | 0.291 | 0.189 |
 | Baseline ridge | 0.372 | 0.300 | 0.232 |
-| Δ, radiomics (nested) vs baseline | −0.001 [−0.006, 0.004] | +0.002 [−0.009, 0.012] | −0.014 [−0.031, 0.003] |
+| Δ, radiomics (nested) vs baseline | −0.000 [−0.004, 0.004] | −0.001 [−0.013, 0.011] | **−0.020 [−0.038, −0.004]** |
 | Δ, boosting vs baseline | −0.002 [−0.007, 0.001] | −0.007 [−0.021, 0.006] | −0.011 [−0.039, 0.013] |
-| Δ, deep (nested D1) vs baseline | −0.004 [−0.014, 0.005] | +0.006 [−0.012, 0.024] | +0.005 [−0.023, 0.030] |
+| Δ, deep (nested D1) vs baseline | −0.002 [−0.013, 0.006] | +0.002 [−0.014, 0.018] | +0.001 [−0.023, 0.026] |
 
 Added value vs the baseline ridge (continuous NRI(>0), events / non-events, IDI):
-- baseline + radiomics (nested): NRI +0.20 [−0.02, 0.42] (+0.22 events, −0.02 non-events); IDI +0.009 [−0.019, 0.035]
-- baseline + deep (nested D1): NRI +0.52 [0.30, 0.75] (+0.37 events, +0.15 non-events); IDI +0.049 [0.002, 0.097]
+- baseline + radiomics (nested): NRI +0.17 [−0.05, 0.41] (+0.11 events, +0.06 non-events); IDI +0.000 [−0.030, 0.029]
+- baseline + deep (nested D1): NRI +0.48 [0.24, 0.73] (+0.35 events, +0.13 non-events); IDI +0.036 [−0.009, 0.082]
 - baseline boosting: NRI +0.06 [−0.17, 0.30]; IDI +0.004 [−0.032, 0.041]
 
 All gliomas:
-- AUC: baseline 0.720, radiomics (nested) 0.732, deep (nested D1) 0.725.
-- Calibration slope: radiomics 0.77 [0.53, 1.09], deep 0.70 [0.47, 1.00] (baseline 0.88 [0.53, 1.35]).
-- Δ net benefit, radiomics: +0.009 [0.001, 0.018] at 10%, +0.011 [−0.001, 0.025] at 20%, −0.001 [−0.020, 0.018] at 30%.
-- Δ net benefit, deep: +0.004 [−0.002, 0.010] / +0.011 [−0.007, 0.029] / −0.000 [−0.025, 0.023].
-- NRI radiomics +0.31 [0.11, 0.49], IDI +0.029 [−0.000, 0.054]; NRI deep +0.38 [0.17, 0.60], IDI +0.029 [−0.004, 0.062].
+- AUC: baseline 0.720, radiomics (nested) 0.747, deep (nested D1) 0.731.
+- Calibration slope: radiomics 0.85 [0.61, 1.19], deep 0.79 [0.53, 1.12] (baseline 0.88 [0.53, 1.35]).
+- Δ net benefit, radiomics: +0.011 [0.004, 0.020] at 10%, +0.014 [0.001, 0.027] at 20%, −0.002 [−0.026, 0.020] at 30%.
+- Δ net benefit, deep: +0.005 [−0.001, 0.012] / +0.011 [−0.004, 0.029] / −0.005 [−0.029, 0.017].
+- NRI radiomics +0.45 [0.25, 0.65], IDI +0.044 [0.012, 0.071]; NRI deep +0.37 [0.16, 0.56], IDI +0.031 [0.002, 0.061].
+- In all gliomas, nested radiomics has a small net benefit gain whose CI excludes 0 at 10% and 20%, and an IDI above 0.
+  Its ΔAUC CI still spans 0 (+0.028 [−0.017, +0.071]), and nothing similar appears in grade 4.
 
 ## LUMIERE (grade-4-trained, clinical + timing + volumes, locked; 132 scans / 61 patients)
 
@@ -96,12 +98,14 @@ Source: `sample_size.csv` (`from_auc` rows). All gliomas: 256 verified scans, 10
 
 ## Findings
 1. **Neither radiomics nor deep features add clinical value.**
-   - Grade 4: Δ net benefit is within ±0.015 at every reported threshold for both, and every CI crosses 0.
-   - Both nested image models are clearly overfit (slope 0.50 radiomics, 0.49 deep).
-   - Their positive continuous NRI (and, for deep, an IDI whose CI just excludes 0: +0.049 [0.002, 0.097]) come mostly
-     from upward risk shifts in events. Continuous NRI and IDI reward miscalibrated or overfit models (Hilden & Gerds 2014;
-     Pepe 2015), so we report them only alongside ΔAUC and Δ net benefit, which are null (deep ΔAUC +0.006 [−0.058, +0.071],
-     `DEEP_FEATURES.md`).
+   - Grade 4: Δ net benefit is within ±0.020 at every reported threshold for both. Every CI crosses 0 except radiomics
+     at 30%: −0.020 [−0.038, −0.004], so radiomics is *worse* than the baseline there.
+   - Both nested image models are overfit (slope 0.60 radiomics, 0.55 deep).
+   - Their positive continuous NRI comes mostly from upward risk shifts in events. For deep, NRI +0.48 [0.24, 0.73] and
+     IDI +0.036 [−0.009, 0.082]. Continuous NRI and IDI reward miscalibrated or overfit models (Hilden & Gerds 2014;
+     Pepe 2015). We therefore report them only alongside ΔAUC and Δ net benefit, which are null (deep ΔAUC −0.004 [−0.069,
+     +0.063], `DEEP_FEATURES.md`).
+   - All gliomas is the exception noted above: radiomics gives +0.011 / +0.014 net benefit at 10% / 20%, with CIs above 0.
 2. **Baselines are well calibrated in the large** (O/E 0.94–0.96, CITL CIs include 0) and only mildly over-fitted (slope 0.82–0.89).
 3. **Clinical usefulness is modest.** The models beat treat-all only above ~20% threshold, because 120-d progression is common (φ ≈ 0.44). At 30% the baseline gains +0.043 net benefit over treat-all, about 4 extra true positives per 100 scans at equal false positives. On LUMIERE the locked model adds essentially nothing over treat-all (≤ +0.019).
 4. **The study is underpowered by Riley's criteria even for the baseline.** It has 3–4 events per parameter, against the ~31 implied by the shrinkage criterion (970 events / 31 parameters); our n is about one tenth of the required 2190. Radiomics models are short by one to three orders of magnitude, which explains the null and unstable radiomics results.

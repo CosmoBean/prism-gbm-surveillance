@@ -1,10 +1,12 @@
-# C3 — Can radiomics improve on a clinical + timing + treatment baseline? (2026-10-06; numbers updated to the final run 2026-10-11)
+# C3 — Can radiomics improve on a clinical + timing + treatment baseline? (2026-10-06; numbers updated after the clipping fix, 2026-10-11)
 
-**Final numbers** from the final full re-run: `outputs/results/c3/{grade4,all_glioma}/{results,nested_choices}.csv`
-(2026-10-11 06:42, label-fixed cohort, as-of-scan treatment features; headline = mean over 5 repeats of the per-repeat
-pooled-OOF IPCW AUC, paired patient-cluster bootstrap ΔAUC, 1000 resamples) and
-`outputs/results/c3/prism_report_split/head_to_head.csv` (06:44). The 2026-10-06 numbers are superseded; the legacy
-ablation table was not re-run and is kept only for the record.
+**Final numbers** from the re-run after the radiomics outlier-clipping fix: `outputs/results/c3/{grade4,all_glioma}/{results,nested_choices}.csv`
+(2026-10-11 18:21–18:23, label-fixed cohort, as-of-scan treatment features, in-fold 1%/99% `QuantileClip` first in
+`selector()`, see [FIX_RADIOMICS_CLIP.md](FIX_RADIOMICS_CLIP.md); headline = mean over 5 repeats of the per-repeat
+pooled-OOF IPCW AUC, paired patient-cluster bootstrap ΔAUC, 1000 resamples). The head-to-head section is from
+`outputs/results/c3/prism_report_split/head_to_head.csv` (06:44), which was **not** re-run after the clipping fix, so
+its radiomics rows predate it. The 2026-10-06 numbers are superseded. The legacy ablation table was not re-run and is
+kept only for the record.
 
 Code: `prism/features/radiomics.py` (corrected extraction), `prism/features/tabular.py:treatment`, `prism/experiments/c3_radiomics.py`.
 Setup: verified 120-d labels, 5×5 repeated patient-grouped CV, all steps in-fold; IPCW AUC(120 d); paired ΔAUC vs the ridge baseline with a patient-cluster bootstrap (1000).
@@ -19,12 +21,12 @@ Corrected extraction: whole-brain z-score, fixed 32 bins (GLCM joint entropy 4.7
 |---|---|---|---|
 | Baseline, ridge | 0.698 [0.615, 0.774] | — | 0.89 |
 | Baseline, regularised boosting | 0.687 [0.601, 0.768] | −0.012 [−0.072, +0.048] | 0.82 |
-| Best radiomics config (post hoc: legacy, pca10, concat) | 0.717 [0.635, 0.787] | +0.019 [−0.056, +0.094] | 0.61 |
-| **Nested choice over all 70 radiomics configs (honest)** | **0.672** [0.597, 0.743] | **−0.026 [−0.073, +0.017]** | 0.50 |
+| Best radiomics config (post hoc: legacy, pca10, stack) | 0.721 [0.638, 0.793] | +0.023 [−0.013, +0.057] | 0.92 |
+| **Nested choice over all 70 radiomics configs (honest)** | **0.666** [0.586, 0.739] | **−0.032 [−0.084, +0.017]** | 0.60 |
 
-Median ΔAUC by variant: legacy +0.007, v2_all4 −0.020, v2_compartments −0.021, v2_lesion −0.004. Configurations with ΔAUC CI
-above 0: **0 / 70**; below 0: 12 / 70 (stacked v2 variants, Δ −0.006 to −0.014 with narrow paired CIs). Nested choices:
-legacy in 17/25 outer folds, stacked integration in 14/25.
+Median ΔAUC by variant: legacy +0.005, v2_all4 −0.016, v2_compartments −0.017, v2_lesion −0.001. Configurations with ΔAUC CI
+above 0: **0 / 70**. Below 0: 8 / 70 (stacked v2_all4 / v2_compartments, Δ −0.007 to −0.009 with narrow paired CIs).
+Nested choices: legacy in 18/25 outer folds, stacked integration in 13/25.
 
 ## all_glioma (308 scans / 155 patients)
 
@@ -32,11 +34,13 @@ legacy in 17/25 outer folds, stacked integration in 14/25.
 |---|---|---|---|
 | Baseline, ridge | 0.720 [0.638, 0.792] | — | 0.88 |
 | Baseline, regularised boosting | 0.718 [0.642, 0.792] | −0.002 [−0.052, +0.047] | 0.87 |
-| Best radiomics config (post hoc: legacy, pca10, concat) | 0.751 [0.690, 0.812] | +0.031 [−0.031, +0.095] | 0.79 |
-| **Nested choice over all 70 radiomics configs (honest)** | **0.732** [0.664, 0.794] | **+0.012 [−0.029, +0.050]** | 0.77 |
+| Best radiomics config (post hoc: legacy, pca10, stack) | 0.754 [0.685, 0.823] | +0.035 [+0.002, +0.068] | 0.96 |
+| **Nested choice over all 70 radiomics configs (honest)** | **0.747** [0.678, 0.811] | **+0.028 [−0.017, +0.071]** | 0.85 |
 
-Median ΔAUC by variant: legacy +0.027, v2_all4 +0.000, v2_compartments −0.006, v2_lesion +0.004. Configurations with ΔAUC CI
-above 0: **0 / 70** (below 0: 0 / 70). Nested choices: legacy in 23/25 outer folds.
+Median ΔAUC by variant: legacy +0.024, v2_all4 +0.000, v2_compartments −0.005, v2_lesion +0.005. Configurations with ΔAUC CI
+above 0: **1 / 70**: `legacy|none|pca10|stack`, Δ +0.035 [+0.002, +0.068], p(Δ ≤ 0) = 0.021. This is uncorrected for
+multiple testing: at a one-sided 2.5% level about 1.75 of 70 null configurations would exclude 0 by chance. Below 0:
+0 / 70. Nested choices: legacy in 25/25 outer folds (`legacy|none|pca10|stack` in 14/25).
 
 ## Legacy radiomics ablation (top-10, concatenated, ridge) — 2026-10-06 run, not re-run (superseded inputs)
 
@@ -52,17 +56,20 @@ above 0: **0 / 70** (below 0: 0 / 70). Nested choices: legacy in 23/25 outer fol
 
 ## Findings
 
-1. **Radiomics does not improve on the baseline.** No configuration has a ΔAUC CI above 0 (0/70 in both populations). Honest
-   nested estimate: Δ −0.026 [−0.073, +0.017] (grade 4, the pre-specified primary analysis), +0.012 [−0.029, +0.050] (all
-   gliomas). The best post-hoc configuration adds +0.019 / +0.031, not significantly.
+1. **Radiomics does not improve on the baseline.** Honest nested estimate: Δ −0.032 [−0.084, +0.017] in grade 4 (the
+   pre-specified primary analysis) and +0.028 [−0.017, +0.071] in all gliomas. Both CIs span 0. No grade-4 configuration
+   has a ΔAUC CI above 0 (0/70). In all gliomas 1/70 does (stacked legacy PCA-10, +0.035 [+0.002, +0.068]), which is
+   fewer than the ~1.75 expected by chance among 70 uncorrected tests. The best post-hoc configuration adds +0.023 /
+   +0.035.
 2. **Correcting the discretisation did not help.** The only variant with a positive median Δ is the legacy 2-level texture
-   (+0.007 / +0.027), which behaves as a *binary habitat descriptor* (spatial arrangement of above- vs below-lesion-mean
-   voxels). Brain-referenced 32-bin texture (v2) carries no added signal (median Δ −0.021 to +0.004).
+   (+0.005 / +0.024), which behaves as a *binary habitat descriptor* (spatial arrangement of above- vs below-lesion-mean
+   voxels). Brain-referenced 32-bin texture (v2) carries no added signal (median Δ −0.017 to +0.005).
 3. **Treatment features strengthen the baseline:** ridge 0.698 (grade 4) vs 0.644 for clinical + timing ridge in C2
    (`analyses/baselines/ladder.csv`: −0.054 [−0.103, −0.012]); regularised boosting does not beat ridge (0.687).
-4. **Stacking beats concatenation in grade 4** (median Δ −0.004 vs −0.031): with ~200 training scans, appending tens of
-   radiomics columns hurts; a single radiomics score is safer. In all gliomas both are ≈ 0.
-5. **Nested radiomics models are overconfident** (calibration slope 0.50 grade 4, 0.77 all gliomas, vs 0.89 / 0.88 baseline).
+4. **Stacking beats concatenation in grade 4** (median Δ −0.003 vs −0.027): with ~200 training scans, appending tens of
+   radiomics columns hurts; a single radiomics score is safer. In all gliomas both are ≈ 0 (+0.004 vs +0.000).
+5. **Nested radiomics models are overconfident** (calibration slope 0.60 grade 4, 0.85 all gliomas, vs 0.89 / 0.88 baseline).
+   Before the clipping fix the slopes were 0.50 / 0.77: part of the overconfidence came from the 1e6 sentinel values.
 
 ## Implication
 Within MU-Glioma-Post, conventional radiomics adds nothing measurable over clinical + timing + treatment information (honest
@@ -70,6 +77,9 @@ grade-4 estimate slightly negative). Previously reported radiomics performance (
 missing treatment-aware baseline, not image signal.
 
 ## Head-to-head on the PRISM report split (126 train / 29 test patients, 82 test scans, all gliomas)
+
+_Not re-run after the clipping fix (2026-10-11 06:44): the three "Baseline + … radiomics" rows predate it. The PRISM
+report model and baseline rows do not use `c3.selector` and are unaffected._
 
 PRISM report split = same test patients as the shipped PRISM radiomics model (`legacy/radiomics/models/calibrated/test_predictions.csv`;
 one of its 30 test patients has no index scan in the label-fixed cohort); our models trained once on its training patients with

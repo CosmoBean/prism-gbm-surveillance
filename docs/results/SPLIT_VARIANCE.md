@@ -3,9 +3,12 @@
 Plan item 3.5; follows An et al. 2021 (*PLOS ONE*, doi:10.1371/journal.pone.0256152).
 
 **Final numbers** from `outputs/results/analyses/split_variance/{summary.csv, per_split_auc.csv, run_info.json}` (final run,
-git HEAD `bea5b7c`, `tabular.py` clean, 14.0 min; figure re-plotted 07:41). Earlier versions of this file used a run with
-an in-progress `tabular.py`; the PRISM report rows barely moved and the baseline rows now use the final as-of-scan
-treatment features.
+git HEAD `bea5b7c`, `tabular.py` clean, 14.0 min). The figure and `summary.csv` were re-plotted on 2026-10-11 18:50 from the
+same `per_split_auc.csv`, and `summary.csv` is unchanged. Earlier versions of this file used a run with an in-progress
+`tabular.py`. The PRISM report rows barely moved, and the baseline rows now use the final as-of-scan treatment features.
+**Caveat:** the per-split fits predate the radiomics clipping fix ([FIX_RADIOMICS_CLIP.md](FIX_RADIOMICS_CLIP.md)). The
+`baseline_rad` row (legacy top-10, concatenated, via `c3.fit_predict`) was therefore fitted without clipping. The PRISM
+report and baseline rows do not use `c3.selector` and are unaffected.
 
 ## Method
 - **Design.** The PRISM report's own split search (`legacy/radiomics/.../train.py` `choose_test_patients`). For each seed it makes
