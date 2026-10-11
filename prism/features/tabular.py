@@ -31,10 +31,14 @@ def clinical(cohort: pd.DataFrame) -> pd.DataFrame:
 
 
 def timing(cohort: pd.DataFrame) -> pd.DataFrame:
-    rt = cohort["days_since_rt_end"]
+    """Time features as of the scan. Days since RT end only once RT has ended (the end date of an ongoing or future
+    course is not known at the scan); early_post_rt = RANO 12-week pseudoprogression window, also x MGMT methylated."""
+    rt = cohort["days_since_rt_end"].where(cohort["days_since_rt_end"] >= 0)
+    early = cohort["early_post_rt"].astype(float)
     return pd.DataFrame({"days_from_diagnosis": cohort["days_from_diagnosis_to_mri"], "days_since_rt_end": rt,
                          "rt_date_unknown": rt.isna().astype(float),
-                         "early_post_rt": cohort["early_post_rt"].astype(float),
+                         "early_post_rt": early,
+                         "early_post_rt_x_mgmt_methylated": early * cohort["mgmt"].eq("methylated").astype(float),
                          "visit_index": cohort["visit_index"]}, index=cohort.index)
 
 
@@ -44,23 +48,36 @@ def volumes(cohort: pd.DataFrame) -> pd.DataFrame:
                         index=cohort.index)
 
 
-def treatment(cohort: pd.DataFrame) -> pd.DataFrame:
-    """Treatment known at scan time: RT schedule, initial chemo, surgery timing, biopsy first, prior tumour."""
-    d = load_index().set_index("scan_id").reindex(cohort.scan_id)
+def treatment(cohort: pd.DataFrame, index: pd.DataFrame | None = None) -> pd.DataFrame:
+    """Treatment as of the scan day. A therapy counts only once its documented start day is <= the scan day; the RT
+    prescription (dose, fractions) is known from RT start, the RT duration only from RT end. Not-yet-known values are
+    NaN (imputed in-fold) with explicit rt_started / rt_completed / chemo_started indicators. A missing start date
+    for a given therapy (2 RT, 2 chemo patients) is taken as started before the scan."""
+    d = (load_index() if index is None else index).set_index("scan_id").reindex(cohort.scan_id)
     num = lambda c: pd.to_numeric(d[c].astype(str).str.extract(r"([-\d.]+)")[0], errors="coerce").to_numpy()
+    mri = pd.to_numeric(cohort["days_from_diagnosis_to_mri"], errors="coerce").to_numpy(float)
     rt_start = num("clinical_number_of_days_from_diagnosis_to_radiation_therapy_start_date")
     rt_end = num("clinical_number_of_days_from_diagnosis_to_radiation_therapy_end_date")
-    fractions = num("clinical_number_of_fractions")
+    chemo_start = num("clinical_number_of_days_from_diagnosis_to_initial_chemo_therapy_start_date")
+    surgery = num("clinical_number_of_days_from_diagnosis_to_first_surgery_or_procedure")
+    by_scan = lambda day: np.isnan(day) | (day <= mri)
+    rt_given = d["clinical_radiation_therapy"].astype(str).str.strip().isin(["Yes", "Proton Therapy"]).to_numpy()
+    started = rt_given & by_scan(rt_start)
+    completed = started & ~np.isnan(rt_end) & (rt_end <= mri)
+    known = lambda x, ok: np.where(ok, x, np.nan)
+    fractions = known(num("clinical_number_of_fractions"), started)
     return pd.DataFrame({
-        "rt_given": d["clinical_radiation_therapy"].eq("Yes").to_numpy(float),
-        "rt_dose_gy": num("clinical_dose"),
+        "rt_started": started.astype(float),
+        "rt_completed": completed.astype(float),
+        "rt_dose_gy": known(num("clinical_dose"), started),
         "rt_fractions": fractions,
-        "rt_hypofractionated": (fractions <= 15).astype(float),
-        "rt_start_day": rt_start,
-        "rt_duration_days": rt_end - rt_start,
-        "chemo_given": d["clinical_initial_chemo_therapy"].eq("Yes").to_numpy(float),
-        "surgery_day": num("clinical_number_of_days_from_diagnosis_to_first_surgery_or_procedure"),
-        "biopsy_before_resection": num("clinical_stereotactic_biopsy_before_surgical_resection"),
+        "rt_hypofractionated": known((fractions <= 15).astype(float), ~np.isnan(fractions)),
+        "rt_start_day": known(rt_start, started),
+        "rt_duration_days": known(rt_end - rt_start, completed),
+        "chemo_started": (d["clinical_initial_chemo_therapy"].astype(str).str.strip().eq("Yes").to_numpy()
+                          & by_scan(chemo_start)).astype(float),
+        "surgery_day": known(surgery, surgery <= mri),
+        "biopsy_before_resection": known(num("clinical_stereotactic_biopsy_before_surgical_resection"), surgery <= mri),
         "previous_brain_tumor": d["clinical_previous_brain_tumor"].astype(str).str.strip().eq("Yes").to_numpy(float),
     }, index=cohort.index)
 
