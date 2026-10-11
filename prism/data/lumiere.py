@@ -9,7 +9,8 @@ rating is ignored (death_date_conflict); a single rated scan after death is drop
 early_post_rt is the rater's "LessThan3Months" flag (< ~90 d after RT), not MU's 0-84 d window from the RT end date.
 label_{H}_altdate / _imgfu equal label_{H} (one progression source, imaging-only follow-up already).
 
-Volumes are the DeepBraTumIA segmentations shipped with LUMIERE (read straight from the imaging archive).
+Volumes are the DeepBraTumIA segmentations shipped with LUMIERE (read straight from the imaging archive); an all-empty
+segmentation is a segmentation failure and its volumes are NaN (imputed inside the fitted model pipelines).
 
     python -m prism lumiere   # -> outputs/data/lumiere_cohort.csv
 """
@@ -107,7 +108,14 @@ def deepbratumia_volumes(zip_path: Path = ROOT / "Imaging-v202211.zip") -> pd.Da
                 date = next(p for p in parts if p.startswith("week-"))
                 vols = json.loads(z.read(name))
                 rows.append({"scan_id": f"{pid}_{date}", **{f"raw_{k}": v for k, v in vols.items()}})
-    return pd.DataFrame(rows)
+    out = pd.DataFrame(rows)
+    # An all-empty mask (no necrosis/cavity, enhancement or oedema) in a post-operative glioblastoma is a failed
+    # segmentation, not "no tumour" (e.g. Patient-023 week-024): missing, not 0 cc.
+    raw = [c for c in out if c.startswith("raw_")]
+    empty = out[raw].eq(0).all(axis=1)
+    out.loc[empty, raw] = np.nan
+    print(f"DeepBraTumIA: {int(empty.sum())} studies with an all-empty segmentation -> volumes set to NaN")
+    return out
 
 
 def load_cohort() -> pd.DataFrame:
@@ -123,7 +131,8 @@ def main(argv=None) -> None:
         print(f"WARNING: {zp} not found - cohort written without volumes")
     LUMIERE_COHORT.parent.mkdir(parents=True, exist_ok=True)
     c.to_csv(LUMIERE_COHORT, index=False)
-    print(f"{len(c)} index scans / {c.patient_id.nunique()} patients")
+    print(f"{len(c)} index scans / {c.patient_id.nunique()} patients; "
+          f"without volumes {int(c.filter(like='raw_').isna().all(axis=1).sum())}")
     print(f"death date ignored (conflict): {sorted(c.loc[c.death_date_conflict, 'patient_id'].unique())}; "
           f"death without PD {int(c.death_without_progression.sum())} scans")
     for h in HORIZONS:

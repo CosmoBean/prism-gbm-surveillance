@@ -9,6 +9,8 @@ Sensitivities (each changes one thing relative to the primary: grade 4, verified
   imgfu           non-progressor follow-up from MRIs only (label_120_imgfu; censoring time = imaging follow-up)
   all_glioma      all gliomas instead of grade 4
   excl_post_rt    scans in the 12-week post-RT window removed (early_post_rt == 1; unknown RT end kept)
+  excl_0145       patient 0145 removed: its two progression-date fields disagree (495 vs 66 d) and its death date is
+                  ignored by the death-date-conflict rule (FIX_LABELS.md 1b, 3), so its outcome is unreliable
 
 Folds: outputs/data/folds.csv (stratified on the primary 120-d status) for every sensitivity; subsets keep each
 patient's fold. The c3 pipeline (prism.experiments.c3_radiomics.fit_predict / inner_auc) is reused unchanged; the
@@ -44,7 +46,9 @@ SENS = {
     "imgfu": ("grade4", 120, "imgfu", "Imaging-only follow-up"),
     "all_glioma": ("all_glioma", 120, "", "All gliomas"),
     "excl_post_rt": ("grade4", 120, "excl_post_rt", "Excluding 12-wk post-RT scans"),
+    "excl_0145": ("grade4", 120, "excl_0145", "Excluding patient 0145 (conflicting dates)"),
 }
+EXCLUDED_PATIENTS = {"excl_0145": ["PatientID_0145"]}
 _CACHE = {}
 
 
@@ -69,6 +73,9 @@ def prepare(name):
         t = np.where(ev, t, np.maximum(cohort.follow_up_imaging_days.to_numpy(float), 0.5))
     elif variant == "excl_post_rt":
         keep = ~cohort.early_post_rt.eq(1).to_numpy()
+    elif variant in EXCLUDED_PATIENTS:
+        assert cohort.patient_id.isin(EXCLUDED_PATIENTS[variant]).any(), variant
+        keep = ~cohort.patient_id.isin(EXCLUDED_PATIENTS[variant]).to_numpy()
     cohort["event"], cohort["time_to_event"] = ev, t
     if variant in ("composite", "altdate"):  # naive label of this outcome (only used for the secondary auc_naive)
         cohort[f"naive_label_{H}"] = (ev & (t <= H)).astype(int)

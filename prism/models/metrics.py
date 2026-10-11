@@ -210,7 +210,9 @@ def fold_mean_metrics(d: pd.DataFrame, P: np.ndarray, fold_ids: np.ndarray, hori
     """Per-fold IPCW AUC/Brier (cohort-level censoring weights), O/E and calibration slope, averaged over folds.
 
     P, fold_ids: (n_repeats x n_scans); each (repeat, fold) is one held-out set. Folds without a case or control
-    are skipped for AUC; slope needs both verified classes."""
+    are skipped for AUC; slope needs both verified classes. oe_ratio_pooled = Kaplan-Meier risk at H of the whole
+    cohort / mean held-out prediction over all scans and repeats (calibration-in-the-large is a ratio of totals, so
+    it can be pooled across folds; a mean of per-fold ratios is unstable with ~25-scan folds)."""
     ctx = ipcw_context(d, horizon) if ctx is None else ctx
     label = d[f"label_{horizon}"].to_numpy(float)
     s = _surv(d, horizon)
@@ -237,6 +239,9 @@ def fold_mean_metrics(d: pd.DataFrame, P: np.ndarray, fold_ids: np.ndarray, hori
         out[f"{k}_fold_mean"], out[f"{k}_fold_sd"] = float(np.nanmean(v)), float(np.nanstd(v))
         if k == "cal_slope":
             out["cal_slope_fold_median"] = float(np.nanmedian(v))
+    times, km = kaplan_meier_estimator(s["event"], s["time"])
+    obs = 1.0 - float(km[times <= horizon][-1]) if (times <= horizon).any() else 0.0
+    out["oe_ratio_pooled"] = obs / float(np.mean(P))
     out["n_folds_auc"] = int(np.isfinite(vals["auc_ipcw"]).sum())
     return out
 
@@ -283,11 +288,11 @@ def fold_mean_bootstrap(d: pd.DataFrame, arms: dict[str, np.ndarray], fold_ids: 
 
 
 # ---------------------------------------------------------------- warnings in worker processes
+# f_classif's divide warning is silenced at its call site (c3_radiomics.f_classif_quiet) and the SWIG import
+# deprecation at the SimpleITK import (features/radiomics.py); every other RuntimeWarning is counted and logged.
 KNOWN_NOISY = (  # (category, message regex): expected and harmless in these pipelines
     (UserWarning, r"Features .* are constant"),
-    (RuntimeWarning, r"invalid value encountered in (divide|true_divide)"),
     (UserWarning, r"Skipping features without any observed values"),
-    (DeprecationWarning, r"builtin type .* has no __module__ attribute"),  # SWIG (SimpleITK) import
 )
 
 

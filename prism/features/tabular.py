@@ -109,7 +109,7 @@ def measurement_groups(cohort: pd.DataFrame) -> dict[str, pd.DataFrame]:
                             m[["d_et_n_components", *DELTA_REL, "vol_pd_flag", "new_et_component"]].fillna(0),
                             pd.DataFrame({f"{c}_missing": (m.has_prior.eq(1) & m[c].isna()).astype(float)
                                           for c in DELTA_REL}),
-                            m.reindex(columns=["et_new_from_zero_nadir"]).fillna(0)], axis=1),
+                            m[["et_new_from_zero_nadir"]].fillna(0)], axis=1),
     }
 
 

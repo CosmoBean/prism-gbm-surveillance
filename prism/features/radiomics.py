@@ -25,14 +25,18 @@ from __future__ import annotations
 import argparse
 import json
 import logging
+import warnings
 from concurrent.futures import ProcessPoolExecutor
 
 import nibabel as nib
 import numpy as np
 import pandas as pd
-import SimpleITK as sitk
-from radiomics import featureextractor
 from scipy import ndimage
+
+with warnings.catch_warnings():  # SWIG bindings warn once, at import time (Python >= 3.12): nothing to act on
+    warnings.filterwarnings("ignore", r"builtin type .* has no __module__ attribute", DeprecationWarning)
+    import SimpleITK as sitk
+    from radiomics import featureextractor
 
 from prism.config import (LABEL_ET, LABEL_NETC, LABEL_RC, LABEL_SNFH, LEGACY_FEATURES_DIR, RADIOMICS,
                           RADIOMICS_ERODED, WORKERS, mu_scan_paths)

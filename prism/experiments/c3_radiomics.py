@@ -146,16 +146,23 @@ class L1Select(BaseEstimator, TransformerMixin):
         return X[:, self.keep_] if len(self.keep_) else np.zeros((len(X), 1))
 
 
+def f_classif_quiet(X, y):
+    """f_classif without numpy's divide warning for a zero within-class variance (NaN score; SelectKBest ranks it
+    last)."""
+    with np.errstate(divide="ignore", invalid="ignore"):
+        return f_classif(X, y)
+
+
 def selector(name):
     steps = [("imp", ImputeWithFlags()), ("var", VarianceThreshold(1e-8)), ("sc", StandardScaler())]
     if name.startswith("top"):
-        steps.append(("sel", SelectKBest(f_classif, k=int(name[3:]))))
+        steps.append(("sel", SelectKBest(f_classif_quiet, k=int(name[3:]))))
     elif name == "l1":
         steps.append(("sel", L1Select(C=0.1, max_features=30)))
     elif name == "pca10":
         steps.append(("sel", PCA(n_components=10, random_state=0)))
     elif name == "decor20":
-        steps += [("dec", Decorrelate(0.9)), ("sel", SelectKBest(f_classif, k=20))]
+        steps += [("dec", Decorrelate(0.9)), ("sel", SelectKBest(f_classif_quiet, k=20))]
     return Pipeline(steps)
 
 

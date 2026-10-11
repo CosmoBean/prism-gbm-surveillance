@@ -23,6 +23,10 @@ consistent):
   are dropped;
 - imaging-only follow-up: non-progressors are censored at `follow_up_imaging_days`;
 - post-RT: scans with `early_post_rt == 1` (0–84 d after RT end) are removed. Scans with an unknown RT end are kept.
+- excluding 0145: patient 0145 (2 grade-4 scans, both verified negative at 120 d) is removed. Its two progression-date
+  fields disagree (day 495 vs 66) and its death date is ignored as contradicted by later records (FIX_LABELS.md 1b, 3).
+  Added after the first run; its row and the primary row were re-run together (private outputs, 2026-10-11) and the
+  primary row reproduced exactly.
 
 | Sensitivity | Scans / pts | Events / censored | Baseline AUC [95% CI] | + radiomics (nested) | ΔAUC [95% CI] |
 |---|---|---|---|---|---|
@@ -34,20 +38,22 @@ consistent):
 | Imaging-only follow-up | 249 / 126 | 93 / 43 | 0.685 [0.600, 0.761] | 0.651 | −0.034 [−0.085, +0.015] |
 | All gliomas | 308 / 155 | 100 / 52 | 0.720 [0.638, 0.792] | 0.732 | +0.012 [−0.029, +0.050] |
 | Excluding 12-wk post-RT scans | 151 / 90 | 46 / 39 | 0.725 [0.602, 0.834] | 0.725 | +0.001 [−0.054, +0.059] |
+| Excluding patient 0145 (conflicting dates) | 247 / 125 | 93 / 39 | 0.691 [0.602, 0.776] | 0.679 | −0.011 [−0.064, +0.038] |
 
 ![forest plot](../../outputs/results/analyses/sensitivity/forest.png)
 
 ## Findings
 
-1. **"Radiomics adds no measurable value" is robust.** None of the 8 ΔAUC CIs excludes 0. The point estimates range
-   from −0.034 to +0.012, and 6 of 8 are negative. The largest upper bound is +0.059, after excluding post-RT scans,
+1. **"Radiomics adds no measurable value" is robust.** None of the 9 ΔAUC CIs excludes 0. The point estimates range
+   from −0.034 to +0.012, and 7 of 9 are negative. Dropping patient 0145 (conflicting dates) moves the baseline by
+   −0.007 and ΔAUC from −0.026 to −0.011. The largest upper bound is +0.059, after excluding post-RT scans,
    where n = 151. Δ IPCW Brier is ≥ −0.001 in every row (`summary.csv`), so radiomics never improves it either.
 2. **The baseline is less robust than the null result.** Its AUC ranges from 0.64 (composite) to 0.73 (post-RT
    excluded). The composite outcome is the hardest: death without documented progression is less predictable from
    these features. Removing the post-RT window does not lower the baseline (0.725), so timing features are not only
    picking up pseudoprogression-window scans. The CI is wide at 46 events.
-3. **Nested radiomics models are overconfident.** Their calibration slopes are 0.39–0.53 in grade 4 (baseline
-   0.52–0.90) and 0.77 in all gliomas. Legacy radiomics is chosen in 10–23 of 25 outer folds per row
+3. **Nested radiomics models are overconfident.** Their calibration slopes are 0.39–0.53 in grade 4 (0.60 without
+   patient 0145; baseline 0.52–0.90) and 0.77 in all gliomas. Legacy radiomics is chosen in 10–23 of 25 outer folds per row
    (`nested_choices.csv`).
 4. **The primary row is lower than the FIX_EVALUATION number.** Primary ΔAUC is −0.026 here, vs −0.002 in
    FIX_EVALUATION, because this run uses the post-label-fix cohort (249 scans, death censored), not the 253-scan

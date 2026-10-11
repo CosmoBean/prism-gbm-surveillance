@@ -9,6 +9,11 @@ The PRISM report radiomics model enters with its shipped test-set probabilities
     -> outputs/results/c3/prism_report_split/head_to_head.csv   (head_to_head_masking_only.csv with --drop-mgmt-flag)
 
 --drop-mgmt-flag removes the early-post-RT x MGMT-methylated flag from the timing block (the "masking only" ablation).
+
+The two legacy rows can be (near-)identical; that is expected, not a bug. Univariate top-10 selection on all 2446 legacy
+columns picks almost only 2-level texture: original-image texture (which "legacy texture" also offers) or its
+wavelet-LLL twin (excluded from "legacy texture", r 0.93-0.99 with the original feature). On the 2026-10-11 data the
+two top-10 sets share 7 features and the rows differ (IPCW AUC 0.840 vs 0.847); with other labels they can coincide.
 """
 
 from __future__ import annotations

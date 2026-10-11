@@ -105,8 +105,10 @@ all-glioma-trained 0.697 [0.563, 0.816] → 0.692 [0.557, 0.810]. The PRISM repo
 
 ## 4. Reading
 
-- **Removing the leakage raised the treatment-aware baseline** (ridge +0.035 grade 4, +0.030 all gliomas), as the earlier
-  one-off check suggested (0.694 → 0.732). The leaked values gave pre-RT and on-RT scans the treatment profile of a
+- **Removing the leakage raised the treatment-aware baseline** (ridge +0.035 grade 4, +0.030 all gliomas; grade 4
+  0.694 → 0.729, "After" column of the C3 table in section 3). The earlier one-off check quoted in
+  `docs/PIPELINE_REVIEW.md` (T1: 0.694 → 0.732) was an exploratory run; no script or output for it exists in docs/,
+  outputs/ or the session scratchpad, so it cannot be reproduced; use the pipeline number. The leaked values gave pre-RT and on-RT scans the treatment profile of a
   completed course and mixed them with post-RT scans (negative days since RT end); with the masking they are an explicit
   state (`rt_started`, `rt_completed`). The gain is within the CIs.
 - **The MGMT × window flag adds nothing**: masking-only and full results differ by ≤ 0.008 in every repeated-CV row (grade 4

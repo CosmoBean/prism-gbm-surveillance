@@ -9,7 +9,7 @@ import numpy as np
 import pandas as pd
 
 from prism.data.mu import add_outcomes, eligible_scans, patient_dates
-from prism.models.formulations import person_period
+from prism.models.formulations import _observed_time, censoring_survival, person_period
 
 DEATH = "clinical_number_of_days_from_diagnosis_to_death_days"
 PROG = "clinical_number_of_days_from_diagnosis_to_date_of_first_progression"
@@ -69,7 +69,10 @@ class CohortRuleTests(unittest.TestCase):
         self.assertEqual(d.at["many_after_1", "label_120"], 0.0)         # death ignored: follow-up 280 d
         self.assertEqual(d.at["alt_1", "label_120"], 0.0)
         self.assertEqual(d.at["alt_1", "label_120_altdate"], 1.0)
-        self.assertFalse(d["status_known_indefinitely"].any())
+        # death censors in the IPCW bookkeeping: the dead non-progressor is observed to day 50 and counted as censored
+        # (a "status known" row would be pushed past H and never censored)
+        self.assertEqual(_observed_time(d.loc[["one_after_1"]], 120)[0], 50)
+        self.assertEqual(censoring_survival(d.loc[["one_after_1", "many_after_1"]], 120)(np.array([60.0]))[0], 0.5)
 
 
 class CompositeTests(unittest.TestCase):

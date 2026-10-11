@@ -133,8 +133,10 @@ stays manual). `run_all.sh` has the new steps and a `--to STEP` option.
   single zero column. The plain `threshold=1e-10` crashed on a fold where nothing survived.
 - **nested_choices.csv** (C3) now has `repeat, fold, chosen, inner_auc`.
 - **Warnings**: workers no longer call `warnings.filterwarnings("ignore")`. `counted_warnings` silences only the known
-  noisy ones (constant features in `f_classif`, its divide-by-zero, SWIG import deprecations) and logs a per-job count
-  of everything else to stderr. Validation runs logged no convergence or other warnings.
+  noisy ones (constant features in `f_classif`; columns without observed values) and logs a per-job count of everything
+  else to stderr. `f_classif`'s divide warning is silenced at its call site (`c3_radiomics.f_classif_quiet`,
+  `np.errstate`) and the SWIG deprecation at the SimpleITK import (`features/radiomics.py`; the earlier filter in the
+  worker wrapper never applied because the warning fires at import time). Validation runs logged no convergence or other warnings.
 - **mu_cv** in external uses `folds.csv`. **ΔAUC** everywhere is the point estimate with a bootstrap CI.
 
 ## 7. Scripts

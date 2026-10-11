@@ -7,6 +7,21 @@ Tests: `tests/test_label_fixes.py` (new), `tests/test_labels_and_folds.py` (upda
 regenerates `outputs/data/*` (cohorts, flow, **folds**) when everything is re-run. Folds change because the 120-day
 stratification labels change.
 
+## Estimand
+
+- **Primary:** documented first progression within H = 120 d of the index scan (90 / 180 d as sensitivities). Death
+  without documented progression is **censoring** at the death day, not an event and not a verified negative
+  (`label_{H}`, `event`, `time_to_event`; IPCW AUC(H) treats it like any other loss to follow-up). Label 0 needs
+  progression-free follow-up ≥ H.
+- **Sensitivity:** composite event = progression **or death** within H (`label_{H}_composite`, `event_composite`,
+  `time_to_event_composite`; `prism.analyses.sensitivity` variant `composite`). It answers a different question (any
+  bad outcome) and is reported only as a sensitivity.
+- **LUMIERE:** the demographics give a survival time (56/61 patients) but no death/censoring indicator. A recorded
+  survival time is read as a death, so the LUMIERE composite is **not** identical to the primary label: at 120 d it
+  has 51 positives / 5 censored vs 47 / 9 (table below; 4 scans whose patient died within 120 d without PD). If some
+  survival times are in fact censoring times, the LUMIERE composite over-counts deaths; the primary label uses the
+  survival time only as a censoring time. All external (LUMIERE) results use the primary label.
+
 ## Rules
 
 | # | Problem (audit) | Rule now | Columns |

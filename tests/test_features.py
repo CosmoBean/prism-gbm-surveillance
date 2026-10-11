@@ -91,6 +91,39 @@ class Deltas(unittest.TestCase):
         self.assertFalse(d.isna().any().any())
 
 
+    def test_stale_measurements_table_fails_loudly(self):
+        import tempfile
+        from pathlib import Path
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "measurements.csv"
+            pd.DataFrame({"scan_id": ["a"], "et_cc": [1.0]}).to_csv(path, index=False)  # written before the fixes
+            with mock.patch.object(measurements, "MEASUREMENTS", path):
+                with self.assertRaisesRegex(RuntimeError, "et_new_from_zero_nadir"):
+                    measurements.load_measurements(["a"])
+                pd.DataFrame({"scan_id": ["a"], "et_cc": [1.0], "et_new_from_zero_nadir": [1.0]}).to_csv(path, index=False)
+                self.assertEqual(measurements.load_measurements(["a", "b"]).et_new_from_zero_nadir.tolist()[0], 1.0)
+
+
+class LumiereVolumes(unittest.TestCase):
+    def test_empty_segmentation_is_missing_not_zero(self):
+        import json
+        import tempfile
+        import zipfile
+        from pathlib import Path
+        from prism.data.lumiere import deepbratumia_volumes
+        vols = {"week-024": [0.0, 0.0, 0.0], "week-039": [0.0, 500.0, 2000.0]}
+        with tempfile.TemporaryDirectory() as tmp:
+            zp = Path(tmp) / "img.zip"
+            with zipfile.ZipFile(zp, "w") as z:
+                for w, (n, e, o) in vols.items():
+                    z.writestr(f"Imaging/Patient-023/{w}/DeepBraTumIA-segmentation/atlas/segmentation/"
+                               "measured_volumes_in_mm3.json",
+                               json.dumps({"Necrotic_NonEnhancing": n, "Enhancing_Core": e, "Edema_Compartment": o}))
+            v = deepbratumia_volumes(zp).set_index("scan_id")
+        self.assertTrue(v.loc["Patient-023_week-024"].isna().all())
+        self.assertEqual(v.loc["Patient-023_week-039", "raw_Necrotic_NonEnhancing"], 0.0)  # one empty compartment is real
+
+
 class ReferenceMask(unittest.TestCase):
     def test_euclidean_margin(self):
         brain = np.ones((41, 41, 41), bool)

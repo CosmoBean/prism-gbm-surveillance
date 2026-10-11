@@ -123,9 +123,16 @@ def volumetric_pd(et_cc: float, nadir_et_cc: float) -> dict:
             "et_new_from_zero_nadir": float(not measurable and grew)}
 
 
+REQUIRED_COLUMNS = ("et_new_from_zero_nadir",)  # added by the feature fixes (FIX_FEATURES.md 3)
+
+
 def load_measurements(scan_ids) -> pd.DataFrame:
-    """Measurement rows aligned to `scan_ids` (positional index)."""
-    return pd.read_csv(MEASUREMENTS).set_index("scan_id").reindex(scan_ids).reset_index(drop=True)
+    """Measurement rows aligned to `scan_ids` (positional index). Fails on a table written before the feature fixes."""
+    m = pd.read_csv(MEASUREMENTS)
+    missing = [c for c in REQUIRED_COLUMNS if c not in m]
+    if missing:
+        raise RuntimeError(f"{MEASUREMENTS} is stale (no {missing}); regenerate it with `prism measurements`")
+    return m.set_index("scan_id").reindex(scan_ids).reset_index(drop=True)
 
 
 def main(argv=None) -> None:

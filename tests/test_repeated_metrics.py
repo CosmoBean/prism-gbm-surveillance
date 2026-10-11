@@ -70,6 +70,14 @@ class RepeatedMetricTests(unittest.TestCase):
         b = fold_mean_metrics(self.d, recal, folds, H)["auc_ipcw_fold_mean"]
         self.assertAlmostEqual(a, b, places=12)
 
+    def test_pooled_oe_is_ratio_of_totals(self):
+        folds = np.tile(np.arange(len(self.d)) % 5, (3, 1))
+        same = np.tile(self.oof[0], (3, 1))  # a locked model: one prediction per scan in every repeat
+        fm = fold_mean_metrics(self.d, same, folds, H)
+        self.assertAlmostEqual(fm["oe_ratio_pooled"], point_metrics(self.d, self.oof[0], H)["oe_ratio"], places=12)
+        doubled = fold_mean_metrics(self.d, same / 2, folds, H)
+        self.assertAlmostEqual(doubled["oe_ratio_pooled"], 2 * fm["oe_ratio_pooled"], places=12)
+
 
 if __name__ == "__main__":
     unittest.main()

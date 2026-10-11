@@ -8,13 +8,26 @@ Arms (same features, H = 120 d, verified labels for training, IPCW AUC for evalu
   finetune_shrink  ridge refit on training LUMIERE patients, penalised towards the MU coefficients
   finetune_pooled  refit on MU + training LUMIERE patients (LUMIERE weight 3)
   lumiere_only     model trained and tested within LUMIERE — the local ceiling
+  locked+cohort_norm_{rank,zscore}
+                   sensitivity (volume feature sets only): the locked model with the volume columns re-expressed
+                   within each cohort (features.tabular.within_cohort_normalise: MU on the training population,
+                   LUMIERE on all its index scans; transductive, never uses LUMIERE labels). Removes segmenter scale
+                   differences by construction (docs/results/FIX_FEATURES.md section 2)
 
 Estimator: every LUMIERE arm, locked included, is scored on the same 5x5 patient-grouped LUMIERE folds: IPCW AUC(H)
 per held-out fold (cases/controls of the fold, censoring weights from the whole LUMIERE cohort), Brier, O/E and IPCW
 calibration slope per fold, then averaged over the 25 folds; 95% CIs from a patient-cluster bootstrap in which
 patients keep their folds (paired vs locked). Pooling out-of-fold predictions across differently adapted folds is not
-a valid estimate, so adapted arms have no pooled metrics. The locked model is also reported pooled on all of LUMIERE.
+a valid estimate for discrimination, so adapted arms have no pooled AUC; O/E is reported pooled (oe_ratio_pooled:
+Kaplan-Meier risk of all LUMIERE / mean held-out prediction; per-fold mean kept as oe_ratio_fold_mean). The locked
+arms are also reported pooled on all of LUMIERE.
 MU CV is reported as the mean over repeats of the pooled-OOF AUC (as in c1-c3) and per fold.
+
+Missing values (e.g. LUMIERE scans without a usable DeepBraTumIA segmentation) are imputed by the fitted pipeline
+(PRE), i.e. with the medians of the data the model was trained on: MU medians for the locked / recalibrated / shrink
+arms. That is the correct behaviour of a locked model (it carries no LUMIERE statistics), but MU and DeepBraTumIA
+volumes differ in level, so an imputed LUMIERE volume is an MU-typical value; MU has no missing volumes, so there is
+no missingness indicator for them either.
 
     python -m prism external   # -> outputs/results/external_lumiere/{results.csv, locked_predictions.csv}
 """
@@ -35,7 +48,7 @@ from sklearn.preprocessing import StandardScaler
 
 from prism.config import RESULTS
 from prism.data import lumiere, mu
-from prism.features.tabular import SHARED, shared_lumiere, shared_mu
+from prism.features.tabular import SHARED, shared_lumiere, shared_mu, within_cohort_normalise
 from prism.models.formulations import fit as fit_ridge
 from prism.models.folds import load_folds
 from prism.models.metrics import (cluster_bootstrap, counted_warnings, fold_mean_bootstrap, fold_mean_metrics,
@@ -50,7 +63,9 @@ FEATURE_SETS = {
 }
 GBM = HistGradientBoostingClassifier(max_depth=2, learning_rate=0.03, max_iter=150, min_samples_leaf=20,
                                      l2_regularization=2.0, max_features=0.5, random_state=0)
+# Fitted on the training rows only: a locked MU model imputes LUMIERE gaps with MU training medians (see docstring).
 PRE = Pipeline([("imp", SimpleImputer(strategy="median", add_indicator=True)), ("sc", StandardScaler())])
+COHORT_NORMS = ("rank", "zscore")
 
 
 def mu_table(grade4_only: bool) -> tuple[pd.DataFrame, pd.DataFrame]:
@@ -210,11 +225,15 @@ def run_combo(job):
     rows.append({**base, "arm": "mu_cv", "cohort": "MU", **repeated_point_metrics(mc, mu_oof, H),
                  "auc_ipcw_lo": b.auc_ipcw_lo, "auc_ipcw_hi": b.auc_ipcw_hi, **fold_mean_metrics(mc, mu_oof, mu_ids, H)})
     oof, ids, slopes = adapt_on_lumiere(learner, cols, mc, MX, lc, LX)
+    vol = [c for c in cols if c in SHARED["volumes"]]
+    for norm in COHORT_NORMS if vol else ():
+        p = fit(learner, within_cohort_normalise(MX, vol, norm)[cols], mc)(within_cohort_normalise(LX, vol, norm)[cols])
+        oof[f"locked+cohort_norm_{norm}"] = np.tile(p, (len(ids), 1))
     fb = fold_mean_bootstrap(lc, oof, ids, H, reference="locked", n_boot=n_boot).set_index("arm")
     for arm, P in oof.items():
         row = {**base, "arm": arm, "cohort": "LUMIERE", **fold_mean_metrics(lc, P, ids, H),
                "auc_verified_fold_mean": verified_fold_auc(lc, P, ids), **fb.loc[arm].dropna().to_dict()}
-        if arm == "locked":  # the one arm with a single prediction per scan: also pooled over all of LUMIERE
+        if arm.startswith("locked"):  # one prediction per scan: also pooled over all of LUMIERE
             pm = point_metrics(lc, P[0], H)
             cb = cluster_bootstrap(lc, {"m": P[0]}, H, reference="m", n_boot=n_boot).iloc[0]
             row.update({f"{k}_pooled": v for k, v in pm.items()})
@@ -244,16 +263,19 @@ def main(argv=None) -> None:
     out.mkdir(parents=True, exist_ok=True)
     res.to_csv(out / "results.csv", index=False)
     pd.DataFrame({k: p for _, k, p in outs}).assign(scan_id=lc.scan_id).to_csv(out / "locked_predictions.csv", index=False)
-    order = ["mu_cv", "locked", "recalibrated", "finetune_shrink", "finetune_pooled", "lumiere_only"]
+    order = ["mu_cv", "locked", "recalibrated", "finetune_shrink", "finetune_pooled", "lumiere_only",
+             *[f"locked+cohort_norm_{n}" for n in COHORT_NORMS]]
     idx = ["train", "features", "learner"]
     print("IPCW AUC, mean over held-out folds (MU: shared MU folds; LUMIERE: identical 5x5 patient folds for every arm)")
     print(res.pivot_table(index=idx, columns="arm", values="auc_ipcw_fold_mean")
           .reindex(columns=[o for o in order if o in set(res.arm)]).round(3).to_string())
     print("MU CV, mean over repeats of pooled-OOF AUC:")
     print(res[res.arm == "mu_cv"][idx + ["auc_ipcw", "auc_ipcw_lo", "auc_ipcw_hi"]].round(3).to_string(index=False))
-    print("Calibration on LUMIERE, per fold then averaged (O/E | slope median):")
+    print("Calibration on LUMIERE (O/E pooled over held-out predictions | per-fold slope median):")
     c = res[res.arm != "mu_cv"]
-    print(c.pivot_table(index=idx, columns="arm", values=["oe_ratio_fold_mean", "cal_slope_fold_median"]).round(2).to_string())
-    print("Locked model on all of LUMIERE (pooled IPCW AUC, 95% CI) and per fold:")
-    print(res[res.arm == "locked"][idx + ["auc_ipcw_pooled", "auc_ipcw_pooled_lo", "auc_ipcw_pooled_hi", "auc_ipcw_fold_mean",
-                                          "auc_ipcw_fold_mean_lo", "auc_ipcw_fold_mean_hi"]].round(3).to_string(index=False))
+    print(c.pivot_table(index=idx, columns="arm", values=["oe_ratio_pooled", "cal_slope_fold_median"]).round(2).to_string())
+    print("Locked model(s) on all of LUMIERE (pooled IPCW AUC, 95% CI, O/E, slope) and per fold:")
+    print(res[res.arm.str.startswith("locked")][idx + ["arm", "auc_ipcw_pooled", "auc_ipcw_pooled_lo", "auc_ipcw_pooled_hi",
+                                                       "oe_ratio_pooled", "cal_slope_pooled", "auc_ipcw_fold_mean",
+                                                       "auc_ipcw_fold_mean_lo", "auc_ipcw_fold_mean_hi"]]
+          .round(3).to_string(index=False))

@@ -29,7 +29,7 @@ import pandas as pd
 from sklearn.base import clone
 from sklearn.compose import ColumnTransformer
 from sklearn.ensemble import HistGradientBoostingClassifier
-from sklearn.feature_selection import SelectKBest, VarianceThreshold, f_classif
+from sklearn.feature_selection import SelectKBest, VarianceThreshold
 from sklearn.impute import SimpleImputer
 from sklearn.metrics import roc_auc_score
 from sklearn.model_selection import GroupKFold
@@ -39,6 +39,7 @@ from threadpoolctl import threadpool_limits
 
 from prism.config import RESULTS
 from prism.data.mu import load_cohort
+from prism.experiments.c3_radiomics import ImputeWithFlags, f_classif_quiet
 from prism.features.tabular import groups as feature_groups
 from prism.models.folds import load_folds
 from prism.models.formulations import fit as fit_logistic
@@ -56,8 +57,8 @@ def preprocessor(combo: tuple[str, ...], groups: dict[str, pd.DataFrame]) -> Col
     for g in combo:
         cols = list(groups[g].columns)
         if g == "radiomics":
-            pipe = Pipeline([("imp", SimpleImputer(strategy="median")), ("var", VarianceThreshold()),
-                             ("sc", StandardScaler()), ("sel", SelectKBest(f_classif, k=RADIOMICS_K))])
+            pipe = Pipeline([("imp", ImputeWithFlags()), ("var", VarianceThreshold()),  # same imputation as c3
+                             ("sc", StandardScaler()), ("sel", SelectKBest(f_classif_quiet, k=RADIOMICS_K))])
         else:
             pipe = Pipeline([("imp", SimpleImputer(strategy="median", add_indicator=True)), ("sc", StandardScaler())])
         parts.append((g, pipe, cols))
