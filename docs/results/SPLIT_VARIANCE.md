@@ -2,46 +2,54 @@
 
 Plan item 3.5; follows An et al. 2021 (*PLOS ONE*, doi:10.1371/journal.pone.0256152).
 
+**Final numbers** from `outputs/results/analyses/split_variance/{summary.csv, per_split_auc.csv, run_info.json}` (final run,
+git HEAD `bea5b7c`, `tabular.py` clean, 14.0 min; figure re-plotted 07:41). Earlier versions of this file used a run with
+an in-progress `tabular.py`; the PRISM report rows barely moved and the baseline rows now use the final as-of-scan
+treatment features.
+
 ## Method
 - **Design.** The PRISM report's own split search (`legacy/radiomics/.../train.py` `choose_test_patients`). For each seed it makes
   20 000 random draws of 30 patients and keeps the draw closest to 96 test scans and 53 positives. Seed 62 gives back the PRISM report split
   exactly (same 30 patients, 84 scans, 22 positives). Seeds 0–499 gave 500 distinct splits (test scans 82–94, mean 86.1; positives 10–33). The splits are not stratified, and neither was the original. The search prefers patients with many scans, so the test sets overlap a lot: all 157 patients appear, and the most frequent one is in 71% of splits.
-- **Cohort, label, features.** These are the PRISM report's: 315 scans / 157 patients, label = progression within 120 d, pre-progression scans only, scans before late treatment, T1c + FLAIR legacy radiomics + `hybrid_basic` clinical codes. This label equals our `naive_label_120` on all 314 scans the two cohorts share.
+- **Cohort, label, features.** These are the PRISM report's: 315 scans / 157 patients, label = progression within 120 d, pre-progression scans only, scans before late treatment, T1c + FLAIR legacy radiomics + `hybrid_basic` clinical codes. This label equals our `naive_label_120` on all 314 scans the two cohorts share. Test AUCs are computed on the test patients' scans in our post-fix MU cohort (79–92 scans per split; 82 on seed 62).
 - **Models** (trained on each split's training patients):
   - `prism_reselect`: the PRISM report pipeline with the L1 + permutation consensus ranking redone on each split (5 folds and 5
     repeats instead of the shipped 10 and 100), then top 48 and the shipped C. Optuna is not re-run. **This is the honest
-    version.** On seed 62 it gives 0.800, against 0.802 for the shipped model.
+    version.** On seed 62 it gives 0.801, against 0.802 for the shipped model.
   - `prism_fixed`: the shipped 48 columns, preprocessing thresholds and C, refitted. **Optimistic (features selected using
     other splits' test patients):** the columns were chosen on the PRISM report split's training patients, and most test
     patients of the other splits are among them. Treat it as an upper bound.
   - `baseline`: clinical + timing + treatment ridge. `baseline_rad`: baseline + legacy radiomics top-10. Both use the C3 code (`c3.fit_predict`).
 - **Metric.** Test AUC on the MU-cohort scans of the 30 test patients, with the naive label (500 splits) and as IPCW AUC(120 d).
-  IPCW AUC is undefined on 22 splits, so the IPCW column has **478 splits**.
+  IPCW AUC is undefined on 25 splits, so the IPCW column has **475 splits**.
 - **Rank of the PRISM report split.** Throughout, "rank" is the share of splits whose AUC is strictly lower than **that model's
   own AUC on the PRISM report split (seed 62), re-run in this analysis** (`pct_rank_prism_split_value` in `summary.csv`). It is not
-  the rank of the reported 0.802. For `prism_reselect` the two are almost the same value (0.800 vs 0.802).
+  the rank of the reported 0.802. For `prism_reselect` the two are almost the same value (0.801 vs 0.802).
 
 ## Results
 
 | Model | Naive AUC mean ± SD (n = 500) | 2.5–97.5% | Seed 62 re-run (rank) | Splits ≥ 0.802 | Beats baseline | Mean Δ vs baseline |
 |---|---|---|---|---|---|---|
-| PRISM report pipeline, re-selected per split | 0.719 ± 0.056 | 0.606–0.816 | 0.800 (92%) | 6.2% | 11% | −0.081 |
-| PRISM report model, shipped features (optimistic) | 0.818 ± 0.044 | 0.727–0.893 | 0.802 (34%) | 66% | 60% | +0.018 |
-| Clinical + timing + treatment ridge | 0.800 ± 0.054 | 0.690–0.907 | 0.880 (93%) | 50% | – | – |
-| Baseline + legacy radiomics | 0.814 ± 0.048 | 0.712–0.902 | 0.871 (91%) | 63% | 64% | +0.014 |
+| PRISM report pipeline, re-selected per split | 0.720 ± 0.055 | 0.610–0.819 | 0.801 (92%) | 7.2% | 12% | −0.081 |
+| PRISM report model, shipped features (optimistic) | 0.815 ± 0.044 | 0.726–0.887 | 0.802 (38%) | 62% | 58% | +0.014 |
+| Clinical + timing + treatment ridge | 0.801 ± 0.052 | 0.694–0.895 | 0.871 (91%) | 50% | – | – |
+| Baseline + legacy radiomics | 0.801 ± 0.053 | 0.679–0.892 | 0.867 (90%) | 52% | 54% | −0.000 |
 
-| Model | IPCW AUC(120) mean ± SD (n = 478) | 2.5–97.5% | Seed 62 re-run (rank) | Beats baseline | Mean Δ vs baseline |
+| Model | IPCW AUC(120) mean ± SD (n = 475) | 2.5–97.5% | Seed 62 re-run (rank) | Beats baseline | Mean Δ vs baseline |
 |---|---|---|---|---|---|
-| PRISM report pipeline, re-selected per split | 0.715 ± 0.057 | 0.591–0.815 | 0.811 (96%) | 18% | −0.066 |
-| PRISM report model, shipped features (optimistic) | 0.818 ± 0.045 | 0.723–0.894 | 0.811 (41%) | 72% | +0.037 |
-| Clinical + timing + treatment ridge | 0.781 ± 0.057 | 0.673–0.896 | 0.860 (91%) | – | – |
-| Baseline + legacy radiomics | 0.797 ± 0.050 | 0.694–0.893 | 0.852 (87%) | 65% | +0.016 |
+| PRISM report pipeline, re-selected per split | 0.727 ± 0.058 | 0.602–0.832 | 0.816 (94%) | 25% | −0.042 |
+| PRISM report model, shipped features (optimistic) | 0.825 ± 0.045 | 0.737–0.901 | 0.817 (40%) | 81% | +0.055 |
+| Clinical + timing + treatment ridge | 0.769 ± 0.056 | 0.654–0.876 | 0.851 (92%) | – | – |
+| Baseline + legacy radiomics | 0.776 ± 0.058 | 0.646–0.875 | 0.847 (91%) | 60% | +0.006 |
 
 Figure: `outputs/results/analyses/split_variance/split_variance.png`: histograms of per-split AUC per model, n per panel,
 x-axis from 0.5, triangles + dotted lines at each model's seed-62 re-run value with its rank, black line at the reported 0.802.
 Data: `per_split_auc.csv`, `summary.csv` and `run_info.json` in the same folder.
 
 ## Sensitivity checks (verifier, `scratchpad/verify_splitvar/`)
+
+These checks were run by the verifier on the earlier (pre-final) per-split table and were not repeated on the final run.
+The PRISM report pipeline does not depend on `tabular.py`; the baseline numbers in check 2 are from the earlier table.
 
 **1. Full-cost selection and Optuna (15 splits + seed 62; `fullsel.csv`, `fullsel.py`).** On the PRISM report split and the first
 15 other design splits, the per-split ranking was redone with the shipped settings (10 folds × 100 permutation repeats, "full")
@@ -77,18 +85,21 @@ patients. AUC here is on the legacy (PRISM report) case table and label, so seed
 
 ## Interpretation
 - **The 0.80 is an upper-tail draw.** When the PRISM report pipeline selects its own features on each split, its AUC is 0.72 on
-  average, and its seed-62 re-run (0.800) ranks above 92% of splits (96% with IPCW AUC). Only 6% of splits reach the reported
-  0.802. The PRISM report split is favourable for every model: the baseline ranks 93% there.
+  average, and its seed-62 re-run (0.801) ranks above 92% of splits (94% with IPCW AUC). Only 7% of splits reach the reported
+  0.802. The PRISM report split is favourable for every model: the baseline ranks 91% there (92% IPCW).
 - **Keeping the shipped features does not rescue it.** The shipped 48 columns average 0.82 over other splits, but this is
   optimistic: the features were selected using other splits' test patients. The gap between the honest and optimistic versions
-  is 0.099 ± 0.040 per split.
-- **Radiomics against the baseline.** The honest radiomics pipeline loses to the clinical + timing + treatment baseline in 89%
-  of splits (mean −0.08). Adding legacy radiomics to the baseline gives +0.014 on average and helps in 64% of splits. Both are
-  within the noise: one 30-patient split has an SD of about 0.05.
-- **Absolute levels are higher than in repeated CV** (baseline 0.80 here against 0.72–0.74 in C3). This design favours patients
+  is 0.095 ± 0.040 per split (`per_split_auc.csv`).
+- **Radiomics against the baseline.** The honest radiomics pipeline loses to the clinical + timing + treatment baseline in 88%
+  of splits (mean −0.08). Adding legacy radiomics to the baseline gives −0.000 on average (IPCW +0.006) and helps in 54% of
+  splits (60% IPCW). Both are within the noise: one 30-patient split has an SD of about 0.05.
+- **Absolute levels are higher than in repeated CV** (baseline 0.80 here against 0.720 for all gliomas in C3). This design favours patients
   with many scans and scores with the naive label. Compare models within this analysis, not with the C3 tables.
 
 ## Reproducibility
-Command: `uv run --frozen --no-sync python -m prism.analyses.split_variance --workers 22 --n-splits 500` (15.4 min on 22 processes).
+Command: `uv run --frozen --no-sync python -m prism.analyses.split_variance --workers 22 --n-splits 500` (final run: 14.0 min on 22 processes).
 Figure and `summary.csv` only, from the existing `per_split_auc.csv` (no refit): `python -m prism.analyses.split_variance --replot`.
-Feature version: git HEAD `7112486`, with `prism/features/tabular.py` **modified** while this ran: the as-of-scan treatment masking was in progress, and the diff SHA-1 is `e797bd09…`; the full diff is in `run_info.json`. This may explain why the baseline gives 0.880 on the PRISM report split here against 0.870 in C3_radiomics.md. Once the treatment-feature change is final, re-run so that `baseline` and `baseline_rad` use it. The PRISM report models do not depend on `tabular.py`.
+Feature version (final run): git HEAD `bea5b7c`, `tabular.py` unmodified (`run_info.json`: `tabular_py_dirty: false`), so
+`baseline` and `baseline_rad` use the final as-of-scan treatment features. The baseline's seed-62 value (naive 0.871, IPCW
+0.851) equals the head-to-head stage (`outputs/results/c3/prism_report_split/head_to_head.csv`). The PRISM report models
+do not depend on `tabular.py`.

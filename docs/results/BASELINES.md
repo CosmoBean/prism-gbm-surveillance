@@ -1,10 +1,11 @@
 # Literature baselines ladder and nested hyperparameter grid (2026-10-11)
 
 Code: `prism/analyses/baselines.py` (`python -m prism.analyses.baselines [--workers 8] [--n-boot 1000]`).
-Outputs: `$PRISM_OUTPUTS/results/analyses/baselines/{ladder.csv, lumiere.csv, nested_choices.csv, prevalence.csv,
-oof_repeats.csv.gz, forest.png}`. Numbers below come from a private run (`PRISM_OUTPUTS=<scratchpad>/out-baselines`:
-post-fix `outputs/data` (308 scans / 155 patients; grade 4 = 249 scans) + the fixed `measurements.csv` from FIX_FEATURES).
-Regenerate them on the final outputs.
+Outputs: `outputs/results/analyses/baselines/{ladder.csv, lumiere.csv, nested_choices.csv, prevalence.csv,
+oof_repeats.csv.gz, forest.png}`. **Final numbers**: every number below was checked against the final full re-run
+(`outputs/results/analyses/baselines/`, 2026-10-11 07:29, HEAD `cc2e3a3`; MU 308 scans / 155 patients, grade 4 = 249 scans).
+The MU tables were unchanged from the provisional run; the LUMIERE table changed because empty DeepBraTumIA
+segmentations are now missing volumes instead of 0 cc (`cc2e3a3`).
 
 Protocol (same as C3): shared 5x5 patient-grouped folds (`outputs/data/folds.csv`), models fitted on verified 120-d
 labels, headline = mean over repeats of the pooled-OOF IPCW AUC(120 d), 95% CI and paired ΔAUC vs the **C3 ridge
@@ -67,16 +68,16 @@ Reference = locked shared clinical + timing ridge (the C3 baseline's treatment b
 |---|---|---|---|---|
 | Clinical + timing, shared (reference) | 0.610 [0.497, 0.737] | — | 0.48 | 0.98 |
 | Clinical only, shared | 0.610 [0.487, 0.737] | +0.000 [−0.049, +0.037] | 0.28 | 1.15 |
-| Clinical + timing + volumes, shared | 0.615 [0.483, 0.741] | +0.005 [−0.063, +0.066] | 0.37 | 1.36 |
-| B0 log ET volume | 0.620 [0.510, 0.708] | +0.011 [−0.155, +0.156] | 0.72 | 1.12 |
-| B0 ΔET vs previous | 0.590 [0.472, 0.696] | −0.020 [−0.185, +0.138] | 0.25 | 0.90 |
+| Clinical + timing + volumes, shared | 0.608 [0.469, 0.739] | −0.001 [−0.073, +0.057] | 0.38 | 1.33 |
+| B0 log ET volume | 0.607 [0.478, 0.705] | −0.003 [−0.171, +0.147] | 0.63 | 1.08 |
+| B0 ΔET vs previous | 0.572 [0.457, 0.681] | −0.038 [−0.206, +0.124] | 0.17 | 0.90 |
 | B1 rule (binary) | 0.559 [0.468, 0.641] | −0.051 [−0.209, +0.102] | 0.64 | 0.87 |
 | B1 rule, RANO 2.0 window | 0.511 [0.434, 0.581] | −0.099 [−0.236, +0.043] | 0.21 | 0.88 |
-| B1 continuous (vs nadir) | 0.583 [0.460, 0.699] | −0.027 [−0.213, +0.147] | 0.20 | 0.88 |
-| B4 Hashim Cox | 0.644 [0.521, 0.755] | +0.034 [−0.067, +0.125] | 0.98 | 1.27 |
+| B1 continuous (vs nadir) | 0.566 [0.441, 0.682] | −0.044 [−0.233, +0.129] | 0.14 | 0.88 |
+| B4 Hashim Cox | 0.640 [0.508, 0.754] | +0.030 [−0.080, +0.127] | 0.94 | 1.24 |
 
-Trained on MU all gliomas: reference 0.605, B4 Cox 0.636 (Δ +0.031 [−0.057, +0.112], slope 0.97, O/E 1.29); B0/B1 AUCs
-identical (monotone maps). LUMIERE caveats: volumes are DeepBraTumIA (MU: different segmenter; median grade-4 ET 0.61 vs
+Trained on MU all gliomas: reference 0.605 [0.488, 0.734], B4 Cox 0.633 (Δ +0.028 [−0.060, +0.109], slope 0.96, O/E 1.27);
+B0/B1 AUCs identical to the grade-4-trained ones (monotone maps). LUMIERE caveats: volumes are DeepBraTumIA (MU: different segmenter; median grade-4 ET 0.61 vs
 5.45 cc), so the 1 cc / 40 % thresholds and calibrated maps transfer imperfectly; ET history comes from all DeepBraTumIA
 studies except pre-op (84 % of index scans have a prior vs 49 % in MU); no RT end date (nadir over all priors; RANO 2.0
 window = rater's "< 3 months" flag); no component counts. Point estimates on locked single predictions (the external
@@ -88,8 +89,8 @@ experiment's fold-mean estimator is not used here).
    RANO-style rule reaches 0.55 (ΔAUC −0.15 grade 4, CI excludes 0), prior-trend 0.55, persistence (ET volume) 0.64, the
    Hashim Cox 0.63 (Δ −0.07, CI includes 0). Adding the RANO 2.0 12-week exclusion or component counts makes the rule
    worse (0.51).
-2. On LUMIERE every model is ~0.51–0.64 with wide CIs; the Hashim Cox is the best-calibrated (slope 0.98) and nominally
-   highest (0.644), but no difference vs the reference is significant.
+2. On LUMIERE every model is ~0.51–0.64 with wide CIs; the Hashim Cox is the best-calibrated (slope 0.94) and nominally
+   highest (0.640), but no difference vs the reference is significant.
 3. Hyperparameter tuning does not change the baseline (|Δ| ≤ 0.024, all CIs include 0).
 
 ![forest](../../outputs/results/analyses/baselines/forest.png)

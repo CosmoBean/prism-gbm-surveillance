@@ -66,6 +66,8 @@ Values are n (%) or median [IQR]. Percentages use the column's patients (patient
   entry. MU-Glioma-Post is distributed as pre-processed NIfTI without acquisition metadata, so field strength is not available.
 
 **Source.** `python -m prism.analyses.tables` → `$PRISM_OUTPUTS/results/analyses/tables/table1.{csv,md}` (copy:
-`docs/manuscript/table1.csv`). Inputs: `outputs/data/mu_cohort.csv`, `mu_index.csv`, `lumiere_cohort.csv` (post-fix tables of
-2026-10-11, HEAD 478e280) and the raw LUMIERE rating / MR-info CSVs. Built here from a private copy of `outputs/data`; the
-coordinator should re-run the module on the final outputs (numbers should not change unless the cohort tables change).
+`docs/manuscript/table1.csv`). Inputs: `outputs/data/mu_cohort.csv`, `mu_index.csv`, `lumiere_cohort.csv` and the raw LUMIERE
+rating / MR-info CSVs. **Checked against the final run:** the table above is identical to
+`outputs/results/analyses/tables/table1.md` (2026-10-11 07:40, HEAD `cc2e3a3`), and `table1.csv` here is byte-identical to the
+final `outputs/results/analyses/tables/table1.csv`. Counts agree with `outputs/data/mu_flow.csv` (308 / 155),
+`outputs/logs/lumiere.log` (132 / 61; 120 d: 47 / 76 / 9) and the C1–C3 outputs (grade 4 120 d: 93 positive, 39 censored).

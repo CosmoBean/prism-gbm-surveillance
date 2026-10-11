@@ -3,7 +3,10 @@
 ![Cohort flow](cohort_flow.png)
 
 Figure: `docs/manuscript/cohort_flow.png` (made by `python -m prism.analyses.tables`, which writes
-`$PRISM_OUTPUTS/results/analyses/tables/cohort_flow.{png,csv}`). Counts: `cohort_flow.csv` in this folder.
+`outputs/results/analyses/tables/cohort_flow.{png,csv}`). Counts: `cohort_flow.csv` in this folder. **Checked against the final
+run (2026-10-11 07:40):** `cohort_flow.csv` and `cohort_flow.png` here are byte-identical to
+`outputs/results/analyses/tables/`, and the tables below match `outputs/data/mu_flow.csv` and
+`outputs/results/analyses/tables/lumiere_flow.csv`.
 
 ## MU-Glioma-Post (development)
 

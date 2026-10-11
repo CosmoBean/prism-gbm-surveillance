@@ -1,5 +1,10 @@
 # Fix: as-of-scan treatment features and post-RT window × MGMT (2026-10-11)
 
+> **Superseded numbers.** The AUCs in this file document the fix itself on intermediate inputs (before the later label,
+> evaluation and empty-segmentation fixes, some with the old repeat-averaged estimator). They are not the reported results.
+> Final numbers: [FINAL_RESULTS.md](FINAL_RESULTS.md) (e.g. grade-4 baseline ridge 0.698 [0.615, 0.774], nested radiomics
+> ΔAUC −0.026 [−0.073, +0.017], `outputs/results/c3/grade4/results.csv`; LUMIERE in [EXTERNAL_LUMIERE.md](EXTERNAL_LUMIERE.md)).
+
 Code: `prism/features/tabular.py` (`timing`, `treatment`), tests in `tests/test_treatment_asof.py`.
 Before = `outputs/results_pre_fix_2026-10-11/`; after = `outputs/results/`; masking-only ablation (no new flag) =
 `outputs/results/{c2,c3}/grade4_ablation_masking_only/`. PRISM report split head-to-head: `outputs/results/c3/prism_report_split/`.

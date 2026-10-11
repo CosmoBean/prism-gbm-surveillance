@@ -22,23 +22,24 @@ from another institution or dataset that was not used for development.
 | Li et al. 2023, *Quant Imaging Med Surg*, [doi:10.21037/qims-22-459](https://doi.org/10.21037/qims-22-459) [abs] | Pre-radiotherapy (post-operative) structural MRI radiomics, HGG | 162 patients | Progression at 6, 9, 12, 15, 18 months (binary per horizon) | Not confirmed | AUC 0.70 / 0.68 / 0.78 / 0.78 / 0.78 | Not confirmed |
 | Patel et al. 2021, *Clin Radiol* 76(8):628.e17–e27, [doi:10.1016/j.crad.2021.03.019](https://doi.org/10.1016/j.crad.2021.03.019) [abs, via RELATED_WORK] | Early post-chemoradiotherapy MRI; clinical, MGMT, radiomics | 76 patients | Treatment response | Cross-validation | AUC 0.80 | No |
 | Booth et al. 2022 (meta-analysis), *Front Oncol* 12:799662, [doi:10.3389/fonc.2022.799662](https://doi.org/10.3389/fonc.2022.799662) [abs] | 18 ML studies, progression vs treatment-related mimics (adjacent task) | 1,335 train / 384 test patients | Concurrent progression vs pseudoprogression | Mixed; high risk of bias, a third without hold-out test | Pooled ROC-AUC 0.765 (sens 0.769, spec 0.648) | Mixed |
-| **This study: clinical + timing + treatment ridge, MU grade 4** | MU-Glioma-Post; clinical, timing, as-of-scan treatment | 249 scans / 126 patients | Progression within 120 d of each index scan; censoring-aware (IPCW) | 5 × 5 repeated patient-grouped stratified CV; patient-cluster bootstrap | IPCW AUC(120) {{C3_G4_BASELINE_AUC}} ({{lo}}–{{hi}}) | No (internal) |
-| **This study: + radiomics, MU grade 4 (nested selection)** | + corrected compartment radiomics | 249 / 126 | Same | Same, nested over 70 radiomics configurations | ΔAUC vs baseline {{C3_G4_NESTED_DAUC}} ({{lo}}–{{hi}}) | No (internal) |
-| **This study: all gliomas** | MU-Glioma-Post, all grades | 308 / 155 | Same | Same | Baseline {{C3_ALL_BASELINE_AUC}}; nested ΔAUC {{C3_ALL_NESTED_DAUC}} | No (internal) |
-| **This study: locked external test** | Train MU grade 4 → test LUMIERE | 132 scans / 61 patients | RANO PD within 120 d; censoring-aware | Locked model, no refitting | IPCW AUC(120) {{EXT_BEST_AUC}} ({{lo}}–{{hi}}); shipped PRISM report model {{EXT_SHIPPED_AUC}} | Yes |
-| **This study: PRISM report radiomics model, split variance** | MU-Glioma-Post, PRISM report design | 30 test patients per split, 500 splits | Naive 120-d label | 500 splits of the PRISM report design, features re-selected per split | 0.802 on the PRISM report split; 0.719 ± 0.056 across splits (seed-62 re-run ranks above 92%) | No |
+| **This study: clinical + timing + treatment ridge, MU grade 4** | MU-Glioma-Post; clinical, timing, as-of-scan treatment | 249 scans / 126 patients | Progression within 120 d of each index scan; censoring-aware (IPCW) | 5 × 5 repeated patient-grouped stratified CV; patient-cluster bootstrap | IPCW AUC(120) 0.698 (95% CI 0.615–0.774) | No (internal) |
+| **This study: + radiomics, MU grade 4 (nested selection)** | + corrected compartment radiomics | 249 / 126 | Same | Same, nested over 70 radiomics configurations | ΔAUC vs baseline −0.026 (95% CI −0.073 to +0.017); AUC 0.672 | No (internal) |
+| **This study: all gliomas** | MU-Glioma-Post, all grades | 308 / 155 | Same | Same | Baseline 0.720 (0.638–0.792); nested ΔAUC +0.012 (−0.029 to +0.050) | No (internal) |
+| **This study: locked external test** | Train MU grade 4 → test LUMIERE | 132 scans / 61 patients | RANO PD within 120 d; censoring-aware | Locked model, no refitting | Pre-specified clinical + timing + volumes model: IPCW AUC(120) 0.608 (0.469–0.739) ridge, 0.620 (0.495–0.733) boosting; shipped PRISM report model 0.613 (0.500–0.729; 118 scans) | Yes |
+| **This study: PRISM report radiomics model, split variance** | MU-Glioma-Post, PRISM report design | 30 test patients per split, 500 splits | Naive 120-d label | 500 splits of the PRISM report design, features re-selected per split | 0.802 on the PRISM report split; 0.720 ± 0.055 across splits (seed-62 re-run 0.801 ranks above 92%; 7% of splits ≥ 0.802) | No |
 
-Placeholders (the coordinator fills these from the final run; all are mean over 5 repeats of per-repeat pooled-OOF AUC with
-patient-cluster bootstrap CIs, `docs/results/FIX_EVALUATION.md`):
+Sources of the "This study" rows (final full re-run, HEAD `cc2e3a3`; MU rows are the mean over 5 repeats of per-repeat
+pooled-OOF IPCW AUC with patient-cluster bootstrap CIs, `docs/results/FIX_EVALUATION.md`; summary in
+`docs/results/FINAL_RESULTS.md`):
 
-| Placeholder | File | Row / column |
+| Row | File | Row / column |
 |---|---|---|
-| `{{C3_G4_BASELINE_AUC}}` | `outputs/results/c3/grade4/results.csv` | baseline row (`variant` empty, stability/selection/integration `none`, learner `ridge`): `auc_ipcw`, `auc_ipcw_lo`, `auc_ipcw_hi` |
-| `{{C3_G4_NESTED_DAUC}}` | `outputs/results/c3/grade4/results.csv`, row `variant` = NESTED | `d_auc_ipcw_vs_None\|none\|none\|none\|ridge`, `d_auc_ipcw_lo`, `d_auc_ipcw_hi` |
-| `{{C3_ALL_BASELINE_AUC}}`, `{{C3_ALL_NESTED_DAUC}}` | `outputs/results/c3/all_glioma/results.csv` | as above |
-| `{{EXT_BEST_AUC}}` | `outputs/results/external_lumiere/results.csv` | `arm` = locked, prespecified primary model: `auc_ipcw`, `auc_ipcw_lo`, `auc_ipcw_hi` |
-| `{{EXT_SHIPPED_AUC}}` | `outputs/results/external_lumiere/shipped_model.csv` | `variant` = codes_as_unknown: `auc_ipcw` (`_lo`, `_hi`) |
-| split variance (filled) | `outputs/results/analyses/split_variance/summary.csv` | `prism_reselect`, naive (`docs/results/SPLIT_VARIANCE.md`) |
+| MU grade 4 baseline | `outputs/results/c3/grade4/results.csv` | baseline row (`variant` empty, stability/selection/integration `none`, learner `ridge`): `auc_ipcw`, `auc_ipcw_lo`, `auc_ipcw_hi` |
+| MU grade 4 nested ΔAUC | `outputs/results/c3/grade4/results.csv`, row `variant` = NESTED | `d_auc_ipcw_vs_None\|none\|none\|none\|ridge`, `d_auc_ipcw_lo`, `d_auc_ipcw_hi` |
+| All gliomas | `outputs/results/c3/all_glioma/results.csv` | as above |
+| Locked external test | `outputs/results/external_lumiere/results.csv` | `train` = grade4, `features` = clinical+timing+volumes, `arm` = locked: `auc_ipcw_pooled` (`_lo`, `_hi`), ridge and gbm (no single learner was pre-specified, so both are shown) |
+| Shipped PRISM report model on LUMIERE | `outputs/results/external_lumiere/shipped_model.csv` | `variant` = codes_as_unknown: `auc_ipcw` (`_lo`, `_hi`); file dated 2026-10-09, not regenerated in the final run |
+| Split variance | `outputs/results/analyses/split_variance/summary.csv` | `prism_reselect`, naive (`docs/results/SPLIT_VARIANCE.md`) |
 
 Not included, with reasons (all in `comparison.md`): Jung 2026 (voxel-wise forecast, not risk), Li ID 2026 (MU used only for
 pretraining), Pineda 2024 / Liu 2025 PHSP-Net (overall survival), Farzana 2023 and Pignotti 2024 (pre-RT or pre-operative

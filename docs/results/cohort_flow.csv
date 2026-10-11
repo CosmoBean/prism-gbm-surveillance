@@ -1,8 +1,10 @@
 step,scans,patients,excluded
-all timepoints in experiment index,596,203,0
-"ROI written, all image/mask paths present",594,203,2
+all timepoints,596,203,0
+all four sequences and mask present,594,203,2
 tumour (labels 1-3) present,592,203,2
 MRI day known,589,202,3
-progression date known for progressors,589,202,0
-"before late treatment (2nd-line, immunotherapy, new treatment)",508,199,81
-before first progression (index scans only),314,157,194
+"MRI day plausible (>= -365 d, not before an earlier timepoint)",588,202,1
+progression date known for progressors,588,202,0
+MRI not after recorded death,580,202,8
+"before late treatment (2nd-line, immunotherapy, new treatment)",501,199,79
+before first progression (index scans only),308,155,193

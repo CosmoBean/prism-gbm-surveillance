@@ -2,9 +2,9 @@
 
 Code: `prism/analyses/sensitivity.py` (`python -m prism.analyses.sensitivity --workers 48`). It reuses the C3 pipeline
 (`c3_radiomics.fit_predict`, `inner_auc`, `RAD_CONFIGS`) unchanged.
-Output: `$PRISM_OUTPUTS/results/analyses/sensitivity/{summary.csv, nested_choices.csv, oof_repeats.csv.gz, forest.png}`.
-This run: private `PRISM_OUTPUTS` = scratchpad `out-sens/` with copies of `outputs/data` (05:31, after the label fixes)
-and `outputs/features`, taken 2026-10-11. The coordinator re-runs it on the final outputs.
+Output: `outputs/results/analyses/sensitivity/{summary.csv, nested_choices.csv, oof_repeats.csv.gz, forest.png}`.
+**Final numbers:** the table below was checked against the final full re-run (`outputs/results/analyses/sensitivity/summary.csv`,
+2026-10-11 07:38, HEAD `cc2e3a3`); every row is identical to the earlier private run.
 
 **Comparison.** The primary comparison is the grade-4 ridge baseline (clinical + timing + treatment) vs baseline +
 radiomics, with the radiomics configuration chosen by **nested** selection over all 70 C3 configurations (inner 3-fold
@@ -55,9 +55,10 @@ consistent):
 3. **Nested radiomics models are overconfident.** Their calibration slopes are 0.39–0.53 in grade 4 (0.60 without
    patient 0145; baseline 0.52–0.90) and 0.77 in all gliomas. Legacy radiomics is chosen in 10–23 of 25 outer folds per row
    (`nested_choices.csv`).
-4. **The primary row is lower than the FIX_EVALUATION number.** Primary ΔAUC is −0.026 here, vs −0.002 in
-   FIX_EVALUATION, because this run uses the post-label-fix cohort (249 scans, death censored), not the 253-scan
-   inputs. The code and seeds are the same as `prism c3`, so the final `c3/grade4` nested row should match this primary
-   row. I have not checked this yet.
+4. **The primary row is lower than the FIX_EVALUATION validation number.** Primary ΔAUC is −0.026 here, vs −0.002 in
+   the FIX_EVALUATION validation run, because the final cohort is the post-label-fix one (249 scans, death censored), not
+   the 253-scan inputs. Checked: the final `outputs/results/c3/grade4/results.csv` NESTED row matches the primary row
+   exactly (0.672 [0.597, 0.743]; ΔAUC −0.026 [−0.073, +0.017]; baseline 0.698 [0.615, 0.774]), and so does the all-glioma
+   row (`c3/all_glioma/results.csv`: 0.732, ΔAUC +0.012 [−0.029, +0.050]).
 
 Open: one lbfgs ConvergenceWarning occurred (h180, repeat 0, fold 0, inner ridge fit).

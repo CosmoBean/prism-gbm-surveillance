@@ -1,5 +1,10 @@
 # Feature-layer fixes (2026-10-11)
 
+> **Superseded numbers.** The AUCs in this file document the fix itself on intermediate inputs (before the later label,
+> evaluation and empty-segmentation fixes, some with the old repeat-averaged estimator). They are not the reported results.
+> Final numbers: [FINAL_RESULTS.md](FINAL_RESULTS.md) (e.g. grade-4 baseline ridge 0.698 [0.615, 0.774], nested radiomics
+> ΔAUC −0.026 [−0.073, +0.017], `outputs/results/c3/grade4/results.csv`; LUMIERE in [EXTERNAL_LUMIERE.md](EXTERNAL_LUMIERE.md)).
+
 Scope: `prism/features/{tabular,measurements,radiomics}.py`, tests in `tests/test_features.py`. `treatment()` and the
 as-of-scan `timing()` logic are unchanged. All numbers below were produced in a private output directory
 (`PRISM_OUTPUTS=<scratchpad>/out-features`, a copy of `outputs/data` + `outputs/features` with `prism measurements`

@@ -4,6 +4,25 @@ Fixes from the evaluation audit. Code: `prism/models/metrics.py` (new estimator 
 c2_feature_search,c3_radiomics,external_lumiere}.py`, `prism/analyses/head_to_head.py` (new stage),
 `prism/__main__.py`, `scripts/`, `legacy/shipped_on_lumiere.py` (`adapt()` only). Tests: `tests/test_repeated_metrics.py`.
 
+> **Numbers in sections 1–5 are from a validation run on intermediate inputs (253 grade-4 scans, before the label and
+> feature fixes); they are superseded for reporting.** Final numbers: [FINAL_RESULTS.md](FINAL_RESULTS.md). The final
+> equivalents of the section 1–5 rows (full re-run, HEAD `cc2e3a3`, same estimator) are:
+>
+> | Grade 4, H = 120 d | Final (mean over repeats) [95% CI] | Source |
+> |---|---|---|
+> | C1 volumes + clinical, naive / ipcw | 0.651 [0.567, 0.727] / 0.656 [0.578, 0.731] | `outputs/results/c1/c1_summary.md` |
+> | C1 radiomics + clinical, naive / hazard | 0.648 [0.553, 0.736] / 0.669 [0.583, 0.746] | same |
+> | C2 grid best (boosting, clinical + timing) | 0.714 [0.643, 0.785] | `outputs/results/c2/grade4/grid.csv` |
+> | C2 nested (ridge + boosting); permutation p (100) | 0.664 [0.601, 0.722]; null mean 0.548, 95th pct 0.636, p = 0.050 (4 of 100 ≥ observed) | `c2/grade4/{nested,permutation}.csv` |
+> | C3 baseline ridge / boosting | 0.698 [0.615, 0.774] / 0.687 [0.601, 0.768] | `outputs/results/c3/grade4/results.csv` |
+> | **C3 nested radiomics; ΔAUC vs baseline ridge** | **0.672 [0.597, 0.743]; −0.026 [−0.073, +0.017]** | same |
+> | C3 configs with ΔAUC CI > 0 / < 0 (of 70) | 0 / 12 | same |
+> | External, grade-4 boosting, clinical + timing + volumes, locked: per fold / pooled | 0.608 [0.493, 0.691] / 0.620 [0.495, 0.733] | `outputs/results/external_lumiere/results.csv` |
+> | Head-to-head (29 test patients, 82 scans): PRISM report model / baseline ridge, naive / IPCW | 0.802 / 0.817 [0.690, 0.920]; 0.871 / 0.851 [0.735, 0.947] | `outputs/results/c3/prism_report_split/head_to_head.csv` |
+>
+> In particular the section 3 statement "p = 0.010 (0 of 100 ≥ observed)" for grade 4 does **not** hold in the final run
+> (p = 0.0495); all gliomas: p = 0.0099 (0 of 100).
+
 **Validation run.** Private output dir (`$PRISM_OUTPUTS` = scratchpad `out-eval/`) with copies of `outputs/data` and
 `outputs/features` taken 2026-10-11 04:31, i.e. the labels/features after the treatment-as-of fix and *before* any
 concurrent data/feature fixes. Ran c1, c2 grade 4, c3 grade 4, external, head2head (both modes) and the shipped-model
