@@ -1,6 +1,6 @@
 # Phase-of-care ladder: does imaging add value once phase of care is known?
 
-Code: `prism/analyses/phase_ladder.py` (`python -m prism.analyses.phase_ladder` or `prism phaseladder`).
+Code: `prism/analyses/phase_ladder.py` (`python -m prism phaseladder`; `uv run prism ...` needs the project installed in the venv, see scripts/common.sh).
 Outputs: `outputs/results/analyses/phase_ladder/`.
 
 ## 0. Why
@@ -25,15 +25,16 @@ This would hold even though imaging adds nothing over the full baseline.
 
 ## 1. Analysis plan (pre-specified)
 
-This section was written, and committed to the module docstring, before any result of this analysis was seen. It was
-not changed afterwards. Anything added after the results is labelled **EXPLORATORY**.
+This section was written into the module docstring before the full run. It was not separately committed: plan, code
+and results arrived in one commit (10569cd), and a reduced smoke run had printed some I0–I2 numbers beforehand. The plan
+was not changed after either run. Anything added after the results is labelled **EXPLORATORY**.
 
 **A. Phase-of-care block.** Built as of the scan from `features.tabular.treatment()` and the cohort's
 `days_since_rt_end`. There are 4 mutually exclusive phases:
 
 | Phase | Definition | Grade 4 scans | All-glioma scans |
 |---|---|---|---|
-| pre-RT | `rt_started == 0` (includes patients with no RT documented) | 76 | 115 |
+| pre-RT | `rt_started == 0` (includes patients with no RT documented, e.g. 63 grade-4 scans, some as late as day 579) | 76 | 115 |
 | during RT | started, not completed | 6 | 8 |
 | early post-RT | completed, ≤ 84 d after RT end (the `early_post_rt` / RANO 12-week definition) | 98 | 104 |
 | later post-RT (reference) | completed, > 84 d after RT end | 69 | 81 |
@@ -278,8 +279,9 @@ detectably.**
 
 **What the ladder does show.**
 
-1. **A compact 4-level phase-of-care block explains most of the baseline.** Grade 4: R2 0.664 vs R3 0.698 vs
-   clinical 0.585. The headline baseline is largely a "where in the treatment course" model.
+1. **A compact 4-level phase-of-care block recovers a large part of the baseline's gain over clinical.** Grade 4:
+   clinical 0.585, R2 0.664, R3 0.698 (the R2 − R0 CI is +0.005 to +0.152, a single secondary contrast). The headline
+   baseline is largely a "where in the treatment course" model.
 2. **Within the post-RT phase, nobody discriminates well.** Clinical, phase, timing, treatment, volumes, radiomics and
    deep features all give AUC 0.55–0.66 in grade 4 (ridge and GBM) (167 scans, 83 events). Phase itself carries no signal there
    (R2 − R0 −0.003).
@@ -287,6 +289,12 @@ detectably.**
    nothing beyond them.
 4. **Later post-RT alone (69 scans) is too small to fit any model.** Non-imaging bases score below chance, which
    inflates every ΔAUC there.
+
+**EXPLORATORY (independent check, after the results).** A ridge on age alone scores 0.586 in grade-4 post-RT scans, above
+R2 (0.549); age + I2 vs age gives +0.022 (−0.103, +0.145). Part of the primary +0.061 therefore comes from R2's
+uninformative phase columns dragging the base down. Note also that "post-RT" means *RT documented and completed*: scans
+of patients with no documented RT are in the pre-RT phase and so outside the post-RT cohort. In post-RT scans two phase
+dummies are constant, so R2 has about 8 effective parameters (EPP about 10, not 8.3).
 
 All of this sits far below Riley-recommended sample sizes (EPP 1.5 for the primary imaging model). A real but modest
 imaging effect of about +0.05 AUC in post-RT surveillance cannot be excluded. Detecting it would need a cohort several
