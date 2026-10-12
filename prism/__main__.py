@@ -22,6 +22,7 @@ Analyses (read the prepared tables, write to $PRISM_OUTPUTS/results):
     utility       calibration, decision curves, NRI/IDI, sample size
     sensitivity   primary comparison under other horizons, labels and subsets
     tables        Table 1, cohort flow, manuscript tables
+    phaseladder   phase-of-care ladder: imaging added value per non-imaging base, full and post-RT cohorts
 
 Every stage takes -h for its options.
 """
@@ -48,6 +49,7 @@ STAGES = {
     "utility": "prism.analyses.utility",
     "sensitivity": "prism.analyses.sensitivity",
     "tables": "prism.analyses.tables",
+    "phaseladder": "prism.analyses.phase_ladder",
 }
 PIPELINES = {"data": ("mu", "lumiere", "measurements")}
 
