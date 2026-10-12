@@ -39,7 +39,7 @@ def censoring_survival(d: pd.DataFrame, horizon: int):
         at_risk = (t >= u).sum()
         s *= 1.0 - ((t == u) & censored).sum() / max(at_risk, 1)
         surv.append(s)
-    times, surv = np.asarray(times), np.asarray(surv)
+    times, surv = np.asarray(times, float), np.asarray(surv + [1.0] * (not surv))  # no censoring: G = 1
 
     def G_minus(x):
         idx = np.searchsorted(times, np.asarray(x, float), side="left") - 1  # last censoring time strictly < x
