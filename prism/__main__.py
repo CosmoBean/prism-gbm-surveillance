@@ -27,6 +27,7 @@ Analyses (read the prepared tables, write to $PRISM_OUTPUTS/results):
     cfbadc        CFB-GBM: does ADC radiomics at t1 add to conventional radiomics for t1->t2 RANO progression?
     audit         auditable decision-support layer on the baseline: locked model + card, per-scan audit records,
                   conformal/selective prediction, referral rules, shortcut/subgroup audit, explanation stability
+    figures       manuscript figures 1-4 and tables (re-fits the PRISM report split and the clipped split-variance arm)
 
 Every stage takes -h for its options.
 """
@@ -57,6 +58,7 @@ STAGES = {
     "cleanlabel": "prism.analyses.clean_label",
     "cfbadc": "prism.analyses.cfb_adc",
     "audit": "prism.analyses.audit_system",
+    "figures": "prism.analyses.paper_figures",
 }
 PIPELINES = {"data": ("mu", "lumiere", "measurements")}
 
