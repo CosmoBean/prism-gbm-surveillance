@@ -23,6 +23,7 @@ Analyses (read the prepared tables, write to $PRISM_OUTPUTS/results):
     sensitivity   primary comparison under other horizons, labels and subsets
     tables        Table 1, cohort flow, manuscript tables
     phaseladder   phase-of-care ladder: imaging added value per non-imaging base, full and post-RT cohorts
+    cleanlabel    imaging-defined MU endpoint (clinical-only progression censored) + LUMIERE imaging vs clinical
 
 Every stage takes -h for its options.
 """
@@ -50,6 +51,7 @@ STAGES = {
     "sensitivity": "prism.analyses.sensitivity",
     "tables": "prism.analyses.tables",
     "phaseladder": "prism.analyses.phase_ladder",
+    "cleanlabel": "prism.analyses.clean_label",
 }
 PIPELINES = {"data": ("mu", "lumiere", "measurements")}
 
