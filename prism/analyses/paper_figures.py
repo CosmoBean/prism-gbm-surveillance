@@ -64,8 +64,39 @@ def _letter(ax, s, x=-0.02, y=1.04):
     ax.text(x, y, s, transform=ax.transAxes, fontsize=11, fontweight="bold", va="bottom", ha="right", color=INK)
 
 
+# display names for the PRISM paper (data keys keep the analysis names)
+_RENAME = [("PRISM report pipeline,", "PRISM initial pipeline,"), ("PRISM report model, shipped", "PRISM initial model, shipped"),
+           ("PRISM report model", "PRISM initial model"), ("PRISM report split", "initial evaluation split"),
+           ("PRISM report design", "initial evaluation design"), ("PRISM split", "Initial split"),
+           ("reported 0.802", "initial 0.802"), ("Baseline ridge", "Core model (ridge)"),
+           ("Baseline GBM", "Core model (boosting)"), ("baseline ridge", "core model (ridge)"),
+           ("Baseline + ", "Core + "), ("baseline + ", "core + ")]
+
+
+def _display(s):
+    import re
+    for a, b in _RENAME:
+        s = s.replace(a, b)
+    return re.sub(r"\b([Bb])aseline\b", lambda m: "Core" if m.group(1) == "B" else "core", s)
+
+
+def _rename_text(fig):
+    from matplotlib.text import Text
+    fig.canvas.draw()  # materialise tick labels
+    for ax in fig.axes:
+        for get, setl, axis in ((ax.get_yticklabels, ax.set_yticklabels, ax.yaxis),
+                                (ax.get_xticklabels, ax.set_xticklabels, ax.xaxis)):
+            labs = [t.get_text() for t in get()]
+            if any(_display(s) != s for s in labs):
+                setl([_display(s) for s in labs])
+    for t in fig.findobj(Text):
+        if t.get_text():
+            t.set_text(_display(t.get_text()))
+
+
 def _save(fig, name):
     FIG.mkdir(parents=True, exist_ok=True)
+    _rename_text(fig)
     for ext in ("png", "pdf"):
         fig.savefig(FIG / f"{name}.{ext}", bbox_inches="tight", facecolor="white")
 

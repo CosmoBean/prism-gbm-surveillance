@@ -1,4 +1,4 @@
-# Draft notes (2026-10-15)
+# Draft notes (2026-10-15; PRISM-paper framing pass appended)
 
 LaTeX (paper/) is the source of truth from 2026-10-15; this markdown is a frozen snapshot.
 
@@ -6,36 +6,82 @@ Files: [DRAFT.md](DRAFT.md) (main text), [SUPPLEMENT.md](SUPPLEMENT.md), Table 2
 [figures/table2_single_split_vs_cv.md](figures/table2_single_split_vs_cv.md) / `.csv`, Figure 5 basis copied to
 `figures/fig5_system_risk_coverage.png` (from `outputs/results/analyses/audit_system/risk_coverage.png`).
 
+## Framing pass (2026-10-15, PRISM paper)
+
+The manuscript was re-framed as **the PRISM paper** (user decision): PRISM is the authors' own, unpublished system;
+the full multimodal pipeline is presented and every branch ablated; the deployed configuration is the clinical +
+treatment-phase **core model** with imaging branches as optional modules; the report generator is rebuilt on the
+audit record; the original 0.80 is "our initial single-split evaluation" (self-correction). Terminology and new
+structure: [OUTLINE.md](OUTLINE.md). Changes:
+
+- `macros.tex`: new title and running title. `main.tex`: abstract, key points, clinical relevance, introduction
+  (problem → PRISM design goals → contributions), new §2.1 *PRISM: architecture and data flow* (methods renumbered:
+  old §2.1–2.11 → §2.2–2.12, new §2.13 report generator, old §2.12 → §2.14), results re-titled (§3.2 initial
+  single-split result and why it misled; §3.4 component ablation; new §3.10 report generator), discussion
+  restructured (what PRISM contributes; why our initial evaluation misled; what imaging did not add), conclusion,
+  declarations ("PRISM versions"), Table 2/3 row names, Figure 1–5 legends; Figure 5 now has panels A/B (from
+  `fig5a_architecture.pdf`, `fig5a_example_report.pdf`, red placeholder via `\IfFileExists` until they exist) and C
+  (risk–coverage).
+- `supplement.tex`: header definitions, S7 retitled and extended with PRISM v1 encoder/fusion components, new S19
+  report generator (placeholder), S17 checklist cross-references renumbered to the new methods numbering, all
+  "PRISM report" wording replaced.
+- `SOURCE_MAP.md`: terminology, renumbering note, rows for the v1 component numbers and the report generator.
+
+**Numbers.** No number was removed. New decimals in main.pdf: 0.8006 and 0.8043 (v1 fusion MLP vs its radiomics
+input, v1's own scoring; `legacy/reproduction/AUDIT.md` fault 3, `README.md` §1). New in supplement S7 (same
+sources, `FINDINGS.md` §2–3): encoder alone ≈ 0.50, linear probe 0.55 / 0.62, 0.48 threshold, BraTS SwinUNETR rebuild
+image-only 0.64–0.65 and late fusion 0.790–0.809. All other decimals are unchanged (checked by diffing the decimal
+sets of the old and new PDFs and `main.tex`). These legacy numbers are not in `docs/results/`.
+
+## Title options
+
+1. **PRISM: an auditable, phase-aware pipeline for post-treatment glioma surveillance — rigorous evaluation of
+   imaging, clinical and treatment-course information** (current).
+2. PRISM: auditable risk prediction at post-treatment glioma surveillance MRI, and what imaging, clinical and
+   treatment-course information each contribute.
+3. Phase of care, not MRI texture: development, self-correction and external evaluation of PRISM, an auditable
+   pipeline for glioma surveillance.
+4. (Shorter, for journals with a title limit) PRISM: an auditable, phase-aware model for post-treatment glioma
+   surveillance.
+
 ## Word counts
 
-Counted with a whitespace tokenizer, headings excluded (script in the session scratchpad; re-count after edits).
+Counted with a whitespace tokenizer on the LaTeX source after removing comments, commands, citations and labels,
+headings excluded (`wc_tex.py` in the session scratchpad). This counter gives slightly different values from the
+earlier one; the "before" column is the previous `main.tex` with the same counter.
 
-| Part | Words | Target |
-|---|---|---|
-| Abstract (excluding the five bold labels) | 299 | ≤ 300 |
-| Key points + clinical relevance statement | 216 | — |
-| 1. Introduction | 886 | ~900 |
-| 2. Methods | 2,196 | ~2,200 |
-| 3. Results | 2,336 | ~2,200 |
-| 4. Discussion (incl. limitations, conclusion) | 1,583 | ~1,500 |
-| **Main text (Introduction to Discussion)** | **7,001** | 5,500–7,000 |
-| Declarations | 128 | — |
-| Tables 1–3 (with captions) | 1,247 | — |
-| Figure legends 1–5 | 657 | — |
-| References (39 entries incl. one dataset) | 1,241 | — |
-| Source-map appendix (remove before submission) | 1,278 | — |
-| Supplement (S1–S18, 25 tables, 7 figure pointers) | 11,664 | — |
+| Part | Before (same counter) | Now | Target |
+|---|---|---|---|
+| Abstract (incl. five bold labels; 298 without) | 300 | 303 | ≤ 300 |
+| Key points + clinical relevance statement | 210 | 229 | — |
+| 1. Introduction | 809 | 891 | ~900 |
+| 2. Methods | 2,093 | 2,713 | ~2,200 |
+| 3. Results | 2,279 | 2,375 | ~2,200 |
+| 4. Discussion (incl. limitations, conclusion) | 1,512 | 1,646 | ~1,500 |
+| **Main text (Introduction to Discussion)** | **6,693** | **7,625** | 5,500–7,000 |
+| Declarations | 123 | 144 | — |
+| Tables 1–3 (with captions) | 898 | 922 | — |
+| Figure legends 1–5 | 595 | 727 | — |
+| Supplement (body) | 9,145 | 9,421 | — |
 
-The main text sits at the top of the target range. Journals with a 5,000-word limit would need about 2,000 words
-moved to the Supplement (candidates: §2.5 second paragraph, §2.11 details, §3.2 history paragraph, §3.8).
+Pages: main.pdf 30 → 33, supplement.pdf 34 → 34.
+
+The main text is now about 600 words over the upper target, mostly from the new §2.1 (architecture) and §2.13
+(report generator). Candidates to move to the Supplement: §2.6 second paragraph (as-of history), §2.12 details of the
+audit record (keep P1/P2), §3.2 "treatment-date leak" history paragraph (keep two sentences), §3.8, and the
+"Comparison with other work" paragraph. The report-generator results (§3.10) will add more.
 
 ## Open placeholders
 
-- Declarations: ethics statement, funding, competing interests, data-availability wording, code link — `[PENDING AUTHOR DECISION]` / `[PENDING]` in DRAFT.md.
-- Figure 5: panel A (system architecture + example audit record) still to be drawn; the risk–coverage panel exists.
-- Supplement S17: TRIPOD+AI 5b (accrual dates; both datasets give relative days only), 22 (release model coefficients), CLEAR 53–58 (release).
-- Supplement S16: public code release and tag; supplementary figures need export.
-- No `[PENDING: AUDIT_SYSTEM results]` or `[PENDING: CFB_ADC results]` remain: both analyses finished and are reported (main §3.7, §3.9; Supplement S15, S18).
+- **Report generator** (red `[PENDING: REPORT_AGENT results]`): abstract last sentence, §2.13 (generator, criteria,
+  scoring), §3.10 (results), Discussion "What PRISM contributes" and Limitations, Figure 5B legend, Supplement S19.
+- **Figure 5A/5B** files (`docs/manuscript/figures/fig5a_architecture.pdf`, `fig5a_example_report.pdf`) from the
+  report-generator work stream; red placeholder boxes until they exist (the `\IfFileExists` switch was tested).
+- **Figures 1–2 panel labels** still read "PRISM report model", "PRISM split", "baseline"; legends map them and carry a
+  red PENDING. Regenerate with `prism/analyses/paper_figures.py` (not owned by this pass).
+- Declarations: ethics, funding, competing interests, data availability, code link; **"PRISM versions"**: who wrote
+  the v1 report and whether to cite it.
+- Supplement S17: TRIPOD+AI 5b, 22, CLEAR 53–58. Supplement S16: code release and tag; supplementary figure export.
 
 ## [CHECK] items (citations not in the verified literature files, or flagged unverified there)
 
@@ -43,8 +89,8 @@ moved to the Supplement (candidates: §2.5 second paragraph, §2.11 details, §3
 2. **Kocak et al. (2023), CLEAR** — reference taken from `CHECKLIST_CLEAR.md`, not from the literature files.
 3. **Cox et al. (2024), BrainSegFounder** — DOI from `DEEP_FEATURES.md` only; title and authors incomplete.
 4. **CFB-GBM dataset citation** (TCIA doi:10.7937/v9pn-2f72) — from `DATASETS.md`; the TCIA-recommended data citation and the arXiv:2608.17884 dataset paper should be added.
-5. **Christodoulou et al. (2026) vs the PRISM report.** The draft treats them as separate (published single-test-set
-   AUC 0.80 on MU-Glioma-Post vs the unpublished PRISM report model). `comparison.md` notes an earlier repo reading of a
+5. **Christodoulou et al. (2026) vs PRISM v1.** The draft treats them as separate work (Christodoulou: single-test-set
+   AUC 0.80 on MU-Glioma-Post; PRISM v1 itself cites it as separate work). `comparison.md` notes an earlier repo reading of a
    30-patient / 96-scan test set for Christodoulou, which matches the PRISM split-search target (96 test scans). The
    authors must state the relationship (if any) explicitly; the draft makes no claim either way.
 6. Methods references not in the literature files and therefore **not cited** (add if wanted, after verification):
@@ -62,9 +108,12 @@ moved to the Supplement (candidates: §2.5 second paragraph, §2.11 details, §3
   constraints (BrainSegFounder weights under the UK Biobank MTA must not be redistributed; derived features — check).
 - **Code availability**: repository, tag, licence.
 - **Funding and competing interests.**
-- **How to present the PRISM report**: it is unpublished; decide whether to describe it as "an internal report" (as now)
-  or name its authors/institution, and whether the history rows (pre-fix leaky results) stay in Table 2 or move to the
-  Supplement.
+- **How to present PRISM v1**: it is unpublished; decide whether to cite the v1 report (and its authors) or only
+  describe it, and whether the history rows (pre-fix leaky results) stay in Table 2 or move to the Supplement.
+- **Reporting guideline for the report generator**: consider adding TRIPOD-LLM items once the report-generator
+  results exist (not cited yet).
+- **`paper/README.md`** still says 'write "the PRISM report model/split"' (not owned by this pass; update to the new
+  terminology). The same rule is in the user's auto-memory note on PRISM naming.
 - **Whether to report the duplicate-patient finding** (three identical cross-patient masks) to the MU-Glioma-Post
   maintainers before submission.
 - **Molecular look-ahead** (IDH/MGMT used at 8 grade 4 scans taken before diagnosis): decide whether to re-run the

@@ -1,7 +1,16 @@
 % main.tex -- manuscript. SOURCE OF TRUTH from 2026-10-15 (docs/manuscript/DRAFT.md is a frozen snapshot).
 % Build: ./build.sh (tectonic). Figures are read from ../docs/manuscript/figures/ (see macros.tex).
+% Framing (2026-10-15, second pass): this is the PRISM paper. PRISM is the authors' own, unpublished system;
+% "PRISM v1" = the initial pipeline, "our initial evaluation split" = the seed-62 split of PRISM v1's split search.
 \documentclass[11pt,a4paper]{article}
 \input{macros}
+
+% Figure 5 panels A/B are produced by the report-generator work stream; show a red placeholder until they exist.
+\newcommand{\figorplaceholder}[3]{%
+  \IfFileExists{../docs/manuscript/figures/#1}%
+    {\includegraphics[width=#2,height=0.30\textheight,keepaspectratio]{#1}}%
+    {\fcolorbox{red}{white}{\parbox[c][0.16\textheight][c]{\dimexpr #2-2\fboxsep-2\fboxrule\relax}{\centering
+      \textcolor{red}{[PENDING: #3\\ (\texttt{\detokenize{#1}} not yet available)]}}}}}
 
 \begin{document}
 \linenumbers
@@ -16,62 +25,67 @@
 \end{flushleft}
 
 \textbf{Article type.} Original research (development and external evaluation of a multivariable prediction
-model; TRIPOD+AI and CLEAR reporting).
+model and an auditable decision-support pipeline; TRIPOD+AI and CLEAR reporting).
 
 \textbf{Running title.} \runningtitle
 
 \textbf{Keywords.} glioma; glioblastoma; surveillance MRI; tumour progression; radiomics; deep learning;
-prediction model; cross-validation; external validation; censoring; selective prediction; model audit
+prediction model; cross-validation; external validation; censoring; selective prediction; model audit;
+clinical decision support; report generation
 
 \section*{Abstract}
 
-\textbf{Background.} Models that predict glioma progression from post-treatment MRI are often judged on one
-held-out patient split. A radiomics model in an internal report (the PRISM report model) scored AUC 0.80 on
-one 30-patient split of the MU-Glioma-Post cohort.
+\textbf{Background.} PRISM (Post-treatment Response Intelligence and Surveillance Monitor) is our multimodal
+pipeline that predicts documented progression after a glioma surveillance MRI and explains each prediction in a
+clinician report. Its first version scored AUC 0.80 on one 30-patient split of MU-Glioma-Post.
 
-\textbf{Purpose.} To test whether that performance survives other splits, censoring-aware labels and a
-clinical comparator, and whether MRI adds information once the phase of care is known.
+\textbf{Purpose.} To present PRISM and evaluate every branch rigorously, including why the initial result was
+optimistic.
 
-\textbf{Methods.} Retrospective study of MU-Glioma-Post (308 post-treatment index scans, 155 patients; grade
-4: 249 scans, 126 patients) with locked external evaluation on LUMIERE (132 scans, 61 patients). Outcome:
-documented progression within 120 days of the scan, death censored, scored by IPCW AUC(120 d). We re-scored
-the PRISM report model on its own split and over 500 splits of the same design, and compared a clinical +
-timing + as-of-scan treatment ridge model with radiomics (70 configurations, nested selection) and frozen deep
-features under 5$\times$5 patient-grouped cross-validation. Phase-of-care, label, re-segmentation, diffusion
-and audit-layer analyses had pre-specified rules.
+\textbf{Methods.} PRISM reads clinical, molecular and treatment-course data as of the scan day and adds lesion
+volumes, radiomics and a frozen SwinUNETR encoder; an audit layer writes a per-scan record, and a report
+generator writes a report grounded in it. Development: MU-Glioma-Post (308 index scans, 155 patients; grade 4:
+249 scans, 126 patients); locked external evaluation: LUMIERE (132 scans, 61 patients). Outcome: documented
+progression within 120 days, death censored, IPCW AUC(120 d). We re-scored the initial split, ran 500 splits
+of its design and ablated each branch under 5$\times$5 patient-grouped cross-validation with nested selection.
+Key analyses had pre-specified rules.
 
-\textbf{Results.} On the PRISM report split the PRISM report model scored 0.802 and a model without imaging
-0.871; with treatment dates leaking from the future, a boosting model reached 0.901. Over 500 splits the PRISM
-report pipeline averaged 0.720 $\pm$ 0.055, and 7\% of splits reached 0.802. Under repeated cross-validation
-the clinical model reached 0.698 (95\% CI 0.615--0.774) in grade 4. Radiomics changed this by $-$0.032
-($-$0.084 to +0.017) and deep features by $-$0.004 ($-$0.069 to +0.063). In post-radiotherapy scans, imaging
-added +0.061 ($-$0.038 to +0.156; permutation p = 0.21). Locked external AUCs were 0.608--0.620. An audit
-layer met its coverage target (0.841, 0.790--0.885), did not improve discrimination beyond case mix, and
-exposed a missingness shortcut.
+\textbf{Results.} On our initial evaluation split, PRISM's initial radiomics model scored 0.802 and a model
+without imaging 0.871; with treatment dates leaking from the future, a boosting model reached 0.901. Over 500
+splits the initial radiomics pipeline averaged 0.720 $\pm$ 0.055, and 7\% of splits reached 0.802. Under
+repeated cross-validation the clinical + treatment-phase core reached 0.698 (95\% CI 0.615--0.774) in grade 4.
+Radiomics changed this by $-$0.032 ($-$0.084 to +0.017) and deep features by $-$0.004 ($-$0.069 to +0.063). In
+post-radiotherapy scans, imaging added +0.061 ($-$0.038 to +0.156; permutation p = 0.21). Locked external AUCs
+were 0.608--0.620. The audit layer met its coverage target (0.841, 0.790--0.885), did not improve
+discrimination beyond case mix, and exposed a missingness shortcut. \flag{[PENDING: REPORT\_AGENT results ---
+report faithfulness.]}
 
-\textbf{Conclusion.} The 0.80 reflected a favourable split. Phase of care, not MRI texture, carried the
-measurable signal. Report repeated cross-validation, phase strata and a clinical comparator.
+\textbf{Conclusion.} PRISM's signal comes from phase of care, not MRI texture. Its deployed form is the
+clinical + treatment-phase core with auditable records; imaging branches are optional modules.
 
 \section*{Key points}
 
 \begin{itemize}
-\item \textbf{Question.} Does MRI radiomics or deep learning add to clinical and treatment-phase information
-for predicting documented progression within 120 days of a post-treatment glioma MRI, and how far can one
-patient split mislead?
-\item \textbf{Findings.} On one favourable 29-patient split, models scored 0.80--0.90; the same pipelines
-averaged about 0.70 under repeated cross-validation, and the radiomics pipeline averaged 0.720 over 500 splits
-of the same design. Radiomics, frozen deep features and re-segmentation added no measurable discrimination to
-a clinical + treatment-phase model (AUC 0.698 in grade 4), internally or on an external cohort.
-\item \textbf{Meaning.} Single-split AUCs on cohorts of this size measure the split. Imaging-model AUCs that
-mix pre-radiotherapy and surveillance scans are inflated by phase of care. A clinical model with an audit
-layer can state its uncertainty and its weak points, but it does not triage scans better than case mix does.
+\item \textbf{Question.} Which parts of a multimodal surveillance pipeline (PRISM) predict documented
+progression within 120 days of a post-treatment glioma MRI, and how far did our own initial single-split
+evaluation mislead?
+\item \textbf{Findings.} On our favourable 29-patient initial evaluation split, models scored 0.80--0.90; the
+same pipelines averaged about 0.70 under repeated cross-validation, and PRISM's initial radiomics pipeline
+averaged 0.720 over 500 splits of the same design. Radiomics, frozen deep features and re-segmentation added no
+measurable discrimination to PRISM's clinical + treatment-phase core (AUC 0.698 in grade 4), internally or on
+an external cohort.
+\item \textbf{Meaning.} PRISM is deployed as its clinical + treatment-phase core. Its audit records and grounded
+reports state what was known at the scan date, the uncertainty and the weak points of each prediction, but
+abstention does not triage scans better than case mix does. Single-split AUCs on cohorts of this size measure
+the split.
 \end{itemize}
 
 \section*{Clinical relevance statement}
-At a surveillance MRI after glioma treatment, a model built from age,
-molecular markers and where the scan sits in the treatment course predicts documented progression within 120
-days about as well as any MRI-based model tested here (AUC about 0.70). Conventional MRI radiomics should not
-be expected to add to it, and a single reported test-split AUC near 0.80 should not be taken at face value.
+At a surveillance MRI after glioma treatment, PRISM's core --- age, molecular markers and where the scan sits in
+the treatment course --- predicts documented progression within 120 days about as well as any MRI-based branch
+tested here (AUC about 0.70), and each prediction comes with an audit record of its inputs, interval and
+referral flags. Conventional MRI radiomics should not be expected to add to it, and a single test-split AUC
+near 0.80, including our own initial one, should not be taken at face value.
 
 \section{Introduction}\label{sec:1}
 
@@ -85,8 +99,8 @@ for confirmation of progression within the first 12 weeks \citep{wen2023}. Secon
 data is a clinical documentation event. It depends on imaging, on symptoms and on when the next scan is
 scheduled. A model that predicts it is a prognostic model for a pragmatic endpoint, and its intended user is
 the neuro-oncology team deciding whether to shorten the interval to the next scan or to act on an equivocal
-finding. For that use, a well-calibrated probability with an honest statement of uncertainty matters as much
-as a high AUC.
+finding. For that use, a well-calibrated probability with an honest statement of uncertainty, and a way to
+check what the model knew, matter as much as a high AUC.
 
 Radiomics and deep learning have been proposed to answer this question from the images. Most work addresses an
 adjacent task, the separation of pseudoprogression from true progression at a lesion that is already
@@ -95,9 +109,8 @@ perfusion measures reach AUC 0.90--0.93 in meta-analysis \citep{taylor2022}. For
 surveillance scan has received less attention. On the public MU-Glioma-Post dataset \citep{mahmoud2025}, a
 calibrated radiomics model reported AUC 0.80 on one held-out patient set \citep{christodoulou2026}, and a
 nested-CV model of volume increase at the next scan reported 0.728 \citep{rai2026} \flag{[CHECK: Rai 2026 is
-``repo, unverified (this pass)'' in COMPARABLE\_RESULTS.md]}. An earlier internal report on the same dataset,
-which we call the PRISM report, also described a radiomics model (the PRISM report model) with test AUC 0.80
-on one 30-patient split (the PRISM report split). That model is the starting point of this study.
+``repo, unverified (this pass)'' in COMPARABLE\_RESULTS.md]}. Neither returns a structured, checkable account of
+a prediction to the treating team.
 
 Three problems are well documented in this literature. First, single train--test splits are unstable in small
 radiomics cohorts. Over 1,000 random splits of a brain-tumour radiomics dataset, one split gave 0.882 in
@@ -124,30 +137,73 @@ routine clinical tables, treatment fields are recorded once per patient. If they
 follow-up, a scan taken before radiotherapy ``knows'' the radiotherapy that follows it, and the model learns
 the phase of care from the future.
 
-We therefore re-evaluated the PRISM report model and asked four questions. (i) What does a single split of
-this size do to the AUC, and why was the PRISM report split favourable? (ii) Under repeated, patient-grouped,
-censoring-aware evaluation, do MRI radiomics or frozen deep features add to a clinical model that knows where
-each scan sits in the treatment course? (iii) Does the answer change within the post-radiotherapy surveillance
-phase, with a cleaner imaging-defined label, with a consistent segmenter, on an external cohort, or with
-diffusion imaging? (iv) If the imaging gain is absent, what can an auditable clinical model offer at AUC about
-0.70? Our contributions are a split-variance and composition analysis of the single split, a head-to-head of
-clinical and imaging features under nested evaluation with internal and external testing, the identification
-of phase of care as the driver of discrimination, and an auditable decision-support layer whose value and
-limits we test against pre-specified criteria.
+We built PRISM for this setting with three design goals: (1) \emph{prediction} --- a calibrated probability of
+documented progression within 120 days from everything available on the scan day: clinical and molecular data,
+the treatment course, lesion volumes, radiomics and deep image features; (2) \emph{interpretability} --- each
+prediction decomposed into the contributions of its inputs and placed in the phase of care; and (3) an
+\emph{auditable clinician report} in which every statement can be traced to a recorded value. The first version
+(PRISM v1) combined a calibrated radiomics model, a transformer image encoder and a late-fusion network with an
+agentic report generator, and scored AUC 0.80 on one 30-patient split of MU-Glioma-Post, which we call our
+initial evaluation split. Before building on that number, we tested it, and the three problems above ---
+single-split variance, phase of care and leakage --- all turned out to apply to it.
+
+This paper presents PRISM and its rigorous evaluation. Our contributions are: (i) the PRISM pipeline, rebuilt
+so that every input is read as of the scan day, every branch can be ablated, and every prediction produces an
+audit record and a report grounded in that record; (ii) a transparent self-correction of our initial
+single-split evaluation, with a split-variance and composition analysis that shows why it was optimistic;
+(iii) a branch-by-branch ablation of clinical, treatment-phase and imaging information under nested,
+patient-grouped, censoring-aware evaluation with internal, external and third-cohort testing, which identifies
+phase of care as the driver of discrimination; and (iv) an evaluation of PRISM's audit layer and report
+generator against pre-specified criteria, including what they cannot do.
 
 \section{Methods}\label{sec:2}
 
-\subsection{Study design and reporting}\label{sec:2.1}
+\subsection{PRISM: architecture and data flow}\label{sec:2.1}
 
-This retrospective study of public, de-identified data develops and internally evaluates prediction models on
-one cohort (MU-Glioma-Post), evaluates locked models on a second (LUMIERE) and runs a supporting analysis on a
-third (CFB-GBM). Reporting follows TRIPOD+AI \citep{collins2024} and CLEAR (\citealp{kocak2023}
-\flag{[CHECK]}); both checklists are cross-referenced in Supplementary S17. Analyses labelled
-\emph{pre-specified} had their plan and decision rule written into the analysis document and code before any
-model output of that analysis was seen; for the clean-label, audit and CFB-GBM analyses a dated plan snapshot
-was saved before the run (Supplementary S1). Everything else is secondary or exploratory.
+PRISM takes one post-treatment MRI (T1, T1c, T2 and FLAIR with a four-compartment mask) and the patient's
+clinical tables, and returns a risk of documented progression within 120 days, an audit record and a clinician
+report (Figure~\ref{fig:5}A). Every input is read as of the scan day. Five predictor branches feed one model
+(\S\ref{sec:2.5}): (1) clinical and molecular data; (2) the treatment course and phase of care, from timing
+since diagnosis and radiotherapy (RT) and as-of-scan treatment status; (3) imaging measurements (volumes,
+morphology, change); (4) radiomics; and (5) a frozen SwinUNETR image encoder. Radiomics and deep features enter
+either concatenated or as a stacked score (late fusion). The predictor is a ridge logistic model over the enabled
+branches; every fitted step, including feature
+selection and branch integration, is fitted inside the training data (\S\ref{sec:2.8}). Downstream, the
+\textbf{audit layer} wraps the deployed predictor and writes a per-scan audit record with provenance, phase of
+care, a risk interval, exact contributions, a conformal prediction set and referral flags (\S\ref{sec:2.12}).
+The \textbf{report generator} turns each record into a clinician report in which every statement points to a
+record field (\S\ref{sec:2.13}).
 
-\subsection{Data sources}\label{sec:2.2}
+\textbf{PRISM v1 and what changed.} PRISM v1 differed in four ways. Its radiomics branch, \emph{PRISM's initial
+radiomics model}, was a calibrated logistic regression on T1c and FLAIR radiomics plus clinical codes
+(\S\ref{sec:2.6}). Its image encoder was a small SwinUNETR-style transformer with random, untrained weights. A
+late-fusion MLP combined the encoder embedding with the radiomics score (\emph{the initial PRISM fusion
+pipeline}). Its report generator combined hard-coded RANO 2.0 rules, a RANO--model concordance check and a large
+language model (GPT-4.1-mini). When we reproduced v1, the fusion MLP did not exceed its radiomics input alone
+(AUC 0.8006 against 0.8043 in v1's own scoring), the random encoder carried no outcome signal (alone, AUC about
+0.50), and the report's RANO measurements were derived from the model score rather than from the masks
+(Supplementary S7). We therefore replaced the encoder with pretrained frozen encoders tested against
+a random-weight control, replaced the fusion MLP with one regularised model in which each branch is an
+ablatable block, added the as-of-scan rule and censoring-aware labels, and rebuilt the report generator on the
+audit record.
+
+\textbf{Deployed configuration.} A branch enters the deployed model only if it improves cross-validated
+discrimination. After the evaluation below, the deployed PRISM configuration is the \emph{core model}: branches
+1--2 (clinical + timing + as-of-scan treatment; 23 predictors, 31 design columns; ridge). The core model is
+also the reference (``baseline'') for every imaging comparison. Branches 3--5 remain optional modules for
+research use; they add no measurable discrimination on these data.
+
+\subsection{Study design and reporting}\label{sec:2.2}
+
+This retrospective study of public, de-identified data develops and internally evaluates PRISM on one cohort
+(MU-Glioma-Post), evaluates locked models on a second (LUMIERE) and runs a supporting analysis on a third
+(CFB-GBM). Reporting follows TRIPOD+AI \citep{collins2024} and CLEAR (\citealp{kocak2023} \flag{[CHECK]}); both
+checklists are cross-referenced in Supplementary S17. Analyses labelled \emph{pre-specified} had their plan and
+decision rule written into the analysis document and code before any model output of that analysis was seen;
+for the clean-label, audit and CFB-GBM analyses a dated plan snapshot was saved before the run (Supplementary
+S1). Everything else is secondary or exploratory.
+
+\subsection{Data sources}\label{sec:2.3}
 
 \textbf{MU-Glioma-Post} (development; \citealp{mahmoud2025}) is a single-centre collection of post-operative
 MRI (T1, T1c, T2, FLAIR) with four-compartment masks (non-enhancing tumour core, NETC; surrounding FLAIR
@@ -162,7 +218,7 @@ the Stupp protocol, imaged at RT planning (t0) and twice afterwards (t1, t2), in
 RANO 2.0 labels and precomputed PyRadiomics features on the gross tumour volume (GTV), but no IDH or MGMT. We
 used only its released tables.
 
-\subsection{Index scans and outcome}\label{sec:2.3}
+\subsection{Index scans and outcome}\label{sec:2.4}
 
 An index scan is a post-treatment MRI before first documented progression and before late treatment, with all
 four sequences and a mask, a known and plausible MRI day, and no recorded death before it. The flow from 596
@@ -176,69 +232,75 @@ sensitivity analyses). A scan is negative only if progression-free follow-up rea
 censored. Death without documented progression censors at the death day. Rules for conflicting dates were
 fixed in an audit before the final run; six index scans left the cohort, and at 120 days 17 negatives became
 censored and one became positive (Supplementary S3). In LUMIERE, progression is the first expert rating of
-progressive disease. The PRISM report used a ``naive'' label that counted censored scans as negatives; we use
-it only where we reproduce the PRISM report. Models are fitted on scans whose 120-day status is known.
-Discrimination is the inverse-probability-of- censoring-weighted (IPCW) cumulative/dynamic AUC at 120 days
+progressive disease. PRISM v1 used a ``naive'' label that counted censored scans as negatives; we use it only
+where we reproduce the initial evaluation. Models are fitted on scans whose 120-day status is known.
+Discrimination is the inverse-probability-of-censoring-weighted (IPCW) cumulative/dynamic AUC at 120 days
 \citep{uno2007,blanche2013}. In a planned comparison of label formulations, none changed discrimination (all
 36 $\Delta$AUC CIs included 0), but the naive label under-predicted risk (observed/expected, O/E, 1.12--1.19
 against 0.95--0.99; Supplementary S3).
 
-\subsection{Predictors}\label{sec:2.4}
+\subsection{Predictors: PRISM's input branches}\label{sec:2.5}
 
 All predictors are defined as of the scan day (definitions in Supplementary S4).
 
 \begin{itemize}
-\item \textbf{Clinical}: age, sex, IDH (wild type, mutant, unknown), MGMT (methylated, unmethylated, unknown).
-\item \textbf{Timing}: days from diagnosis, days since RT end, an early post-RT flag (0--84 days after RT end,
-the RANO 12-week window) and its interaction with MGMT methylation, visit index, and an unknown-RT-end flag.
-\item \textbf{Treatment, as of the scan}: whether RT and chemotherapy had started, whether RT was completed,
-prescription, RT start day, RT duration, surgery day, biopsy before resection and previous brain tumour. A
-treatment fact enters only once its documented start day is on or before the scan day; RT duration and days
-since RT end appear only after RT has ended. Unknown values are imputed in-fold with missingness indicators.
-The \textbf{baseline} model is clinical + timing + treatment (23 predictors, 31 design columns).
-\item \textbf{Phase of care}: pre-RT, during RT, early post-RT ($\leq$ 84 days) or later post-RT, plus log
-days since RT end.
-\item \textbf{Imaging measurements}: compartment volumes; morphology (ET fraction, multifocality, ET-to-cavity
-distance, intensities relative to normal brain); and past-only change from the previous scan and the nadir.
-\item \textbf{Radiomics}: the PRISM report's legacy T1c + FLAIR features (2,446 columns) and corrected
+\item \textbf{Clinical} (branch 1): age, sex, IDH (wild type, mutant, unknown), MGMT (methylated,
+unmethylated, unknown).
+\item \textbf{Timing} (branch 2): days from diagnosis, days since RT end, an early post-RT flag (0--84 days
+after RT end, the RANO 12-week window) and its interaction with MGMT methylation, visit index, and an
+unknown-RT-end flag.
+\item \textbf{Treatment, as of the scan} (branch 2): whether RT and chemotherapy had started, whether RT was
+completed, prescription, RT start day, RT duration, surgery day, biopsy before resection and previous brain
+tumour. A treatment fact enters only once its documented start day is on or before the scan day; RT duration
+and days since RT end appear only after RT has ended. Unknown values are imputed in-fold with missingness
+indicators. The \textbf{core model} (``baseline'') is clinical + timing + treatment (23 predictors, 31 design
+columns).
+\item \textbf{Phase of care} (branch 2, compact form): pre-RT, during RT, early post-RT ($\leq$ 84 days) or
+later post-RT, plus log days since RT end.
+\item \textbf{Imaging measurements} (branch 3): compartment volumes; morphology (ET fraction, multifocality,
+ET-to-cavity distance, intensities relative to normal brain); and past-only change from the previous scan and
+the nadir.
+\item \textbf{Radiomics} (branch 4): PRISM v1's legacy T1c + FLAIR features (2,446 columns) and corrected
 features (whole-brain z-score, fixed 32-bin discretisation, per compartment, all four sequences). In every
 training fold each radiomics and deep feature is clipped to that fold's 1st and 99th percentiles, which
 removes a PyRadiomics sentinel value ($10^{6}$) found in three legacy columns of four scans (Supplementary
 S5).
-\item \textbf{Deep features}: frozen SwinUNETR encoders with BraTS 2021 and BrainSegFounder weights
-(\citealp{cox2024} \flag{[CHECK]}), and the same architecture with random weights as a control; mask-weighted
-pooled features per region (Supplementary S6).
+\item \textbf{Deep features} (branch 5): frozen SwinUNETR encoders with BraTS 2021 and BrainSegFounder weights
+(\citealp{cox2024} \flag{[CHECK]}), and the same architecture with random weights as a control (the v1 encoder
+type); mask-weighted pooled features per region (Supplementary S6).
 \end{itemize}
 
-\subsection{The PRISM report model, its split and the as-of-scan correction}\label{sec:2.5}
+\subsection{PRISM's initial radiomics model, our initial evaluation split and the as-of-scan
+correction}\label{sec:2.6}
 
-The PRISM report model is an L2-penalised logistic regression on 46 legacy radiomics and clinical-code columns
-with Platt calibration; its features came from an L1 + permutation consensus ranking and its hyperparameters
-from an Optuna search (Supplementary S7). The PRISM report split came from the report's own split search: for
-a seed, 20,000 random draws of 30 patients, keeping the draw closest to 96 test scans and 53 positives; seed
-62 gives the split. We reproduced the shipped model's stored test predictions to \num{1.1e-15}. In the
-label-fixed cohort the split has 126 training and 29 test patients with 82 test scans (22 naive positives). On
-it we fitted, once and without tuning on the split, a baseline ridge, a baseline gradient-boosting model, the
-baseline plus legacy radiomics, and a clinical-only ridge. CIs and paired $\Delta$AUC against the baseline
-ridge come from a 1,000-draw patient-cluster bootstrap over test patients.
+PRISM's initial radiomics model is an L2-penalised logistic regression on 46 legacy radiomics and clinical-code
+columns with Platt calibration; its features came from an L1 + permutation consensus ranking and its
+hyperparameters from an Optuna search (Supplementary S7). Our initial evaluation split came from PRISM v1's own
+split search: for a seed, 20,000 random draws of 30 patients, keeping the draw closest to 96 test scans and 53
+positives; seed 62 gives the split. We reproduced the shipped model's stored test predictions to
+\num{1.1e-15}. In the label-fixed cohort the split has 126 training and 29 test patients with 82 test scans
+(22 naive positives). On it we fitted, once and without tuning on the split, the core ridge model, a
+gradient-boosting version of it, the core model plus legacy radiomics, and a clinical-only ridge. CIs and
+paired $\Delta$AUC against the core ridge model come from a 1,000-draw patient-cluster bootstrap over test
+patients.
 
-In earlier runs, treatment and timing features read the workbook as of the end of follow-up. A pre-RT scan
+In our earlier runs, treatment and timing features read the workbook as of the end of follow-up. A pre-RT scan
 therefore carried the dose, start date and ``RT given'' status of a course that had not started, and a ``days
 since RT end'' computed from a future date (RT status was wrong in 23 all-glioma scans and RT duration or days
 since RT end in 29; Supplementary S4). We fixed this with the as-of rule above and report the split before and
 after the fix (Table~\ref{tab:2}).
 
-\subsection{Split variance}\label{sec:2.6}
+\subsection{Split variance}\label{sec:2.7}
 
-We ran the PRISM report's split search for seeds 0--499, giving 500 distinct 30-patient test sets (82--94
-scans, 10--33 positives). On each split's training patients we refitted (a) the PRISM report pipeline with its
+We ran PRISM v1's split search for seeds 0--499, giving 500 distinct 30-patient test sets (82--94 scans, 10--33
+positives). On each split's training patients we refitted (a) PRISM's initial radiomics pipeline with its
 feature ranking redone (the honest estimate; Optuna not re-run), (b) the shipped 48 features (optimistic,
-because they were selected on patients who are test patients in most other splits), (c) the baseline ridge and
-(d) the baseline plus legacy radiomics. We report naive-label AUC (500 splits) and IPCW AUC (475 splits;
-undefined on 25), the percentile rank of the PRISM report split, and the relation of per-split AUC to test-set
-composition. This analysis is descriptive; verifier checks are in Supplementary S8.
+because they were selected on patients who are test patients in most other splits), (c) the core ridge model
+and (d) the core model plus legacy radiomics. We report naive-label AUC (500 splits) and IPCW AUC (475 splits;
+undefined on 25), the percentile rank of our initial evaluation split, and the relation of per-split AUC to
+test-set composition. This analysis is descriptive; verifier checks are in Supplementary S8.
 
-\subsection{Repeated cross-validation and model comparison}\label{sec:2.7}
+\subsection{Repeated cross-validation and component ablation}\label{sec:2.8}
 
 All repeated-CV analyses share one set of 5 $\times$ 5 repeated patient-grouped folds stratified by 120-day
 status and grade. Every fitted step --- imputation, clipping, scaling, selection, stacking and hyperparameters
@@ -248,19 +310,20 @@ which acts as an ensemble, was replaced before the final run (Supplementary S9).
 $\Delta$AUC come from a 1,000-draw patient-cluster bootstrap in which all models are scored on the same
 resampled patients.
 
-The primary learner is ridge logistic regression with the penalty chosen by inner patient-grouped log-loss;
-regularised gradient boosting is secondary. Radiomics enters through 70 configurations (feature variant
-$\times$ stability filter $\times$ selection $\times$ concatenation or a stacked radiomics score;
-Supplementary S5). The honest estimate chooses one configuration per outer training fold by inner 3-fold
-patient-grouped CV (nested selection). Deep features use the same protocol over 32 configurations, with a
-16-configuration random-weight control. With 70--80 uncorrected intervals, about 1.75--2 single configurations
-are expected to exclude 0 by chance. \textbf{The pre-specified primary development analysis} was grade 4:
-baseline ridge versus baseline + radiomics by nested selection.
+Each branch is ablated by adding it to, or removing it from, the core model. The primary learner is ridge
+logistic regression with the penalty chosen by inner patient-grouped log-loss; regularised gradient boosting is
+secondary. The radiomics branch enters through 70 configurations (feature variant $\times$ stability filter
+$\times$ selection $\times$ concatenation or a stacked radiomics score; Supplementary S5). The honest estimate
+chooses one configuration per outer training fold by inner 3-fold patient-grouped CV (nested selection). The
+deep branch uses the same protocol over 32 configurations, with a 16-configuration random-weight control. With
+70--80 uncorrected intervals, about 1.75--2 single configurations are expected to exclude 0 by chance.
+\textbf{The pre-specified primary development analysis} was grade 4: core ridge model versus core + radiomics
+by nested selection.
 
-\subsection{Phase of care (pre-specified)}\label{sec:2.8}
+\subsection{Phase of care (pre-specified)}\label{sec:2.9}
 
-A ladder of non-imaging bases --- R0 clinical; R1 + timing; R2 clinical + phase; R3 baseline --- received four
-imaging additions: I1 volumes; I2 all non-radiomics imaging measurements; I3 radiomics (nested); I4 deep
+A ladder of non-imaging bases --- R0 clinical; R1 + timing; R2 clinical + phase; R3 core model --- received
+four imaging additions: I1 volumes; I2 all non-radiomics imaging measurements; I3 radiomics (nested); I4 deep
 features (nested). Cohorts were the full cohort, the post-RT cohort (RT documented and completed; grade 4: 167
 scans, 84 patients, 83 events) and the later post-RT cohort (> 84 days after RT end). Models were trained and
 evaluated within each cohort. The primary contrast was grade 4, post-RT, ridge, R2 + I2 versus R2, with a
@@ -268,11 +331,11 @@ evaluated within each cohort. The primary contrast was grade 4, post-RT, ridge, 
 contrast was R2 + I3 versus R2. The plan was written into the code before the full run but not committed
 separately (Supplementary S11).
 
-\subsection{Label, positive controls and re-segmentation}\label{sec:2.9}
+\subsection{Label, positive controls and re-segmentation}\label{sec:2.10}
 
 \textbf{Imaging-defined label (pre-specified).} Clinical-only first progressions were censored at the
-progression date. Rule: the label is ``the bottleneck'' if, in grade 4 (ridge), imaging alone or baseline +
-imaging (volumes + change) beats the baseline by $\Delta$AUC $\geq$ 0.03 with a 95\% CI excluding 0.
+progression date. Rule: the label is ``the bottleneck'' if, in grade 4 (ridge), imaging alone or core +
+imaging (volumes + change) beats the core model by $\Delta$AUC $\geq$ 0.03 with a 95\% CI excluding 0.
 \textbf{Positive controls.} We checked volumes against the dataset's own volume table, label mapping,
 label--date alignment and 12 random masks, and measured concurrent detection of the progression scan against
 verified 120-day negatives (imaging only). \textbf{Re-segmentation (pre-specified).} All 594 complete MU scans
@@ -280,14 +343,14 @@ were re-segmented with the MONAI BraTS 2021 SwinUNETR (primary) and BrainSegFoun
 concurrent detection rises by $\geq$ 0.05 with a CI excluding 0, or if ET is larger at the progression scan
 than at the previous scan in more than 65\% of pairs.
 
-\subsection{External evaluation and diffusion}\label{sec:2.10}
+\subsection{External evaluation and diffusion}\label{sec:2.11}
 
 Models trained on all MU scans were applied unchanged to LUMIERE. Without treatment dates, the transportable
 features are clinical + timing (log days since surgery, the < 3-month flag) $\pm$ harmonised volumes; the
 pre-specified external model was clinical + timing + volumes trained on grade 4. We report pooled IPCW AUC,
 O/E and calibration slope, and on 5 $\times$ 5 LUMIERE folds recalibration, fine-tuning and a
-cohort-normalised volume sensitivity analysis (Supplementary S13). The shipped PRISM report model was applied
-to legacy features re-extracted on LUMIERE.
+cohort-normalised volume sensitivity analysis (Supplementary S13). PRISM's initial radiomics model, as shipped,
+was applied to legacy features re-extracted on LUMIERE.
 
 In CFB-GBM (pre-specified; one row per patient), the outcome was volumetric RANO 2.0 progression from t1 to
 t2. Nested feature sets were (a) clinical, (b) + GTV volume and its change from t0, (c) + conventional T1-Gd
@@ -296,9 +359,9 @@ and FLAIR radiomics, (d) + ADC radiomics, fitted by ridge with in-fold clipping 
 1,000-permutation test of the ADC block. Caveats were fixed in advance: no molecular markers; t1 falls inside
 the 12-week window; and volume at t1 is part of the label, so (b) is partly circular.
 
-\subsection{The auditable decision-support layer}\label{sec:2.11}
+\subsection{The audit layer}\label{sec:2.12}
 
-The system wraps the baseline ridge model; it adds no new predictor (plan snapshot saved before the run;
+The audit layer wraps the core model; it adds no new predictor (plan snapshot saved before the run;
 Supplementary S15). It has five parts. (1) A \textbf{locked model} with a model card: code version, hashes of
 every input table, each input's definition, unit, source column and as-of rule, training counts,
 cross-validated performance, intended use and out-of-scope uses. (2) A \textbf{per-scan audit record}: each
@@ -319,7 +382,19 @@ $\geq$ 0.78 overall, with per-phase coverage reported as conditional coverage. \
 retained at about 70\% coverage minus the AUC of composition-matched retention, met if its 95\% CI lies above
 0.
 
-\subsection{Further analyses and software}\label{sec:2.12}
+\subsection{The report generator and its faithfulness evaluation}\label{sec:2.13}
+
+The report generator takes one audit record as its only input and writes a structured clinician report: the
+risk with its interval, the phase of care, the largest contributions, the referral flags with their reasons,
+the inputs that were unknown or out of range, and the model's intended use. Each statement in the report
+carries a pointer to the record field it states, so that every number and claim can be checked against the
+record; statements that cannot be traced are not allowed. Unlike v1, the generator has no RANO rule layer and
+no access to the model or the images, so it cannot introduce information that the record does not contain.
+Faithfulness is evaluated on out-of-fold audit records (Supplementary S19): \flag{[PENDING: REPORT\_AGENT results --- generator
+and prompt, number of records, faithfulness criteria (for example share of statements traceable to a record
+field, numeric errors, omitted referral flags, unsupported claims) and how they were scored.]}
+
+\subsection{Further analyses and software}\label{sec:2.14}
 
 The Supplement reports a feature-group search with a permutation control (S10), literature baselines
 (including a Hashim-style Cox model; \citealp{hashim2026}), hyperparameter grids, class imbalance, schedule
@@ -340,89 +415,91 @@ in the full cohort, 8.7\% of pre-RT scans were followed by progression within 12
 132 index scans from 61 glioblastoma patients (47 / 76 / 9 at 120 days). IDH status was unknown in 36\% of
 LUMIERE patients and 8\% of MU patients.
 
-\subsection{The PRISM report split}\label{sec:3.2}
+\subsection{PRISM's initial single-split result and why it misled}\label{sec:3.2}
 
-On the PRISM report split, every model scored high (Figure~\ref{fig:1}A; Table~\ref{tab:2}). The PRISM report
-model reached 0.802 on the naive label and an IPCW AUC of 0.817 (95\% CI 0.690--0.920). A ridge model with no
-imaging --- clinical, timing and as-of-scan treatment --- reached 0.871 and 0.851 (0.735--0.947). The paired
-difference between the two was $-$0.034 ($-$0.186 to +0.109). Adding legacy radiomics to the ridge model
-changed it by $-$0.006 ($-$0.081 to +0.090). A clinical-only ridge model, with age, sex, IDH and MGMT alone,
-scored 0.791 and 0.782 (0.638--0.897). All intervals were wide and overlapping.
+Our initial evaluation reported AUC 0.80 for PRISM v1 on one split. Re-scored with the current cohort and
+labels, every model scored high on that split (Figure~\ref{fig:1}A; Table~\ref{tab:2}). PRISM's initial
+radiomics model reached 0.802 on the naive label and an IPCW AUC of 0.817 (95\% CI 0.690--0.920). The core
+model, with no imaging --- clinical, timing and as-of-scan treatment --- reached 0.871 and 0.851
+(0.735--0.947). The paired difference between the two was $-$0.034 ($-$0.186 to +0.109). Adding legacy
+radiomics to the core model changed it by $-$0.006 ($-$0.081 to +0.090). A clinical-only ridge model, with age,
+sex, IDH and MGMT alone, scored 0.791 and 0.782 (0.638--0.897). All intervals were wide and overlapping.
 
-\textbf{How a 0.70 model scored 0.90.} Before the as-of-scan correction, the same clinical + timing +
-treatment design fitted by gradient boosting scored 0.901 on the naive label on this split (30 test patients,
-84 scans; Table~\ref{tab:2}, history rows). Under repeated CV on the same pre-correction inputs, that model
-averaged 0.723 (0.633--0.806) in grade 4 and 0.743 (0.666--0.816) in all gliomas. Two things lifted it. The
-first was leakage: pre-RT and on-RT scans carried the RT start date, dose and end date of a course that had
-not yet started or ended. After the correction, the boosting model scored 0.869 on the same split, and with
-the final labels and the 29-patient test set, 0.844 (IPCW 0.824, 0.690--0.916). Its final repeated-CV AUC is
-0.687 (0.601--0.768) in grade 4 and 0.718 (0.642--0.792) in all gliomas. The ridge model moved less: 0.870
-before the correction, 0.880 after it and 0.871 with the final labels. The second lift was the split itself.
+\textbf{How a 0.70 model scored 0.90: a treatment-date leak.} Before the as-of-scan correction, the same
+clinical + timing + treatment design fitted by gradient boosting scored 0.901 on the naive label on this split
+(30 test patients, 84 scans; Table~\ref{tab:2}, history rows). Under repeated CV on the same pre-correction
+inputs, that model averaged 0.723 (0.633--0.806) in grade 4 and 0.743 (0.666--0.816) in all gliomas. Two
+things lifted it. The first was leakage: pre-RT and on-RT scans carried the RT start date, dose and end date of
+a course that had not yet started or ended. After the correction, the boosting model scored 0.869 on the same
+split, and with the final labels and the 29-patient test set, 0.844 (IPCW 0.824, 0.690--0.916). Its final
+repeated-CV AUC is 0.687 (0.601--0.768) in grade 4 and 0.718 (0.642--0.792) in all gliomas. The ridge model
+moved less: 0.870 before the correction, 0.880 after it and 0.871 with the final labels. The second lift was
+the split itself.
 
-\textbf{Why the split is easy.} Of the 60 negative test scans, 36 were taken before RT started, and none of
-the 36 pre-RT test scans was followed by progression (Figure~\ref{fig:1}B). In the whole cohort 9\% of such
-scans were. So 60\% of the positive--negative pairs compared a progression scan with an early post-operative,
-pre-RT scan. The baseline ridge ranked these pairs with AUC 0.962 and the remaining pairs with 0.735; the
-PRISM report model scored 0.823 and 0.771. Among the 500 design splits, the PRISM report split was at the 89th
-percentile for the share of pre-RT scans, the 5th for IDH-mutant scans and the 6th for later post-RT scans. A
-no-training rule, ``the scan is post-RT'', scored 0.740 on this test set (92nd percentile). On the 42 post-RT
-test scans (19 patients), the PRISM report model scored 0.770 (0.604--0.907) and the baseline 0.718
-(0.481--0.880) (Figure~\ref{fig:1}C). The clinical-only model was nominally highest there, at 0.818
-(0.664--0.924), with a difference from the baseline of +0.100 ($-$0.015 to +0.293): another illustration of
-single-split noise.
+\textbf{Why the split is easy: composition and phase of care.} Of the 60 negative test scans, 36 were taken
+before RT started, and none of the 36 pre-RT test scans was followed by progression (Figure~\ref{fig:1}B). In
+the whole cohort 9\% of such scans were. So 60\% of the positive--negative pairs compared a progression scan
+with an early post-operative, pre-RT scan. The core model ranked these pairs with AUC 0.962 and the remaining
+pairs with 0.735; PRISM's initial radiomics model scored 0.823 and 0.771. Among the 500 design splits, our
+initial evaluation split was at the 89th percentile for the share of pre-RT scans, the 5th for IDH-mutant
+scans and the 6th for later post-RT scans. A no-training rule, ``the scan is post-RT'', scored 0.740 on this
+test set (92nd percentile). On the 42 post-RT test scans (19 patients), PRISM's initial radiomics model scored
+0.770 (0.604--0.907) and the core model 0.718 (0.481--0.880) (Figure~\ref{fig:1}C). The clinical-only model was
+nominally highest there, at 0.818 (0.664--0.924), with a difference from the core model of +0.100 ($-$0.015 to
++0.293): another illustration of single-split noise.
 
-\subsection{What a single split does: 500 splits of the same design}\label{sec:3.3}
+\subsection{Split variance: 500 splits of the same design}\label{sec:3.3}
 
-When the PRISM report pipeline re-selected its features on each split, its AUC averaged 0.720 $\pm$ 0.055
-(2.5--97.5\% range 0.610--0.819) (Figure~\ref{fig:2}A). Its re-run on the PRISM report split scored 0.801,
-above 92\% of splits. Only 7\% of splits reached the reported 0.802. Refitting the shipped 48 features gave
-0.815 $\pm$ 0.044, but this is an upper bound: those features were chosen on patients who are test patients in
-most other splits. Per split, the honest version was 0.095 $\pm$ 0.040 lower than the optimistic one.
-Re-running the full hyperparameter search did not rescue the pipeline (Supplementary S8).
+When PRISM's initial radiomics pipeline re-selected its features on each split, its AUC averaged 0.720 $\pm$
+0.055 (2.5--97.5\% range 0.610--0.819) (Figure~\ref{fig:2}A). Its re-run on our initial evaluation split scored
+0.801, above 92\% of splits. Only 7\% of splits reached the reported 0.802. Refitting the shipped 48 features
+gave 0.815 $\pm$ 0.044, but this is an upper bound: those features were chosen on patients who are test
+patients in most other splits. Per split, the honest version was 0.095 $\pm$ 0.040 lower than the optimistic
+one. Re-running the full hyperparameter search did not rescue the pipeline (Supplementary S8).
 
-The baseline ridge averaged 0.801 $\pm$ 0.052 over the same splits, and the PRISM report split ranked it at
+The core model averaged 0.801 $\pm$ 0.052 over the same splits, and our initial evaluation split ranked it at
 the 91st percentile. Adding legacy radiomics gave 0.799 $\pm$ 0.053, a mean difference of $-$0.002; radiomics
 helped in 51.6\% of splits. Per-split AUC tracked the phase mix of the test set (Figure~\ref{fig:2}B): for the
-baseline, the Spearman correlation with the AUC of the ``post-RT'' rule was +0.57. From composition alone,
-nine variables predicted 0.851 for the PRISM report split for the baseline (observed 0.871, mean 0.801; CV
-R$^{2}$ 0.42) and 0.773 for the PRISM report pipeline (observed 0.801, mean 0.720; CV R$^{2}$ 0.10). About two
-thirds of the split's excess over an average split is thus explained by its composition, and the rest by the
-particular patients.
+core model, the Spearman correlation with the AUC of the ``post-RT'' rule was +0.57. From composition alone,
+nine variables predicted 0.851 for our initial evaluation split for the core model (observed 0.871, mean
+0.801; CV R$^{2}$ 0.42) and 0.773 for the initial radiomics pipeline (observed 0.801, mean 0.720; CV R$^{2}$
+0.10). About two thirds of the split's excess over an average split is thus explained by its composition, and
+the rest by the particular patients.
 
-These AUCs use the naive label and the PRISM report's case table, so their level is not comparable with
-repeated CV; for the same models, single-split IPCW AUCs were 0.10--0.16 above the all-glioma repeated-CV
-values (Table~\ref{tab:2}).
+These AUCs use the naive label and PRISM v1's case table, so their level is not comparable with repeated CV;
+for the same models, single-split IPCW AUCs were 0.10--0.16 above the all-glioma repeated-CV values
+(Table~\ref{tab:2}).
 
-\subsection{Clinical versus imaging features under repeated cross-validation}\label{sec:3.4}
+\subsection{Component ablation: clinical, treatment-phase and imaging branches}\label{sec:3.4}
 
 In grade 4, clinical features alone reached 0.585 (0.496--0.666). Adding timing raised this to 0.644
-(0.560--0.721), and adding as-of-scan treatment to 0.698 (0.615--0.774), the baseline (Figure~\ref{fig:3}A).
+(0.560--0.721), and adding as-of-scan treatment to 0.698 (0.615--0.774), the core model (Figure~\ref{fig:3}A).
 In all gliomas the steps were 0.619, 0.693 and 0.720 (0.638--0.792). Boosting did not beat ridge (grade 4
-0.687; all gliomas 0.718). Tuning changed the baseline by at most $\pm$0.025, and imaging-only literature
+0.687; all gliomas 0.718). Tuning changed the core model by at most $\pm$0.025, and imaging-only literature
 baselines were weaker (for example, a volumetric RANO-style rule 0.551; Supplementary S12).
 
-\textbf{Radiomics (pre-specified primary analysis).} With nested selection over 70 configurations, radiomics
-changed the grade 4 baseline by $-$0.032 ($-$0.084 to +0.017; AUC 0.666) and the all-glioma baseline by +0.028
-($-$0.017 to +0.071; AUC 0.747) (Table~\ref{tab:3}; Figure~\ref{fig:3}B). No grade 4 configuration had a CI
-above 0 (8 of 70 were below 0). In all gliomas 1 of 70 did --- legacy PCA-10, stacked, +0.035 (+0.002 to
-+0.068) --- fewer than the 1.75 expected by chance. Nested radiomics models were over-confident (calibration
-slope 0.60 in grade 4 against 0.89 for the baseline).
+\textbf{Radiomics branch (pre-specified primary analysis).} With nested selection over 70 configurations,
+radiomics changed the grade 4 core model by $-$0.032 ($-$0.084 to +0.017; AUC 0.666) and the all-glioma core
+model by +0.028 ($-$0.017 to +0.071; AUC 0.747) (Table~\ref{tab:3}; Figure~\ref{fig:3}B). No grade 4
+configuration had a CI above 0 (8 of 70 were below 0). In all gliomas 1 of 70 did --- legacy PCA-10, stacked,
++0.035 (+0.002 to +0.068) --- fewer than the 1.75 expected by chance. Nested radiomics models were
+over-confident (calibration slope 0.60 in grade 4 against 0.89 for the core model).
 
-\textbf{Deep features.} Frozen pretrained encoders, nested over 32 configurations, changed the baseline by
-$-$0.004 ($-$0.069 to +0.063) in grade 4 and +0.011 ($-$0.032 to +0.056) in all gliomas. The pretrained
+\textbf{Deep encoder branch.} Frozen pretrained encoders, nested over 32 configurations, changed the core model
+by $-$0.004 ($-$0.069 to +0.063) in grade 4 and +0.011 ($-$0.032 to +0.056) in all gliomas. The pretrained
 features did carry image-only signal (grade 4 image-only AUC 0.652, against 0.566 with random weights), but it
-correlated with tumour volume (r = 0.58) and was not additive. The random-weight control was worse than the
-baseline: $-$0.049 ($-$0.085 to $-$0.014).
+correlated with tumour volume (r = 0.58) and was not additive. The random-weight control, the v1 encoder type,
+was worse than the core model: $-$0.049 ($-$0.085 to $-$0.014).
 
 \textbf{Credit is not value.} In models that included volumes, morphology and change features, these imaging
 groups took 45\% (ridge) and 51\% (boosting) of the mean absolute SHAP credit, yet the models did not improve
-on the baseline (0.692 and 0.694 against 0.698) (Figure~\ref{fig:3}C). In the baseline itself, treatment took
-58\% of the credit, clinical 25\% and timing 17\%; the leading features were whether RT had started and the RT
-start day.
+on the core model (0.692 and 0.694 against 0.698) (Figure~\ref{fig:3}C). In the core model itself, treatment
+took 58\% of the credit, clinical 25\% and timing 17\%; the leading features were whether RT had started and
+the RT start day.
 
 \subsection{Phase of care}\label{sec:3.5}
 
-A compact four-level phase block recovered most of the baseline's gain over clinical features: grade 4 R0
+A compact four-level phase block recovered most of the core model's gain over clinical features: grade 4 R0
 0.585, R2 0.664, R3 0.698 (R2 $-$ R0 +0.080, +0.005 to +0.152) (Figure~\ref{fig:4}A). With phase known,
 volumes did as well as the full treatment block (R2 + I1 0.696) but no better. Within the post-RT cohort no
 model discriminated well. Grade 4 bases scored 0.549--0.604, and phase itself carried nothing (R2 $-$ R0
@@ -433,7 +510,7 @@ measurements to clinical + phase changed AUC from 0.549 (0.458--0.642) to 0.610 
 +0.061 ($-$0.038 to +0.156), permutation p = 0.21 (Figure~\ref{fig:4}B). The permutation null itself averaged
 +0.028: adding 44 permuted columns to a weak base raises its AUC. The key secondary contrast, radiomics, gave
 +0.061 ($-$0.041 to +0.157) with calibration slope 0.44. \textbf{The hypothesis that imaging adds value within
-the post-RT phase was not supported.} On top of the full baseline, every imaging block changed post-RT AUC by
+the post-RT phase was not supported.} On top of the full core model, every imaging block changed post-RT AUC by
 +0.005 to +0.04 with all CIs including 0. In an exploratory check, age alone scored 0.586 in grade 4 post-RT
 scans, above R2, so part of the +0.061 reflects a weak base. In the later post-RT cohort (69 scans) the bases
 fell below 0.5 (0.343--0.472), so contrasts there are not interpretable.
@@ -441,9 +518,10 @@ fell below 0.5 (0.343--0.472), so contrasts there are not interpretable.
 \subsection{Label, positive controls and segmentation}\label{sec:3.6}
 
 \textbf{Imaging-defined label (pre-specified).} Clinical-only progression accounted for 12 of 93 grade 4
-events (10 patients). With these censored, baseline + imaging reached 0.722 (0.639--0.799) against 0.696
-(0.610--0.776) for the baseline: $\Delta$AUC +0.027 ($-$0.033 to +0.082). Imaging alone was 0.068 below the
-baseline. \textbf{The rule was not met}; the documented-progression label was not shown to be the bottleneck.
+events (10 patients). With these censored, core + imaging reached 0.722 (0.639--0.799) against 0.696
+(0.610--0.776) for the core model: $\Delta$AUC +0.027 ($-$0.033 to +0.082). Imaging alone was 0.068 below the
+core model. \textbf{The rule was not met}; the documented-progression label was not shown to be the
+bottleneck.
 
 \textbf{Positive controls.} No pipeline error was found. Our volumes reproduced the dataset's own table
 (Pearson r 0.996-- 0.9998 by compartment), labels were aligned with scan dates and the 12 inspected masks were
@@ -470,8 +548,8 @@ brought O/E to 0.93--0.97 without changing the ranking, and no fine-tuning arm b
 Rank-normalising volumes within each cohort raised the boosting model to 0.659 (0.529--0.767), suggesting that
 part of the loss is segmenter scale. Frozen deep features added +0.050 to +0.089 (one of four CIs excluded 0),
 but a random-weight encoder gained up to +0.045, and deep features identified the cohort with AUC about 0.8.
-The shipped PRISM report model scored 0.613 (0.500--0.729) on 118 LUMIERE scans. In LUMIERE the time to the
-next scan alone scored 0.788 (0.703--0.868), higher than any locked model (Supplementary S13).
+PRISM's initial radiomics model, as shipped, scored 0.613 (0.500--0.729) on 118 LUMIERE scans. In LUMIERE the
+time to the next scan alone scored 0.788 (0.703--0.868), higher than any locked model (Supplementary S13).
 
 \textbf{CFB-GBM (pre-specified).} In 77 patients with ADC (19 events), adding ADC features to conventional
 radiomics changed AUC by +0.007 ($-$0.019 to +0.035; permutation p = 0.151; minimal detectable difference
@@ -480,22 +558,22 @@ conventional cohort, 0.565 in the ADC cohort). GTV volume and its change added +
 +0.148 (+0.031 to +0.266), but this block is partly circular with a label defined by the same volume.
 Conventional texture added nothing beyond volume ($-$0.009 and $-$0.022).
 
-\subsection{Calibration and clinical utility}\label{sec:3.8}
+\subsection{Calibration and clinical utility of the core model}\label{sec:3.8}
 
-The grade 4 baseline was well calibrated in the large (weighted O/E 0.96; calibration-in-the-large $-$0.09,
+The grade 4 core model was well calibrated in the large (weighted O/E 0.96; calibration-in-the-large $-$0.09,
 $-$0.42 to 0.28) and mildly over-fitted (slope 0.89, 0.50--1.43). At a 30\% threshold its net benefit was
 0.232 against 0.189 for treating all. Radiomics lowered net benefit at 30\% by $-$0.020 ($-$0.038 to
 $-$0.004); deep features changed it by at most $\pm$0.002 at 10--30\%. The study is under-powered by the Riley
-criteria even for the baseline: 3.0 events per parameter for 31 design columns, against 2,190 scans (970
+criteria even for the core model: 3.0 events per parameter for 31 design columns, against 2,190 scans (970
 events) required. The radiomics result held in nine sensitivity analyses ($\Delta$AUC $-$0.032 to +0.028, no
-CI excluding 0), and the baseline held within strata of the interval to the next scan (0.687, 0.595--0.768)
+CI excluding 0), and the core model held within strata of the interval to the next scan (0.687, 0.595--0.768)
 and against re-balancing or XGBoost (Supplementary S12).
 
-\subsection{The auditable layer}\label{sec:3.9}
+\subsection{The audit layer}\label{sec:3.9}
 
-The system's cross-validated predictions reproduced the baseline's out-of-fold predictions (maximum difference
-\num{1.7e-16}), and the additive explanation reproduced every logit (maximum error \num{1.3e-15}). An
-example record is in Supplementary S15.
+The audit layer's cross-validated predictions reproduced the core model's out-of-fold predictions (maximum
+difference \num{1.7e-16}), and the additive explanation reproduced every logit (maximum error \num{1.3e-15}).
+An example record is in Supplementary S15.
 
 \textbf{P1 (coverage) was met overall, with conditional failures.} At $\alpha$ = 0.2, conformal coverage on
 verified test scans was 0.841 (0.790--0.885) in grade 4 and 0.823 (0.776--0.865) in all gliomas. Coverage
@@ -504,100 +582,110 @@ failed in two places. Almost every pre-RT scan received the set \{0\}, so all 5 
 
 \textbf{P2 (abstention beyond case mix) was not met.} At about 70\% coverage, AUC on the retained scans was
 0.731 (0.635--0.812) against 0.698 for random removal, but composition-matched removal gave 0.725: P2 +0.006
-($-$0.023 to +0.036) in grade 4 and +0.003 ($-$0.031 to +0.036) in all gliomas (Figure~\ref{fig:5}).
+($-$0.023 to +0.036) in grade 4 and +0.003 ($-$0.031 to +0.036) in all gliomas (Figure~\ref{fig:5}C).
 Abstention kept 97.6\% of pre-RT scans. The early post-RT referral rule raised AUC to 0.723 only by removing a
 whole phase; within-phase AUCs were 0.555 (pre-RT), 0.663 (early post-RT) and 0.597 (later post-RT), all below
 the pooled 0.698. Any referral flag applied to 72.6\% of grade 4 scans.
 
 \textbf{The audit found four problems that the headline AUC hides.} (1) A missingness shortcut: IDH was
 unknown in 0 of 93 progression scans but in 6 of 117 non-progression and 5 of 39 censored scans; removing the
-unknown-marker indicators lowered grade 4 AUC by $-$0.023 ($-$0.047 to $-$0.001). (2) The model is a
+unknown-marker indicators lowered grade 4 AUC by $-$0.023 ($-$0.047 to $-$0.001). (2) The core model is a
 treatment-course model: treatment features alone scored 0.701 (0.622--0.776), $\Delta$ +0.003 ($-$0.050 to
-+0.048) against the full baseline. (3) A molecular look-ahead: IDH and MGMT were used at 8 grade 4 scans taken
-1--58 days before the diagnosis date. (4) The LUMIERE miscalibration came mostly from the same shortcut: IDH
-was unknown in 40.9\% of LUMIERE scans against 4.4\% in MU, and the mean contribution of the IDH-unknown
++0.048) against the full core model. (3) A molecular look-ahead: IDH and MGMT were used at 8 grade 4 scans
+taken 1--58 days before the diagnosis date. (4) The LUMIERE miscalibration came mostly from the same shortcut:
+IDH was unknown in 40.9\% of LUMIERE scans against 4.4\% in MU, and the mean contribution of the IDH-unknown
 indicator shifted by $-$0.68 logits; refitting without the unknown indicators moved LUMIERE O/E from 1.33 to
 0.89. Under this shift, conformal coverage on LUMIERE fell to 0.715 (0.340 on events). Explanation signs were
 stable, but the exact top 5 features recurred in at most 4\% of refits.
 
+\subsection{The report generator}\label{sec:3.10}
+
+An example grounded report, with each statement linked to its audit-record field, is shown in
+Figure~\ref{fig:5}B. \flag{[PENDING: REPORT\_AGENT results --- number of reports generated and evaluated;
+faithfulness results (traceable statements, numeric errors, omitted or invented flags, unsupported claims)
+with intervals; failure cases.]}
+
 \section{Discussion}\label{sec:4}
 
-We set out to re-evaluate a radiomics model that scored AUC 0.80 on one 30-patient split of a public
-post-treatment glioma cohort. Four findings stand out. First, the split was favourable: over 500 splits of the
-same design the PRISM report pipeline averaged 0.72, and 7\% of splits reached the reported value. Second,
-under repeated, patient-grouped and censoring-aware evaluation, a model built from clinical variables and the
-as-of-scan treatment course reached about 0.70, and neither radiomics, frozen deep features nor a consistent
-re-segmentation added measurable discrimination. Third, the clinical model's signal is largely phase of care:
-whether and when RT started and ended. Within the post-RT surveillance phase no model, with or without
-imaging, discriminated well. Fourth, an audit layer around the clinical model met its coverage target and made
-each prediction traceable, but it did not improve discrimination beyond case mix, and its main value was to
-expose problems that the AUC hides.
+We present PRISM, a pipeline for post-treatment glioma surveillance that reads every input as of the scan day,
+places each scan in its phase of care, and returns a risk with an audit record and a grounded clinician report.
+Evaluating every branch rigorously led to four findings. First, our initial single-split evaluation was
+optimistic: over 500 splits of the same design PRISM's initial radiomics pipeline averaged 0.72, and 7\% of
+splits reached the reported value. Second, under repeated, patient-grouped and censoring-aware evaluation,
+PRISM's clinical + treatment-phase core reached about 0.70, and neither the radiomics branch, the frozen deep
+encoder nor a consistent re-segmentation added measurable discrimination. Third, the core model's signal is
+largely phase of care: whether and when RT started and ended. Within the post-RT surveillance phase no model,
+with or without imaging, discriminated well. Fourth, the audit layer met its coverage target and made each
+prediction traceable, but it did not improve discrimination beyond case mix, and its main value was to expose
+problems that the AUC hides.
 
-\textbf{What single splits do.} The single split did more than add noise. It changed the ranking question.
-When 60\% of the case--control pairs compare a progression scan with a fresh post-operative scan before RT,
-any model that recognises a pre-RT scan scores well. The clinical model does this through treatment status.
-The radiomics model does it through T1c texture. A no-training ``post-RT'' rule scored 0.740 on that test set.
-This mechanism is not specific to radiomics. It also lifted a no-imaging model to 0.871, and, while future
-treatment dates still leaked into the features, a boosting model to 0.901. That model averaged about 0.70
-under repeated CV. This agrees with the instability across random splits shown by \citet{an2021} and adds a
-specific mechanism: when cohorts mix phases of care with very different event rates, the composition of a
-small test set is a major source of variance, explaining about two thirds of this split's excess. A split
-search that targets the number of test scans and positives does not control it. We therefore suggest four
-reporting rules for this task: repeated grouped CV; the distribution over splits when a single split is
-reported; results within phases of care; and a clinical comparator that knows the treatment course.
+\textbf{What PRISM contributes.} At AUC about 0.70 we did not find a triage benefit. Abstaining on uncertain
+scans and referring early post-RT scans raised the AUC of the remaining scans only by changing their phase
+mix, and the flags together covered most scans. The conformal sets met their marginal target, but they did so
+mainly by assigning ``no progression'' to pre-RT scans, missing every pre-RT progression, and coverage broke
+under the shift to LUMIERE. What PRISM does provide is auditability, phase awareness and an honest statement
+of uncertainty. Each record shows what the model knew at the scan date, where the scan sits in the treatment
+course, an interval and an exact explanation, and the report generator restates only what the record contains.
+Running the audit found a missingness shortcut, a look-ahead in the use of molecular results before diagnosis,
+and the cause of the external miscalibration, none of which the cross-validated AUC revealed. We think this is
+the honest use of such a system at this level of performance: to make a modest model's reasoning and failure
+modes visible, not to claim better decisions. \flag{[PENDING: REPORT\_AGENT results --- one or two sentences on
+report faithfulness and its failure modes.]}
+
+\textbf{Why our initial evaluation misled.} The single split did more than add noise. It changed the ranking
+question. When 60\% of the case--control pairs compare a progression scan with a fresh post-operative scan
+before RT, any model that recognises a pre-RT scan scores well. The core model does this through treatment
+status. PRISM's initial radiomics model does it through T1c texture. A no-training ``post-RT'' rule scored
+0.740 on that test set. This mechanism is not specific to radiomics. It also lifted a no-imaging model to
+0.871, and, while future treatment dates still leaked into the features, a boosting model to 0.901. That model
+averaged about 0.70 under repeated CV. This agrees with the instability across random splits shown by
+\citet{an2021} and adds a specific mechanism: when cohorts mix phases of care with very different event rates,
+the composition of a small test set is a major source of variance, explaining about two thirds of this split's
+excess. A split search that targets the number of test scans and positives does not control it. We therefore
+suggest four reporting rules for this task: repeated grouped CV; the distribution over splits when a single
+split is reported; results within phases of care; and a clinical comparator that knows the treatment course.
 
 \textbf{Phase of care as a confounder.} Event rates after a surveillance MRI depend strongly on where the scan
 sits in the course of treatment. A scan before RT is rarely followed by documented progression within 120
 days. A scan in the early post-RT window often is, partly because of pseudoprogression and the follow-up
-imaging it triggers \citep{brandes2008,taal2008,wen2023}. A four-level phase block recovered most of the
-clinical model's gain over clinical variables, treatment features alone reproduced the whole baseline (0.701),
-and SHAP gave treatment status the largest share of credit. Two published clinical comparators also use time
-since the end of RT and find it influential \citep{gomaa2025,leone2023}, though in a pseudoprogression task
-with an already suspicious lesion. Imaging models that pool pre-RT and surveillance scans can therefore report
-high AUCs for phase recognition rather than for progression biology. Our pre-specified test of imaging within
-the post-RT phase was negative (+0.061, $-$0.038 to +0.156), and part of its point estimate was an artefact of
+imaging it triggers \citep{brandes2008,taal2008,wen2023}. A four-level phase block recovered most of the core
+model's gain over clinical variables, treatment features alone reproduced the whole core model (0.701), and
+SHAP gave treatment status the largest share of credit. Two clinical comparators in the literature also use time since
+the end of RT and find it influential \citep{gomaa2025,leone2023}, though in a pseudoprogression task with an
+already suspicious lesion. Imaging models that pool pre-RT and surveillance scans can therefore report high
+AUCs for phase recognition rather than for progression biology. This is why PRISM makes phase of care an
+explicit part of every record and flags the early post-RT window. Our pre-specified test of imaging within the
+post-RT phase was negative (+0.061, $-$0.038 to +0.156), and part of its point estimate was an artefact of
 adding columns to a weak base.
 
-\textbf{Why imaging did not add.} We found no pipeline defect: volumes matched the dataset's own table, labels
-were aligned and masks looked correct. Yet even at the scan where progression was documented, compartment
-volumes separated it from verified negatives with AUC only 0.68, and ET volume was no larger than at the
-previous scan in half of the pairs. Three features of the data explain this. The label is a documentation
-event: about one in eight grade 4 events was a clinical-only progression, and the 120-day label mostly means
-that the next scan was the progression scan. Volume series were noisy, with changes over days as large as over
-months; a consistent segmenter reduced but did not remove this. And the cohort is small: by the Riley criteria
-even the 31-column baseline would need about ten times more scans, and radiomics models far more
-\citep{riley2020}. Cleaning the label and re-segmenting moved imaging in the expected direction by about
+\textbf{What imaging did not add, and why.} We found no pipeline defect: volumes matched the dataset's own
+table, labels were aligned and masks looked correct. Yet even at the scan where progression was documented,
+compartment volumes separated it from verified negatives with AUC only 0.68, and ET volume was no larger than
+at the previous scan in half of the pairs. Three features of the data explain this. The label is a
+documentation event: about one in eight grade 4 events was a clinical-only progression, and the 120-day label
+mostly means that the next scan was the progression scan. Volume series were noisy, with changes over days as
+large as over months; a consistent segmenter reduced but did not remove this. And the cohort is small: by the
+Riley criteria even the 31-column core model would need about ten times more scans, and radiomics models far
+more \citep{riley2020}. Cleaning the label and re-segmenting moved imaging in the expected direction by about
 +0.03, but neither met its pre-specified rule. A real imaging effect of that size cannot be excluded; our data
-cannot detect it. Diffusion did not change the picture in CFB-GBM, although that test was small (19 events)
+cannot detect it, and PRISM keeps its imaging branches as optional modules so that the question can be re-tested
+on larger cohorts. Diffusion did not change the picture in CFB-GBM, although that test was small (19 events)
 and used precomputed features. The task literature where imaging performs well uses diffusion and perfusion
 for pseudoprogression classification \citep{kim2019,taylor2022}, a different question from forward risk at
-every surveillance scan.
-
-\textbf{Credit is not value.} Imaging took about half of the SHAP credit in models that included it, without
-any gain in discrimination. Attribution shares among correlated features describe how a model divides its
-output, not whether a feature group is needed; claims of imaging value need a paired difference with an
+every surveillance scan. Imaging also took about half of the SHAP credit in models that included it, without
+any gain in discrimination: attribution shares among correlated features describe how a model divides its
+output, not whether a feature group is needed, so claims of imaging value need a paired difference with an
 interval.
 
 \textbf{External validity.} Locked models lost about 0.05--0.06 AUC on LUMIERE, in line with the drops
-reported for externally validated imaging models \citep{yu2022}. The shipped PRISM report model fell from 0.80
-to 0.61. LUMIERE lacks treatment dates, so the treatment-aware model could not be transported, and the shared
-model's under-prediction came mostly from a missingness indicator: IDH status is often unknown in LUMIERE, and
-in MU unknown IDH occurred only in scans without progression. The time to the next scan alone predicted the
-LUMIERE label better than any model, so external AUCs on this kind of label are partly schedule-dependent. In
-MU, by contrast, the baseline kept its ranking within strata of the scan interval.
+reported for externally validated imaging models \citep{yu2022}. PRISM's initial radiomics model fell from 0.80
+to 0.61. LUMIERE lacks treatment dates, so the treatment-aware core model could not be transported, and the
+shared model's under-prediction came mostly from a missingness indicator: IDH status is often unknown in
+LUMIERE, and in MU unknown IDH occurred only in scans without progression. The time to the next scan alone
+predicted the LUMIERE label better than any model, so external AUCs on this kind of label are partly
+schedule-dependent. In MU, by contrast, the core model kept its ranking within strata of the scan interval.
 
-\textbf{What an auditable model offers at AUC about 0.70.} We did not find a triage benefit. Abstaining on
-uncertain scans and referring early post-RT scans raised the AUC of the remaining scans only by changing their
-phase mix, and the flags together covered most scans. The conformal sets met their marginal target, but they
-did so mainly by assigning ``no progression'' to pre-RT scans, missing every pre-RT progression, and coverage
-broke under the shift to LUMIERE. What the layer did provide is auditability. Each record shows what the model
-knew at the scan date, where the scan sits in the treatment course, an interval, and an exact explanation.
-Running the audit found a missingness shortcut, a look-ahead in the use of molecular results before diagnosis,
-and the cause of the external miscalibration, none of which the cross-validated AUC revealed. We think this is
-the honest use of such a layer at this level of performance: to make a modest model's reasoning and failure
-modes visible, not to claim better decisions.
-
-\textbf{Comparison with other work.} Our grade 4 baseline (0.698) is close to the clinical comparators
+\textbf{Comparison with other work.} Our grade 4 core model (0.698) is close to the clinical comparators
 reported for adjacent tasks (0.69 in \citealp{leone2023}; 0.727 externally in \citealp{gomaa2025}) and to the
 nested-CV result for a volume-defined label on the same dataset (0.728; \citealp{rai2026} \flag{[CHECK]}). It
 is below the single-test-set 0.80 reported on MU-Glioma-Post \citep{christodoulou2026}, whose label
@@ -612,25 +700,29 @@ recommended sample sizes; small imaging effects cannot be excluded. The outcome 
 routine records, not a blinded per-scan RANO read, and its timing depends on scheduling. MU images lack
 acquisition metadata, so scanner and field-strength effects could not be audited, and race could not be
 studied. The external cohort is small (61 patients), uses a different segmenter and an expert RANO label, and
-lacks treatment dates, so the main model was not externally tested. Several analyses were added after earlier
-results were known (for example the clean-label and re-segmentation tests followed the imaging null), although
-each had its rule fixed before its own run; the phase-ladder plan was written into the code but not separately
-committed. Radiomics discretisation used a fixed bin count rather than the IBSI-recommended fixed bin width
-\citep{zwanenburg2020}, and the ICC stability filter covered only T1c and FLAIR. Deep features were frozen;
-fine-tuning and diffusion-based deep features were not run. Feature pipelines in two secondary analyses (the
-feature-group search and one label-formulation set) still contain unclipped legacy radiomics. The shipped
-PRISM report model's LUMIERE score predates the final external label definition. The audit found a small
-molecular look-ahead (8 grade 4 scans) that also affects the reported baseline; its size was not quantified.
-There was no reader study, so we cannot say whether the audit records change clinical decisions.
+lacks treatment dates, so PRISM's core model was not externally tested. Several analyses were added after
+earlier results were known (for example the clean-label and re-segmentation tests followed the imaging null),
+although each had its rule fixed before its own run; the phase-ladder plan was written into the code but not
+separately committed. Radiomics discretisation used a fixed bin count rather than the IBSI-recommended fixed
+bin width \citep{zwanenburg2020}, and the ICC stability filter covered only T1c and FLAIR. Deep features were
+frozen; fine-tuning and diffusion-based deep features were not run. Feature pipelines in two secondary analyses
+(the feature-group search and one label-formulation set) still contain unclipped legacy radiomics. The LUMIERE
+score of PRISM's initial radiomics model predates the final external label definition. The audit found a small
+molecular look-ahead (8 grade 4 scans) that also affects the reported core model; its size was not quantified.
+Report faithfulness to the audit record is not clinical usefulness: there was no reader study, so we cannot
+say whether the audit records or reports change clinical decisions. \flag{[PENDING: REPORT\_AGENT results ---
+limitations specific to the report generator.]}
 
 \subsection*{Conclusion}
 
-On MU-Glioma-Post, a radiomics model's AUC of 0.80 reflected one favourable split; across splits its pipeline
-averaged 0.72, and a clinical model that knows the treatment course reached about 0.70 under repeated
-cross-validation. MRI radiomics, frozen deep features, re-segmentation, a cleaner label and diffusion features
-added no measurable discrimination. Phase of care drives discrimination on this task and should be reported as
-a stratum and controlled as a confounder. An audit layer can make a modest model's knowledge and failure modes
-explicit, but on these data it did not make triage better than case mix.
+PRISM's initial AUC of 0.80 reflected one favourable split and, for one of its comparators, a treatment-date
+leak; across splits its radiomics pipeline averaged 0.72, and its clinical + treatment-phase core reached about
+0.70 under repeated cross-validation. MRI radiomics, frozen deep features, re-segmentation, a cleaner label and
+diffusion features added no measurable discrimination. Phase of care drives discrimination on this task and
+should be reported as a stratum and controlled as a confounder. PRISM is therefore deployed as its
+clinical + treatment-phase core, with imaging branches as optional modules. Its audit records and grounded
+reports make a modest model's knowledge and failure modes explicit, but on these data they did not make triage
+better than case mix.
 
 
 \section*{Declarations}
@@ -655,8 +747,10 @@ repository (Supplementary S1).
 
 \textbf{Patient and public involvement.} None.
 
-\textbf{Use of the name ``PRISM''.} The PRISM report is an unpublished internal report; ``PRISM report model''
-and ``PRISM report split'' refer to the model and split described there.
+\textbf{PRISM versions.} PRISM v1 and its initial single-split evaluation were described in an unpublished
+internal report \todo{PENDING AUTHOR DECISION: by whom; whether to cite it}; this manuscript supersedes it.
+``Our initial evaluation split'' and ``PRISM's initial radiomics model'' refer to the split and the radiomics
+model of that report.
 
 % =====================================================================================================
 \clearpage
@@ -710,29 +804,30 @@ Death without documented progression (scans) & 22 (7\%) & 20 (8\%) & 7 (5\%) \\
 \begin{threeparttable}
 \caption[The same models on a single split, across 500 splits and under repeated
 cross-validation]{\textbf{The same models on a single split, across 500 splits and under repeated
-cross-validation.} IPCW AUC(120 d) with 95\% patient-cluster bootstrap CI unless stated. Single split = PRISM
-report split (all gliomas; 29 test patients, 82 scans). 500 splits = the PRISM report split design (naive label;
-for the PRISM report model, its pipeline with features re-selected per split). 5 $\times$ 5 CV = repeated
+cross-validation.} IPCW AUC(120 d) with 95\% patient-cluster bootstrap CI unless stated. Single split = our
+initial evaluation split (all gliomas; 29 test patients, 82 scans). 500 splits = PRISM v1's split design (naive
+label; for PRISM's initial radiomics model, its pipeline with features re-selected per split). Core model = PRISM's
+deployed clinical + timing + as-of-scan treatment model (the baseline of every imaging comparison). 5 $\times$ 5 CV = repeated
 patient-grouped CV on the label-fixed cohort. History rows document the as-of-scan treatment correction on the
 earlier 30-patient / 84-scan version of the split; ``pre-fix (leaky)'' means that future RT dates and RT status
 entered the treatment and timing features.}
 \label{tab:2}
 \begin{tabularx}{\linewidth}{@{}L R{1.3cm} R{3.0cm} R{3.5cm} R{4.0cm} R{3.0cm} R{3.0cm}@{}}
 \toprule
-Model & Single split: naive AUC & Single split: IPCW AUC [95\% CI] & $\Delta$ vs baseline ridge [95\% CI] & 500 splits: naive mean $\pm$ SD (2.5--97.5\%) & 5 $\times$ 5 CV, all gliomas & 5 $\times$ 5 CV, grade 4 \\
+Model & Single split: naive AUC & Single split: IPCW AUC [95\% CI] & $\Delta$ vs core ridge [95\% CI] & 500 splits: naive mean $\pm$ SD (2.5--97.5\%) & 5 $\times$ 5 CV, all gliomas & 5 $\times$ 5 CV, grade 4 \\
 \midrule
-PRISM report model & 0.802 & 0.817 [0.690, 0.920] & $-$0.034 [$-$0.186, +0.109] & 0.720 $\pm$ 0.055 (0.610--0.819) & n/a (fixed model) & n/a (fixed model) \\
-Baseline ridge & 0.871 & 0.851 [0.735, 0.947] & -- & 0.801 $\pm$ 0.052 (0.694--0.895) & 0.720 [0.638, 0.792] & 0.698 [0.615, 0.774] \\
-Baseline GBM & 0.844 & 0.824 [0.690, 0.916] & $-$0.027 [$-$0.127, +0.062] & not run & 0.718 [0.642, 0.792] & 0.687 [0.601, 0.768] \\
-Baseline + legacy radiomics & 0.862 & 0.845 [0.746, 0.936] & $-$0.006 [$-$0.081, +0.090] & 0.799 $\pm$ 0.053 (0.674--0.892) & 0.743 [0.678, 0.803] & 0.703 [0.627, 0.774] \\
+PRISM initial radiomics model & 0.802 & 0.817 [0.690, 0.920] & $-$0.034 [$-$0.186, +0.109] & 0.720 $\pm$ 0.055 (0.610--0.819) & n/a (fixed model) & n/a (fixed model) \\
+Core model (ridge) & 0.871 & 0.851 [0.735, 0.947] & -- & 0.801 $\pm$ 0.052 (0.694--0.895) & 0.720 [0.638, 0.792] & 0.698 [0.615, 0.774] \\
+Core model (GBM) & 0.844 & 0.824 [0.690, 0.916] & $-$0.027 [$-$0.127, +0.062] & not run & 0.718 [0.642, 0.792] & 0.687 [0.601, 0.768] \\
+Core + legacy radiomics & 0.862 & 0.845 [0.746, 0.936] & $-$0.006 [$-$0.081, +0.090] & 0.799 $\pm$ 0.053 (0.674--0.892) & 0.743 [0.678, 0.803] & 0.703 [0.627, 0.774] \\
 Clinical only (ridge) & 0.791 & 0.782 [0.638, 0.897] & $-$0.069 [$-$0.215, +0.058] & not run & 0.619 [0.540, 0.696] & 0.585 [0.496, 0.666] \\
 \addlinespace
 \multicolumn{7}{@{}l}{\emph{History rows (30 patients / 84 scans; earlier cohort and inputs)}} \\
-PRISM report model & 0.802 & 0.811 [0.694, 0.919] & not computed & -- & -- & -- \\
-Baseline ridge, pre-fix (leaky) & 0.870 & 0.844 (no CI) & not computed & not run & 0.719 [0.648, 0.788]\tnote{c} & 0.694 [0.613, 0.775]\tnote{c} \\
-Baseline ridge, after as-of-scan fix & 0.880 & 0.860 [0.730, 0.943] & not computed & not run & 0.749 [0.675, 0.820]\tnote{d} & 0.729 [0.648, 0.811]\tnote{d} \\
-Baseline GBM, pre-fix (leaky) & 0.901 & 0.881 (no CI) & not computed & not run & 0.743 [0.666, 0.816]\tnote{c} & 0.723 [0.633, 0.806]\tnote{c} \\
-Baseline GBM, after as-of-scan fix & 0.869 & 0.855 (no CI) & not computed & not run & 0.740 [0.663, 0.815]\tnote{d} & 0.731 [0.641, 0.813]\tnote{d} \\
+PRISM initial radiomics model & 0.802 & 0.811 [0.694, 0.919] & not computed & -- & -- & -- \\
+Core ridge, pre-fix (leaky) & 0.870 & 0.844 (no CI) & not computed & not run & 0.719 [0.648, 0.788]\tnote{c} & 0.694 [0.613, 0.775]\tnote{c} \\
+Core ridge, after as-of-scan fix & 0.880 & 0.860 [0.730, 0.943] & not computed & not run & 0.749 [0.675, 0.820]\tnote{d} & 0.729 [0.648, 0.811]\tnote{d} \\
+Core GBM, pre-fix (leaky) & 0.901 & 0.881 (no CI) & not computed & not run & 0.743 [0.666, 0.816]\tnote{c} & 0.723 [0.633, 0.806]\tnote{c} \\
+Core GBM, after as-of-scan fix & 0.869 & 0.855 (no CI) & not computed & not run & 0.740 [0.663, 0.815]\tnote{d} & 0.731 [0.641, 0.813]\tnote{d} \\
 \bottomrule
 \end{tabularx}
 \begin{tablenotes}\footnotesize
@@ -750,8 +845,8 @@ History-row CV values are not comparable with the final rows.
 \centering
 \small
 \begin{threeparttable}
-\caption[Does imaging add to non-imaging information?]{\textbf{Does imaging add to non-imaging information? Paired
-$\Delta$AUC with 95\% patient-cluster bootstrap CI.} Reference: the baseline (clinical + timing + treatment, ridge)
+\caption[Do PRISM's imaging branches add to its core model?]{\textbf{Do PRISM's imaging branches add to its core model? Paired
+$\Delta$AUC with 95\% patient-cluster bootstrap CI.} Reference: PRISM's core model (clinical + timing + treatment, ridge)
 unless stated in the section heading. Grade 4 (G4) is primary. * = CI excludes 0 (uncorrected; 3 of the 32
 intervals in Figure~\ref{fig:3}B; the CFB-GBM row is added here).}
 \label{tab:3}
@@ -760,24 +855,24 @@ intervals in Figure~\ref{fig:3}B; the CFB-GBM row is added here).}
 Analysis & G4 $\Delta$AUC [95\% CI] & All gliomas $\Delta$AUC [95\% CI] \\
 \midrule
 \addlinespace
-\multicolumn{3}{@{}l}{\textbf{Radiomics vs baseline}} \\
+\multicolumn{3}{@{}l}{\textbf{Radiomics branch vs core model}} \\
 Nested over 70 configurations (pre-specified primary) & $-$0.032 [$-$0.084, +0.017] & +0.028 [$-$0.017, +0.071] \\
 Legacy top-10, concatenated (single configuration) & +0.005 [$-$0.059, +0.067] & +0.024 [$-$0.026, +0.075] \\
 Legacy PCA-10, stacked (best post hoc, optimistic) & +0.023 [$-$0.013, +0.057] & +0.035 [+0.002, +0.068]* \\
 \addlinespace
-\multicolumn{3}{@{}l}{\textbf{Frozen deep features vs baseline}} \\
+\multicolumn{3}{@{}l}{\textbf{Frozen deep encoder branch vs core model}} \\
 Nested over 32 (BraTS21 SwinUNETR + BrainSegFounder) & $-$0.004 [$-$0.069, +0.063] & +0.011 [$-$0.032, +0.056] \\
 BraTS21 SwinUNETR, lesion PCA-10 stacked & +0.016 [$-$0.029, +0.059] & +0.017 [$-$0.014, +0.050] \\
 BrainSegFounder, lesion PCA-10 stacked & +0.014 [$-$0.029, +0.057] & +0.024 [$-$0.013, +0.064] \\
 Random-weight encoder, nested (control) & $-$0.049 [$-$0.085, $-$0.014]* & $-$0.009 [$-$0.032, +0.009] \\
 \addlinespace
 \multicolumn{3}{@{}l}{\textbf{Imaging-defined label (clinical-only progression censored)}} \\
-Baseline + volumes/change vs baseline (pre-specified rule) & +0.027 [$-$0.033, +0.082] & +0.008 [$-$0.036, +0.049] \\
+Core + volumes/change vs core (pre-specified rule) & +0.027 [$-$0.033, +0.082] & +0.008 [$-$0.036, +0.049] \\
 \addlinespace
 \multicolumn{3}{@{}l}{\textbf{Post-RT scans only}} \\
 Clinical + phase + imaging vs clinical + phase (pre-specified primary) & +0.061 [$-$0.038, +0.156] & +0.033 [$-$0.054, +0.128] \\
-Baseline + imaging measurements vs baseline & +0.017 [$-$0.069, +0.093] & +0.005 [$-$0.075, +0.082] \\
-Baseline + radiomics (nested) vs baseline & +0.005 [$-$0.070, +0.075] & +0.024 [$-$0.030, +0.076] \\
+Core + imaging measurements vs core & +0.017 [$-$0.069, +0.093] & +0.005 [$-$0.075, +0.082] \\
+Core + radiomics (nested) vs core & +0.005 [$-$0.070, +0.075] & +0.024 [$-$0.030, +0.076] \\
 \addlinespace
 \multicolumn{3}{@{}l}{\textbf{Re-segmentation (reference: same model on MU masks)}} \\
 Clinical + phase + imaging, BraTS21 SwinUNETR masks & +0.030 [$-$0.008, +0.069] & +0.029 [$-$0.010, +0.069] \\
@@ -803,14 +898,15 @@ Clinical + phase + imaging, BrainSegFounder masks & +0.008 [$-$0.023, +0.040] & 
 \begin{figure}[!htbp]
 \centering
 \includegraphics[width=\linewidth,height=0.55\textheight,keepaspectratio]{fig1_single_split.pdf}
-\caption[The PRISM report split]{\textbf{The PRISM report split.} Discrimination on the PRISM report split (all
-gliomas; 126 training / 29 test patients, 82 test scans, 22 naive positives). Every model except the PRISM report
-model was fitted once on the training patients; the PRISM report model enters with its shipped test-set
-probabilities. (A) IPCW AUC with 95\% patient-cluster bootstrap CI (1,000 draws; dot and bar) and naive AUC (tick).
-(B) Naive AUC decomposed by the type of negative scan: 36 of the 60 negative test scans were taken before RT
-started, and none of them progressed, so 60\% of positive--negative pairs compare a progression scan with a pre-RT
-scan; solid bars, positives against pre-RT negatives; light bars, positives against other negatives. (C) The same
-models on the 42 post-RT test scans (19 patients). Intervals are wide and overlap throughout.}
+\caption[PRISM's initial single-split result]{\textbf{PRISM's initial single-split result.} Discrimination on our
+initial evaluation split (all gliomas; 126 training / 29 test patients, 82 test scans, 22 naive positives). Every
+model except PRISM's initial radiomics model was fitted once on the training patients; the initial radiomics model
+enters with its shipped test-set probabilities. (A) IPCW AUC with 95\% patient-cluster bootstrap CI (1,000 draws;
+dot and bar) and naive AUC (tick). (B) Naive AUC decomposed by the type of negative scan: 36 of the 60 negative
+test scans were taken before RT started, and none of them progressed, so 60\% of positive--negative pairs compare a
+progression scan with a pre-RT scan; solid bars, positives against pre-RT negatives; light bars, positives against
+other negatives. (C) The same models on the 42 post-RT test scans (19 patients). Intervals are wide and overlap
+throughout.}
 \label{fig:1}
 \end{figure}
 
@@ -818,15 +914,15 @@ models on the 42 post-RT test scans (19 patients). Intervals are wide and overla
 \begin{figure}[!htbp]
 \centering
 \includegraphics[width=\linewidth,height=0.55\textheight,keepaspectratio]{fig2_split_variance.pdf}
-\caption[Where the PRISM report split sits among 500 splits of the same design]{\textbf{Where the PRISM report
-split sits among 500 splits of the same design.} The PRISM report's split search was run for seeds 0--499; seed 62
-reproduces the PRISM report split. (A) Test AUC (naive label) per split for the PRISM report pipeline with features
-re-selected per split (honest estimate), the shipped features refitted (optimistic upper bound), the baseline ridge
-and the baseline + legacy radiomics. Violin and points, 500 splits; grey dot and line, mean and 2.5--97.5\% range;
-diamond, each model's own value on the PRISM report split with its percentile rank; dashed line, the reported
-0.802. (B) Per-split AUC against the AUC of the no-training rule ``scan is post-RT'' on that test set (higher =
-more pre-RT negatives and fewer pre-RT events); lines, least-squares fits; Spearman $\rho$ +0.57 (baseline) and
-+0.22 (PRISM report pipeline).}
+\caption[Where our initial evaluation split sits among 500 splits of the same design]{\textbf{Where our initial
+evaluation split sits among 500 splits of the same design.} PRISM v1's split search was run for seeds 0--499; seed
+62 reproduces our initial evaluation split. (A) Test AUC (naive label) per split for PRISM's initial radiomics
+pipeline with features re-selected per split (honest estimate), the shipped features refitted (optimistic upper
+bound), the core ridge model and the core model + legacy radiomics. Violin and points, 500 splits; grey dot and
+line, mean and 2.5--97.5\% range; diamond, each model's own value on our initial evaluation split with its
+percentile rank; dashed line, the reported 0.802. (B) Per-split AUC against the AUC of the no-training rule ``scan
+is post-RT'' on that test set (higher = more pre-RT negatives and fewer pre-RT events); lines, least-squares fits;
+Spearman $\rho$ +0.57 (core model) and +0.22 (initial radiomics pipeline).}
 \label{fig:2}
 \end{figure}
 
@@ -834,14 +930,15 @@ more pre-RT negatives and fewer pre-RT events); lines, least-squares fits; Spear
 \begin{figure}[!htbp]
 \centering
 \includegraphics[width=\linewidth,height=0.62\textheight,keepaspectratio]{fig3_clinical_vs_radiomics.pdf}
-\caption[Clinical versus imaging features under repeated cross-validation]{\textbf{Clinical versus imaging features
-under repeated cross-validation.} (A) Feature ladder (ridge; 5 $\times$ 5 repeated patient-grouped CV; IPCW AUC(120
-d) with 95\% patient-cluster bootstrap CI): clinical $\rightarrow$ + timing $\rightarrow$ + as-of-scan treatment (=
-baseline, B); the last three points each add one imaging block to B (volumes; radiomics, nested over 70
-configurations; frozen deep features, nested over 32). (B) Paired $\Delta$AUC with 95\% CI against the reference
-named in each section (Table~\ref{tab:3}). Asterisks mark CIs excluding 0 (3 of 32, uncorrected; about 1.6 expected
-by chance). (C) Share of mean absolute group SHAP in grade 4 out-of-fold explanations: imaging blocks take 45--51\%
-of the credit in the full models without improving discrimination.}
+\caption[Component ablation: clinical, treatment-phase and imaging branches]{\textbf{Component ablation: clinical,
+treatment-phase and imaging branches under repeated cross-validation.} (A) Feature ladder (ridge; 5 $\times$ 5
+repeated patient-grouped CV; IPCW AUC(120 d) with 95\% patient-cluster bootstrap CI): clinical $\rightarrow$ +
+timing $\rightarrow$ + as-of-scan treatment (= PRISM's core model, B); the last three points each add one imaging
+branch to B (volumes; radiomics, nested over 70 configurations; frozen deep features, nested over 32). (B) Paired
+$\Delta$AUC with 95\% CI against the reference named in each section (Table~\ref{tab:3}). Asterisks mark CIs
+excluding 0 (3 of 32, uncorrected; about 1.6 expected by chance). (C) Share of mean absolute group SHAP in grade 4
+out-of-fold explanations: imaging blocks take 45--51\% of the credit in the full models without improving
+discrimination.}
 \label{fig:3}
 \end{figure}
 
@@ -852,7 +949,7 @@ of the credit in the full models without improving discrimination.}
 \caption[Phase of care]{\textbf{Phase of care.} (A) Non-imaging bases (ridge, grade 4) in the full cohort (249
 scans), the post-RT cohort (167 scans, 84 patients, 83 events) and the later post-RT cohort (> 12 weeks after RT
 end; 69 scans), each trained and evaluated within the cohort. R0 clinical; R1 + timing; R2 + four-level phase of
-care; R3 baseline. In the later post-RT cohort the bases fall below 0.5, the expected anti-learning of a near-null
+care; R3 core model. In the later post-RT cohort the bases fall below 0.5, the expected anti-learning of a near-null
 model in a small sample, so contrasts there are not interpretable. (B) $\Delta$AUC from adding each imaging block
 (I1 volumes; I2 all non-radiomics measurements; I3 radiomics; I4 deep) to each base within grade 4 post-RT scans.
 Diamond, pre-specified primary contrast (R2 + I2 vs R2): +0.061 ($-$0.038 to +0.156), permutation p = 0.21; the
@@ -860,19 +957,32 @@ permutation null itself averages +0.03.}
 \label{fig:4}
 \end{figure}
 
-% Figure 5. DRAFT.md legend pointer: "File: figures/fig5_system_risk_coverage.png (copy of
-% outputs/results/analyses/audit_system/risk_coverage.png)." PDF version not available; PNG (150 dpi) used.
+% Figure 5. Panels A and B: docs/manuscript/figures/fig5a_architecture.pdf and fig5a_example_report.pdf (made by the
+% report-generator work stream; red placeholder until they exist). Panel C: fig5_system_risk_coverage.png (copy of
+% outputs/results/analyses/audit_system/risk_coverage.png; PNG only, 150 dpi).
 \begin{figure}[!htbp]
 \centering
-\includegraphics[width=\linewidth,height=0.60\textheight,keepaspectratio]{fig5_system_risk_coverage.png}
-\caption[The auditable layer: selective prediction against case mix]{\textbf{The auditable layer: selective
-prediction against case mix.} Risk--coverage curves for the baseline model (5 $\times$ 5 CV, pooled out-of-fold
-predictions, mean over repeats), grade 4 (left) and all gliomas (right). Top, IPCW AUC(120 d); bottom, IPCW Brier
-score, of the scans retained when the least confident scans (lowest max(p, 1 $-$ p)) are withheld first (solid),
-against random removal (dashed) and phase-composition-matched random removal (dotted; shaded band, 2.5--97.5\% of
-the composition-matched draws). The gain over random removal is almost entirely matched by the composition-matched
-reference (pre-specified P2 at about 70\% coverage: +0.006, $-$0.023 to +0.036, grade 4). \flag{[PENDING: a panel A
-with the system architecture and an example audit record (Supplementary S15) is to be drawn.]}}
+\begin{minipage}[t]{0.49\linewidth}\raggedright\textbf{A}\par\centering
+\figorplaceholder{fig5a_architecture.pdf}{\linewidth}{PRISM architecture}\end{minipage}\hfill
+\begin{minipage}[t]{0.49\linewidth}\raggedright\textbf{B}\par\centering
+\figorplaceholder{fig5a_example_report.pdf}{\linewidth}{example grounded report}\end{minipage}
+\par\medskip
+\begin{minipage}{\linewidth}\raggedright\textbf{C}\par\centering
+\includegraphics[width=\linewidth,height=0.36\textheight,keepaspectratio]{fig5_system_risk_coverage.png}
+\end{minipage}
+\caption[PRISM: architecture, grounded report and selective prediction]{\textbf{PRISM: architecture, grounded
+report and selective prediction.} (A) Architecture and data flow: clinical tables and one MRI with its mask, read as
+of the scan day, feed five predictor branches (clinical and molecular; treatment course and phase of care; imaging
+measurements; radiomics; deep encoder); the deployed configuration uses the first two (the core model); the audit
+layer writes a per-scan audit record, and the report generator writes a clinician report from that record only.
+(B) An example grounded report; each statement is linked to the audit-record field it states. \flag{[PENDING:
+REPORT\_AGENT results --- which record is shown and why.]} (C) Risk--coverage curves for the core model (5 $\times$ 5
+CV, pooled out-of-fold predictions, mean over repeats), grade 4 (left) and all gliomas (right). Top, IPCW AUC(120
+d); bottom, IPCW Brier score, of the scans retained when the least confident scans (lowest max(p, 1 $-$ p)) are
+withheld first (solid), against random removal (dashed) and phase-composition-matched random removal (dotted;
+shaded band, 2.5--97.5\% of the composition-matched draws). The gain over random removal is almost entirely
+matched by the composition-matched reference (pre-specified P2 at about 70\% coverage: +0.006, $-$0.023 to +0.036,
+grade 4).}
 \label{fig:5}
 \end{figure}
 

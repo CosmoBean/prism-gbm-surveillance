@@ -36,7 +36,7 @@ used where they exist (Figure 5 is PNG only).
 - Numbers are typed exactly as reported; minus signs are `$-$`, Δ/±/×/≥ are math symbols, ranges use `--`.
 - Citations: `\citep{...}` for purely bibliographic parentheses, `\citealp{...}` inside running parentheses,
   `\citet{...}` in text. Keys are `firstauthorYEAR` (see `refs.bib`).
-- The PRISM report is unpublished: write "the PRISM report model/split", never "published".
+- PRISM is the authors' own system and is not yet published: never write "published". The original 0.80 result is "our initial single-split evaluation" on "our initial evaluation split".
 - Supplementary tables carry fixed numbers (`\renewcommand{\thetable}{S..}` inside each float) so that the
   numbering of the frozen draft is preserved; tables without a number in the draft have no caption.
 - Line numbers (`lineno`) and 1.3 line spread are for review; remove `\linenumbers` / adjust `\linespread` in

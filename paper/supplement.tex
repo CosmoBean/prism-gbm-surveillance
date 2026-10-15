@@ -25,8 +25,10 @@
 ``Grade 4'' (G4)
 is the primary population; ``all'' = all gliomas. AUC = IPCW AUC(120 d), mean over 5 repeats of the per-repeat
 pooled out-of-fold value, with 95\% patient-cluster bootstrap CI (1,000 draws), unless stated otherwise.
-``PRISM report'' refers to an unpublished internal report; ``PRISM report model'' and ``PRISM report split''
-are its model and split.}
+PRISM v1 is the first version of PRISM, described in an unpublished internal report; ``PRISM's initial radiomics
+model'' and ``our initial evaluation split'' are its radiomics model and its seed-62 test split. ``Baseline'' =
+PRISM's core model (clinical + timing + as-of-scan treatment, ridge), the deployed configuration and the reference
+for every imaging comparison.}
 
 \section*{Contents}
 \makeatletter\@starttoc{toc}\makeatother
@@ -314,8 +316,8 @@ Source: \code{docs/results/C3\_radiomics.md},
 \code{docs/results/FIX\_FEATURES.md} \S{}6,
 \code{prism/features/radiomics.py}.
 
-\textbf{Extraction.} PyRadiomics \citep{vangriethuysen2017}. \emph{Legacy} features are those of the PRISM
-report: T1c and FLAIR, original, LoG and wavelet images, 2,446 columns. Under the legacy within-lesion z-score
+\textbf{Extraction.} PyRadiomics \citep{vangriethuysen2017}. \emph{Legacy} features are those of PRISM's
+initial radiomics model: T1c and FLAIR, original, LoG and wavelet images, 2,446 columns. Under the legacy within-lesion z-score
 and fixed bin width the texture matrices are effectively two-level (GLCM joint entropy $\leq$ 2 bits), so
 legacy texture behaves as a binary habitat descriptor (above vs below lesion mean). \emph{Corrected} (v2)
 features use a whole-brain z-score, a fixed bin count of 32 (joint entropy 4.7--6.3 bits), no second N4
@@ -431,7 +433,7 @@ Single configurations with CI above 0: 0/80 (grade 4); 3/80 (all gliomas; +0.035
 = 0.28. Calibration slope of nested D1: 0.55 (grade 4), 0.79 (all).
 
 \FloatBarrier
-\section{The PRISM report model and the PRISM report split}\label{sec:S7}
+\section{PRISM v1: the initial radiomics model, the initial evaluation split and the fusion components}\label{sec:S7}
 
 Source: \code{docs/results/SHAP\_PRISM\_SPLIT.md};
 \code{docs/manuscript/FIGURES.md} (Figure 1);
@@ -440,7 +442,7 @@ shap\_prism\_split/};
 \code{outputs/results/analyses/paper\_figures/single\_split\{,\_pairs\}.csv}.
 
 \textbf{Reconstruction.} The input matrix was rebuilt from the legacy feature files plus the clinical codes
-using the PRISM report case table; the shipped bundle reproduced the stored test predictions on all 84 rows
+using PRISM v1's case table; the shipped bundle reproduced the stored test predictions on all 84 rows
 (maximum absolute difference \num{1.1e-15} calibrated, \num{1.4e-15} raw). The model is an L2 logistic
 regression (liblinear, C = 0.0087, balanced class weights) on 46 standardised columns (two of 48 selected
 columns are dropped by a correlation filter), with a monotone Platt calibrator. Exact linear SHAP reproduced
@@ -451,11 +453,11 @@ clinical codes 22\% (share of mean absolute per-scan group sum).
 \centering
 \small
 \renewcommand{\thetable}{S11}\renewcommand{\theHtable}{S11}
-\caption{\textbf{Composition of the PRISM report test set} (percentile among 500 design splits).}
+\caption{\textbf{Composition of the test set of our initial evaluation split} (percentile among 500 design splits).}
 \label{tab:S11}
 \begin{tabularx}{\linewidth}{@{}L R{2.02cm} R{2.55cm} R{3.42cm} R{1.75cm}@{}}
 \toprule
- & Full cohort & PRISM report test set & 500 splits: mean (2.5--97.5\%) & Percentile \\
+ & Full cohort & Initial split test set & 500 splits: mean (2.5--97.5\%) & Percentile \\
 \midrule
 Scans / patients & 308 / 155 & 82 / 29 & 84.5 / 29.8 &  \\
 Event rate, naive & 0.325 & 0.268 & 0.254 (0.165--0.348) & 62 \\
@@ -481,7 +483,7 @@ positives, 36 pre-RT negatives, 24 other negatives; 60\% of pairs involve a pre-
 \toprule
 Model & All pairs & Positives vs pre-RT negatives & Positives vs other negatives \\
 \midrule
-PRISM report model & 0.802 & 0.823 & 0.771 \\
+PRISM initial radiomics model & 0.802 & 0.823 & 0.771 \\
 Baseline ridge & 0.871 & 0.962 & 0.735 \\
 Baseline GBM & 0.844 & 0.933 & 0.710 \\
 Baseline + legacy radiomics & 0.862 & 0.934 & 0.754 \\
@@ -490,23 +492,35 @@ Clinical only (ridge) & 0.791 & 0.789 & 0.793 \\
 \end{tabularx}
 \end{table}
 
-On the 36 pre-RT scans the PRISM report model's T1c features lowered the log-odds by $-$0.50 on average; the
+On the 36 pre-RT scans the initial radiomics model's T1c features lowered the log-odds by $-$0.50 on average; the
 baseline ridge did the same through treatment ($-$0.38) and timing ($-$0.15). Our models' SHAP profiles on
 this split match their whole-cohort out-of-fold profiles at group level (baseline ridge: treatment 55\%,
 clinical 29\%, timing 16\% on the split; 52 / 29 / 19\% out of fold); the split does not lean on unusual
 features.
 
 \textbf{Post-RT test scans} (42 scans, 19 patients, 19 positives; IPCW AUC [95\% CI], naive in brackets):
-PRISM report model 0.770 [0.604, 0.907] (0.778); baseline ridge 0.718 [0.481, 0.880] (0.730); baseline GBM
+initial radiomics model 0.770 [0.604, 0.907] (0.778); baseline ridge 0.718 [0.481, 0.880] (0.730); baseline GBM
 0.699 [0.463, 0.846] (0.705); + legacy radiomics 0.758 [0.605, 0.886] (0.769); clinical only 0.818 [0.664,
 0.924] (0.826), $\Delta$ vs baseline +0.100 [$-$0.015, +0.293].
 
 \textbf{Before and after the as-of-scan fix} (30 test patients / 84 scans, naive / IPCW;
-\code{head\_to\_head\_\{before,after\}.csv}): PRISM report
+\code{head\_to\_head\_\{before,after\}.csv}): initial radiomics
 model 0.802 / 0.811 in both; baseline ridge 0.870 /
 0.844 $\rightarrow$ 0.880 / 0.860; baseline boosting 0.901 / 0.881 $\rightarrow$ 0.869 / 0.855; baseline +
 legacy radiomics 0.869 / 0.848 $\rightarrow$ 0.871 / 0.852; baseline + corrected compartments 0.869 / 0.843
 $\rightarrow$ 0.886 / 0.870. With the final labels (29 / 82): ridge 0.871 / 0.851, boosting 0.844 / 0.824.
+
+\textbf{PRISM v1 encoder and fusion components} (source: \code{legacy/reproduction/\{README,FINDINGS,AUDIT\}.md};
+v1's own case table, labels and scoring on the 30-patient / 84-scan test set). All v1 numbers reproduced from the
+code. The v1 image encoder was a small SwinUNETR-style transformer with random, untrained weights; its embeddings
+alone gave AUC about 0.50 in fusion (linear probe 0.55 in training CV, 0.62 on the test set). The v1 late-fusion MLP
+scored AUC 0.8006, below its radiomics input alone (0.8043); its checkpoint had been selected on test loss and its
+0.48 threshold hand-tuned, so its reported recall and F1 gains over the radiomics model were an operating-point
+shift. A BraTS-pretrained SwinUNETR fine-tuned on MU (lesion-masked pooling) reached image-only test AUC 0.64--0.65,
+and late fusion with the radiomics score gave 0.790--0.809, with a patient-bootstrap CI of the difference spanning 0.
+These results motivated the frozen-encoder design with a random-weight control (S6) and the single regularised model
+with ablatable branches (main \S2.1). The v1 report generator's RANO section was computed from the radiomics score,
+not from mask measurements; the rebuilt generator is described in S19.
 
 \FloatBarrier
 \section{Split variance: full tables and verifier checks}\label{sec:S8}
@@ -516,10 +530,10 @@ Source: \code{docs/results/SPLIT\_VARIANCE.md};
 \code{baseline\_rad});
 \code{outputs/results/analyses/split\_variance/\{summary,summary\_clipped,per\_split\_auc\_clipped\}.csv}.
 
-\textbf{Design.} Seeds 0--499 of the PRISM report's split search gave 500 distinct test sets (82--94 test
-scans, mean 86.1; 10--33 positives). The search favours patients with many scans: all 157 patients of the
-PRISM report case table appear, and the most frequent is in 71\% of splits. Cohort, label and features are the
-PRISM report's (315 scans / 157 patients; naive label, equal to ours on all 314 shared scans). Rank = share of
+\textbf{Design.} Seeds 0--499 of PRISM v1's split search gave 500 distinct test sets (82--94 test
+scans, mean 86.1; 10--33 positives). The search favours patients with many scans: all 157 patients of
+PRISM v1's case table appear, and the most frequent is in 71\% of splits. Cohort, label and features are
+PRISM v1's (315 scans / 157 patients; naive label, equal to ours on all 314 shared scans). Rank = share of
 splits with strictly lower AUC than the model's own seed-62 value re-run here.
 
 \begin{table}[H]
@@ -532,8 +546,8 @@ splits with strictly lower AUC than the model's own seed-62 value re-run here.
 \toprule
 Model & Mean $\pm$ SD & 2.5--97.5\% & Seed 62 (rank) & $\geq$ 0.802 & Beats baseline & Mean $\Delta$ vs baseline \\
 \midrule
-PRISM report pipeline, re-selected per split & 0.720 $\pm$ 0.055 & 0.610--0.819 & 0.801 (92\%) & 7.2\% & 12\% & $-$0.081 \\
-PRISM report model, shipped features refitted (optimistic) & 0.815 $\pm$ 0.044 & 0.726--0.887 & 0.802 (38\%) & 62\% & 58\% & +0.014 \\
+Initial radiomics pipeline, re-selected per split & 0.720 $\pm$ 0.055 & 0.610--0.819 & 0.801 (92\%) & 7.2\% & 12\% & $-$0.081 \\
+Initial radiomics model, shipped features refitted (optimistic) & 0.815 $\pm$ 0.044 & 0.726--0.887 & 0.802 (38\%) & 62\% & 58\% & +0.014 \\
 Baseline ridge & 0.801 $\pm$ 0.052 & 0.694--0.895 & 0.871 (91\%) & 50\% & -- & -- \\
 Baseline + legacy radiomics (clipped) & 0.799 $\pm$ 0.053 & 0.674--0.892 & 0.862 (89\%) & 50.2\% & 51.6\% & $-$0.002 \\
 \bottomrule
@@ -550,7 +564,7 @@ Baseline + legacy radiomics (clipped) & 0.799 $\pm$ 0.053 & 0.674--0.892 & 0.862
 \toprule
 Model & Mean $\pm$ SD & Seed 62 (rank) & Beats baseline & Mean $\Delta$ \\
 \midrule
-PRISM report pipeline, re-selected & 0.727 $\pm$ 0.058 (0.602--0.832) & 0.816 (94\%) & 25\% & $-$0.042 \\
+Initial radiomics pipeline, re-selected & 0.727 $\pm$ 0.058 (0.602--0.832) & 0.816 (94\%) & 25\% & $-$0.042 \\
 Shipped features refitted (optimistic) & 0.825 $\pm$ 0.045 (0.737--0.901) & 0.817 (40\%) & 81\% & +0.055 \\
 Baseline ridge & 0.769 $\pm$ 0.056 (0.654--0.876) & 0.851 (92\%) & -- & -- \\
 Baseline + legacy radiomics (clipped) & 0.774 $\pm$ 0.058 & 0.845 (92.0\%) & 56.8\% & +0.005 \\
@@ -559,12 +573,12 @@ Baseline + legacy radiomics (clipped) & 0.774 $\pm$ 0.058 & 0.845 (92.0\%) & 56.
 \end{table}
 
 Per split, clipped minus pre-clip naive AUC of the radiomics arm: mean $-$0.002, SD 0.009. Gap between honest
-and optimistic PRISM versions: 0.095 $\pm$ 0.040.
+and optimistic versions of the initial radiomics pipeline: 0.095 $\pm$ 0.040.
 
 \textbf{Composition.} Baseline ridge per-split AUC correlates with the pre-RT event rate (Spearman $-$0.61
 naive, $-$0.57 IPCW), the AUC of the ``post-RT'' rule (+0.57, +0.51), the later post-RT share ($-$0.26) and
 the pre-RT share (+0.22). Nine composition variables explain CV R$^{2}$ 0.42 and predict 0.851 for seed 62
-(observed 0.871, mean 0.801). For the PRISM report pipeline: CV R$^{2}$ 0.10 (naive), 0.15 (IPCW); strongest
+(observed 0.871, mean 0.801). For the initial radiomics pipeline: CV R$^{2}$ 0.10 (naive), 0.15 (IPCW); strongest
 correlates IDH-mutant fraction ($-$0.30) and the ``post-RT'' rule (+0.22); predicted 0.773 for seed 62
 (observed 0.801, mean 0.720).
 
@@ -961,7 +975,7 @@ encoder same configuration 0.667 (+0.045). With volumes: 0.635 $\rightarrow$ 0.7
 same configuration: +0.011 to +0.069, no CI above 0. A classifier separates LUMIERE from MU on deep features
 with AUC 0.82 / 0.79 / 0.81 (BraTS 2021 / BrainSegFounder / random).
 
-\textbf{Shipped PRISM report model} (legacy features re-extracted, 118 scans; files dated 2026-10-09, before
+\textbf{PRISM's initial radiomics model, as shipped} (legacy features re-extracted, 118 scans; files dated 2026-10-09, before
 the final LUMIERE label definition): raw 0.613 [0.500, 0.729] pooled (O/E 1.24); recalibrated O/E 0.98;
 fine-tuned 0.570 pooled.
 
@@ -1294,18 +1308,18 @@ Item & Topic & Where reported \\
 2 & Abstract & Structured abstract \\
 3a--c & Background, intended use, inequalities & M1; intended use in Key points and S15 model card; inequalities: race not auditable (M4 Limitations, S15) \\
 4 & Objectives & M1 final paragraph \\
-5a--b & Data sources, dates & M2.2; accrual dates: \flag{[PENDING --- relative days only in both datasets; take from dataset papers]} \\
-6a--c & Setting, eligibility, treatments & M2.2--2.3, S2; as-of treatment handling M2.4--2.5, S4 \\
-7 & Data preparation & M2.4, S4, S5, S14 \\
-8a--c & Outcome, assessors, blinding & M2.3, S3; MU assessor not documented, LUMIERE expert RANO; no blinding (M4 Limitations) \\
-9a--c & Predictors & M2.4, S4--S6; MU masks from the dataset, LUMIERE automatic \\
+5a--b & Data sources, dates & M2.3; accrual dates: \flag{[PENDING --- relative days only in both datasets; take from dataset papers]} \\
+6a--c & Setting, eligibility, treatments & M2.3--2.4, S2; as-of treatment handling M2.5--2.6, S4 \\
+7 & Data preparation & M2.5, S4, S5, S14 \\
+8a--c & Outcome, assessors, blinding & M2.4, S3; MU assessor not documented, LUMIERE expert RANO; no blinding (M4 Limitations) \\
+9a--c & Predictors & M2.5, S4--S6; MU masks from the dataset, LUMIERE automatic \\
 10 & Sample size & Fixed by public datasets; Riley calculation S12.7, M3.8 \\
-11 & Missing data & In-fold imputation with indicators (M2.4, S4) \\
-12a--g & Analysis methods & M2.5--2.11, S8--S9, S13 (recalibration, locked predictions) \\
+11 & Missing data & In-fold imputation with indicators (M2.5, S4) \\
+12a--g & Analysis methods & M2.1 (architecture), M2.6--2.13, S8--S9, S13 (recalibration, locked predictions) \\
 13 & Class imbalance & None used; S12.3 \\
 14 & Fairness & Subgroup audit S15; limits M4 \\
-15 & Model output & Probabilities; decision curves S12.7; no threshold chosen \\
-16 & Development vs evaluation differences & M2.10, S13 \\
+15 & Model output & Probabilities, audit record and grounded report (M2.12--2.13, S15, S19); decision curves S12.7; no threshold chosen \\
+16 & Development vs evaluation differences & M2.11, S13 \\
 17 & Ethics & Declarations \flag{[PENDING]} \\
 18a--f & Funding, conflicts, protocol, registration, data, code & Declarations \flag{[PENDING]}; plans S1; code S16 \\
 19 & Patient and public involvement & Declarations (none) \\
@@ -1331,13 +1345,13 @@ Item & Topic & Where reported \\
 Items & Topic & Where reported \\
 \midrule
 1--6 & Title, abstract, keywords, background, rationale, objectives & Title, Abstract, Keywords, M1 \\
-7--11 & Guidelines, ethics, sample size, study nature, eligibility & M2.1, Declarations, S12.7, M2.3, S2 \\
-13--18 & Data source, overlap, split, imaging protocol, non-radiomic predictors, reference standard & M2.2, S6 (BraTS pretraining overlap risk), M2.6--2.7, S4, S3; MU protocol not distributed \\
-19--24 & Segmentation, pre-processing, resampling, discretisation, image types & M2.2, S5, S14 \\
+7--11 & Guidelines, ethics, sample size, study nature, eligibility & M2.2, Declarations, S12.7, M2.4, S2 \\
+13--18 & Data source, overlap, split, imaging protocol, non-radiomic predictors, reference standard & M2.3, S6 (BraTS pretraining overlap risk), M2.7--2.8, S4, S3; MU protocol not distributed \\
+19--24 & Segmentation, pre-processing, resampling, discretisation, image types & M2.3, S5, S14 \\
 25--28 & Extraction method, classes, number, defaults & S5 \\
 29--33 & Missing data, imbalance, reliability, scaling, dimension reduction & S4, S12.3, S5 (ICC filter), S5 \\
-34--37 & Algorithm, tuning, confounders, model selection & M2.7, S5, S12.4 (schedule), M2.8 (phase of care) \\
-38--43 & Testing, metrics, uncertainty, comparisons, explainability & M2.7, M2.10, S9, S12.6 \\
+34--37 & Algorithm, tuning, confounders, model selection & M2.8, S5, S12.4 (schedule), M2.9 (phase of care) \\
+38--43 & Testing, metrics, uncertainty, comparisons, explainability & M2.8, M2.11, S9, S12.6 \\
 44--48 & Characteristics, flow, feature statistics, performance, comparison & Table 1, S2, S5, M3, Table 3 \\
 49--52 & Discussion items & M4 \\
 53--58 & Open science & Declarations, S16 \flag{[PENDING: release]} \\
@@ -1404,6 +1418,14 @@ met.} Clinical features are at chance (no molecular markers and no phase variati
 same post-RT stage). Volume is the only informative block and is partly circular with the volumetric label.
 Conventional texture adds nothing beyond volume; ADC adds nothing measurable beyond conventional radiomics.
 Gains larger than about 0.04 are unlikely; smaller gains cannot be excluded. Perfusion was not available.
+
+\FloatBarrier
+\section{PRISM report generator: design and faithfulness evaluation}\label{sec:S19}
+
+Source: \code{docs/results/REPORT\_AGENT.md} \flag{[PENDING: REPORT\_AGENT results]}. The generator takes one audit
+record (S15) as its only input; every statement in the report carries a pointer to the record field it states.
+\flag{[PENDING: REPORT\_AGENT results --- generator and prompt, record-to-report schema, faithfulness criteria and
+scoring, number of records, results table, example reports including failure cases.]}
 
 \FloatBarrier
 \section*{Supplementary figures}
