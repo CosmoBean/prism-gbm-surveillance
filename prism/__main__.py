@@ -25,6 +25,8 @@ Analyses (read the prepared tables, write to $PRISM_OUTPUTS/results):
     phaseladder   phase-of-care ladder: imaging added value per non-imaging base, full and post-RT cohorts
     cleanlabel    imaging-defined MU endpoint (clinical-only progression censored) + LUMIERE imaging vs clinical
     cfbadc        CFB-GBM: does ADC radiomics at t1 add to conventional radiomics for t1->t2 RANO progression?
+    audit         auditable decision-support layer on the baseline: locked model + card, per-scan audit records,
+                  conformal/selective prediction, referral rules, shortcut/subgroup audit, explanation stability
 
 Every stage takes -h for its options.
 """
@@ -54,6 +56,7 @@ STAGES = {
     "phaseladder": "prism.analyses.phase_ladder",
     "cleanlabel": "prism.analyses.clean_label",
     "cfbadc": "prism.analyses.cfb_adc",
+    "audit": "prism.analyses.audit_system",
 }
 PIPELINES = {"data": ("mu", "lumiere", "measurements")}
 
