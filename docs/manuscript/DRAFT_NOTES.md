@@ -44,44 +44,57 @@ sets of the old and new PDFs and `main.tex`). These legacy numbers are not in `d
 4. (Shorter, for journals with a title limit) PRISM: an auditable, phase-aware model for post-treatment glioma
    surveillance.
 
+## Report-generator results added (2026-10-15)
+
+All `[PENDING: REPORT_AGENT results]` placeholders replaced from `docs/results/REPORT_AGENT.md` and
+`outputs/results/analyses/report_agent/summary_eval.csv`: abstract (last results sentence), §2.13 rewritten to match
+what was built (record + tier + indicative volumes; deterministic sections + local Qwen3.8-27B summary with cited
+keys; lexical checker; arms A/B/C; frozen plan; stress test; kept/dropped v1 components), §3.10 (primary 236/249 =
+0.948 [0.913, 0.969] vs target ≥ 0.95, not met by one report; 13 failures = horizon field not cited; 0/269 flags
+omitted; no forbidden content; arm B 171/249, A − B +0.261 [+0.197, +0.328], forbidden 100%, 48/269 flags omitted;
+arm C 243/249, forbidden 2.8% (1 real); stress A 27/30, B 17/30, C 28/30; 15 reports read), Discussion and
+Limitations (lexical checker, one cohort/repeat, no clinician evaluation), Figure 5 (A full width, B + C side by
+side; legend describes the actual panels). Supplement S19 now holds the full account with Tables S26 (arms) and S27
+(stress). Every new number was checked against REPORT_AGENT.md; the only tokens not literally in it are "2,000"
+and "1,024" (written "2000"/"1024" there) and the values printed inside the Figure 5 panels. The coordinator's
+Figure 1–4 relabelling (HEAD 65d2e26) was kept.
+
 ## Word counts
 
 Counted with a whitespace tokenizer on the LaTeX source after removing comments, commands, citations and labels,
-headings excluded (`wc_tex.py` in the session scratchpad). This counter gives slightly different values from the
-earlier one; the "before" column is the previous `main.tex` with the same counter.
+headings excluded (`wc_tex.py` in the session scratchpad). "Before" = the manuscript before the PRISM reframing,
+same counter.
 
-| Part | Before (same counter) | Now | Target |
+| Part | Before reframing | Now | Target |
 |---|---|---|---|
-| Abstract (incl. five bold labels; 298 without) | 300 | 303 | ≤ 300 |
+| Abstract (incl. five bold labels; 299 without) | 300 | 304 | ≤ 300 |
 | Key points + clinical relevance statement | 210 | 229 | — |
 | 1. Introduction | 809 | 891 | ~900 |
-| 2. Methods | 2,093 | 2,713 | ~2,200 |
-| 3. Results | 2,279 | 2,375 | ~2,200 |
-| 4. Discussion (incl. limitations, conclusion) | 1,512 | 1,646 | ~1,500 |
-| **Main text (Introduction to Discussion)** | **6,693** | **7,625** | 5,500–7,000 |
+| 2. Methods | 2,093 | 3,003 | ~2,200 |
+| 3. Results | 2,279 | 2,691 | ~2,200 |
+| 4. Discussion (incl. limitations, conclusion) | 1,512 | 1,786 | ~1,500 |
+| **Main text (Introduction to Discussion)** | **6,693** | **8,371** | 5,500–7,000 |
 | Declarations | 123 | 144 | — |
 | Tables 1–3 (with captions) | 898 | 922 | — |
-| Figure legends 1–5 | 595 | 727 | — |
-| Supplement (body) | 9,145 | 9,421 | — |
+| Figure legends 1–5 | 595 | 707 | — |
+| Supplement (body) | 9,145 | 10,884 | — |
 
-Pages: main.pdf 30 → 33, supplement.pdf 34 → 34.
+Pages: main.pdf 30 → 34, supplement.pdf 34 → 37.
 
-The main text is now about 600 words over the upper target, mostly from the new §2.1 (architecture) and §2.13
-(report generator). Candidates to move to the Supplement: §2.6 second paragraph (as-of history), §2.12 details of the
-audit record (keep P1/P2), §3.2 "treatment-date leak" history paragraph (keep two sentences), §3.8, and the
-"Comparison with other work" paragraph. The report-generator results (§3.10) will add more.
+**The main text is about 1,400 words over the upper target.** Candidates to move to the Supplement (S19 already holds
+the full report-generator account): §2.13 kept/dropped v1 components and checker details (~200 words), §3.10
+comparison arms and stress test (keep one sentence each, ~200), §2.6 second paragraph (as-of history), §2.12
+audit-record details (keep P1/P2), §3.2 leak-history paragraph, §3.8, "Comparison with other work".
 
 ## Open placeholders
 
-- **Report generator** (red `[PENDING: REPORT_AGENT results]`): abstract last sentence, §2.13 (generator, criteria,
-  scoring), §3.10 (results), Discussion "What PRISM contributes" and Limitations, Figure 5B legend, Supplement S19.
-- **Figure 5A/5B** files (`docs/manuscript/figures/fig5a_architecture.pdf`, `fig5a_example_report.pdf`) from the
-  report-generator work stream; red placeholder boxes until they exist (the `\IfFileExists` switch was tested).
-- **Figures 1–2 panel labels** still read "PRISM report model", "PRISM split", "baseline"; legends map them and carry a
-  red PENDING. Regenerate with `prism/analyses/paper_figures.py` (not owned by this pass).
 - Declarations: ethics, funding, competing interests, data availability, code link; **"PRISM versions"**: who wrote
-  the v1 report and whether to cite it.
+  the v1 report and whether to cite it. Author list and affiliations.
 - Supplement S17: TRIPOD+AI 5b, 22, CLEAR 53–58. Supplement S16: code release and tag; supplementary figure export.
+- No `[PENDING: REPORT_AGENT results]` remains. Figure 5 panels A/B exist; the `\IfFileExists` fallback stays in the
+  source but is not triggered.
+- Report generator open issues to decide: whether to test the obvious horizon-citation fix on fresh records (another
+  CV repeat) before submission; whether to add TRIPOD-LLM items.
 
 ## [CHECK] items (citations not in the verified literature files, or flagged unverified there)
 

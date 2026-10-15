@@ -35,33 +35,31 @@ clinical decision support; report generation
 
 \section*{Abstract}
 
-\textbf{Background.} PRISM (Post-treatment Response Intelligence and Surveillance Monitor) is our multimodal
-pipeline that predicts documented progression after a glioma surveillance MRI and explains each prediction in a
-clinician report. Its first version scored AUC 0.80 on one 30-patient split of MU-Glioma-Post.
+\textbf{Background.} PRISM (Post-treatment Response Intelligence and Surveillance Monitor), our multimodal
+pipeline, predicts documented progression after a glioma surveillance MRI and explains it in a clinician report. Its first version scored AUC 0.80 on one 30-patient split of MU-Glioma-Post.
 
-\textbf{Purpose.} To present PRISM and evaluate every branch rigorously, including why the initial result was
-optimistic.
+\textbf{Purpose.} To present PRISM, evaluate every branch and explain the optimistic initial result.
 
-\textbf{Methods.} PRISM reads clinical, molecular and treatment-course data as of the scan day and adds lesion
-volumes, radiomics and a frozen SwinUNETR encoder; an audit layer writes a per-scan record, and a report
-generator writes a report grounded in it. Development: MU-Glioma-Post (308 index scans, 155 patients; grade 4:
+\textbf{Methods.} PRISM reads clinical, molecular and treatment-course data as of the scan day, adds volumes,
+radiomics and a frozen SwinUNETR encoder, and writes an audit record and a grounded report per scan.
+Development: MU-Glioma-Post (308 index scans, 155 patients; grade 4:
 249 scans, 126 patients); locked external evaluation: LUMIERE (132 scans, 61 patients). Outcome: documented
-progression within 120 days, death censored, IPCW AUC(120 d). We re-scored the initial split, ran 500 splits
-of its design and ablated each branch under 5$\times$5 patient-grouped cross-validation with nested selection.
-Key analyses had pre-specified rules.
+progression within 120 days (death censored; IPCW AUC). We ran 500 splits of the initial split's design and
+ablated each branch under 5$\times$5 patient-grouped nested cross-validation; key analyses had pre-specified rules.
 
-\textbf{Results.} On our initial evaluation split, PRISM's initial radiomics model scored 0.802 and a model
+\textbf{Results.} On the initial split, PRISM's initial radiomics model scored 0.802 and a model
 without imaging 0.871; with treatment dates leaking from the future, a boosting model reached 0.901. Over 500
-splits the initial radiomics pipeline averaged 0.720 $\pm$ 0.055, and 7\% of splits reached 0.802. Under
+splits its pipeline averaged 0.720 $\pm$ 0.055, and 7\% of splits reached 0.802. Under
 repeated cross-validation the clinical + treatment-phase core reached 0.698 (95\% CI 0.615--0.774) in grade 4.
 Radiomics changed this by $-$0.032 ($-$0.084 to +0.017) and deep features by $-$0.004 ($-$0.069 to +0.063). In
 post-radiotherapy scans, imaging added +0.061 ($-$0.038 to +0.156; permutation p = 0.21). Locked external AUCs
 were 0.608--0.620. The audit layer met its coverage target (0.841, 0.790--0.885), did not improve
-discrimination beyond case mix, and exposed a missingness shortcut. \flag{[PENDING: REPORT\_AGENT results ---
-report faithfulness.]}
+discrimination beyond case mix, and exposed a missingness shortcut. Local-language-model reports were faithful to the record in
+236/249 scans (0.948; target 0.95 missed by one report, all failures one missing citation), with no omitted flag
+or forbidden content.
 
-\textbf{Conclusion.} PRISM's signal comes from phase of care, not MRI texture. Its deployed form is the
-clinical + treatment-phase core with auditable records; imaging branches are optional modules.
+\textbf{Conclusion.} PRISM's signal comes from phase of care, not MRI texture. It is deployed as the clinical +
+treatment-phase core with auditable records; imaging branches are optional.
 
 \section*{Key points}
 
@@ -171,8 +169,8 @@ branches; every fitted step, including feature
 selection and branch integration, is fitted inside the training data (\S\ref{sec:2.8}). Downstream, the
 \textbf{audit layer} wraps the deployed predictor and writes a per-scan audit record with provenance, phase of
 care, a risk interval, exact contributions, a conformal prediction set and referral flags (\S\ref{sec:2.12}).
-The \textbf{report generator} turns each record into a clinician report in which every statement points to a
-record field (\S\ref{sec:2.13}).
+The \textbf{report generator} turns each record into a clinician report: deterministic sections rendered from the
+record and a language-model summary in which every sentence cites the record fields it uses (\S\ref{sec:2.13}).
 
 \textbf{PRISM v1 and what changed.} PRISM v1 differed in four ways. Its radiomics branch, \emph{PRISM's initial
 radiomics model}, was a calibrated logistic regression on T1c and FLAIR radiomics plus clinical codes
@@ -384,15 +382,33 @@ retained at about 70\% coverage minus the AUC of composition-matched retention, 
 
 \subsection{The report generator and its faithfulness evaluation}\label{sec:2.13}
 
-The report generator takes one audit record as its only input and writes a structured clinician report: the
-risk with its interval, the phase of care, the largest contributions, the referral flags with their reasons,
-the inputs that were unknown or out of range, and the model's intended use. Each statement in the report
-carries a pointer to the record field it states, so that every number and claim can be checked against the
-record; statements that cannot be traced are not allowed. Unlike v1, the generator has no RANO rule layer and
-no access to the model or the images, so it cannot introduce information that the record does not contain.
-Faithfulness is evaluated on out-of-fold audit records (Supplementary S19): \flag{[PENDING: REPORT\_AGENT results --- generator
-and prompt, number of records, faithfulness criteria (for example share of statements traceable to a record
-field, numeric errors, omitted referral flags, unsupported claims) and how they were scored.]}
+The report is written only from one scan's audit record, extended with a descriptive risk tier (tertiles of the
+fold model's predicted risk on its own training scans; not a decision threshold) and past-only compartment volumes
+labelled indicative, not RANO. Sections for scan context, inputs (with source and as-of day), risk (interval, tier,
+conformal set), contributions, referral flags with reasons and volumetric change are rendered deterministically
+from the record. A summary is written by a local language model (Qwen3.8-27B at a pinned revision, bf16, run
+offline on the study's own GPUs, greedy decoding) whose only input is a flat view of the record's fields. The
+prompt allows only facts from the record, requires every number to be copied from a field and every sentence to
+cite the field keys it uses, requires every active flag to be stated, and forbids diagnoses, RANO categories,
+management advice and unhedged certainty; the output is constrained to a list of sentences with their cited keys.
+From PRISM v1 we kept the change-from-prior and nadir table, the explanation section (now exact contributions
+instead of SHAP on the fusion network), tiered confidence language and the disclaimer. We dropped the fixed alert
+threshold (hand-set on the initial split and supported by none of our evaluations), the RANO rule engine and
+RANO--model concordance (computed from the model's own score, not from measurements), an unfitted
+pseudoprogression confounder score, and the printing of the outcome label (Supplementary S19).
+
+A deterministic checker scores every sentence: cited keys must exist, and every number must equal a cited
+field's value up to the written rounding. Per report, every active flag must be mentioned and no inactive flag
+described as raised, the stated tier must agree with the record, and no forbidden pattern (diagnosis, RANO
+category, management, unhedged certainty) may appear. Prompts and checker patterns were developed on the 59
+non-grade-4 scans; the plan was frozen before any evaluation report was generated. The evaluation set was all 249
+grade 4 scans, with records from the out-of-fold fits of one CV repeat. \textbf{The pre-specified primary
+quantity} was the proportion of grounded reports with zero unsupported claims and every active flag mentioned
+(Wilson 95\% CI; target $\geq$ 0.95). Secondary arms, compared on the same scans with a 2,000-draw
+patient-cluster bootstrap, were the original PRISM v1 prompt run with the same model on the same facts (arm B; its
+numbers checked against its own input) and the grounded prompt with a smaller model (Qwen3.5-9B; arm C). A stress
+test perturbed 30 records (risk moved to another tier, a flag switched on or off) and required the report to
+follow the change.
 
 \subsection{Further analyses and software}\label{sec:2.14}
 
@@ -600,10 +616,29 @@ stable, but the exact top 5 features recurred in at most 4\% of refits.
 
 \subsection{The report generator}\label{sec:3.10}
 
-An example grounded report, with each statement linked to its audit-record field, is shown in
-Figure~\ref{fig:5}B. \flag{[PENDING: REPORT\_AGENT results --- number of reports generated and evaluated;
-faithfulness results (traceable statements, numeric errors, omitted or invented flags, unsupported claims)
-with intervals; failure cases.]}
+\textbf{Primary (pre-specified) not met, by one report.} Of 249 grade 4 grounded reports, 236 (0.948, Wilson
+95\% CI 0.913--0.969) had zero unsupported claims and mentioned every active flag, against a target of
+$\geq$ 0.95. All 13 failures had the same cause: the risk sentence stated the 120-day horizon without citing the
+horizon field. The number was correct, and no grounded report contained a number absent from the record. All 13
+were early post-RT scans (85 of 98 passed; every pre-RT, during-RT and later post-RT report passed). Otherwise the
+grounded reports were clean: all 249 parsed, no citation was invalid, none of 269 active flags was omitted, no
+inactive flag was described as raised, no report contained forbidden content, and the tier was stated in every
+report and never inconsistent. Generation took 0.06 s per report in batch (median single-request latency 3.6 s).
+
+\textbf{Comparison arms.} The original PRISM v1 prompt with the same model and facts (arm B) passed 171 of 249
+reports against its own input (0.687, 0.627--0.741; difference +0.261, +0.197 to +0.328 in favour of the grounded
+prompt) and none against the record. Every arm-B report contained forbidden content (management 99\%, diagnosis
+51\%, RANO category 41\%, unhedged certainty 40\%), and it omitted 48 of 269 active flags (17.8\%) although they
+were in its input. The grounded prompt with the 9B model (arm C) passed 243 of 249 (0.976, 0.948--0.989;
+difference $-$0.028, $-$0.062 to +0.008) but wrote forbidden content in 7 reports (2.8\%); on reading, 1 was a real
+violation (a hedged diagnosis) and 6 were pattern false positives.
+
+\textbf{Stress test and reading.} Of 30 perturbed records, the grounded reports passed 27 (arm B 17, arm C 28). All
+three failures followed the changed field and failed for other reasons: the horizon citation, a new interval bound
+that coincided with the old risk, and an invented field key. Reading 15 grounded reports (3 chosen by a
+pre-specified rule, 12 at random) against their records found no factual error; wording issues included a
+bootstrap interval called a ``confidence interval'' and a risk and tier cut point that rounded to the same value.
+Figure~\ref{fig:5}B shows the pre-specified early post-RT example.
 
 \section{Discussion}\label{sec:4}
 
@@ -629,8 +664,11 @@ course, an interval and an exact explanation, and the report generator restates 
 Running the audit found a missingness shortcut, a look-ahead in the use of molecular results before diagnosis,
 and the cause of the external miscalibration, none of which the cross-validated AUC revealed. We think this is
 the honest use of such a system at this level of performance: to make a modest model's reasoning and failure
-modes visible, not to claim better decisions. \flag{[PENDING: REPORT\_AGENT results --- one or two sentences on
-report faithfulness and its failure modes.]}
+modes visible, not to claim better decisions. The report generator carries this into the clinic's language.
+Grounded in the record, it restated the record faithfully in all but 13 of 249 reports, all failing on one missing
+citation of a correct number, with no omitted flag and no forbidden content. The v1 prompt, given the same facts,
+issued RANO verdicts and management advice and dropped referral flags. Grounding the language model in an audit
+record, and checking it against that record, is what made the report auditable.
 
 \textbf{Why our initial evaluation misled.} The single split did more than add noise. It changed the ranking
 question. When 60\% of the case--control pairs compare a progression scan with a fresh post-operative scan
@@ -709,9 +747,13 @@ frozen; fine-tuning and diffusion-based deep features were not run. Feature pipe
 (the feature-group search and one label-formulation set) still contain unclipped legacy radiomics. The LUMIERE
 score of PRISM's initial radiomics model predates the final external label definition. The audit found a small
 molecular look-ahead (8 grade 4 scans) that also affects the reported core model; its size was not quantified.
-Report faithfulness to the audit record is not clinical usefulness: there was no reader study, so we cannot
-say whether the audit records or reports change clinical decisions. \flag{[PENDING: REPORT\_AGENT results ---
-limitations specific to the report generator.]}
+The faithfulness checker is lexical: it verifies numbers, cited keys, flags, tier words and forbidden patterns,
+but not meaning (a correct number attached to the wrong concept), and its forbidden patterns produce false
+positives on negations; meaning was checked only by reading 15 reports. The report-generator primary was missed
+by one report; the obvious fix would be tuned on the evaluation set and needs fresh records to be tested. Reports
+came from one CV repeat of one cohort. Faithfulness to the audit record is not clinical usefulness: no clinician
+assessed the reports, and there was no reader study, so we cannot say whether the audit records or reports change
+clinical decisions.
 
 \subsection*{Conclusion}
 
@@ -962,21 +1004,25 @@ permutation null itself averages +0.03.}
 % outputs/results/analyses/audit_system/risk_coverage.png; PNG only, 150 dpi).
 \begin{figure}[!htbp]
 \centering
-\begin{minipage}[t]{0.49\linewidth}\raggedright\textbf{A}\par\centering
-\figorplaceholder{fig5a_architecture.pdf}{\linewidth}{PRISM architecture}\end{minipage}\hfill
-\begin{minipage}[t]{0.49\linewidth}\raggedright\textbf{B}\par\centering
-\figorplaceholder{fig5a_example_report.pdf}{\linewidth}{example grounded report}\end{minipage}
+\begin{minipage}{\linewidth}\raggedright\textbf{A}\par\centering
+\figorplaceholder{fig5a_architecture.pdf}{\linewidth}{PRISM architecture}\end{minipage}
 \par\medskip
-\begin{minipage}{\linewidth}\raggedright\textbf{C}\par\centering
-\includegraphics[width=\linewidth,height=0.36\textheight,keepaspectratio]{fig5_system_risk_coverage.png}
+\begin{minipage}[t]{0.40\linewidth}\raggedright\textbf{B}\par\centering
+\IfFileExists{../docs/manuscript/figures/fig5a_example_report.pdf}%
+{\includegraphics[width=\linewidth,height=0.42\textheight,keepaspectratio]{fig5a_example_report.pdf}}%
+{\figorplaceholder{fig5a_example_report.pdf}{\linewidth}{example grounded report}}\end{minipage}\hfill
+\begin{minipage}[t]{0.58\linewidth}\raggedright\textbf{C}\par\centering
+\includegraphics[width=\linewidth,height=0.42\textheight,keepaspectratio]{fig5_system_risk_coverage.png}
 \end{minipage}
 \caption[PRISM: architecture, grounded report and selective prediction]{\textbf{PRISM: architecture, grounded
-report and selective prediction.} (A) Architecture and data flow: clinical tables and one MRI with its mask, read as
-of the scan day, feed five predictor branches (clinical and molecular; treatment course and phase of care; imaging
-measurements; radiomics; deep encoder); the deployed configuration uses the first two (the core model); the audit
-layer writes a per-scan audit record, and the report generator writes a clinician report from that record only.
-(B) An example grounded report; each statement is linked to the audit-record field it states. \flag{[PENDING:
-REPORT\_AGENT results --- which record is shown and why.]} (C) Risk--coverage curves for the core model (5 $\times$ 5
+report and selective prediction.} (A) Architecture and data flow: inputs read as of the scan day feed the deployed core
+model (clinical + treatment-phase ridge); the imaging branches (volumes, radiomics, deep encoder; dashed) are
+optional and not deployed, and volumes enter the record only as indicative values; the risk, with its interval and
+tier, goes into the per-scan audit record (contributions, 80\% conformal set, referral flags), from which the
+grounded report is written. (B) Grounded report for the first early post-RT evaluation scan (chosen by a
+pre-specified rule): deterministic sections rendered from the record and a local language-model summary in which
+every sentence cites record fields; all three active flags are stated and the checker found every claim
+supported. (C) Risk--coverage curves for the core model (5 $\times$ 5
 CV, pooled out-of-fold predictions, mean over repeats), grade 4 (left) and all gliomas (right). Top, IPCW AUC(120
 d); bottom, IPCW Brier score, of the scans retained when the least confident scans (lowest max(p, 1 $-$ p)) are
 withheld first (solid), against random removal (dashed) and phase-composition-matched random removal (dotted;

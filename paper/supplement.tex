@@ -1422,10 +1422,148 @@ Gains larger than about 0.04 are unlikely; smaller gains cannot be excluded. Per
 \FloatBarrier
 \section{PRISM report generator: design and faithfulness evaluation}\label{sec:S19}
 
-Source: \code{docs/results/REPORT\_AGENT.md} \flag{[PENDING: REPORT\_AGENT results]}. The generator takes one audit
-record (S15) as its only input; every statement in the report carries a pointer to the record field it states.
-\flag{[PENDING: REPORT\_AGENT results --- generator and prompt, record-to-report schema, faithfulness criteria and
-scoring, number of records, results table, example reports including failure cases.]}
+Source: \code{docs/results/REPORT\_AGENT.md};
+\code{outputs/results/analyses/report\_agent/}
+(\code{summary\_eval.csv}, \code{checks\_eval.csv}, \code{by\_phase.csv}, \code{stress.csv},
+\code{summary\_stress.csv}, \code{reports/eval/}). Code: \code{prism/report/},
+\code{prism/analyses/report\_agent.py} (\code{python -m prism report}).
+
+\textbf{Plan.} Written after prompt and checker development on a separate development set and before any
+evaluation or stress report was generated; frozen 2026-10-15 with a timestamp and the sha256 of the plan and of
+every report-generator code file (\code{PLAN\_snapshot.\{md,timestamp,code\_sha256\}}). After the run only the
+example-page flag labels and a duplicated ``Limitations:'' prefix were changed (figures re-run; no check, prompt
+or number changed).
+
+\textbf{Report record.} The audit record (S15) plus two blocks: a risk tier (tertile cut points of the fold
+model's predicted risk on its own training scans; descriptive, not a threshold) and past-only indicative volumes
+(ET and SNFH volume, change since the prior scan and the nadir, and the volumetric rule of Supplementary S12,
+development AUC 0.551, labelled ``indicative, not RANO''; percent changes only from a baseline $\geq$ 1 cc). The
+120-day outcome is not in the record. A flat \emph{facts} view (field key $\rightarrow$ pre-rounded value) is the only
+input of the language model and the only reference of the checker. The refitted fold models reproduce the audit
+stage's stored risk (maximum $|\Delta|$ \num{9.7e-17}).
+
+\textbf{Sections.} Deterministic: scan context; inputs (value, unit, source column, as-of day); risk with 95\%
+interval, tier and 80\% conformal set; contributions (intercept + clinical / timing / treatment = logit, top terms;
+imaging ``not part of this model''); referral flags with reasons; volumetric change (indicative); a standing
+limitations line. Language model: the summary. \emph{Kept from PRISM v1:} the change-from-prior and nadir table (now
+measured volumes, past-only), the explanation section (exact additive contributions instead of SHAP on the fusion
+MLP), tiered confidence language, the decision-support disclaimer. \emph{Dropped:} the fixed 0.48 alert threshold
+and 0.75 ``high confidence'' cut (hand-set on the initial split; the core model's net benefit exceeds treat-all
+only above about a 20\% threshold); the ``RANO 2.0 rule engine'' and RANO--AI concordance (computed from the model's
+own probability, not measurements; the volumetric rule has AUC 0.55 for 120-day progression and cannot arbitrate
+the model); the weighted pseudoprogression confounder score (literature weights never fitted; steroid change not in
+the data; its main component is already a model input and a flag); the hard-coded molecular table and the
+printed outcome label.
+
+\textbf{Language model and arms.} Arm A (grounded): \code{Qwen/Qwen3.8-27B}, revision
+\texttt{\small 1d4bf0f2\allowbreak ff6012fd\allowbreak 82039f2f\allowbreak a52739d0\allowbreak dd7c60c0} (Apache-2.0), bf16, vLLM 0.31.0 in a separate environment, tensor
+parallel over 4 H100, offline (no external API; data stay on the node), non-thinking mode, greedy decoding, seed 0,
+structured output \code{\{"sentences": [\{"text", "fields"\}]\}}, at most 1,024 new tokens. Frozen 10-rule system
+prompt: facts only; every number copied from a field; cite field keys per sentence; state risk, interval and tier;
+state every active flag and the clinician-review action, never describe an inactive flag as raised; no diagnosis
+or RANO category; no management; hedged language; volumes indicative; 4--7 sentences. Arm B (original style): the
+v1 \code{generate\_llm\_summary} prompt verbatim, its context blocks filled from the same record (risk in place of
+the fusion probability with the original 0.48 / 0.75 phrases; the volumetric rule in the ``RANO 2.0'' block; the
+original confounder score; top 3 contributions as ``SHAP drivers''; a referral-flag block added so that both arms
+see the same facts); no citation constraint; same model and decoding; at most 500 new tokens. Arm C: arm A's
+prompt with \code{Qwen/Qwen3.5-9B}, revision \texttt{\small c2022362\allowbreak 35762e1c\allowbreak 871ad0cc\allowbreak b60c8ee5\allowbreak ba337b9a}, 1 GPU.
+
+\textbf{Checker} (deterministic, patterns frozen with the plan). Per claim: every cited key must exist; every number
+must equal a number in a cited field up to the written rounding (magnitudes of signed values and $\times$100 for
+percentages allowed); a number without a citation is unsupported. Arm B has no citations; its numbers are checked
+against its own prompt (``vs own input'') and against the record. Per report: each active flag mentioned (keyword
+patterns per flag); inactive flags not described as raised; tier words consistent with the record; no forbidden
+content (diagnosis, RANO category as outcome, management, unhedged certainty; full patterns in the source
+document). An unparsed report fails every check. The checker cannot see a correct number attached to the wrong
+concept; meaning was checked by reading.
+
+\textbf{Sets.} Development: the 59 non-grade-4 scans (two rounds; final pass A 58/59, B 51/59, C 54/59).
+Evaluation: all 249 grade 4 scans (126 patients), records from the out-of-fold fits of CV repeat 0, one report per
+scan per arm. Primary (pre-specified): arm A, share of reports with zero unsupported claims and every active flag
+mentioned, Wilson 95\% CI, target $\geq$ 0.95. Secondary: paired differences on the same scans, 2,000-draw
+patient-cluster bootstrap (seed 0). Stress: 30 perturbed evaluation records (10 risk moved to another tier's
+mid-point, 10 flag switched on, 10 flag switched off); a report passes if it passes the checks against the
+perturbed record and follows the change.
+
+\begin{table}[H]
+\centering
+\footnotesize
+\renewcommand{\thetable}{S26}\renewcommand{\theHtable}{S26}
+\caption{\textbf{Report faithfulness on 249 grade 4 scans} (\code{summary\_eval.csv}). CI: Wilson 95\%.}
+\label{tab:S26}
+\begin{tabularx}{\linewidth}{@{}L R{3.4cm} R{3.6cm} R{3.4cm}@{}}
+\toprule
+ & A grounded, 27B & B original prompt, 27B & C grounded, 9B \\
+\midrule
+Pass (zero unsupported + all flags) & 236/249 (0.948) [0.913, 0.969] & 171/249 (0.687) [0.627, 0.741] (vs own input) & 243/249 (0.976) [0.948, 0.989] \\
+Pass vs the record & 236 & 0 & 243 \\
+Reports with an unsupported claim & 13 & 38 (own input); 249 (record) & 6 \\
+Unsupported claims per report & 0.05 & 0.15 (own input); 2.33 (record) & 0.02 \\
+Active flags omitted & 0/269 & 48/269 (17.8\%), 47 reports & 0/269 \\
+Spurious flag & 0 & 1 & 0 \\
+Forbidden content, any & 0\% & 100\% & 2.8\% (7) \\
+\quad diagnosis / RANO category / management / certainty & 0 / 0 / 0 / 0\% & 51\% / 41\% / 99\% / 40\% & 0.8\% / 0 / 2.0\% / 0.8\% \\
+Tier stated / inconsistent & 100\% / 0\% & 57\% / 44\% (other scheme) & 100\% / 0.4\% \\
+Batched time per report & 0.06 s (4 H100) & 0.06 s & 0.08 s (1 H100) \\
+Single-request latency, median of 10 & 3.6 s & -- & 3.1 s \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\textbf{Arm A.} All 13 failures: the risk sentence says ``within 120 days'' without citing \code{risk.horizon\_days};
+the number is correct and in the record (0 numbers absent from the record). All 13 are early post-RT scans (pass by
+phase: pre-RT 76/76, during RT 6/6, early post-RT 85/98, later post-RT 69/69); the development set showed the same
+mode once. 249/249 parsed; 0 invalid citations; 0 truncated; 5.9 sentences and 480 output tokens per report.
+\emph{EXPLORATORY:} accepting a number that appears verbatim in a field cited elsewhere in the report would give
+249/249; this relaxation is post hoc.
+
+\textbf{A vs B} (paired, 249 scans): pass +0.261 [+0.197, +0.328]; pass vs record +0.948 [+0.919, +0.973];
+unsupported claims per report $-$0.10 [$-$0.15, $-$0.05]; flag omissions per report (keyword-based for both)
+$-$0.19 [$-$0.25, $-$0.13]; forbidden content $-$1.00 [$-$1.00, $-$1.00]. Arm B states a RANO verdict in 241 reports,
+mentions pseudoprogression in 249, recommends management in 242 (MDT / tumour board 166, short-interval MRI 172),
+mentions steroids (not in the record) in 84 and calls the 120-day horizon ``12-month'' in 41. \textbf{A vs C:} pass
+$-$0.028 [$-$0.062, +0.008]; forbidden $-$0.028 [$-$0.053, $-$0.008] (C worse). Of C's 7 forbidden hits, 1 is a real
+violation (``suggesting changes that may reflect treatment effects'') and 6 are pattern false positives (for example
+``this does not confirm progression''); one C report also gives a wrong reason for a referral, a meaning error the
+checker cannot see. C's 6 unsupported claims are 4 invalid keys and 2 citation omissions.
+
+\begin{table}[H]
+\centering
+\small
+\renewcommand{\thetable}{S27}\renewcommand{\theHtable}{S27}
+\caption{\textbf{Stress test: 30 perturbed records} (\code{stress.csv}; pass = checks against the perturbed record and
+the report follows the change; checks alone: A 28, B 17, C 29).}
+\label{tab:S27}
+\begin{tabularx}{\linewidth}{@{}L R{2.6cm} R{2.4cm} R{2.4cm} R{1.4cm}@{}}
+\toprule
+Arm & Risk moved to another tier & Flag switched on & Flag switched off & Total \\
+\midrule
+A & 8/10 & 10/10 & 9/10 & 27/30 \\
+B & 2/10 & 6/10 & 5/10 & 17/30 \\
+C & 9/10 & 9/10 & 10/10 & 28/30 \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+The three arm-A failures, read: the horizon-citation omission (the new risk and tier were stated correctly); a new
+interval bound that coincided with the old risk (the new risk, interval and tier were stated correctly; C fails
+the same record); and an invented key (\code{risk.tier\_cut\_upper\_percent}) for a value that is in the record.
+\emph{EXPLORATORY:} in all 30 perturbed records the grounded text followed the changed field.
+
+\textbf{Manual reading.} The three pre-specified examples (first scan per phase) and 12 random arm-A reports (seed 1)
+were read against their facts: no factual error; every active flag stated with its reason. Wording issues the
+checker cannot see: ``95\% confidence interval'' for a bootstrap interval (twice); a double negative for a volume
+below the nadir; a pre-diagnosis scan whose ``all inputs known by the scan day'' is ``no'' (the molecular look-ahead,
+S15) is not mentioned in the summary, only in the deterministic section; a risk just below a tier cut point that
+rounds to the same value as the cut. Arm B on the same examples states ``stable disease'' or ``Progressive Disease
+(PD)'', recommends MDT review and short-interval MRI, and mentions steroid dosing that is not in the record.
+
+\textbf{Open issues.} The primary target was missed by one report; the obvious fix (require citing the horizon
+field, or treat constants as citable) would be tuned on the evaluation set and needs fresh records (for example
+another CV repeat). The checker is lexical and has false positives on negations. Tier cut points should be shown
+with more decimals. Re-run identity of greedy decoding under vLLM batching was not tested. Records come from one CV
+repeat of one cohort, and the core model has no external validation with treatment fields. No clinician evaluated
+usefulness, readability or trust.
 
 \FloatBarrier
 \section*{Supplementary figures}

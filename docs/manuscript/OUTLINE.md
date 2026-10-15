@@ -5,7 +5,7 @@ and Surveillance Monitor) is the authors' own, unpublished system (first version
 PRISM = the full multimodal pipeline (clinical + treatment phase + volumes + radiomics + deep encoder), every branch
 ablated honestly; the deployed configuration is the clinical + treatment-phase **core model** with the imaging branches
 as optional modules. The report generator is kept and rebuilt on the per-scan audit record (grounded; every statement
-traceable to a record field), with a faithfulness evaluation (results pending from the report-generator work stream).
+traceable to a record field), with a faithfulness evaluation (`docs/results/REPORT_AGENT.md`).
 The original 0.80 single-split result is "our initial single-split evaluation": a transparent self-correction.
 
 Source of truth: `paper/main.tex`, `paper/supplement.tex`. Number sources: `paper/SOURCE_MAP.md`. Figures:
@@ -45,7 +45,7 @@ generator; PRISM v1 and what changed (legacy reproduction numbers); deployed con
 2.2 Study design and reporting · 2.3 Data sources · 2.4 Index scans and outcome · 2.5 Predictors: PRISM's input
 branches · 2.6 Initial radiomics model, initial evaluation split, as-of correction · 2.7 Split variance · 2.8 Repeated
 CV and component ablation · 2.9 Phase of care · 2.10 Label, positive controls, re-segmentation · 2.11 External and
-diffusion · 2.12 Audit layer · 2.13 **Report generator and faithfulness evaluation** [PENDING details] · 2.14 Further
+diffusion · 2.12 Audit layer · 2.13 **Report generator and faithfulness evaluation** · 2.14 Further
 analyses and software.
 
 ## 3. Results
@@ -53,7 +53,7 @@ analyses and software.
 composition and phase of care) · 3.3 Split variance (500 splits) · 3.4 **Component ablation** (clinical → timing →
 treatment; radiomics branch; deep branch; credit ≠ value) · 3.5 Phase of care · 3.6 Label, positive controls,
 segmentation · 3.7 External (LUMIERE) and CFB-GBM · 3.8 Calibration and utility of the core model · 3.9 Audit layer
-(P1 met, P2 not met, four problems found) · 3.10 **Report generator** [PENDING: REPORT_AGENT results].
+(P1 met, P2 not met, four problems found) · 3.10 **Report generator** (primary 236/249 = 0.948, target 0.95 not met by one report; arms B and C; stress test).
 
 ## 4. Discussion
 Summary of four findings → **What PRISM contributes** (auditable, phase-aware, honest about uncertainty; no triage
@@ -70,4 +70,4 @@ work → Limitations (incl. report faithfulness ≠ clinical usefulness) → Con
    the report-generator work stream; red placeholder via `\IfFileExists` until they exist), (C) risk–coverage
    `fig5_system_risk_coverage.png`.
 Table 1 cohort; Table 2 single split vs 500 splits vs CV (rows renamed); Table 3 imaging branches vs core model.
-Supplement: S7 now also covers PRISM v1's encoder and fusion components; new S19 report generator [PENDING].
+Supplement: S7 now also covers PRISM v1's encoder and fusion components; new S19 report generator (Tables S26–S27).
