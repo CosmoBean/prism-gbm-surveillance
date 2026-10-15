@@ -1,5 +1,7 @@
 # Draft notes (2026-10-15)
 
+LaTeX (paper/) is the source of truth from 2026-10-15; this markdown is a frozen snapshot.
+
 Files: [DRAFT.md](DRAFT.md) (main text), [SUPPLEMENT.md](SUPPLEMENT.md), Table 2 history rows appended to
 [figures/table2_single_split_vs_cv.md](figures/table2_single_split_vs_cv.md) / `.csv`, Figure 5 basis copied to
 `figures/fig5_system_risk_coverage.png` (from `outputs/results/analyses/audit_system/risk_coverage.png`).
