@@ -14,6 +14,8 @@ reference changes in this directory.
 | `build.sh` | Builds both PDFs with tectonic |
 | `SOURCE_MAP.md` | Where every number in the draft came from (moved verbatim out of DRAFT.md; not submitted) |
 
+Journal rules and submission checklist: `docs/manuscript/JOURNAL_RULES.md`.
+
 ## Build
 
 ```bash

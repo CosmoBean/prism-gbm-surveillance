@@ -84,6 +84,9 @@ signal may be loss to follow-up) is stated in the text but needs a re-analysis b
 
 ## Target journal: CMBBE: Imaging & Visualization (2026-10-15)
 
+Current rules and the paper's status against each: [JOURNAL_RULES.md](JOURNAL_RULES.md) (live rules pasted by the user
+2026-10-16).
+
 Checked on 2026-10-15 for the two journals the user named.
 
 | | CMBBE: Imaging & Visualization (Taylor & Francis) | Int. J. for Computational Vision and Biomechanics (MUK) | Int. J. of Imaging and Robotics (CESER) |
