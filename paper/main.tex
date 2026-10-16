@@ -22,7 +22,7 @@
 
 % Unstructured abstract, 100--150 words (journal instructions). Longer structured version: DRAFT_NOTES.md.
 \begin{abstract}
-PRISM predicts documented progression within 120 days of a glioma surveillance MRI and returns an audit record and a grounded clinician report for every scan. Its first version scored AUC 0.80 on one test split of 30 patients from MU-Glioma-Post, and we tested that number before building on it. Over 500 splits of the same design the pipeline averaged 0.72; our split was easy because of its mix of scans taken before radiotherapy. Under repeated cross-validation, a core of clinical and treatment-course variables reached 0.70 in grade 4 glioma. Radiomics, deep features, resegmentation, a cleaner label and diffusion showed no measurable gain, and a locked model scored 0.61 on an external cohort. The phase of care drove discrimination. The audit layer made each prediction traceable and exposed a missingness shortcut, but did not improve triage. Of 249 reports written by a local language model, 236 passed a faithfulness check.
+PRISM predicts documented progression within 120 days of a glioma surveillance MRI and returns an audit record and a clinician report per scan. Its first version scored AUC 0.80 on one MU-Glioma-Post test split but averaged 0.72 over 500 similar splits; that split was easy because of its mix of scans before radiotherapy. Under repeated cross-validation, clinical and treatment-course variables reached 0.70 in grade 4 glioma, or 0.68 after removing leaks found by its own audit. Radiomics, frozen and fine-tuned deep encoders, resegmentation, a cleaner label and diffusion showed no measurable gain, and a locked model scored 0.61 on an external cohort. The phase of care drove discrimination, even after correcting for censoring. Reports written from the audit record by a local language model passed a faithfulness check for all 249 grade 4 scans and met every prespecified usefulness item in 247; clinicians have not yet assessed them.
 \end{abstract}
 
 % No more than 3 keywords (journal instructions).
@@ -87,7 +87,7 @@ and returns the risk of documented progression within 120 days, an audit record 
 (Figure~\ref{fig:arch}). Every input is read as it stood on the scan day. Five branches can feed one ridge
 logistic model: (1) clinical and molecular data; (2) the treatment course, from the time since diagnosis and RT
 and the treatment status on the scan day; (3) imaging measurements (volumes, morphology and change); (4)
-radiomics; and (5) a frozen SwinUNETR image encoder. Any branch can be switched off, which is how we ablate it.
+radiomics; and (5) a SwinUNETR image encoder, frozen or fine-tuned. Any branch can be switched off, which is how we ablate it.
 An audit layer wraps the model and writes one record per scan, and a report generator turns each record into a
 report (Sections~\ref{sec:2.7} and~\ref{sec:2.8}).
 
@@ -216,6 +216,15 @@ between the two scans after RT. Nested feature sets were clinical; plus tumour v
 conventional T1-Gd and FLAIR radiomics; plus ADC radiomics, evaluated by 20 repeats of 5-fold cross-validation.
 ADC helps if it adds at least 0.03 with a CI excluding 0 (1,000-draw permutation test). We noted in advance that
 the volume block is partly circular, because the label is defined by the same volume (Supplementary S18).
+
+\textbf{The encoder.} Frozen features may miss what a network trained on this label would find, so we fine-tuned
+the BraTS 2021 SwinUNETR encoder on the 120-day label inside the shared folds, with a plan committed before training
+(Supplementary S22). The two deepest stages and a small head were trained on a cube around the lesion and cavity,
+with fixed hyperparameters and early stopping on patients held out from training. Within each outer training fold,
+four networks gave out-of-fold scores for stacking onto the core model and an averaged score for the test fold, 100
+fine-tunes per arm. A copy with outcomes shuffled within each training fold showed what an uninformative score does
+to the stack, and BrainSegFounder weights and all gliomas were secondary arms. Fine-tuning helps if, in grade 4, the
+core model plus the fine-tuned score gains at least 0.03 with a CI excluding 0.
 
 \subsection{The audit layer}\label{sec:2.7}
 
@@ -377,6 +386,16 @@ S13).
 its change added 0.15 to 0.19, but that block is partly circular with the label, and conventional texture added
 nothing beyond volume.
 
+\textbf{Nor did training the encoder on the task.} The fine-tuned image score alone reached 0.644 (0.559--0.727) in
+grade 4, close to the frozen features' 0.652, and it again tracked tumour volume (r = 0.57)
+more than the core model (r = 0.13). Added to the core model it gave 0.708, a difference of +0.009 ($-$0.022 to
++0.040); the rule was not met (Table~\ref{tab:3}). The shuffled-outcome control scored 0.476 alone, as intended, but
+its stack gained +0.005 ($-$0.006 to +0.015), slightly above the limit of 0 that we had set for a valid run. An
+uninformative score therefore buys about half of the observed gain, which weakens any reading of the +0.009 as
+signal. BrainSegFounder weights gave $-$0.005 and all gliomas +0.017 ($-$0.009 to +0.044). Fine-tuning tightened the
+interval: gains of about 0.045 or more can now be excluded in grade 4, against 0.09 for frozen features
+(Supplementary S22).
+
 \subsection{Auditing a modest model}\label{sec:3.6}
 
 The audit layer reproduced the core model's predictions exactly (largest difference \num{1.7e-16}), and the
@@ -468,7 +487,8 @@ and the 120-day label mostly means that the next scan was the progression scan. 
 changing as much over days as over months. And the cohort is small: by the Riley criteria even the 31-column core
 model would need about ten times more scans \citep{riley2020}. Cleaning the label and resegmenting moved imaging
 up by about 0.03, and imaging added 0.06 within the surveillance cohort, and the upper confidence bounds reach
-0.02 to 0.16. Effects of that size cannot be excluded; our data cannot detect them. Diffusion did not change this in CFB-GBM, although that test was small.
+0.02 to 0.16. Effects of that size cannot be excluded; our data cannot detect them. Training the encoder on the
+label narrowed this: its gain was +0.009, and gains above about 0.045 are now unlikely for deep features in grade 4. Diffusion did not change this in CFB-GBM, although that test was small.
 Where imaging performs well in the literature, it uses diffusion and perfusion to classify a lesion that is
 already suspicious \citep{kim2019,taylor2022}, a different question from forward risk at every scan. We keep
 PRISM's imaging branches as optional modules so that larger cohorts can test them again. Attribution is no guide
@@ -507,7 +527,8 @@ a competing risk. The external cohort is small, uses a different segmenter and l
 was not tested externally. The label and segmentation tests were added after the imaging result was known,
 although each had its rule fixed before its own run, and the plan for the phase ladder was not committed
 separately. Radiomics used a fixed bin count rather than the fixed bin width recommended by IBSI
-\citep{zwanenburg2020}, and the deep encoders were frozen rather than trained on this task. The ablation and phase analyses use the original core model; the corrected model,
+\citep{zwanenburg2020}. The fine-tuned encoder was trained on about 100 scans per network with fixed hyperparameters and
+stopped early, and its permuted-label control slightly missed its validity limit. The ablation and phase analyses use the original core model; the corrected model,
 which removes the leaks found by the audit, scores 0.020 lower. The faithfulness checker is lexical: it verifies numbers, citations, flags and forbidden patterns but not
 meaning, which was checked only by an AI assistant reading 15 reports. The reports come from one cohort, the public reference reports describe pre-operative or published
 cases rather than routine surveillance, our usefulness criteria were written with v2 in mind, and no clinician has
@@ -518,7 +539,7 @@ assessed the reports.
 PRISM's initial AUC of 0.80 came from one favourable split. Across splits its radiomics pipeline averaged 0.72,
 and its core of clinical and treatment-course variables reached about 0.70 under repeated cross-validation (0.68
 after removing leaks found by its own audit). MRI
-radiomics, frozen deep features, resegmentation, a cleaner label and diffusion added no measurable discrimination.
+radiomics, deep features (frozen or fine-tuned), resegmentation, a cleaner label and diffusion added no measurable discrimination.
 The phase of care drives discrimination on this task and should be reported as a stratum and treated as a
 confounder. PRISM is deployed as its corrected core model for patients on a documented RT pathway, and every
 prediction is recorded, explained and reported in a form that can be checked.
@@ -548,7 +569,7 @@ released and give a DOI or other persistent identifier.} Code: \todo{PENDING: pu
 tag.}
 
 \section*{Supplemental material}
-Supplemental data for this article (Supplementary S1--S19, Tables S1--S27) are provided as a separate file.
+Supplemental data for this article (Supplementary S1--S22, Tables S1--S43) are provided as a separate file.
 
 \section*{PRISM versions}
 PRISM v1 and its initial evaluation on a single split were described in an unpublished
@@ -682,6 +703,11 @@ Nested over 32 (BraTS21 SwinUNETR + BrainSegFounder) & $-$0.004 [$-$0.069, +0.06
 BraTS21 SwinUNETR, lesion PCA-10 stacked & +0.016 [$-$0.029, +0.059] & +0.017 [$-$0.014, +0.050] \\
 BrainSegFounder, lesion PCA-10 stacked & +0.014 [$-$0.029, +0.057] & +0.024 [$-$0.013, +0.064] \\
 Untrained encoder, nested (control) & $-$0.049 [$-$0.085, $-$0.014]* & $-$0.009 [$-$0.032, +0.009] \\
+\addlinespace
+\multicolumn{3}{@{}l}{\textbf{Fine-tuned deep encoder branch vs core model}} \\
+BraTS21 SwinUNETR, fine-tuned (prespecified primary) & +0.009 [$-$0.022, +0.040] & +0.017 [$-$0.009, +0.044] \\
+BrainSegFounder, fine-tuned & $-$0.005 [$-$0.030, +0.019] & -- \\
+BraTS21 SwinUNETR, shuffled outcomes (control) & +0.005 [$-$0.006, +0.015] & -- \\
 \addlinespace
 \multicolumn{3}{@{}l}{\textbf{Imaging-defined label (progression on clinical grounds alone censored)}} \\
 Core + volumes/change vs core (prespecified rule) & +0.027 [$-$0.033, +0.082] & +0.008 [$-$0.036, +0.049] \\

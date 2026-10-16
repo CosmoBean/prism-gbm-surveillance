@@ -2194,6 +2194,102 @@ read them. Institutional approval and reader consent; data stay on the instituti
 applicable CLAIM and TRIPOD+AI items, and the protocol is preregistered before the first reader session.
 
 \FloatBarrier
+\section{Fine-tuned SwinUNETR encoder}\label{sec:S22}
+
+\textbf{Plan.} Written into \code{docs/results/FINETUNE\_DEEP.md} and committed (9aaa8d3) before any network saw a
+real label; a dated copy (\code{PLAN\_snapshot.md}) was saved at 22:06 on 2026-10-15, and the first real-label job
+finished at 22:08. Code: \code{prism/analyses/finetune\_deep.py} (stage \code{finetune}).
+
+\textbf{Splits.} Outer: the shared 5 $\times$ 5 folds. Inside each outer training set, the scans with a known
+120-day outcome were split into 4 patient-grouped inner folds. For each inner fold one network was fine-tuned on the
+other three, with early stopping on 20\% of their patients, and predicted the inner fold (out-of-fold score) and the
+outer test fold. The test score is the mean logit of the 4 networks; the out-of-fold scores, z-scored, were stacked
+onto the core model's predictors and the core ridge was refitted. Patients never overlap between fitting, stopping,
+inner and outer test sets (unit test). Censored scans were excluded from the training loss and scored as usual.
+
+\textbf{Network.} MONAI SwinUNETR encoder (feature size 48; FLAIR, T1c, T1, T2) from BraTS 2021 or BrainSegFounder
+weights. Input: a brain z-scored cube centred on the lesion and cavity, side $\max(128, \text{extent} + 16)$ mm,
+resampled to 128$^3$ when larger (37 of 308 scans). Mask-weighted means of stages 2 to 4 within the lesion plus the
+global mean of stage 4 (2,112 features), LayerNorm, dropout 0.3 and one linear output. Patch embedding and stages 1--2
+frozen; stages 3--4 and the head trained with AdamW (encoder 2e-5, head 1e-3, weight decay 0.01), one warm-up epoch
+and cosine decay over 25 epochs, batch 4, bf16, binary cross-entropy; early stopping with patience 5 and at least 3
+epochs. Augmentation: flips, translation of $\pm$8 voxels, intensity scale 0.9--1.1 and shift $\pm$0.1. Prediction:
+mean over 8 flips. Seeds fixed per job and deterministic kernels; repeated runs are bit identical. No hyperparameter
+was tuned.
+
+\textbf{Arms.} (1) BraTS 2021, grade 4 (primary); (2) the same with outcomes permuted within each outer training set
+(control; the stacking ridge uses the real outcomes); (3) BraTS 2021, all gliomas; (4) BrainSegFounder, grade 4; (5)
+optional, a siamese network that also sees the previous scan, cropped at the same atlas box. Each arm has 100
+fine-tunes.
+
+\textbf{Rule.} Fine-tuning helps if, in grade 4, the core model plus the arm 1 score gains at least 0.03 with a paired
+95\% CI excluding 0. Validity: the permuted arm's image-only AUC near 0.5 with a CI covering 0.5, and its stack gain
+$\leq$ 0. Other arms are secondary, without multiplicity correction.
+
+\begin{table}[H]
+\centering
+\small
+\renewcommand{\thetable}{S42}\renewcommand{\theHtable}{S42}
+\caption{\textbf{Fine-tuned encoder: discrimination and calibration} (\code{finetune/<population>/results.csv}). IPCW
+AUC at 120 days with 95\% bootstrap CI over patients; $\Delta$AUC paired against the core model; MDE: minimal
+detectable $\Delta$AUC at 80\% power.}
+\label{tab:S42}
+\begin{tabularx}{\linewidth}{@{}L R{2.6cm} R{2.9cm} R{1.0cm} R{1.0cm} R{0.8cm}@{}}
+\toprule
+Model & AUC [95\% CI] & $\Delta$AUC [95\% CI] & MDE & Slope & O/E \\
+\midrule
+\multicolumn{6}{@{}l}{\textbf{Grade 4 (249 scans, 126 patients)}} \\
+Core model (reference) & 0.698 [0.615, 0.774] & -- & -- & 0.89 & 1.04 \\
+Fine-tuned image only, BraTS21 & 0.644 [0.559, 0.727] & $-$0.054 [$-$0.164, +0.051] & 0.154 & 0.88 & 0.96 \\
+Core + fine-tuned BraTS21 (primary) & 0.708 [0.623, 0.786] & +0.009 [$-$0.022, +0.040] & 0.045 & 0.86 & 1.04 \\
+Image only, permuted outcomes & 0.476 [0.438, 0.514] & $-$0.223 [$-$0.316, $-$0.125] & -- & 0.08 & 0.96 \\
+Core + permuted score (control) & 0.703 [0.622, 0.778] & +0.005 [$-$0.006, +0.015] & 0.015 & 0.88 & 1.05 \\
+Fine-tuned image only, BrainSegFounder & 0.594 [0.503, 0.679] & $-$0.105 [$-$0.219, +0.003] & -- & 0.48 & 0.95 \\
+Core + fine-tuned BrainSegFounder & 0.693 [0.612, 0.769] & $-$0.005 [$-$0.030, +0.019] & 0.035 & 0.85 & 1.04 \\
+Core + frozen encoder, nested (reference) & 0.694 [0.610, 0.773] & $-$0.004 [$-$0.069, +0.063] & 0.094 & 0.55 & 1.00 \\
+\addlinespace
+\multicolumn{6}{@{}l}{\textbf{All gliomas (308 scans, 155 patients)}} \\
+Core model (reference) & 0.720 [0.638, 0.792] & -- & -- & 0.88 & 1.05 \\
+Fine-tuned image only, BraTS21 & 0.682 [0.610, 0.756] & $-$0.038 [$-$0.130, +0.054] & -- & 0.91 & 0.99 \\
+Core + fine-tuned BraTS21 & 0.736 [0.655, 0.807] & +0.017 [$-$0.009, +0.044] & 0.038 & 0.97 & 1.05 \\
+Core + frozen encoder, nested (reference) & 0.731 [0.660, 0.798] & +0.011 [$-$0.032, +0.056] & 0.063 & 0.79 & 1.03 \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\textbf{Verdict.} The primary gain, +0.009, is below 0.03 and its CI includes 0: fine-tuning does not help. The
+permuted control behaved as intended alone (0.476, CI covering 0.5), but its stack gained +0.005 [$-$0.006, +0.015],
+which misses the validity limit of $\leq$ 0 as written. We report this as a flag rather than relaxing the limit
+afterwards. It means that adding an uninformative score to the core ridge buys about +0.005 by chance, so the primary
++0.009 is barely distinguishable from noise; it does not affect the verdict. Three jobs of arm 3 ran out of GPU memory
+with three processes per GPU and were rerun alone; because jobs are deterministic, this changes no number.
+
+\begin{table}[H]
+\centering
+\small
+\renewcommand{\thetable}{S43}\renewcommand{\theHtable}{S43}
+\caption{\textbf{Fine-tuned encoder: what the score tracks and how training went} (\code{diagnostics.csv},
+\code{jobs.csv}). r: Pearson correlation of the image logit (mean over repeats) with log lesion volume and with the
+core model's logit. Epochs: best epoch restored by early stopping and epochs run, mean (range), of at most 25.}
+\label{tab:S43}
+\begin{tabularx}{\linewidth}{@{}L R{1.4cm} R{1.4cm} R{1.9cm} R{1.9cm} R{1.2cm} R{1.1cm}@{}}
+\toprule
+Arm & r volume & r core & Best epoch & Epochs run & Min/job & Peak GB \\
+\midrule
+BraTS21, grade 4 & 0.57 & 0.13 & 3.9 (0--19) & 9.9 (6--25) & 3.0 & 19 \\
+BraTS21, permuted, grade 4 & $-$0.03 & $-$0.08 & 3.3 (0--12) & 9.3 (6--18) & 2.9 & 19 \\
+BrainSegFounder, grade 4 & 0.37 & 0.14 & 3.2 (0--13) & 9.2 (6--19) & 1.9 & 24 \\
+BraTS21, all gliomas & 0.59 & 0.30 & 3.5 (0--12) & 9.5 (6--18) & 2.4 & 25 \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+As with the frozen features (r = 0.58 with lesion volume), the fine-tuned score mostly tracks tumour size. Early
+stopping fired after a few epochs: with about 100 training scans per network and a noisy label, validation loss
+rose soon after the warm-up, so the networks moved little from their starting weights. Arm 5 (change from the
+previous scan) is reported in \code{FINETUNE\_DEEP.md} when complete.
+
+\FloatBarrier
 \section*{Supplementary figures}
 \addcontentsline{toc}{section}{Supplementary figures}
 
