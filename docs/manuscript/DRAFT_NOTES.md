@@ -59,6 +59,29 @@ side; legend describes the actual panels). Supplement S19 now holds the full acc
 and "1,024" (written "2000"/"1024" there) and the values printed inside the Figure 5 panels. The coordinator's
 Figure 1–4 relabelling (HEAD 65d2e26) was kept.
 
+## Story rewrite (2026-10-15)
+
+Main text rewritten as one narrative: the initial split scored high for every model → why the split was easy (500
+splits, composition) → what carries the signal (ablation, phase of care) → imaging given every chance (surveillance
+cohort, label, segmentation, external, diffusion) → auditing a modest model → reports that can be checked. Detail
+that the story does not need now lives only in the Supplement (every cut number was checked to be there, except
+97.6%, which stayed in the main text). No em dashes; hyphenated forms replaced where a plain form exists
+(prespecified, resegmentation, grouped by patient, held-out). Title: *PRISM: an auditable pipeline for post-treatment
+glioma surveillance, evaluated branch by branch*. Figures renumbered in order of first citation: Figure 1 is now the
+architecture, Figure 6 the grounded report and risk–coverage curves. Typography: STIX Two text and maths, 1.5 line
+spacing, 9.5 pt captions and 9 pt tables (were 8 pt), upright grey running head. Previous version:
+`git show 01c9500:paper/main.tex`.
+
+| | Before | After |
+|---|---|---|
+| Main text, Introduction to Conclusion (words, from the PDF) | 8,997 | 5,839 |
+| main.pdf pages | 35 | 22 |
+| Abstract (words) | 142 | 149 |
+
+Weaknesses found by the internal review, with verification: [INTERNAL_REVIEW.md](INTERNAL_REVIEW.md). The most
+important one (censoring concentrated in patients whose RT was never documented, so part of the "phase of care"
+signal may be loss to follow-up) is stated in the text but needs a re-analysis before submission.
+
 ## Target journal: CMBBE: Imaging & Visualization (2026-10-15)
 
 Checked on 2026-10-15 for the two journals the user named.

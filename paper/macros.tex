@@ -13,16 +13,30 @@
   \usepackage[T1]{fontenc}
   \usepackage{lmodern}
 \else
-  % XeTeX/LuaTeX: fontspec's default text font is Latin Modern (OpenType lmodern)
   \usepackage{fontspec}
+  % STIX Two: a Times-style text face with matching maths, close to the journal's typeset look
+  \setmainfont{STIXTwoText}[Extension=.otf, UprightFont=*-Regular, BoldFont=*-Bold,
+    ItalicFont=*-Italic, BoldItalicFont=*-BoldItalic]
+  \usepackage{unicode-math}
+  \setmathfont{STIXTwoMath-Regular.otf}
 \fi
 \usepackage{textcomp}
 \usepackage{microtype}
 
 % ---------------------------------------------------------------- page layout
 \ifjournal
-  % interact: template layout (largeformat option), double spacing for review as the template suggests
-  \usepackage[doublespacing]{setspace}
+  % interact: template layout (largeformat option); one-and-a-half spacing for review, readable float text
+  \usepackage[onehalfspacing]{setspace}
+  \setlength{\parindent}{1.5em}
+  \makeatletter
+  \def\figcaptionfont{\fontsize{9.5}{12}\selectfont}
+  \def\fignumfont{\fontsize{9.5}{12}\selectfont\bfseries}
+  \def\tablecaptionfont{\fontsize{9.5}{12}\selectfont}
+  \def\tablenumfont{\fontsize{9.5}{12}\selectfont\bfseries}
+  \def\tablefont{\fontsize{9}{11}\selectfont}
+  \def\abstractfont{\fontsize{10}{13}\selectfont}
+  \def\keywordfont{\fontsize{10}{13}\selectfont}
+  \makeatother
 \else
   \usepackage[raggedright]{titlesec}
   \usepackage[a4paper,margin=2.5cm,headheight=14pt]{geometry}
@@ -93,6 +107,7 @@
     \tl_set:Nn \l__paper_code_tl {#1}
     \tl_replace_all:Nnn \l__paper_code_tl { / } { / \allowbreak }
     \tl_replace_all:Nnn \l__paper_code_tl { , } { , \allowbreak }
+    \tl_replace_all:Nnn \l__paper_code_tl { | } { | \allowbreak }
     \tl_replace_all:Nnn \l__paper_code_tl { \_ } { \_ \allowbreak }
     \tl_use:N \l__paper_code_tl
     \group_end:
@@ -112,7 +127,7 @@
 \providecommand{\doi}{}\renewcommand{\doi}[1]{doi:\href{https://doi.org/#1}{#1}}
 
 % Running title (used in the page header of both documents)
-\newcommand{\runningtitle}{PRISM: auditable, phase-aware glioma surveillance}
-\newcommand{\papertitle}{PRISM: an auditable, phase-aware pipeline for post-treatment glioma surveillance ---
-  rigorous evaluation of imaging, clinical and treatment-course information}
-\fancyhead[L]{\small\itshape\runningtitle}
+\newcommand{\runningtitle}{PRISM: auditable glioma surveillance}
+\newcommand{\papertitle}{PRISM: an auditable pipeline for post-treatment glioma surveillance, evaluated branch
+  by branch}
+\fancyhead[R]{\footnotesize\color{gray}\runningtitle}
