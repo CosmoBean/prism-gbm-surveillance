@@ -17,6 +17,7 @@ evaluation-set report is generated: outputs/results/analyses/report_usefulness/P
   evaluate   same checker (prism.report.checker) on v2 facts + usefulness items U1-U8, safety S1-S2, readability
              (prism.report.usefulness); primary and decision rules in the plan; paired v2 - v1 patient-cluster bootstrap
   judge      EXPLORATORY LLM-as-judge (Gemma 4 31B-it, different family, blinded to arm; prism.report.judge)
+  figure     v2 example page for the pre-specified early post-RT scan (docs/manuscript/figures/fig6a_*)
 
     python -m prism reportuse [--steps reference records requests generate evaluate judge render] [--sets dev|eval|stress]
     -> $PRISM_OUTPUTS/results/analyses/report_usefulness/
@@ -389,6 +390,24 @@ def render_step(sets):
                                                          [prompts_v2.render_text(o["text"], arm)]))
 
 
+def figure_step():
+    """v2 example page for the pre-specified scan of the v1 figure (first early post-RT scan id, report_agent.examples);
+    record from this module's evaluation set (CV repeat 1). Does not touch the v1 figure (fig5a)."""
+    import shutil
+    from prism.analyses.report_agent import FIG, examples
+    from prism.report.figures import example_report
+    sid = examples()["early_post_rt"]
+    rec, o = load_records("eval")[sid], load_outputs("eval")[f"eval|v2|{sid}"]
+    det = json.loads((OUT / "check_details_eval.json").read_text())[f"eval|v2|{sid}"]
+    sec = prompts_v2.sectioned(o["text"])
+    summ = [f"FINDINGS: {' '.join(sec['findings'])}", f"IMPRESSION: {' '.join(sec['impression'])}"]
+    example_report(rec, facts_v2(rec), summ, OUT / "example_report_v2", det["check"])
+    FIG.mkdir(parents=True, exist_ok=True)
+    for ext in ("pdf", "png"):
+        shutil.copy(OUT / f"example_report_v2.{ext}", FIG / f"fig6a_example_report_v2.{ext}")
+    print("figure:", sid)
+
+
 def main(argv=None) -> None:
     ap = argparse.ArgumentParser(prog="prism reportuse", description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -399,7 +418,7 @@ def main(argv=None) -> None:
     steps = {"reference": reference_step, "records": lambda: records_step(a.sets),
              "requests": lambda: requests_step(a.sets), "generate": lambda: generate_step(a.sets),
              "evaluate": lambda: evaluate_step(a.sets), "judge": lambda: judge_step(a.sets),
-             "render": lambda: render_step(a.sets)}
+             "render": lambda: render_step(a.sets), "figure": figure_step}
     for st in a.steps:
         print(f"== reportuse {st}", flush=True)
         steps[st]()

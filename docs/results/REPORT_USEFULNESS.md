@@ -237,6 +237,185 @@ python -m prism reportuse --steps judge --sets eval        # EXPLORATORY
 
 ---
 
+## Run record
+
+- **Plan:** committed and pushed as `de9c487`. The snapshot was saved before the run:
+  - `PLAN_snapshot.md`, `PLAN_snapshot.timestamp` (2026-10-16T02:59:19Z);
+  - `PLAN_snapshot.code_sha256`, holding the sha256 of the module, of every `prism/report/*.py` file used, and of the
+    unchanged v1 files.
+- **Commands, all on GPU 0 only:**
+  - `python -m prism reportuse --steps requests generate evaluate render --sets eval stress`: 8 min 20 s
+    (log `outputs/logs/report_usefulness_eval.log`). Generation took 356 s for 498 eval requests and 137 s for 60
+    stress requests, each including model load. That is 0.51 s per request in batch.
+  - `--steps judge --sets eval`: 1065 s (log `outputs/logs/report_usefulness_judge.log`). That is 996 requests,
+    974 s in batch, 0/996 truncated, and 498/498 absolute ratings parsed.
+  - `--steps figure`: the v2 example page (see below).
+- **After the plan, mechanical only:** the `figure` step was added to the module at the coordinator's request after GO.
+  No prompt, fact, checker, criterion or rule changed.
+
+## Results
+
+All files are in `outputs/results/analyses/report_usefulness/`:
+- `summary_eval.csv`, `checks_eval.csv` (one row per report), `check_details_eval.json`;
+- `decision_eval.json`, `by_phase.csv`;
+- `stress.csv`, `summary_stress.csv`;
+- `judge_{absolute,pairwise,summary}_eval.csv`;
+- `reports/{eval,stress}/{v1,v2}/<scan>.md`;
+- `llm/` (requests, raw outputs, run metadata).
+
+### Primary and decision rule (249 grade-4 scans, CV repeat 1)
+
+| Rule (pre-specified) | v2 result | Met |
+|---|---|---|
+| P1 pass rate ≥ 0.95 | **249/249 = 1.000** (Wilson 95% CI 0.985–1.000) | yes |
+| P2a complete rate ≥ 0.90 | **247/249 = 0.992** (0.971–0.998) | yes |
+| P2b usefulness v2 − v1, bootstrap lower bound > 0 | **+0.325 [+0.312, +0.337]** | yes |
+| G1 forbidden content ≤ 2% | 0/249 | yes |
+| G2 S1 or S2 ≤ 1% | 0/249 | yes |
+| G3 no active flag omitted | 0 of 262 omitted | yes |
+
+**Verdict: under the pre-specified rule, v2 replaces v1 as the default summary** (`decision_eval.json`,
+`adopt_v2: true`).
+
+**Horizon fix: 0 v2 reports have an unsupported "120"** (0 unsupported claims overall). On the same records, v1 again
+fails only on this. v1 has 11 reports whose single unsupported number is 120, all in early post-RT scans. v1 passes
+238/249 = 0.956 [0.923, 0.975] on this repeat, against 236/249 on repeat 0. So v1's pre-specified target is met on
+repeat 1 and missed on repeat 0, both times by about one report.
+
+### v1 vs v2 (`summary_eval.csv`; paired, 2000-draw patient-cluster bootstrap)
+
+| | v1 | v2 | v2 − v1 [95% CI] |
+|---|---|---|---|
+| Pass (faithfulness) | 238/249 (0.956) | **249/249 (1.000)** | +0.044 [+0.020, +0.072] |
+| Complete (all applicable U items) | 0/249 | **247/249** | +0.992 [+0.979, 1.000] |
+| Usefulness score, mean | 0.674 | **0.999** | +0.325 [+0.312, +0.337] |
+| U1 risk, interval, horizon | 249/249 | 249/249 | |
+| U2 reference frame | 248/249 | 249/249 | |
+| U3 phase (+ why, early post-RT) | 241/249 | 249/249 | |
+| U4 drivers named | 32/249 | 249/249 | |
+| U5 what the model did not see | **0/249** | 249/249 | |
+| U6 flags with reasons (180 applicable) | 180/180 | 178/180 | |
+| U7 change since prior (123 applicable) | 105/123 | 123/123 | |
+| U8 look-ahead stated (8 applicable) | **0/8** | 8/8 | |
+| Forbidden content (any) | 0 | 0 | 0 |
+| S1 false reassurance / S2 wording mismatch | 0 / 1 | 0 / 0 | |
+| Flags: active / omitted / spurious | 262 / 0 / 0 | 262 / 0 / 0 | |
+| Impression present | — | 246/249 | |
+| Words, median [IQR] | 125 [107, 135] | 190 [158, 214] | +68 [+63, +72] |
+| Sentences, median | 6 | 11 | |
+| Words per sentence, median | 21.3 | 17.4 | |
+| FKGL, median | 11.2 | 9.7 | −1.46 [−1.71, −1.22] |
+| Reading time at 200 words/min, median | 38 s | 57 s | |
+| Output tokens, mean | 478 | 784 | |
+
+- **v1's S2 hit** (PatientID_0143_Timepoint_1) is tier wording that disagrees with the record; the checker counts it
+  as `tier_inconsistent`.
+- **The two incomplete v2 reports** (PatientID_0003_Timepoint_1 and PatientID_0238_Timepoint_1) name all three active
+  flags in one sentence without the reasons, so U6 is not met. The checker still passes them: the flags are mentioned
+  and cited.
+- **3 v2 reports have no IMPRESSION sentence.** Every sentence was tagged "findings".
+- **By phase** (`by_phase.csv`):
+  - v2 passes 100% in every phase.
+  - v2 is complete in 98% of early post-RT scans (the two U6 misses) and in 100% of the other phases.
+  - All 11 v1 failures are early post-RT (pass 0.89 there).
+- **Form against the reference corpora:**
+  - v2 is longer than a RadGenome report (190 vs 125 words) and takes about 1 minute to read.
+  - Its reading level is lower (FKGL 9.7 vs 16.4) and its sentences are shorter (17 vs 27 words).
+  - It has the reference's FINDINGS → IMPRESSION structure, which v1 lacks.
+  - v2 is about 50% longer than v1. This is the cost of the added items.
+
+### Stress test (30 perturbed records; `stress.csv`)
+
+| Arm | Risk moved to another tier | Flag switched on | Flag switched off | Total |
+|---|---|---|---|---|
+| v1 | 9/10 | 8/10 | 10/10 | 27/30 |
+| v2 | 7/10 | 10/10 | 10/10 | 27/30 |
+
+- **v1's three failures** are all the horizon-citation omission; the text followed the change in 30/30.
+- **v2 passes the checks in 30/30.** Its three failures are all on the pre-specified rule "the original risk is absent
+  from the text".
+  - In each case v2 states the new risk, interval and tier correctly.
+  - In each case the patient's *prior-scan* risk (the new `risk.prior_statement`), which v2 is required to report,
+    rounds to the same percent as the perturbed scan's original risk: 43 / 43, 39 / 39, 11 / 11.
+  - The prior-scan risks were checked against `cv_predictions_grade4.csv.gz` (prior scans 0204_T4, 0204_T2, 0007_T2).
+    In 23/123 eval scans with a prior scan, the prior risk rounds to the same percent as the current risk (median
+    difference 3 points).
+  - **EXPLORATORY reading:** v2 followed the changed field in all 30. The rule cannot tell a reported prior risk from a
+    leaked original value. This is the same kind of coincidence as v1's interval-bound case in REPORT_AGENT.md.
+
+### Pre-specified examples (first scan id per phase; full text in `reports/eval/{v1,v2}/`)
+
+- **Early post-RT, PatientID_0003_Timepoint_1** (the Fig 5A scan; repeat-1 record):
+  - Record: risk 46% [26, 71], middle third, three flags.
+  - It is rendered as **`docs/manuscript/figures/fig6a_example_report_v2.{pdf,png}`** (also `example_report_v2.*` in
+    the output folder). `fig5a_*` is untouched.
+  - By the rule, this scan is one of the two incomplete v2 reports. The flags are named without reasons in the
+    summary; the deterministic flag section above it gives the reasons. The position sentence leaves out the cut
+    points and the average value.
+  - Faithfulness check on the page: 8/8 claims supported, all flags mentioned, no forbidden content.
+  - It is a weaker v2 report than most, shown because the rule picked it.
+- **Pre-RT, PatientID_0007_Timepoint_2** (11% [3, 27], lower third, out of distribution):
+  - v2: "…This is in the lower third of the model's estimates on its training scans (cut points 24% and 51%), below
+    the training-scan average of 38%. The largest contributions are MGMT status unknown: yes and RT started: no, both
+    towards lower risk. The model did not use the MRI images or tumour volumes, … The out of distribution flag is active
+    because MGMT status unknown, and the scan is flagged for clinician review. IMPRESSION: The model estimates a 11%
+    (95% interval 3-27%) risk …, in the lower third, below the average. …"
+  - v1 gives the same risk, tier and flag, but no reference value, no drivers and no "not seen".
+- **Later post-RT, PatientID_0014_Timepoint_3** (55% [47, 80], upper third, uncertain):
+  - v2 adds "The risk was 51% on the prior scan 120 days earlier, so the current estimate is 4 percentage points
+    higher" and "above the training-scan average of 42%".
+  - Both versions report the indicative enhancing change (+2.3 cc, 65%).
+
+### EXPLORATORY: LLM-as-judge (Gemma 4 31B-it; not a substitute for clinicians)
+
+| Mean rating (1–5), 249 per arm | accuracy | completeness | clarity | calibrated language | scope | overall usefulness |
+|---|---|---|---|---|---|---|
+| v1 | 4.97 | 2.94 | 5.00 | 5.00 | 5.00 | 3.71 |
+| v2 | 5.00 | 5.00 | 5.00 | 5.00 | 5.00 | 5.00 |
+
+- **Overall usefulness, v2 − v1:** +1.29 [+1.21, +1.38] (patient-cluster bootstrap, computed after the run, not part
+  of the decision).
+- **Pairwise:** v2 was preferred in both orders for 152/249 scans and v1 for 5/249. In 92/249 the preference flipped
+  with order (the judge preferred whichever text came first, v2 when v2 was first). No ties.
+- **How far to trust this: not much.**
+  - The judge gave 5 on clarity, calibrated language and scope to every report of both arms.
+  - It gave v2 5 on completeness in 248/249, including the two reports that omit the flag reasons. Its stated reason
+    there was "all required elements … are present", which is wrong.
+  - Its 6 accuracy deductions for v1 (one 3, five 4s) are judge errors. It said "upper third, values above 0.5" is
+    wrong when the cut point is 50%, but that statement is correct.
+  - 92/249 preferences flipped with presentation order (position bias).
+  - It mostly restates the completeness checklist it was given, which the v2 prompt was built to satisfy. It adds
+    little beyond the automatic criteria and does not replace clinician reading.
+
+### EXPLORATORY: further observations (an AI agent reading outputs, not a clinician)
+
+- **Numbers written as words** escape the numeric checker: 16/249 v2 reports, e.g. "scan number one", "four days
+  before diagnosis", "at least one input". The five day counts and the "scan number one" cases checked here match their
+  records. v1 had none. This is a checker gap to close (map number words to numbers) before relying on it further.
+- **Wording defects the checker cannot see:**
+  - "a 11%" / "a 8%" (15 v2 reports; the prompt's template "The model estimates a " + statement);
+  - input names copied with their value suffix, e.g. "MGMT status unknown: yes", "within 84 days after RT end: no"
+    (170 v2 reports have ": yes/no");
+  - the impression sometimes drops the tier cut points or the average value (by design, the 45-word limit).
+- These are style items for a v2.4 prompt. They would need a fresh evaluation and are not changed here.
+
+### Caveats
+- **No clinician has read any v1 or v2 report.** "Useful" here means meeting our pre-specified, lexical checklist
+  (U1–U8). The checklist was written with v2 in mind, so it favours v2 by construction. The LLM judge is weak, as shown
+  above. Whether clinicians find v2 more useful than the number alone, or than v1, is the question of the reader study
+  in the Supplement.
+- **Fresh records, not fresh patients:** the evaluation records are CV repeat 1 of the same 249 grade-4 scans whose
+  repeat-0 v1 reports motivated the horizon fix. LUMIERE could not be used (no treatment fields).
+- **Cost of v2:** about 50% longer (190 vs 125 words, about 1 minute to read) and 64% more output tokens.
+- **The checker is lexical and unchanged.** It does not see meaning errors, number words or grammar.
+  - Its forbidden patterns had no hits on either arm here.
+  - v1's pass rate on this repeat (0.956) is above its repeat-0 value (0.948). That is the same single failure mode
+    with a slightly different count, so a v1-vs-v2 pass difference of +0.044 is mostly the horizon fix.
+- **Reproducibility:** v1 and v2 ran on one GPU (v1's original run used 4). Greedy vLLM batching is not bit-identical
+  across runs.
+
+---
+
 ## Supplement: protocol for a future clinician reader study
 
 **Aim.** To find out whether the PRISM summary helps clinicians interpret the risk number for a post-treatment
