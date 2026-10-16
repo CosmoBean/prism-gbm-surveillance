@@ -1,7 +1,8 @@
 # Fine-tuned SwinUNETR encoder for the 120-day label (nested in the shared 5×5 folds)
 
-**Status: plan and code only (step 1, 2026-10-15).** No fine-tuned model has been trained or scored against real
-outcome labels. Code: `prism/analyses/finetune_deep.py` (stage `finetune`). The frozen-encoder results that this
+**Status: arms 1–4 run and evaluated (2026-10-16); optional arm 5 running.** The plan below was committed (9aaa8d3)
+and snapshotted to `PLAN_snapshot.md` before any real-label run. **Verdict: fine-tuning does not help** (primary rule
+not met). The permuted-label validity check was missed by +0.005 (see Results). Code: `prism/analyses/finetune_deep.py` (stage `finetune`). The frozen-encoder results that this
 extends are in [DEEP_FEATURES.md](DEEP_FEATURES.md).
 
 ## Analysis plan (pre-specified)
@@ -180,6 +181,47 @@ Outputs:
 - Optional arm 5: 100 fine-tunes at about twice the cost, about 1–1.5 h more with 6 processes.
 - CPU: the evaluation takes a few minutes. Memory: about 20 GB of GPU memory per process.
 
-## Results
+## Results (arms 1–4, 2026-10-16)
 
-Not run yet (waiting for GO).
+Run: 400 fine-tunes on GPUs 1–3, 3 processes per GPU, 2026-10-15 22:08 to 2026-10-16 00:26 (plan snapshot 22:06). Three jobs ran out of GPU
+memory when three processes shared a GPU (one each in `worker_gpu{1_0,2_1,3_1}.log`, all `brats21:all_glioma:real`) and
+were rerun with one process per GPU on 2026-10-16; jobs are deterministic, so the rerun does not change any number.
+The core reference reproduced 0.698 / 0.720 exactly. Files: `outputs/results/analyses/finetune/<population>/`.
+
+**Grade 4 (primary; 249 scans).** IPCW AUC(120 d) [95% CI]; ΔAUC paired against the core model.
+
+| Model | AUC | ΔAUC vs core [95% CI] | MDE (80%) | Cal. slope | O/E |
+|---|---|---|---|---|---|
+| Core (reference) | 0.698 [0.615, 0.774] | — | — | 0.89 | 1.04 |
+| Fine-tuned image only, BraTS21 | 0.644 [0.559, 0.727] | −0.054 [−0.164, +0.051] | 0.154 | 0.88 | 0.96 |
+| **Core + fine-tuned BraTS21 (PRIMARY)** | **0.708 [0.623, 0.786]** | **+0.009 [−0.022, +0.040]** | 0.045 | 0.86 | 1.04 |
+| Fine-tuned image only, permuted labels | 0.476 [0.438, 0.514] | −0.223 [−0.316, −0.125] | — | 0.08 | 0.96 |
+| Core + fine-tuned, permuted labels | 0.703 [0.622, 0.778] | +0.005 [−0.006, +0.015] | 0.015 | 0.88 | 1.05 |
+| Fine-tuned image only, BrainSegFounder | 0.594 [0.503, 0.679] | −0.105 [−0.219, +0.003] | — | 0.48 | 0.95 |
+| Core + fine-tuned BrainSegFounder | 0.693 [0.612, 0.769] | −0.005 [−0.030, +0.019] | 0.035 | 0.85 | 1.04 |
+| Core + frozen encoder (NESTED_D1, reference) | 0.694 [0.610, 0.773] | −0.004 [−0.069, +0.063] | 0.094 | 0.55 | 1.00 |
+
+**All gliomas (secondary; 308 scans).** Core 0.720 [0.638, 0.792]; fine-tuned image only 0.682 [0.610, 0.756];
+core + fine-tuned 0.736 [0.655, 0.807], ΔAUC +0.017 [−0.009, +0.044] (MDE 0.038); frozen NESTED_D1 +0.011 [−0.032,
++0.056].
+
+**Pre-specified rule (G).**
+- Primary: ΔAUC +0.009 < 0.03 and the CI includes 0. **Fine-tuning does not help.**
+- Validity check: the permuted-label image-only AUC is 0.476 with a CI covering 0.5 (met). The permuted stack ΔAUC is
+  +0.005 [−0.006, +0.015], which is not ≤ 0 as written (missed). Under the plan this flags the run. We report it as
+  written and do not relax the rule. The size of the miss matters for interpretation: adding an uninformative score
+  to the core ridge buys about +0.005 by chance, so the primary +0.009 is within about 0.004 of noise. The flag
+  weakens any claim of a gain, and the verdict "does not help" is unaffected.
+- Detectability: the fine-tuned stack is far tighter than the frozen one (MDE 0.045 vs 0.094), so this run rules out
+  gains of about +0.045 or more in grade 4 and +0.04 in all gliomas, not small gains.
+
+**Diagnostics (`diagnostics.csv`, `jobs.csv`).**
+- Correlation of the fine-tuned image logit with log lesion volume: 0.57 (BraTS21), 0.37 (BrainSegFounder), −0.03
+  (permuted); with the core logit: 0.13, 0.14, −0.08. As with the frozen encoder (r = 0.58), the score mostly tracks
+  tumour size and adds little that the core model lacks.
+- Early stopping fired early: the best epoch averaged 3.9 (range 0–19) of at most 25 for arm 1, and 3.3 for the
+  permuted control. The networks moved little from their starting weights before validation loss rose, consistent
+  with a weak, noisy label at about 100 training scans per fine-tune.
+- Cost: 3.0 min per job on average (arm 1), peak 19 GB (BraTS21) to 25 GB (BrainSegFounder, all gliomas).
+
+**Arm 5 (change from the previous scan).** Running; results will be added here.
