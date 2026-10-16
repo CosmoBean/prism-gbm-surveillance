@@ -1475,7 +1475,7 @@ against its own prompt (``vs own input'') and against the record. Per report: ea
 patterns per flag); inactive flags not described as raised; tier words consistent with the record; no forbidden
 content (diagnosis, RANO category as outcome, management, unhedged certainty; full patterns in the source
 document). An unparsed report fails every check. The checker cannot see a correct number attached to the wrong
-concept; meaning was checked by reading.
+concept; meaning was checked by an AI assistant's reading (below).
 
 \textbf{Sets.} Development: the 59 non-grade-4 scans (two rounds; final pass A 58/59, B 51/59, C 54/59).
 Evaluation: all 249 grade 4 scans (126 patients), records from the out-of-fold fits of CV repeat 0, one report per
@@ -1550,8 +1550,9 @@ interval bound that coincided with the old risk (the new risk, interval and tier
 the same record); and an invented key (\code{risk.tier\_cut\_upper\_percent}) for a value that is in the record.
 \emph{EXPLORATORY:} in all 30 perturbed records the grounded text followed the changed field.
 
-\textbf{Manual reading.} The three pre-specified examples (first scan per phase) and 12 random arm-A reports (seed 1)
-were read against their facts: no factual error; every active flag stated with its reason. Wording issues the
+\textbf{Reading by an AI assistant (not a clinician).} The three pre-specified examples (first scan per phase) and 12
+random arm-A reports (seed 1) were read against their facts by an AI assistant (Claude); no human or clinician has
+read them yet: no factual error; every active flag stated with its reason. Wording issues the
 checker cannot see: ``95\% confidence interval'' for a bootstrap interval (twice); a double negative for a volume
 below the nadir; a pre-diagnosis scan whose ``all inputs known by the scan day'' is ``no'' (the molecular look-ahead,
 S15) is not mentioned in the summary, only in the deterministic section; a risk just below a tier cut point that

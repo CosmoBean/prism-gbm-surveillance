@@ -269,7 +269,7 @@ So in all 30 perturbed records arm A's text followed the changed field (EXPLORAT
 the pre-perturbation risk, mentioned a removed flag or missed an added one. The model does not ignore its inputs.
 Arm B mostly fails because of content (forbidden wording, omitted flags) rather than by ignoring the change.
 
-### Manual reading
+### Manual reading (done by an AI agent during the evaluation, not by a human or clinician)
 
 **The three pre-specified examples** (first scan id per phase; full reports in `reports/eval/A/`):
 

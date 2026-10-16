@@ -378,8 +378,8 @@ The prompt mattered more than the model. Given the same facts, v1's prompt passe
 own input (0.687), and every one of its reports contained forbidden content: management advice in 99\%, a diagnosis
 in 51\% and a RANO category in 41\%. It omitted 48 of the 269 active flags. The grounded prompt on the smaller
 model passed 243 of 249 (0.976), with one real violation, a hedged diagnosis. The grounded reports followed 27 of
-30 perturbed records. Reading 15 grounded reports against their records \todo{PENDING: name the reader(s)} found no
-factual error (Supplementary S19).
+30 perturbed records. An AI assistant read 15 grounded reports against their records and found no factual error;
+no clinician has read them yet (Supplementary S19).
 
 \section{Discussion}\label{sec:4}
 
@@ -454,7 +454,7 @@ separately. Radiomics used a fixed bin count rather than the fixed bin width rec
 \citep{zwanenburg2020}, and the deep encoders were frozen rather than trained on this task. The look-ahead and the
 missingness shortcut found by the audit also affect the reported core model, and we have not yet refitted without
 them. The faithfulness checker is lexical: it verifies numbers, citations, flags and forbidden patterns but not
-meaning, which we checked only by reading 15 reports. The reports come from one cohort, and no clinician has
+meaning, which was checked only by an AI assistant reading 15 reports. The reports come from one cohort, and no clinician has
 assessed them.
 
 \subsection*{Conclusion}
