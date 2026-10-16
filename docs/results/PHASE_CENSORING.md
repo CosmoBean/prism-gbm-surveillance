@@ -354,8 +354,8 @@ moves O/E closer to 1.
 
 | Model | Grade 4 AUC (95% CI) | O/E (95% CI) | Slope | All gliomas AUC | O/E | Slope |
 |---|---|---|---|---|---|---|
-| locked_shared | 0.608 (0.469–0.739) | 1.33 (1.02–1.77) | 0.38 | 0.599 | 1.30 | 0.38 |
-| shared_C2 | 0.635 (0.501–0.745) | 0.99 (0.76–1.29) | 0.97 | 0.611 | 1.05 | 1.00 |
+| locked_shared | 0.608 (0.469–0.739) | 1.33 (1.01–1.77) | 0.38 | 0.599 | 1.30 | 0.38 |
+| shared_C2 | 0.635 (0.501–0.745) | 0.99 (0.75–1.29) | 0.97 | 0.611 | 1.05 | 1.00 |
 
 For grade 4, ΔAUC shared_C2 − locked_shared is +0.027 (−0.112 to +0.172). The corrections do not measurably change
 discrimination on LUMIERE, but they remove the miscalibration that the indicator shortcut caused.
