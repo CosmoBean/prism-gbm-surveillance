@@ -82,3 +82,39 @@ RANO table despite the v4 folder renumbering. When the images arrive, re-check I
 - TCIA Brain-Tumor-Progression (20 patients, T1/T1c/T2/FLAIR/ADC/nCBF, post-CRT + progression scans): <https://wiki.cancerimagingarchive.net/x/hQNdC>
 - Guo & Mirzaei (2026), timepoint-specific DL benchmark on follow-up MRI, arXiv:2511.18595: <https://arxiv.org/pdf/2511.18595>
 - Comparable model results for our task: [COMPARABLE_RESULTS.md](COMPARABLE_RESULTS.md)
+
+---
+
+# Public brain-MRI report text for the report generator (2026-10-15)
+
+Purpose: a style and vocabulary reference for the PRISM report summary (`prism/analyses/report_usefulness.py`,
+[REPORT_USEFULNESS.md](../results/REPORT_USEFULNESS.md)). Only public text is used; no patient data leaves the node and
+no external API is called with patient data. Downloaded to `data/public_reports/` (git-ignored) over HTTPS from Hugging
+Face, pinned to a commit.
+
+| Corpus | What it is | Licence | Downloaded | Size | Used |
+|---|---|---|---|---|---|
+| **RadGenome-Brain MRI** (`JiayuLei/RadGenome-Brain_MRI`, commit `0348ba42`) | Manually written, region-grounded brain MRI reports (findings, findings per sequence, impression) released with AutoRG-Brain (Lei et al., arXiv:2407.16684). They cover public BraTS 2023 GLI / MEN / MET, ISLES22 and WMH cases. The English wording reads as if translated (our observation) | MIT | BraTS_GLI/MEN/MET JSON + split file | 0.9 MB | BraTS-GLI, 230 reports: section structure, length, reading level, hedging (`reference` step) |
+| **MultiCaRe** (`mauro-nievoff/MultiCaRe_Dataset`, commit `20bb8619`; Nievas Offidani & Delrieux, *Data in Brief* 2024, doi:10.1016/j.dib.2023.110008) | 75,382 open-access PubMed Central case-report articles (96,428 cases) with case text, figure captions and metadata | CC BY 4.0 for the dataset; each article keeps its own CC licence (CC BY, BY-NC, BY-NC-SA, BY-NC-ND) | `cases.parquet`, `captions_and_labels.csv`, `metadata.parquet`, README, data dictionary (images not downloaded) | 229 MB | 181 glioblastoma / high-grade glioma cases with post-treatment content (chemoradiation, temozolomide, pseudoprogression, radiation necrosis); only their MRI sentences: vocabulary for change over time and hedging |
+
+Checked and not used:
+- **TextBraTS** (`Jupitern52/TextBraTS`, MIT; BraTS 2020, MICCAI 2025): reports drafted by GPT-4o and then edited by
+  radiologists. Not used as a style reference because the text is LLM-drafted. Pre-operative only.
+- **MR-RATE** (`Forithmus/MR-RATE`, CC BY-NC-SA 4.0): about 98,000 real clinical brain and spine MRI reports, structured into
+  clinical information / technique / findings / impression. This is the most relevant real-report corpus, but access is
+  **gated**: it needs a form with the user's name, institution and acceptance of terms. We did not submit it on the user's
+  behalf. It is the first choice for a follow-up comparison if the user requests access.
+- **PMC-Patients** (`zhengyun21/PMC-Patients`, CC BY-NC-SA 4.0, 0.8 GB): patient summaries from PMC case reports. These
+  overlap with MultiCaRe and are not needed.
+- **MIMIC-CXR / MIMIC-IV-Note**: credentialed PhysioNet access, and the reports are chest or general. Not attempted.
+- No TCIA neuro-oncology collection we know of distributes free-text follow-up radiology reports.
+
+Limits of the reference. RadGenome-Brain reports are pre-operative, so they have no post-treatment change wording.
+MultiCaRe sentences come from published case narratives, not radiology reports. Neither is a set of real post-treatment
+glioma surveillance reports. We use them only for form: sections, length, reading level, and how change and
+uncertainty are worded. They are not used as a content or accuracy standard.
+
+Sources: <https://huggingface.co/datasets/JiayuLei/RadGenome-Brain_MRI>,
+<https://huggingface.co/datasets/mauro-nievoff/MultiCaRe_Dataset>, <https://zenodo.org/records/10079370>,
+<https://huggingface.co/datasets/Jupitern52/TextBraTS>, <https://huggingface.co/datasets/Forithmus/MR-RATE>,
+<https://huggingface.co/datasets/zhengyun21/PMC-Patients>.
