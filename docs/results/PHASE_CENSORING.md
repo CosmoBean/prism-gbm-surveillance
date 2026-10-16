@@ -4,7 +4,8 @@ Code: `prism/analyses/phase_censoring.py` (`python -m prism phasecens`). Outputs
 `outputs/results/analyses/phase_censoring/`. Pipeline test on permuted outcomes:
 `outputs/results/analyses/phase_censoring_shuffled<seed>/` (not results).
 
-Status: **STEP 1** (plan, code, descriptives). No model has been fitted or scored on the real labels by this module.
+Status: plan committed before any model run (c98febe); full run on 2026-10-15 (`run_info.json`: 40 workers, 1000
+bootstrap draws, 81 s). Plan snapshot: `outputs/results/analyses/phase_censoring/PLAN_snapshot.md`.
 
 ## 0. Why
 
@@ -241,9 +242,163 @@ independent of outcome: deaths dominate.
 | Scans in the early post-RT window | 98 | 104 |
 | Scans before the diagnosis date (molecular look-ahead) | 8 (7 patients), −58 to −1 d | 11 (10 patients) |
 
-Suggested Table 1 wording: "unknown 65 (63 with no RT documented, 2 with RT end date missing)". The phase analysis has
+**Corrected Table 1 wording (grade 4):** "Within 12 weeks after RT: 98 (39%); unknown 65 (63 with no RT documented, 2 with RT end date missing)"; all gliomas "104 (34%); unknown 94 (92 with no RT documented, 2 with RT end date missing)". The phase analysis has
 no unknowns: the 63 scans are pre-RT and the 2 are during RT.
 
 ## 2. Results
 
-Not run yet (STEP 2, after GO).
+All files below are in `outputs/results/analyses/phase_censoring/`. Grade 4 unless stated. AUC is the mean over the
+5 repeats of the pooled-OOF IPCW AUC(120 d), with 95% patient-cluster bootstrap CIs (1000 draws).
+
+**Consistency checks** (`checks.csv`). The refitted core model reproduces `c3/<pop>/oof_repeats.csv.gz`, and R0, R1 and
+R2 reproduce `phase_ladder/oof_repeats_<pop>_full.csv.gz`, all to 1.7e-16. The `marginal_km` scheme reproduces
+`fast_auc_brier` for every arm (asserted to 1e-9). Under it the core model scores 0.698 and the no-unknown-marker arm
+0.676, the same as the headline and as `audit_system/shortcut_arms.csv`.
+
+The bootstrap CIs of the ladder gains here come from this module's own draws. They differ slightly from
+`phase_ladder/rungs.csv`: R2 − R0 under the marginal scheme is +0.080, with CI +0.019 to +0.160 here and +0.005 to
++0.152 there.
+
+### 2.1 P1: is the phase-of-care gain a censoring artefact?
+
+Source: `ladder_schemes.csv`. The gain is R2 (clinical + phase) − R0 (clinical); "Change vs marginal" is a
+difference of differences.
+
+| Weighting / cohort | Gain R2 − R0 (95% CI) | Change vs marginal (95% CI) |
+|---|---|---|
+| marginal_km, full (headline) | +0.080 (+0.019 to +0.160) | – |
+| **phase5_km, full** (primary) | **+0.124 (+0.039 to +0.232)** | +0.045 (+0.005 to +0.104) |
+| phase4_km, full | +0.125 (+0.044 to +0.224) | +0.046 (+0.019 to +0.090) |
+| logistic_ipw, full | +0.118 (+0.022 to +0.221) | +0.038 (−0.018 to +0.092) |
+| deaths_as_controls, full | +0.111 (+0.044 to +0.193) | +0.032 (+0.006 to +0.066) |
+| bound: censored = events | −0.044 (−0.107 to +0.034) | −0.123 (−0.176 to −0.082) |
+| bound: censored = non-events | +0.167 (+0.098 to +0.248) | +0.088 (+0.049 to +0.130) |
+| **rt_pathway refit** (co-primary; 1 censored scan left) | **+0.057 (+0.009 to +0.117)** | – |
+| rt_started refit (RT started by the scan) | +0.013 (−0.027 to +0.058) | – |
+
+**Verdict under the pre-specified rule: robust.** Both primary estimates clear the +0.040 threshold: +0.124 under
+phase-stratified censoring and +0.057 after excluding the RT-never-documented patients.
+
+Three qualifications:
+
+1. **The marginal curve was conservative, not inflating.** It spreads the scan-day censoring of the never-documented
+   group over every phase. This under-weights the verified pre-RT scans, which are mostly low-risk controls. Allowing
+   censoring to depend on phase therefore raises the phase gain, and every AUC (Section 2.2).
+2. **About 30% of the gain comes from the never-documented group.** Excluding those patients leaves +0.057 of the +0.080.
+3. **The gain does not survive the worst-case bound.** If the 38 censored never-documented scans had all progressed
+   within 120 d, the gain would be −0.044. The descriptives make this unlikely: 14 of these patients died without
+   documented progression, and only 3 of the 25 verified scans in the group are events. Counting deaths as non-events
+   gives +0.111. Still, the data cannot rule it out.
+
+In all gliomas the pattern is the same (`ladder_schemes.csv`):
+
+| Weighting / cohort | Gain R2 − R0 |
+|---|---|
+| marginal_km | +0.082 |
+| phase5_km | +0.121 |
+| rt_pathway refit | +0.018 (−0.010 to +0.052) |
+| bound: censored = events | −0.015 |
+
+Here the rt_pathway gain falls below the threshold, so the all-glioma result would read "partly censoring-dependent".
+All gliomas is the secondary population.
+
+### 2.2 The core model under the alternative censoring weights
+
+Source: `schemes.csv`, full cohort.
+
+| Arm | marginal_km | phase5_km (Δ vs marginal) | logistic_ipw | deaths_as_controls | Bounds (events / non-events) | Phase-stratified AUC (marginal) |
+|---|---|---|---|---|---|---|
+| R0 clinical | 0.585 | 0.599 (+0.014) | 0.586 | 0.585 | 0.578 / 0.568 | 0.595 |
+| R2 + phase | 0.664 | 0.723 (+0.059) | 0.704 | 0.697 | 0.534 / 0.736 | 0.577 |
+| R3 core | 0.698 | 0.749 (+0.050, +0.021 to +0.081) | 0.728 | 0.726 | 0.561 / 0.759 | 0.637 (0.558–0.720) |
+| C2 | 0.678 | 0.734 (+0.056) | 0.713 | 0.708 | 0.545 / 0.744 | 0.609 (0.529–0.689) |
+
+The phase-stratified AUC counts only case-control pairs within the same phase. On that measure R2 (0.577) is no
+better than R0 (0.595): phase information discriminates between phases, not within them. The core model keeps some
+within-phase signal (0.637), mostly from treatment detail inside the early post-RT window.
+
+### 2.3 Within-phase AUCs
+
+Source: `within_phase.csv`, marginal_km, full-cohort OOF. CIs are shown only for strata with ≥ 10 events and ≥ 10
+non-events.
+
+| Phase (events / non-events) | R0 | R2 | R3 core | C2 |
+|---|---|---|---|---|
+| early post-RT (47 / 51) | 0.630 (0.519–0.729) | 0.627 | 0.663 (0.559–0.768) | 0.630 (0.528–0.734) |
+| later post-RT (36 / 32) | 0.514 (0.359–0.662) | 0.480 | 0.597 (0.449–0.757) | 0.582 (0.425–0.745) |
+| pre-RT, RT pending (2 / 11) | 0.546 | 0.583 | 0.696 | 0.625 (descriptive only) |
+| pre-RT, RT never documented (3 / 22) | 0.732 | 0.513 | 0.449 | 0.432 (descriptive only) |
+| during RT (5 / 1) | – | – | – | descriptive only |
+
+In all gliomas the pre-RT stratum (10 / 58) is reportable: core 0.493 (0.299–0.715), C2 0.395 (0.189–0.609).
+
+### 2.4 P2: the corrected core model (C2) and C1
+
+Source: `corrected.csv`; LUMIERE in `lumiere.csv`.
+
+| Arm | AUC (95% CI) | Δ vs core (95% CI) | Brier | O/E | Slope | CITL |
+|---|---|---|---|---|---|---|
+| core (R3) | 0.698 (0.615–0.774) | – | 0.219 | 1.04 | 0.89 | −0.09 |
+| core_no_unknown | 0.676 (0.592–0.752) | −0.023 (−0.047 to −0.001) | 0.224 | 1.05 | 0.86 | −0.06 |
+| C1 | 0.675 (0.591–0.751) | −0.023 (−0.047 to −0.002) | 0.224 | 1.05 | 0.85 | −0.06 |
+| C1_mean | 0.681 (0.597–0.759) | −0.017 (−0.040 to +0.003) | 0.223 | 1.05 | 0.87 | −0.07 |
+| **C2** | **0.678 (0.596–0.755)** | **−0.020 (−0.044 to +0.000)** | 0.223 | 1.04 | 0.85 | −0.08 |
+
+All gliomas: C2 0.706 (0.628–0.777), Δ −0.014 (−0.036 to +0.005), O/E 1.03, slope 0.94.
+
+Almost all of the cost comes from dropping the unknown-marker indicators (−0.023). Masking IDH/MGMT at the 8
+pre-diagnosis scans changes nothing visible. Removing the RT-documentation look-ahead changes the AUC by +0.003 and
+moves O/E closer to 1.
+
+**LUMIERE transport of the shared-feature model**
+
+| Model | Grade 4 AUC (95% CI) | O/E (95% CI) | Slope | All gliomas AUC | O/E | Slope |
+|---|---|---|---|---|---|---|
+| locked_shared | 0.608 (0.469–0.739) | 1.33 (1.02–1.77) | 0.38 | 0.599 | 1.30 | 0.38 |
+| shared_C2 | 0.635 (0.501–0.745) | 0.99 (0.76–1.29) | 0.97 | 0.611 | 1.05 | 1.00 |
+
+For grade 4, ΔAUC shared_C2 − locked_shared is +0.027 (−0.112 to +0.172). The corrections do not measurably change
+discrimination on LUMIERE, but they remove the miscalibration that the indicator shortcut caused.
+
+### 2.5 Mitigations
+
+**(a) Intended-use restriction** (`mitigations.csv`, `cohorts.csv`; models refitted inside the scope):
+
+| Scope | Scans / patients | Censored left | Core AUC | C2 AUC | R2 − R0 |
+|---|---|---|---|---|---|
+| full | 249 / 126 | 39 | 0.698 | 0.678 | +0.080 |
+| rt_pathway (RT documented) | 186 / 89 | 1 | 0.654 (0.575–0.739) | 0.625 (0.548–0.706) | +0.057 |
+| rt_started (as-of rule) | 173 / 86 | 1 | 0.617 (0.539–0.703) | 0.595 (0.517–0.682) | +0.013 |
+
+Either restriction removes 38 of the 39 censored scans, so the AUC no longer depends on any censoring model. The price
+is 0.04–0.08 of AUC, because the easy pre-RT controls leave the evaluation set. In the restricted scopes C2 is below
+the core model by 0.029 (−0.057 to −0.004) for rt_pathway and 0.022 (−0.044 to −0.003) for rt_started.
+
+**(b) Referral / out-of-scope flags** (`referral.csv`, full-cohort OOF):
+
+| Flag | Rate | AUC on retained scans (core / C2) | Gain vs random removal | Gain vs composition-matched removal |
+|---|---|---|---|---|
+| pre-RT as of scan (deployable) | 31% | 0.629 / 0.601 | −0.069 / −0.077 | 0 by construction |
+| RT never documented | 25% | 0.658 / 0.634 | −0.039 / −0.044 | +0.013 / +0.014 |
+
+Neither flag improves the AUC on the scans the model keeps: both remove scans the model ranks easily. Their value is
+scope honesty. Flagging out-of-scope scans makes the displayed AUC match the deployment population, and it keeps the
+model from being judged, or used, on patients whose outcome is mostly unobserved.
+
+**(c) Within-phase reporting**: Section 2.3. Only early and later post-RT have enough events for interpretable AUCs.
+
+### 2.6 What this means for the paper's phase-of-care claim
+
+- The claim survives, and it is not an artefact of the marginal censoring weights. Under phase-dependent censoring the
+  phase gain is larger (+0.124), not smaller. Excluding the patients with no RT documented still leaves +0.057.
+- The claim should be qualified in three ways:
+  - **About 30% of the gain comes from the RT-never-documented group.** Its outcome is mostly unobserved: 38 of 63 scans
+    are censored, at a median of 0 days.
+  - **Arbitrary informative censoring could erase the gain.** Under the bound where every censored scan progressed, it
+    is −0.044.
+  - **Phase information discriminates between phases only.** Within phases R2 does no better than R0
+    (phase-stratified AUC 0.577 vs 0.595), and once RT has started the gain is +0.013.
+- **Suggested change to the text.** Report the core model as C2 (0.678; 0.706 in all gliomas), or add C2 next to the
+  core model. Report the IPCW AUC under phase-stratified censoring as a sensitivity (0.749), and the in-scope
+  rt_pathway AUC (0.654 core / 0.625 C2). State that the intended use is patients on a documented RT pathway, and that
+  scans without a documented treatment plan are flagged as out of scope.
