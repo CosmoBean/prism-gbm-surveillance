@@ -825,7 +825,8 @@ def plot(rc, path):
             if i == 0 and j == 0:
                 ax.legend(fontsize=7)
     fig.tight_layout()
-    fig.savefig(path, dpi=150)
+    fig.savefig(path, dpi=300)
+    fig.savefig(str(path).rsplit(".", 1)[0] + ".pdf")
     plt.close(fig)
 
 
