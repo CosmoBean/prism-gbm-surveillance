@@ -2246,6 +2246,8 @@ Image only, permuted outcomes & 0.476 [0.438, 0.514] & $-$0.223 [$-$0.316, $-$0.
 Core + permuted score (control) & 0.703 [0.622, 0.778] & +0.005 [$-$0.006, +0.015] & 0.015 & 0.88 & 1.05 \\
 Fine-tuned image only, BrainSegFounder & 0.594 [0.503, 0.679] & $-$0.105 [$-$0.219, +0.003] & -- & 0.48 & 0.95 \\
 Core + fine-tuned BrainSegFounder & 0.693 [0.612, 0.769] & $-$0.005 [$-$0.030, +0.019] & 0.035 & 0.85 & 1.04 \\
+Fine-tuned image only, with previous scan & 0.647 [0.567, 0.724] & $-$0.051 [$-$0.146, +0.048] & -- & 0.68 & 0.98 \\
+Core + fine-tuned, with previous scan & 0.712 [0.632, 0.789] & +0.014 [$-$0.010, +0.040] & 0.036 & 0.90 & 1.04 \\
 Core + frozen encoder, nested (reference) & 0.694 [0.610, 0.773] & $-$0.004 [$-$0.069, +0.063] & 0.094 & 0.55 & 1.00 \\
 \addlinespace
 \multicolumn{6}{@{}l}{\textbf{All gliomas (308 scans, 155 patients)}} \\
@@ -2279,6 +2281,7 @@ Arm & r volume & r core & Best epoch & Epochs run & Min/job & Peak GB \\
 BraTS21, grade 4 & 0.57 & 0.13 & 3.9 (0--19) & 9.9 (6--25) & 3.0 & 19 \\
 BraTS21, permuted, grade 4 & $-$0.03 & $-$0.08 & 3.3 (0--12) & 9.3 (6--18) & 2.9 & 19 \\
 BrainSegFounder, grade 4 & 0.37 & 0.14 & 3.2 (0--13) & 9.2 (6--19) & 1.9 & 24 \\
+BraTS21 with previous scan, grade 4 & 0.50 & 0.18 & 3.7 (0--18) & 9.7 (6--24) & 4.0 & 27 \\
 BraTS21, all gliomas & 0.59 & 0.30 & 3.5 (0--12) & 9.5 (6--18) & 2.4 & 25 \\
 \bottomrule
 \end{tabularx}
@@ -2286,8 +2289,9 @@ BraTS21, all gliomas & 0.59 & 0.30 & 3.5 (0--12) & 9.5 (6--18) & 2.4 & 25 \\
 
 As with the frozen features (r = 0.58 with lesion volume), the fine-tuned score mostly tracks tumour size. Early
 stopping fired after a few epochs: with about 100 training scans per network and a noisy label, validation loss
-rose soon after the warm-up, so the networks moved little from their starting weights. Arm 5 (change from the
-previous scan) is reported in \code{FINETUNE\_DEEP.md} when complete.
+rose soon after the warm-up, so the networks moved little from their starting weights. Arm 5, which also saw the previous scan, gained +0.014
+($-$0.010 to +0.040): below 0.03, with a CI including 0 and within about 0.01 of the permuted control, so change
+from the previous scan did not alter the verdict.
 
 \FloatBarrier
 \section*{Supplementary figures}
@@ -2298,7 +2302,7 @@ previous scan) is reported in \code{FINETUNE\_DEEP.md} when complete.
 \item \textbf{Figure S2.} Split-variance histograms per model, original analysis figure
 (\code{outputs/results/analyses/split\_variance/split\_variance.png};
 pre-clip radiomics arm --- superseded by
-main Figure 2).
+main Figure 4).
 \item \textbf{Figure S3.} Phase-ladder overview
 (\code{outputs/results/analyses/phase\_ladder/ladder.png}).
 \item \textbf{Figure S4.} Sensitivity forest plot

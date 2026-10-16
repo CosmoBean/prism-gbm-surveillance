@@ -94,6 +94,11 @@
 % Visible placeholders: [CHECK ...] citations and [PENDING ...] author decisions.
 \newcommand{\flag}[1]{\textcolor{red}{#1}}
 \newcommand{\todo}[1]{\textcolor{red}{[#1]}}
+% \figslot{file}{height}{spec}: includes the figure if the file exists, otherwise a framed red placeholder that
+% states what the figure must show (planned figures; see docs/manuscript/FIGURES.md, "Figure plan").
+\newcommand{\figslot}[3]{\IfFileExists{../docs/manuscript/figures/#1}{\includegraphics[width=\linewidth,height=#2,keepaspectratio]{#1}}{%
+  \fcolorbox{red}{white}{\parbox[c][#2][c]{0.95\linewidth}{\centering\small\textcolor{red}{%
+  \textbf{[PLACEHOLDER: \detokenize{#1}]}}\par\medskip\raggedright\footnotesize #3}}}}
 
 % ---------------------------------------------------------------- inline code / file paths
 % \code{...}: typewriter text that may break after "/", "_" and "," (robust, safe in captions).

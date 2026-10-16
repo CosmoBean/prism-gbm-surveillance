@@ -6,7 +6,7 @@ reference changes in this directory.
 
 | File | Content |
 |---|---|
-| `main.tex` | Main text in the Taylor & Francis `interact` class (target: *CMBBE: Imaging & Visualization*): title block, abstract, keywords, sections 1–4, declarations, references, Tables 1–3, Figures 1–5 |
+| `main.tex` | Main text in the Taylor & Francis `interact` class (target: *CMBBE: Imaging & Visualization*): title block, abstract, keywords, sections 1–4, declarations, references, Tables 1–5, Figures 1–7 (Figure 2 a placeholder) |
 | `supplement.tex` | Supplementary Material S1–S18, Supplementary Tables S1a–S25, supplementary figure list |
 | `macros.tex` | Shared preamble (layout, line numbers, tables, `\code`, `\flag`/`\todo` placeholders, natbib) |
 | `refs.bib` | References (one entry per item of the draft's reference list; `note = {CHECK}` = unverified) |

@@ -12,6 +12,36 @@ All AUCs are AUC(120 d). "IPCW" = inverse-probability-of-censoring-weighted cumu
 PRISM report's label (progression within 120 d, censored scans counted as negatives). "Baseline" = clinical + timing +
 as-of-scan treatment, ridge (C3).
 
+## Figure plan (2026-10-16; manuscript numbering)
+
+Section names below this one ("Figure 1. The PRISM report split", ...) use the old analysis numbering; this table maps
+them to the manuscript. Planned figures appear in `main.pdf` as a red framed box (`\figslot` in `paper/macros.tex`)
+that states what the figure must show, and are replaced automatically once the file exists in `figures/`.
+
+| Manuscript | Content | File | Status |
+|---|---|---|---|
+| Figure 1 | PRISM architecture and data flow | `fig5a_architecture.pdf` | done |
+| Figure 2 | **Study design**: cohorts and outcome; initial split → 500 splits → 5×5 repeated CV, LUMIERE locked test, CFB-GBM CV; prespecified questions pointing to Table 4 | `fig_study_design.pdf` | **placeholder** (spec in the box and in `main.tex`) |
+| Figure 3 | Initial evaluation split (old "Figure 1") | `fig1_single_split.pdf` | done |
+| Figure 4 | 500 splits (old "Figure 2") | `fig2_split_variance.pdf` | done |
+| Figure 5 | Ablation ladder, ΔAUC forest, SHAP shares (old "Figure 3") | `fig3_clinical_vs_radiomics.pdf` | done |
+| Figure 6 | Phase of care (old "Figure 4") | `fig4_phase_of_care.pdf` | done |
+| Figure 7 | (A) example v2 report; (B) risk–coverage | `fig6a_example_report_v2.pdf`, `fig5_system_risk_coverage.pdf` | done |
+| Graphical abstract | Optional journal extender (could adapt Figure 1 or 2) | — | not planned |
+
+Tables (main text): 1 cohorts; 2 single split vs 500 splits vs CV; 3 imaging branches vs core (ΔAUC); **4 prespecified
+questions, rules and answers** (new); **5 report v1 vs v2** (new).
+
+**No repetition between tables and text (journal rule, 2026-10-16).** The decision rules now live only in Table 4;
+Methods describe each analysis and point to it. Results tell the story with the key estimate and cite the table for
+intervals and the remaining rows; numbers that appear only in the text (within-phase AUCs, SHAP shares, censoring
+details, LUMIERE AUCs) stay in the text. Overlap between tables is limited to the primary estimates in Table 4, which
+also appear as rows of Tables 2 and 3.
+
+**Files for submission.** T&F asks for PS, JPEG or TIFF at the printed size: 300 dpi colour, 600 dpi greyscale or
+mixed colour and line work, 1200 dpi line art. All figures exist as vector PDF; export each to TIFF at 600 dpi
+(Figures 3 to 7 are charts with line work) and Figures 1 and 2 at 1200 dpi if they stay pure line art. Not done yet.
+
 ## What was re-run for these figures (2026-10-15)
 
 1. **PRISM report split, all models re-fitted with the current (clipped) C3 code** (`compute-single`, 1000-draw
