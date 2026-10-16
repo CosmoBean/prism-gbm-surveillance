@@ -28,6 +28,10 @@ Analyses (read the prepared tables, write to $PRISM_OUTPUTS/results):
     audit         auditable decision-support layer on the baseline: locked model + card, per-scan audit records,
                   conformal/selective prediction, referral rules, shortcut/subgroup audit, explanation stability
     report        clinician report written only from the audit record (local LLM summary) + faithfulness checks
+    phasecens     phase of care vs censoring: pre-RT split (RT pending / never documented), phase-dependent IPCW,
+                  core model with the unknown-marker shortcut and molecular look-ahead removed
+    finetune      fine-tuned SwinUNETR encoder for the 120-day label, nested inside the shared CV folds
+    reportuse     report generator v2: horizon fix, public-report style comparison, usefulness evaluation, LUMIERE
     figures       manuscript figures 1-4 and tables (re-fits the PRISM report split and the clipped split-variance arm)
 
 Every stage takes -h for its options.
@@ -60,6 +64,9 @@ STAGES = {
     "cfbadc": "prism.analyses.cfb_adc",
     "audit": "prism.analyses.audit_system",
     "report": "prism.analyses.report_agent",
+    "phasecens": "prism.analyses.phase_censoring",
+    "finetune": "prism.analyses.finetune_deep",
+    "reportuse": "prism.analyses.report_usefulness",
     "figures": "prism.analyses.paper_figures",
 }
 PIPELINES = {"data": ("mu", "lumiere", "measurements")}
