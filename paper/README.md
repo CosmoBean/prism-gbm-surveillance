@@ -6,11 +6,11 @@ reference changes in this directory.
 
 | File | Content |
 |---|---|
-| `main.tex` | Main text: title block, abstract, key points, sections 1–4, declarations, Tables 1–3, Figures 1–5 |
+| `main.tex` | Main text in the Taylor & Francis `interact` class (target: *CMBBE: Imaging & Visualization*): title block, abstract, keywords, sections 1–4, declarations, references, Tables 1–3, Figures 1–5 |
 | `supplement.tex` | Supplementary Material S1–S18, Supplementary Tables S1a–S25, supplementary figure list |
 | `macros.tex` | Shared preamble (layout, line numbers, tables, `\code`, `\flag`/`\todo` placeholders, natbib) |
 | `refs.bib` | References (one entry per item of the draft's reference list; `note = {CHECK}` = unverified) |
-| `plainnat-amp.bst` | `plainnat` with "&" in two-author in-text citations (one-line change, see header) |
+| `interact.cls`, `tfcse.bst`, `jabbrv.sty`, `jabbrv-ltwa-*.ldf` | Unmodified files from the T&F Interact CSE LaTeX bundle (class, CSE name-year reference style, journal-title abbreviation) |
 | `build.sh` | Builds both PDFs with tectonic |
 | `SOURCE_MAP.md` | Where every number in the draft came from (moved verbatim out of DRAFT.md; not submitted) |
 

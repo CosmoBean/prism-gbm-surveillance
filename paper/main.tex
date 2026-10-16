@@ -2,7 +2,7 @@
 % Build: ./build.sh (tectonic). Figures are read from ../docs/manuscript/figures/ (see macros.tex).
 % Framing (2026-10-15, second pass): this is the PRISM paper. PRISM is the authors' own, unpublished system;
 % "PRISM v1" = the initial pipeline, "our initial evaluation split" = the seed-62 split of PRISM v1's split search.
-\documentclass[11pt,a4paper]{article}
+\documentclass[largeformat]{interact} % Taylor & Francis template (CMBBE: Imaging & Visualization)
 \input{macros}
 
 % Figure 5 panels A/B are produced by the report-generator work stream; show a red placeholder until they exist.
@@ -15,75 +15,27 @@
 \begin{document}
 \linenumbers
 
-\begin{flushleft}
-{\LARGE\bfseries \papertitle\par}
-\vspace{1.2em}
-{\large \todo{PENDING: Author One\textsuperscript{1}, Author Two\textsuperscript{2}, \ldots}}\par
-\vspace{0.4em}
-{\small \todo{PENDING: \textsuperscript{1}Affiliation; \textsuperscript{2}Affiliation}}\par
-{\small \todo{PENDING: Corresponding author: name, address, e-mail; ORCID iDs}}\par
-\end{flushleft}
+\articletype{ARTICLE}
 
-\textbf{Article type.} Original research (development and external evaluation of a multivariable prediction
-model and an auditable decision-support pipeline; TRIPOD+AI and CLEAR reporting).
+\title{\papertitle}
 
-\textbf{Running title.} \runningtitle
+\author{
+\name{\todo{PENDING: A.~N. Author}\textsuperscript{a}\thanks{CONTACT \todo{PENDING: A.~N. Author. Email: \ldots; ORCID: \ldots}}
+  and \todo{PENDING: B.~N. Author}\textsuperscript{b}}
+\affil{\textsuperscript{a}\todo{PENDING: Affiliation, address}; \textsuperscript{b}\todo{PENDING: Affiliation, address}}
+}
 
-\textbf{Keywords.} glioma; glioblastoma; surveillance MRI; tumour progression; radiomics; deep learning;
-prediction model; cross-validation; external validation; censoring; selective prediction; model audit;
-clinical decision support; report generation
+\maketitle
 
-\section*{Abstract}
+% Unstructured abstract, 100--150 words (journal instructions). Longer structured version: DRAFT_NOTES.md.
+\begin{abstract}
+PRISM is our pipeline for predicting documented progression within 120 days of a post-treatment glioma MRI. It combines clinical, molecular and treatment-course data known on the scan day with lesion volumes, radiomics and deep image features, and returns an audit record and a grounded clinician report for every scan. Its first version scored AUC 0.80 on one 29-patient test split of MU-Glioma-Post; over 500 splits of the same design, its pipeline averaged 0.72. Under repeated patient-grouped cross-validation, the clinical and treatment-phase core reached 0.70 in grade 4 glioma, radiomics and deep features added nothing measurable, and locked external AUCs were 0.61--0.62. Phase of care, not MRI texture, drove discrimination. The audit layer met its coverage target, and 236 of 249 reports from a local language model were fully faithful to the record. Single-split AUCs at this sample size mainly measure the split.
+\end{abstract}
 
-\textbf{Background.} PRISM (Post-treatment Response Intelligence and Surveillance Monitor), our multimodal
-pipeline, predicts documented progression after a glioma surveillance MRI and explains it in a clinician report. Its first version scored AUC 0.80 on one 30-patient split of MU-Glioma-Post.
-
-\textbf{Purpose.} To present PRISM, evaluate every branch and explain the optimistic initial result.
-
-\textbf{Methods.} PRISM reads clinical, molecular and treatment-course data as of the scan day, adds volumes,
-radiomics and a frozen SwinUNETR encoder, and writes an audit record and a grounded report per scan.
-Development: MU-Glioma-Post (308 index scans, 155 patients; grade 4:
-249 scans, 126 patients); locked external evaluation: LUMIERE (132 scans, 61 patients). Outcome: documented
-progression within 120 days (death censored; IPCW AUC). We ran 500 splits of the initial split's design and
-ablated each branch under 5$\times$5 patient-grouped nested cross-validation; key analyses had pre-specified rules.
-
-\textbf{Results.} On the initial split, PRISM's initial radiomics model scored 0.802 and a model
-without imaging 0.871; with treatment dates leaking from the future, a boosting model reached 0.901. Over 500
-splits its pipeline averaged 0.720 $\pm$ 0.055, and 7\% of splits reached 0.802. Under
-repeated cross-validation the clinical + treatment-phase core reached 0.698 (95\% CI 0.615--0.774) in grade 4.
-Radiomics changed this by $-$0.032 ($-$0.084 to +0.017) and deep features by $-$0.004 ($-$0.069 to +0.063). In
-post-radiotherapy scans, imaging added +0.061 ($-$0.038 to +0.156; permutation p = 0.21). Locked external AUCs
-were 0.608--0.620. The audit layer met its coverage target (0.841, 0.790--0.885), did not improve
-discrimination beyond case mix, and exposed a missingness shortcut. Local-language-model reports were faithful to the record in
-236/249 scans (0.948; target 0.95 missed by one report, all failures one missing citation), with no omitted flag
-or forbidden content.
-
-\textbf{Conclusion.} PRISM's signal comes from phase of care, not MRI texture. It is deployed as the clinical +
-treatment-phase core with auditable records; imaging branches are optional.
-
-\section*{Key points}
-
-\begin{itemize}
-\item \textbf{Question.} Which parts of a multimodal surveillance pipeline (PRISM) predict documented
-progression within 120 days of a post-treatment glioma MRI, and how far did our own initial single-split
-evaluation mislead?
-\item \textbf{Findings.} On our favourable 29-patient initial evaluation split, models scored 0.80--0.90; the
-same pipelines averaged about 0.70 under repeated cross-validation, and PRISM's initial radiomics pipeline
-averaged 0.720 over 500 splits of the same design. Radiomics, frozen deep features and re-segmentation added no
-measurable discrimination to PRISM's clinical + treatment-phase core (AUC 0.698 in grade 4), internally or on
-an external cohort.
-\item \textbf{Meaning.} PRISM is deployed as its clinical + treatment-phase core. Its audit records and grounded
-reports state what was known at the scan date, the uncertainty and the weak points of each prediction, but
-abstention does not triage scans better than case mix does. Single-split AUCs on cohorts of this size measure
-the split.
-\end{itemize}
-
-\section*{Clinical relevance statement}
-At a surveillance MRI after glioma treatment, PRISM's core --- age, molecular markers and where the scan sits in
-the treatment course --- predicts documented progression within 120 days about as well as any MRI-based branch
-tested here (AUC about 0.70), and each prediction comes with an audit record of its inputs, interval and
-referral flags. Conventional MRI radiomics should not be expected to add to it, and a single test-split AUC
-near 0.80, including our own initial one, should not be taken at face value.
+% No more than 3 keywords (journal instructions).
+\begin{keywords}
+glioma surveillance; prediction model evaluation; auditable decision support
+\end{keywords}
 
 \section{Introduction}\label{sec:1}
 
@@ -767,32 +719,48 @@ reports make a modest model's knowledge and failure modes explicit, but on these
 better than case mix.
 
 
-\section*{Declarations}
+\section*{Acknowledgements}
+\todo{PENDING AUTHOR DECISION}.
 
-\textbf{Ethics.} \todo{PENDING AUTHOR DECISION: secondary analysis of public de-identified datasets
+\section*{Disclosure statement}
+\todo{PENDING AUTHOR DECISION: competing interests, or ``The authors report there are no competing interests to
+declare.''} If any author serves on the editorial or advisory board of this journal, state it here.
+
+\section*{Funding}
+\todo{PENDING AUTHOR DECISION: ``This work was supported by the [Funding Agency] under Grant [number].''}
+
+\section*{Ethics statement}
+\todo{PENDING AUTHOR DECISION: secondary analysis of public de-identified datasets
 (MU-Glioma-Post, LUMIERE, CFB-GBM); state the institutional determination or waiver and cite the source
-datasets' approvals.}
+datasets' approvals.} No registered protocol. Analysis plans and dated plan snapshots are in the repository
+(Supplementary S1). Patient and public involvement: none.
 
-\textbf{Funding.} \todo{PENDING AUTHOR DECISION}.
-
-\textbf{Competing interests.} \todo{PENDING AUTHOR DECISION}.
-
-\textbf{Data availability.} \todo{PENDING AUTHOR DECISION: MU-Glioma-Post (TCIA,
+\section*{Data availability statement}
+\todo{PENDING AUTHOR DECISION: MU-Glioma-Post (TCIA,
 doi:10.7937/\allowbreak 7K9K-3C83), LUMIERE (figshare; \citealp{suter2022}) and CFB-GBM (TCIA,
 doi:10.7937/v9pn-2f72) are public; derived tables, fold assignments and locked model files --- state what is
-released.}
+released and give a DOI or other persistent identifier.} Code: \todo{PENDING: public repository link and release
+tag.}
 
-\textbf{Code availability.} \todo{PENDING: public repository link and release tag.}
+\section*{Supplemental material}
+Supplemental data for this article (Supplementary S1--S19, Tables S1--S27) are provided as a separate file.
 
-\textbf{Protocol and registration.} No registered protocol. Analysis plans and dated plan snapshots are in the
-repository (Supplementary S1).
-
-\textbf{Patient and public involvement.} None.
-
-\textbf{PRISM versions.} PRISM v1 and its initial single-split evaluation were described in an unpublished
+\section*{PRISM versions}
+PRISM v1 and its initial single-split evaluation were described in an unpublished
 internal report \todo{PENDING AUTHOR DECISION: by whom; whether to cite it}; this manuscript supersedes it.
 ``Our initial evaluation split'' and ``PRISM's initial radiomics model'' refer to the split and the radiomics
 model of that report.
+
+\section*{Notes on contributors}
+\todo{PENDING: a short biographical note for each author (no more than 200 words each).}
+
+% Reference list: Entries from docs/literature/COMPARABLE_RESULTS.md (verified) or
+% docs/literature/RELATED_WORK.md; [CHECK] entries carry note = {CHECK} in refs.bib. References cited only in
+% the Supplement (and two listed but not yet cited in the text: Welch 2019, Yun 2025) are included via \nocite
+% so that the list matches the draft's 39 entries.
+\nocite{demircioglu2021,vangriethuysen2017,welch2019,yun2025,cfbgbm}
+\bibliography{refs}
+
 
 % =====================================================================================================
 \clearpage
@@ -1000,7 +968,7 @@ permutation null itself averages +0.03.}
 \end{figure}
 
 % Figure 5. Panels A and B: docs/manuscript/figures/fig5a_architecture.pdf and fig5a_example_report.pdf (made by the
-% report-generator work stream; red placeholder until they exist). Panel C: fig5_system_risk_coverage.png (copy of
+% report-generator work stream; red placeholder until they exist). Panel C: fig5_system_risk_coverage.pdf (copy of
 % outputs/results/analyses/audit_system/risk_coverage.png; PNG only, 150 dpi).
 \begin{figure}[!htbp]
 \centering
@@ -1012,7 +980,7 @@ permutation null itself averages +0.03.}
 {\includegraphics[width=\linewidth,height=0.42\textheight,keepaspectratio]{fig5a_example_report.pdf}}%
 {\figorplaceholder{fig5a_example_report.pdf}{\linewidth}{example grounded report}}\end{minipage}\hfill
 \begin{minipage}[t]{0.58\linewidth}\raggedright\textbf{C}\par\centering
-\includegraphics[width=\linewidth,height=0.42\textheight,keepaspectratio]{fig5_system_risk_coverage.png}
+\includegraphics[width=\linewidth,height=0.42\textheight,keepaspectratio]{fig5_system_risk_coverage.pdf}
 \end{minipage}
 \caption[PRISM: architecture, grounded report and selective prediction]{\textbf{PRISM: architecture, grounded
 report and selective prediction.} (A) Architecture and data flow: inputs read as of the scan day feed the deployed core
@@ -1035,11 +1003,5 @@ grade 4).}
 
 % =====================================================================================================
 \clearpage
-% Reference list: APA-style entries from docs/literature/COMPARABLE_RESULTS.md (verified) or
-% docs/literature/RELATED_WORK.md; [CHECK] entries carry note = {CHECK} in refs.bib. References cited only in
-% the Supplement (and two listed but not yet cited in the text: Welch 2019, Yun 2025) are included via \nocite
-% so that the list matches the draft's 39 entries.
-\nocite{demircioglu2021,vangriethuysen2017,welch2019,yun2025,cfbgbm}
-\bibliography{refs}
 
 \end{document}

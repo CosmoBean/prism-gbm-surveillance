@@ -59,6 +59,105 @@ side; legend describes the actual panels). Supplement S19 now holds the full acc
 and "1,024" (written "2000"/"1024" there) and the values printed inside the Figure 5 panels. The coordinator's
 Figure 1–4 relabelling (HEAD 65d2e26) was kept.
 
+## Target journal: CMBBE: Imaging & Visualization (2026-10-15)
+
+Checked on 2026-10-15 for the two journals the user named.
+
+| | CMBBE: Imaging & Visualization (Taylor & Francis) | Int. J. for Computational Vision and Biomechanics (MUK) | Int. J. of Imaging and Robotics (CESER) |
+|---|---|---|---|
+| Status | Active (vol. 14, 2026); full open access since vol. 12 (2024) | Dormant: last issue vol. 6(2), Jul–Dec 2020 | Active (vol. 26, 2026) |
+| Indexing | Scopus, Web of Science ESCI, DBLP, DOAJ; IF about 1.3 | Google Scholar, EBSCO, Index Copernicus | Index Copernicus and similar; no DOIs |
+| Deadline | None: rolling submission; no current call for papers found | Rolling (special issues by call) | Rolling |
+| Cost | APC US$2,630 (DOAJ); waivers and institutional agreements | None | None; subscription access only |
+| Review | Single-anonymous; about 13 weeks to publication (DOAJ) | Three board members | 5–14 weeks |
+| Length | No word limit | 15–30 A4 pages, one column, double spaced, PDF by email | Not stated |
+| Abstract / keywords | Unstructured, 100–150 words; no more than 3 keywords | Abstract and keywords | Under 250 words; up to 5 keywords; running title < 40 characters; MSC codes |
+| Format | Word or LaTeX (T&F Interact template); CSE author-date references; British -ise spelling | PDF | Word or LaTeX (journal template); author-year references; plagiarism report required |
+| Other | Disclosure, funding, data availability statement, notes on contributors (≤ 200 words each); figures 300 dpi colour / 1,200 dpi line art; supplement via Figshare | — | Reprints may not be posted online (arXiv, ResearchGate) |
+
+Sources: DOAJ record and API for ISSN 2168-1171; T&F instructions for authors (latest readable copy is the
+2022-06-19 Web Archive snapshot; T&F blocks automated access, so re-check the live page before submitting);
+T&F CSE reference guide v2.0 (CSE-9); T&F Interact CSE LaTeX bundle; mukpublications.com/ijcvb.php and its
+instructions page; ceser.in/ceserp/index.php/iji (about, author instructions, archive).
+
+**Decision.** CMBBE: Imaging & Visualization. IJCV&B has published nothing since 2020, and IJIR has weak
+indexing, no DOIs and forbids posting the article. CMBBE:I&V has no word limit, so the main text (about 8,400
+words) needs no cuts for length; the cut list below is now optional.
+
+**Changes made for CMBBE:I&V.**
+- `main.tex` uses the T&F `interact` class (`largeformat`, double spaced, line numbers kept for review);
+  `interact.cls`, `tfcse.bst`, `jabbrv*.{sty,ldf}` copied into `paper/` from the official bundle.
+- References: T&F CSE name-year (`tfcse.bst`) in main and supplement; CFB-GBM data set entry completed from
+  DataCite (Moreau et al. 2025, version 4).
+- Abstract: unstructured, 142 words. Keywords: 3.
+- Key points and clinical relevance statement removed (not part of the journal's structure); kept below.
+- Back matter in the journal's order: acknowledgements, disclosure statement, funding, ethics, data availability,
+  supplemental material, notes on contributors, references, tables, figures.
+- Fig 5C regenerated as vector PDF (and 300 dpi PNG); the other figures are vector PDFs or 300 dpi PNGs.
+
+**Still to do before submission.** Authors, affiliations, ORCIDs, contact, biographies; disclosure, funding,
+ethics, data availability; upload figures as separate files (EPS/TIFF/JPEG, or PDF if accepted) and the
+supplement as a separate file; LaTeX source with the PDF; confirm the live instructions (keyword limit, APC).
+**Conflict of interest:** if an author or adviser sits on this journal's advisory board (the CV entry the user
+quoted: associate editor 2013–2017, advisory board since 2017), declare it in the cover letter and the disclosure
+statement and ask that they not handle the manuscript.
+
+### Removed front matter (pre-CMBBE:I&V version, kept for other journals)
+
+```latex
+\section*{Abstract}
+
+\textbf{Background.} PRISM (Post-treatment Response Intelligence and Surveillance Monitor), our multimodal
+pipeline, predicts documented progression after a glioma surveillance MRI and explains it in a clinician report. Its first version scored AUC 0.80 on one 30-patient split of MU-Glioma-Post.
+
+\textbf{Purpose.} To present PRISM, evaluate every branch and explain the optimistic initial result.
+
+\textbf{Methods.} PRISM reads clinical, molecular and treatment-course data as of the scan day, adds volumes,
+radiomics and a frozen SwinUNETR encoder, and writes an audit record and a grounded report per scan.
+Development: MU-Glioma-Post (308 index scans, 155 patients; grade 4:
+249 scans, 126 patients); locked external evaluation: LUMIERE (132 scans, 61 patients). Outcome: documented
+progression within 120 days (death censored; IPCW AUC). We ran 500 splits of the initial split's design and
+ablated each branch under 5$\times$5 patient-grouped nested cross-validation; key analyses had pre-specified rules.
+
+\textbf{Results.} On the initial split, PRISM's initial radiomics model scored 0.802 and a model
+without imaging 0.871; with treatment dates leaking from the future, a boosting model reached 0.901. Over 500
+splits its pipeline averaged 0.720 $\pm$ 0.055, and 7\% of splits reached 0.802. Under
+repeated cross-validation the clinical + treatment-phase core reached 0.698 (95\% CI 0.615--0.774) in grade 4.
+Radiomics changed this by $-$0.032 ($-$0.084 to +0.017) and deep features by $-$0.004 ($-$0.069 to +0.063). In
+post-radiotherapy scans, imaging added +0.061 ($-$0.038 to +0.156; permutation p = 0.21). Locked external AUCs
+were 0.608--0.620. The audit layer met its coverage target (0.841, 0.790--0.885), did not improve
+discrimination beyond case mix, and exposed a missingness shortcut. Local-language-model reports were faithful to the record in
+236/249 scans (0.948; target 0.95 missed by one report, all failures one missing citation), with no omitted flag
+or forbidden content.
+
+\textbf{Conclusion.} PRISM's signal comes from phase of care, not MRI texture. It is deployed as the clinical +
+treatment-phase core with auditable records; imaging branches are optional.
+
+\section*{Key points}
+
+\begin{itemize}
+\item \textbf{Question.} Which parts of a multimodal surveillance pipeline (PRISM) predict documented
+progression within 120 days of a post-treatment glioma MRI, and how far did our own initial single-split
+evaluation mislead?
+\item \textbf{Findings.} On our favourable 29-patient initial evaluation split, models scored 0.80--0.90; the
+same pipelines averaged about 0.70 under repeated cross-validation, and PRISM's initial radiomics pipeline
+averaged 0.720 over 500 splits of the same design. Radiomics, frozen deep features and re-segmentation added no
+measurable discrimination to PRISM's clinical + treatment-phase core (AUC 0.698 in grade 4), internally or on
+an external cohort.
+\item \textbf{Meaning.} PRISM is deployed as its clinical + treatment-phase core. Its audit records and grounded
+reports state what was known at the scan date, the uncertainty and the weak points of each prediction, but
+abstention does not triage scans better than case mix does. Single-split AUCs on cohorts of this size measure
+the split.
+\end{itemize}
+
+\section*{Clinical relevance statement}
+At a surveillance MRI after glioma treatment, PRISM's core --- age, molecular markers and where the scan sits in
+the treatment course --- predicts documented progression within 120 days about as well as any MRI-based branch
+tested here (AUC about 0.70), and each prediction comes with an audit record of its inputs, interval and
+referral flags. Conventional MRI radiomics should not be expected to add to it, and a single test-split AUC
+near 0.80, including our own initial one, should not be taken at face value.
+```
+
 ## Word counts
 
 Counted with a whitespace tokenizer on the LaTeX source after removing comments, commands, citations and labels,
@@ -113,8 +212,7 @@ audit-record details (keep P1/P2), §3.2 leak-history paragraph, §3.8, "Compari
 
 ## Decisions for the authors
 
-- **Target journal** and article type (e.g. a radiology-AI or neuro-oncology methods journal); this fixes word limits,
-  abstract format and the key-points box format.
+- **Target journal**: decided 2026-10-15, CMBBE: Imaging & Visualization (see above).
 - **Author list, affiliations, contributions (CRediT).**
 - **Ethics statement**: secondary analysis of public de-identified data; whether an institutional determination exists.
 - **Data availability**: which derived tables, fold files, locked model files and model cards are released; licence
