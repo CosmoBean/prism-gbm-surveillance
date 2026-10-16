@@ -1,6 +1,6 @@
 # Fine-tuned SwinUNETR encoder for the 120-day label (nested in the shared 5×5 folds)
 
-**Status: arms 1–4 run and evaluated (2026-10-16); optional arm 5 running.** The plan below was committed (9aaa8d3)
+**Status: all five arms run and evaluated (2026-10-16).** The plan below was committed (9aaa8d3)
 and snapshotted to `PLAN_snapshot.md` before any real-label run. **Verdict: fine-tuning does not help** (primary rule
 not met). The permuted-label validity check was missed by +0.005 (see Results). Code: `prism/analyses/finetune_deep.py` (stage `finetune`). The frozen-encoder results that this
 extends are in [DEEP_FEATURES.md](DEEP_FEATURES.md).
@@ -181,7 +181,7 @@ Outputs:
 - Optional arm 5: 100 fine-tunes at about twice the cost, about 1–1.5 h more with 6 processes.
 - CPU: the evaluation takes a few minutes. Memory: about 20 GB of GPU memory per process.
 
-## Results (arms 1–4, 2026-10-16)
+## Results (2026-10-16)
 
 Run: 400 fine-tunes on GPUs 1–3, 3 processes per GPU, 2026-10-15 22:08 to 2026-10-16 00:26 (plan snapshot 22:06). Three jobs ran out of GPU
 memory when three processes shared a GPU (one each in `worker_gpu{1_0,2_1,3_1}.log`, all `brats21:all_glioma:real`) and
@@ -224,4 +224,12 @@ core + fine-tuned 0.736 [0.655, 0.807], ΔAUC +0.017 [−0.009, +0.044] (MDE 0.0
   with a weak, noisy label at about 100 training scans per fine-tune.
 - Cost: 3.0 min per job on average (arm 1), peak 19 GB (BraTS21) to 25 GB (BrainSegFounder, all gliomas).
 
-**Arm 5 (change from the previous scan).** Running; results will be added here.
+**Arm 5 (change from the previous scan; optional secondary).** Run 2026-10-16 on GPUs 1–3, 2 processes per GPU, after
+arms 1–4; evaluated with all five arms in one bootstrap (`evaluate_all5.log`; arms 1–4 reproduce the numbers above).
+- Image only: 0.647 [0.567, 0.724], ΔAUC −0.051 [−0.146, +0.048]; calibration slope 0.68.
+- Core + fine-tuned score with the previous scan: 0.712 [0.632, 0.789], **ΔAUC +0.014 [−0.010, +0.040]** (MDE 0.036);
+  slope 0.90, O/E 1.04.
+- r with log lesion volume 0.50, with the core logit 0.18: slightly less tied to size than arm 1.
+- Best epoch 3.7 (0–18), epochs run 9.7 (6–24), 4.0 min per job, peak 27 GB.
+- Secondary arm, no rule of its own. Seeing the previous scan does not change the verdict: its gain is below 0.03,
+  its CI includes 0, and it lies within about 0.01 of the permuted control (+0.005).
