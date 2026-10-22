@@ -75,7 +75,7 @@ and returns three things for each scan: a risk, an audit record and a report (Fi
 is read as it stood on the scan day.
 
 \textbf{The risk.} A ridge logistic model combines the inputs available on the scan day: clinical and molecular
-data, the treatment course and, optionally, imaging. The deployed configuration is the \emph{core model} of
+data, the treatment course and, optionally, imaging. The reference configuration is the \emph{core model} of
 clinical and treatment-course variables (Section~\ref{sec:2.3}). Three imaging branches can be added: imaging
 measurements (volumes, morphology and change), radiomics, and a SwinUNETR image encoder, frozen or fine-tuned.
 Any branch can be switched off, which is how we ablate it.
@@ -240,7 +240,7 @@ which seems unlikely but cannot be excluded. And the phase separates scans betwe
 counting only pairs within the same phase, R2 scored 0.577 against 0.595 for R0 (Supplementary S20).
 
 \textbf{In the intended use.} On scans taken on or after the start of RT (173 grade 4 scans from 86 patients, 88
-events, 1 censored), the deployed corrected model, trained on all scans, scored 0.601 (0.515--0.686): above chance,
+events, 1 censored), the corrected core model, trained on all scans, scored 0.601 (0.515--0.686): above chance,
 but modest. It was calibrated in the large (observed to expected 1.01) but spread its predictions too widely
 (slope 0.53), because part of their range encodes the difference between scans before and after RT; refitting within
 the population did not improve discrimination (0.595). Within phases it scored 0.631 in the 12 weeks after RT and
@@ -303,7 +303,7 @@ explained most of the gap between observed and expected events there.
 \item A documentation leak: the flag for the 12 weeks after RT was missing when the RT end date was missing, which
 told a scan whose RT would be documented later apart from one whose RT never would be.
 \end{enumerate}
-Removing these gave the \emph{corrected core model}, which PRISM deploys: 0.678 (0.596--0.755) in grade 4,
+Removing these gave the \emph{corrected core model}, PRISM's reference configuration: 0.678 (0.596--0.755) in grade 4,
 $-$0.020 against the original, equally well calibrated (observed to expected 1.04, slope 0.85), and 0.706 in all
 gliomas. On LUMIERE it scored 0.635 against 0.608 and fixed the calibration (observed to expected 0.99, was 1.33;
 slope 0.97, was 0.38).
@@ -387,11 +387,12 @@ model was not tested externally. Several imaging tests were added after the firs
 although each had its rule fixed before its own run. Radiomics used a fixed bin count rather than the fixed bin
 width recommended by IBSI \citep{zwanenburg2020}. The fine-tuned encoder was trained on about 100 scans per network
 with fixed hyperparameters, and its shuffled-outcome control slightly missed its validity limit. The ablation and
-phase analyses use the original core model; the deployed corrected model scores 0.020 lower. The report checker is
+phase analyses use the original core model; the corrected model scores 0.020 lower. The report checker is
 lexical: it verifies numbers, citations, flags and forbidden patterns, not meaning. The required content was defined
 by us, so meeting it shows that the reports say what we specified, not that they help; the public reference reports
-describe preoperative or published cases rather than routine surveillance; and no clinician has assessed the
-reports.
+describe preoperative or published cases rather than routine surveillance; and no clinician has assessed the reports. Finally, at an AUC of 0.60 in its intended use, PRISM is not ready to
+guide care; a triage model would need larger multicentre cohorts, a label read from images by experts, and perfusion
+or diffusion imaging, and would need to be tested prospectively.
 
 \subsection*{Conclusion}
 
@@ -399,8 +400,9 @@ PRISM's first AUC of 0.80 came from one favourable split. Under repeated cross-v
 treatment-course variables reached about 0.70, or 0.68 after removing leaks found by its own audit, and radiomics,
 deep features (frozen or fine-tuned), resegmentation, a cleaner label and diffusion added no measurable
 discrimination. The phase of care drives discrimination on this task and should be reported as a stratum and
-treated as a confounder. PRISM is deployed as its corrected core model for surveillance from the start of RT, where its AUC is 0.60, and
-every prediction is recorded, explained and reported in a form that can be checked.
+treated as a confounder. In surveillance from the start of RT, PRISM's intended use, its corrected core model reached an AUC of 0.60, which
+is not enough to guide care. What PRISM provides is a way to build and test such models honestly: every prediction
+is recorded, explained and reported in a form that can be checked, and the audit exposed leaks that the AUC hid.
 
 
 \section*{Acknowledgements}
@@ -506,7 +508,7 @@ still assigned a phase of care (Section~\ref{sec:2.3}).
 cross-validation]{\textbf{The same models on a single split, across 500 splits and under repeated
 cross-validation.} IPCW AUC(120 d) with 95\% bootstrap over patients CI unless stated. Single split = PRISM's first evaluation split (all gliomas; 29 test patients, 82 scans). 500 splits = PRISM v1's split design (naive
 label; for PRISM's initial radiomics model, its pipeline with features reselected per split). Core model = PRISM's
-deployed model of clinical, timing and treatment variables (the reference for every imaging comparison). 5 $\times$ 5 CV = repeated
+reference model of clinical, timing and treatment variables (the reference for every imaging comparison). 5 $\times$ 5 CV = repeated
 cross-validation grouped by patient on the final cohort. }
 \label{tab:2}
 \begin{tabularx}{\linewidth}{@{}L R{1.3cm} R{3.0cm} R{3.5cm} R{4.0cm} R{3.0cm} R{3.0cm}@{}}
@@ -672,8 +674,8 @@ Reading time at 200 words per minute, median & 57 s \\
 \centering
 \includegraphics[width=\linewidth,height=0.40\textheight,keepaspectratio]{fig5a_architecture.pdf}
 \caption[PRISM architecture]{\textbf{PRISM architecture and data flow.} Inputs read as of the scan day feed the
-deployed core model (ridge on clinical and treatment-course variables). The imaging branches (volumes, radiomics,
-deep encoder; dashed) are optional and not deployed; volumes enter the record only as indicative values. The risk,
+reference core model (ridge on clinical and treatment-course variables). The imaging branches (volumes, radiomics,
+deep encoder; dashed) are optional and switched off in the reference configuration; volumes enter the record only as indicative values. The risk,
 with its interval and tier, goes into the per-scan audit record (contributions, 80\% conformal set, referral
 flags), from which the grounded report is written.}
 \label{fig:arch}
