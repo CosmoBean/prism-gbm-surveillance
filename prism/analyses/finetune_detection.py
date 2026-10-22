@@ -19,7 +19,7 @@ Arms (each 5 repeats x 5 outer folds x 4 inner folds = 100 fine-tunes):
     G5      G3's network on the forward 120-day label (label_120, grade-4 index scans, the shared folds), exactly the
             grade-4 arm of finetune_deep except for the input; stacked onto C2 and evaluated in the intended use
     G2      siamese current + previous (finetune_deep's +prev head: [f_cur, f_cur - f_prev, has_prev])
-    G1_all, G3_all   all gliomas (secondary, last)
+    G1_all, G3_all, G4_all, G2_all   all gliomas (secondary, last; same order as grade 4)
 Detection arms train on detection scans with label_det == 1 (progression scan) or neg_primary (index scan with
 label_120 == 0); every population scan of the outer test fold is scored (incl. secondary-only negatives).
 
@@ -67,12 +67,14 @@ ARMS = {
     "G2": dict(pop="grade4", task="det", inp="siamese", lab="real"),
     "G1_all": dict(pop="all_glioma", task="det", inp="cur", lab="real"),
     "G3_all": dict(pop="all_glioma", task="det", inp="diff", lab="real"),
+    "G4_all": dict(pop="all_glioma", task="det", inp="cur", lab="perm"),
+    "G2_all": dict(pop="all_glioma", task="det", inp="siamese", lab="real"),
     # runner / smoke tests only (labels permuted over the whole population, never evaluated)
     "S1": dict(pop="grade4", task="det", inp="cur", lab="shuf"),
     "S3": dict(pop="grade4", task="det", inp="diff", lab="shuf"),
     "S2": dict(pop="grade4", task="det", inp="siamese", lab="shuf"),
 }
-PRIORITY = ("G1", "G4", "G3", "G5", "G2", "G1_all", "G3_all")
+PRIORITY = ("G1", "G4", "G3", "G5", "G2", "G1_all", "G3_all", "G4_all", "G2_all")
 
 
 # ---------------------------------------------------------------- cohort
