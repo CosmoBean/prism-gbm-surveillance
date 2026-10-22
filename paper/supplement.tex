@@ -2294,6 +2294,76 @@ rose soon after the warm-up, so the networks moved little from their starting we
 from the previous scan did not alter the verdict.
 
 \FloatBarrier
+\section{Intended use and censoring sensitivity}\label{sec:S23}
+
+\textbf{Plan.} Written into \code{docs/results/INTENDED\_USE.md} and committed (74eaaf5) before any of these results
+was computed. Code: \code{prism/analyses/intended\_use.py} (stage \code{intendeduse}); outputs in
+\code{outputs/results/analyses/intended\_use/}. No model was retrained: stored held-out predictions were rescored,
+and every published AUC reproduced within 0.0006 (\code{checks.csv}).
+
+\textbf{Intended use.} Grade 4 scans taken on or after the documented RT start date, a condition known on the scan
+day. This replaces the earlier restriction to ``patients on a documented RT pathway'', which depended on whether RT
+was documented later. Primary: the corrected core model (C2) trained on all scans and scored on intended-use scans,
+since deployment trains on everything; secondary: C2 refitted within the population.
+
+\textbf{Sensitivities.} (1) Censoring weights estimated separately within five phases of care; (2) death without
+documented progression within 120 days counted as a non-event. Rule: the conclusions hold if no imaging contrast
+gains at least 0.03 with a CI excluding 0 under either sensitivity; the intended-use AUC is reported whatever its
+value.
+
+\begin{table}[H]
+\centering
+\small
+\renewcommand{\thetable}{S44}\renewcommand{\theHtable}{S44}
+\caption{\textbf{The corrected core model in the intended use} (\code{headline.csv}, \code{within\_phase.csv}). IPCW
+AUC at 120 days with 95\% patient bootstrap CI; 173 grade 4 scans from 86 patients (88 events, 84 non-events, 1
+censored).}
+\label{tab:S44}
+\begin{tabularx}{\linewidth}{@{}L R{3.0cm} R{1.2cm} R{1.2cm}@{}}
+\toprule
+Model or stratum & AUC [95\% CI] & O/E & Slope \\
+\midrule
+C2 trained on all scans (primary) & 0.601 [0.515, 0.686] & 1.01 & 0.53 \\
+C2 refitted within the population & 0.595 [0.517, 0.682] & 0.98 & 0.71 \\
+All gliomas, C2 trained on all scans & 0.637 [0.550, 0.721] & -- & -- \\
+\addlinespace
+\multicolumn{4}{@{}l}{\emph{Within phase (C2 trained on all scans)}} \\
+During RT (5 events / 1 non-event) & 0.40, descriptive & -- & -- \\
+Within 12 weeks after RT (47 / 51) & 0.631 [0.518, 0.734] & -- & -- \\
+Later (36 / 32) & 0.583 [0.431, 0.742] & -- & -- \\
+Pairs within the same phase (88 / 84) & 0.616 [0.524, 0.698] & -- & -- \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\begin{table}[H]
+\centering
+\small
+\renewcommand{\thetable}{S45}\renewcommand{\theHtable}{S45}
+\caption{\textbf{Censoring sensitivities, grade 4, full cohort} (\code{schemes.csv}, \code{contrasts.csv}). Headline:
+one censoring curve. Phase weights: censoring weights within five phases of care. Deaths: death without progression
+within 120 days counted as a non-event.}
+\label{tab:S45}
+\begin{tabularx}{\linewidth}{@{}L R{1.5cm} R{3.1cm} R{3.1cm}@{}}
+\toprule
+Quantity & Headline & Phase weights & Deaths \\
+\midrule
+C2, AUC & 0.678 & 0.734 [0.648, 0.814] & 0.706 [0.628, 0.787] \\
+Core + nested radiomics $-$ core & $-$0.032 & $-$0.021 [$-$0.061, +0.019] & $-$0.035 [$-$0.075, +0.010] \\
+Core + fine-tuned score $-$ core & +0.009 & +0.011 [$-$0.012, +0.035] & +0.009 [$-$0.018, +0.038] \\
+R2 + I2 $-$ R2, scans after RT & +0.061 & +0.061 [$-$0.032, +0.155] & +0.061 [$-$0.033, +0.155] \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\textbf{Verdict.} The conclusions hold: no imaging contrast gains 0.03 with a CI excluding 0 under either
+sensitivity. Inside the intended use the sensitivities change nothing, because the scan-day rule removes 38 of the
+39 censored scans and all 14 deaths without progression. The margin above chance is thin (lower bound 0.515), and
+the slope of 0.53 shows that a model trained on all scans spreads its predictions too widely after RT, because part
+of their range encodes the difference between scans before and after RT. Deviation from the plan: a 50-draw test
+run on the real labels preceded the full run; the plan was not changed afterwards.
+
+\FloatBarrier
 \section*{Supplementary figures}
 \addcontentsline{toc}{section}{Supplementary figures}
 

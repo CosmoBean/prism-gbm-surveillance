@@ -20,7 +20,7 @@
 
 % Unstructured abstract, 100--150 words (journal instructions). Longer structured version: DRAFT_NOTES.md.
 \begin{abstract}
-PRISM predicts documented progression within 120 days of a glioma surveillance MRI and returns an audit record and a clinician report per scan. Its first version scored AUC 0.80 on one MU-Glioma-Post test split but averaged 0.72 over 500 similar splits; that split was easy because of its mix of scans before radiotherapy. Under repeated cross-validation, clinical and treatment-course variables reached 0.70 in grade 4 glioma, or 0.68 after removing leaks found by its own audit. Radiomics, frozen and fine-tuned deep encoders, resegmentation, a cleaner label and diffusion showed no measurable gain, and a locked model scored 0.61 on an external cohort. The phase of care drove discrimination, even after correcting for censoring. Reports written from the audit record by a local language model passed a faithfulness check for all 249 grade 4 scans and met every prespecified usefulness item in 247; clinicians have not yet assessed them.
+PRISM predicts documented progression within 120 days of a glioma surveillance MRI and returns an audit record and a clinician report per scan. Its first version scored AUC 0.80 on one MU-Glioma-Post test split but averaged 0.72 over 500 similar splits; that split was easy because of its mix of scans before radiotherapy. Under repeated cross-validation, clinical and treatment-course variables reached 0.70 in grade 4, or 0.68 after removing leaks found by its own audit. Radiomics, frozen and fine-tuned deep encoders, resegmentation, a cleaner label and diffusion showed no measurable gain, and a locked model scored 0.61 externally. The phase of care drove discrimination: in surveillance after radiotherapy, the intended use, AUC was 0.60. Reports written from the audit record by a local language model passed a faithfulness check for all 249 grade 4 scans and contained every prespecified content item in 247; clinicians have not yet assessed them.
 \end{abstract}
 
 % No more than 3 keywords (journal instructions).
@@ -239,8 +239,16 @@ rule for a robust finding was met (Table~\ref{tab:4}). If every censored scan ha
 which seems unlikely but cannot be excluded. And the phase separates scans between phases, not within them:
 counting only pairs within the same phase, R2 scored 0.577 against 0.595 for R0 (Supplementary S20).
 
-\textbf{In the intended use.} \todo{PENDING intended-use analysis: deployed model's AUC on scans on or after RT
-start, within-phase AUCs, and the two censoring sensitivities.}
+\textbf{In the intended use.} On scans taken on or after the start of RT (173 grade 4 scans from 86 patients, 88
+events, 1 censored), the deployed corrected model, trained on all scans, scored 0.601 (0.515--0.686): above chance,
+but modest. It was calibrated in the large (observed to expected 1.01) but spread its predictions too widely
+(slope 0.53), because part of their range encodes the difference between scans before and after RT; refitting within
+the population did not improve discrimination (0.595). Within phases it scored 0.631 in the 12 weeks after RT and
+0.583 later, and 0.616 over pairs within the same phase, so little of its discrimination here comes from ranking one
+phase against another (Supplementary S23). The rule for scan-day eligibility removed 38 of the 39 censored scans and
+all 14 deaths without progression, so the censoring question largely disappears in the intended use. In the full
+cohort, phase-specific weights or counting deaths as non-events raised absolute AUCs (corrected model 0.734 and
+0.706) but moved no imaging contrast by more than 0.011 (Table~\ref{tab:4}).
 
 \subsection{Imaging adds nothing measurable}\label{sec:3.4}
 
@@ -333,8 +341,8 @@ triggers \citep{brandes2008,taal2008,wen2023}. Four phase categories recovered m
 two published clinical comparators also found time since RT influential \citep{gomaa2025,leone2023}. Imaging models
 that pool scans from all phases can therefore report high AUCs for recognising the phase rather than tumour biology.
 The signal survived censoring corrections but ranks scans between phases, not within them, and part of it reflects
-who stays in follow-up. This is why PRISM places every scan in its phase, flags the 12 weeks after RT, and is
-intended for scans from the start of RT onwards. \todo{PENDING: intended-use AUC sentence.}
+who stays in follow-up. This is why PRISM places every scan in its phase, flags the 12 weeks after RT, and is intended for scans from the start of RT onwards. There its AUC is 0.60, which shows how much of the
+apparent discrimination on mixed cohorts comes from the phase of care.
 
 \textbf{Imaging, as tested here, showed no gain.} Even at the scan where progression was documented, volumes
 separated it from negatives with an AUC of only 0.68. Three features of the data explain this. The label is a
@@ -391,7 +399,7 @@ PRISM's first AUC of 0.80 came from one favourable split. Under repeated cross-v
 treatment-course variables reached about 0.70, or 0.68 after removing leaks found by its own audit, and radiomics,
 deep features (frozen or fine-tuned), resegmentation, a cleaner label and diffusion added no measurable
 discrimination. The phase of care drives discrimination on this task and should be reported as a stratum and
-treated as a confounder. PRISM is deployed as its corrected core model for surveillance from the start of RT, and
+treated as a confounder. PRISM is deployed as its corrected core model for surveillance from the start of RT, where its AUC is 0.60, and
 every prediction is recorded, explained and reported in a form that can be checked.
 
 
@@ -429,7 +437,7 @@ released and give a DOI or other persistent identifier.} Code: \todo{PENDING: pu
 tag.}
 
 \section*{Supplemental material}
-Supplemental data for this article (Supplementary S1--S22, Tables S1--S43) are provided as a separate file.
+Supplemental data for this article (Supplementary S1--S23, Tables S1--S45) are provided as a separate file.
 
 \section*{Notes on contributors}
 \todo{PENDING: a short biographical note for each author (no more than 200 words each).}
@@ -597,8 +605,10 @@ Is the segmentation the bottleneck? (all gliomas) & New masks raise detection of
 Does diffusion add? (CFB-GBM) & ADC radiomics adds $\geq$ 0.03 to conventional radiomics with CI $>$ 0 & +0.007 [$-$0.019, +0.035]; p = 0.151 & Not met \\
 Does fine-tuning the encoder help? & Core + fine-tuned score gains $\geq$ 0.03 with CI $>$ 0; validity: shuffled-outcome control scores about 0.5 alone (CI covering 0.5) and gains $\leq$ 0 in the stack & +0.009 [$-$0.022, +0.040]; control 0.476 [0.438, 0.514] alone, +0.005 [$-$0.006, +0.015] in the stack & Not met; control limit missed \\
 \addlinespace
-\multicolumn{4}{@{}l}{\textbf{Is the phase of care an artefact of censoring?}} \\
+\multicolumn{4}{@{}l}{\textbf{Do the findings survive censoring?}} \\
 Phase signal under censoring & R2 $-$ R0 $\geq$ 0.040 with phase-specific censoring weights and after excluding patients whose RT was never documented & +0.124 [+0.039, +0.232]; +0.057 [+0.009, +0.117] & Robust \\
+\addlinespace
+Imaging contrasts under censoring sensitivities & No imaging contrast gains $\geq$ 0.03 with CI $>$ 0 with phase-specific weights or with deaths counted as non-events & Largest change in any contrast 0.011; radiomics $-$0.021 and $-$0.035; fine-tuned +0.011 and +0.009 & Conclusions hold \\
 \addlinespace
 \multicolumn{4}{@{}l}{\textbf{Does the audit layer work?}} \\
 P1: conformal coverage & Coverage $\geq$ 0.78 on test scans with a known outcome & 0.841 [0.790, 0.885] & Met \\
