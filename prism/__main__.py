@@ -37,6 +37,8 @@ Analyses (read the prepared tables, write to $PRISM_OUTPUTS/results):
     finetune      fine-tuned SwinUNETR encoder for the 120-day label, nested inside the shared CV folds
     detection     detection of progression at the scan (progression scan vs stable scans): tabular arms, deep-arm
                   stacking onto the timing/treatment baseline, locked LUMIERE test
+    finetune_det  deep arms of the detection study (progression at the scan; current, subtraction, siamese inputs;
+                  permuted control; G5 triage retest), same network and cross-fit design as finetune
     reportuse     report generator v2: horizon fix, public-report style comparison, usefulness evaluation, LUMIERE
     figures       manuscript figures 1-4 and tables (re-fits the PRISM report split and the clipped split-variance arm)
 
@@ -75,6 +77,7 @@ STAGES = {
     "triage": "prism.analyses.triage_feasibility",
     "finetune": "prism.analyses.finetune_deep",
     "detection": "prism.analyses.detection",
+    "finetune_det": "prism.analyses.finetune_detection",
     "reportuse": "prism.analyses.report_usefulness",
     "figures": "prism.analyses.paper_figures",
 }
