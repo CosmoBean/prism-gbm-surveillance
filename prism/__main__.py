@@ -32,6 +32,8 @@ Analyses (read the prepared tables, write to $PRISM_OUTPUTS/results):
                   core model with the unknown-marker shortcut and molecular look-ahead removed
     intendeduse   deployed model (C2) in the scan-day intended-use population (RT started), within-phase AUCs,
                   phase-specific censoring and deaths-as-non-events sensitivity for C2 and the imaging contrasts
+    triage        triage feasibility: C2 + longitudinal volume trajectory, rule-out operating points (NPV) and
+                  decision curve of C2 in the intended use
     finetune      fine-tuned SwinUNETR encoder for the 120-day label, nested inside the shared CV folds
     reportuse     report generator v2: horizon fix, public-report style comparison, usefulness evaluation, LUMIERE
     figures       manuscript figures 1-4 and tables (re-fits the PRISM report split and the clipped split-variance arm)
@@ -68,6 +70,7 @@ STAGES = {
     "report": "prism.analyses.report_agent",
     "phasecens": "prism.analyses.phase_censoring",
     "intendeduse": "prism.analyses.intended_use",
+    "triage": "prism.analyses.triage_feasibility",
     "finetune": "prism.analyses.finetune_deep",
     "reportuse": "prism.analyses.report_usefulness",
     "figures": "prism.analyses.paper_figures",

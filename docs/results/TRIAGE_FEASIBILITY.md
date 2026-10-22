@@ -3,8 +3,8 @@
 Code: `prism/analyses/triage_feasibility.py` (`python -m prism triage`). Outputs:
 `outputs/results/analyses/triage_feasibility/`.
 
-Status: plan written and committed before any T1 / T2 quantity was computed on real labels. Results follow in a later
-commit.
+Status: plan committed before any T1 / T2 quantity was computed on real labels (fc2d247); full run 2026-10-21 (Results
+below).
 
 ## 0. Why, and what is already known
 
@@ -127,3 +127,103 @@ controls 1/G(H), censored 0; the headline weights).
 
 **Run** (step 2): `python -m prism triage --workers <n>` (75 ridge fits for the full-cohort arms + 75 refitted, then
 bootstraps; minutes on CPU, Slurm allocation). The plan section is snapshotted to `PLAN_snapshot.md` by the first run.
+
+## Results
+
+Run on 2026-10-21 (`run_info.json`: 25 workers, 1000 bootstrap draws, 12 s; Slurm allocation, CPU only). All files are
+in `outputs/results/analyses/triage_feasibility/`. Plan snapshot: `PLAN_snapshot.md` (git fc2d247). Before the run only
+the feature table and the leakage check were computed (no labels involved).
+
+**Checks** (`checks.csv`).
+
+- **Leakage**: for every one of the 249 index scans, all scans of the same patient dated after the index day were
+  perturbed (volumes × U(0.1, 10) + U(0, 50) cc) and 30% of them dropped, and the features were recomputed: maximum
+  deviation 0, identical missingness. The feature code also asserts that every history scan is dated ≤ the index day.
+- **Reproduction**: the recomputed C2 OOF predictions equal the stored `phase_censoring/oof_grade4_full` and
+  `oof_grade4_rt_started` C2 predictions (max deviation 1e-16), so the C2 column below is the published C2.
+- Feature coverage: 123 of 249 grade-4 scans (97 of 173 intended-use scans) have ≥ 1 earlier MRI; for the others the
+  slope and deviation features are missing (median-imputed in-fold with an indicator).
+
+### T1. C2 + trajectory (`auc.csv`)
+
+IPCW AUC(120 d), mean over 5 repeats, 95% paired patient-cluster bootstrap CI; Δ vs C2 paired.
+
+| Evaluation set (scans / events / non-events / censored) | Arm | AUC (95% CI) | Δ vs C2 (95% CI) | O/E | Slope |
+|---|---|---|---|---|---|
+| **Intended use, trained on all scans (PRIMARY)** (173 / 88 / 84 / 1) | C2 | 0.601 (0.515–0.686) | – | 1.01 | 0.53 |
+| | **C2 + trajectory** | **0.594 (0.504–0.681)** | **−0.008 (−0.074 to +0.052)** | 1.01 | 0.43 |
+| | trajectory only | 0.543 (0.451–0.639) | −0.058 (−0.184 to +0.064) | 1.14 | 0.30 |
+| Grade 4 overall, trained on all scans (249 / 93 / 117 / 39) | C2 | 0.678 (0.596–0.755) | – | 1.04 | 0.85 |
+| | C2 + trajectory | 0.674 (0.592–0.759) | −0.005 (−0.048 to +0.040) | 1.03 | 0.68 |
+| | trajectory only | 0.567 (0.480–0.652) | −0.111 (−0.218 to −0.007) | 0.97 | 0.33 |
+| Intended use, refitted inside intended use (secondary) | C2 | 0.595 (0.517–0.682) | – | 0.98 | 0.71 |
+| | C2 + trajectory | 0.615 (0.535–0.704) | +0.020 (−0.038 to +0.067) | 0.98 | 0.69 |
+| | trajectory only | 0.512 (0.425–0.602) | −0.083 (−0.203 to +0.025) | 0.99 | 0.12 |
+| Intended use with ≥ 1 earlier MRI, trained on all (descriptive) (97 / 50 / 46 / 1) | C2 | 0.630 (0.528–0.729) | – | 1.01 | 0.56 |
+| | C2 + trajectory | 0.610 (0.507–0.722) | −0.020 (−0.115 to +0.060) | 0.99 | 0.45 |
+| | trajectory only | 0.546 (0.397–0.679) | −0.084 (−0.273 to +0.090) | 1.10 | 0.44 |
+
+Trajectory features add nothing to C2, either overall or in the 97 scans that have a volume history. On their own they
+rank intended-use scans barely above chance (0.543, CI spans 0.5). Their largest mean standardised ridge coefficients
+(`coefficients.csv`, full-cohort C2 + trajectory fits) are the exponentially weighted ET level (+0.20, essentially the
+current ET volume), the deviation of the current ET and lesion volume from their smoothed history (+0.11, +0.10) and
+days since the ET nadir (+0.09). The robust slopes (ET −0.07, lesion 0.00) and the ratio to nadir (ET +0.03, lesion
+−0.04) carry almost no weight. The longer histories do not rescue the noise of single-scan volumes.
+
+### T2. Rule-out operating points in the intended use (`operating_points.csv`)
+
+Held-out predictions of the models trained on all scans; low risk = the lowest q fraction of each repeat's predictions;
+IPCW NPV is primary (marginal KM within intended use). With 1 censored scan, NPV on verified scans equals the IPCW NPV
+to 3 decimals for every row. Means over 5 repeats; 95% CIs from 1000 patient-cluster bootstrap draws with the threshold
+and weights re-derived in each draw.
+
+| Arm | Target low risk | Achieved (scans) | Events among low-risk scans | **NPV, IPCW (95% CI)** | Sensitivity | Specificity | Events missed |
+|---|---|---|---|---|---|---|---|
+| C2 | 20% | 20.3% (35.2) | 11.8 | **0.664 (0.508–0.786)** | 0.866 (0.809–0.909) | 0.279 (0.222–0.343) | 13.4% (9.1–19.1) |
+| C2 | 30% | 30.1% (52.0) | 19.6 | 0.623 (0.478–0.721) | 0.777 (0.704–0.824) | 0.386 (0.318–0.455) | 22.3% (17.6–29.6) |
+| C2 | 40% | 39.9% (69.0) | 28.6 | 0.583 (0.459–0.682) | 0.675 (0.600–0.729) | 0.476 (0.412–0.555) | 32.5% (27.1–40.0) |
+| C2 + trajectory | 20% | 20.2% (35.0) | 11.6 | **0.669 (0.515–0.803)** | 0.868 (0.818–0.914) | 0.279 (0.231–0.341) | 13.2% (8.6–18.2) |
+| C2 + trajectory | 30% | 30.1% (52.0) | 18.4 | 0.642 (0.488–0.767) | 0.791 (0.724–0.848) | 0.393 (0.331–0.470) | 20.9% (15.2–27.6) |
+| C2 + trajectory | 40% | 39.9% (69.0) | 27.6 | 0.597 (0.458–0.713) | 0.686 (0.607–0.759) | 0.486 (0.413–0.571) | 31.4% (24.1–39.3) |
+
+NPV difference C2 + trajectory − C2 (descriptive): +0.004 (−0.093 to +0.127) at 20%, +0.019 (−0.061 to +0.122) at 30%,
++0.013 (−0.060 to +0.086) at 40%.
+
+For reference, event prevalence among verified intended-use scans is 0.51, so "everyone low risk" has NPV 0.49. The
+best rule-out group (lowest 20%) still progresses within 120 days in about a third of scans (1 − NPV ≈ 0.34), and
+discarding it misses about 13% of all progressions. The descriptive curve (`npv_curve.csv`, points only) never reaches
+0.85 for any fraction from 5% to 50%. The highest value is 0.80 at 5% (C2 + trajectory; 9 scans, 1.8 events), and C2
+peaks at 0.72 (5%).
+
+**Decision curve** (`decision_curve.csv`; "treat" = flag for early review, prediction ≥ p_t; net benefit per scan,
+IPCW). Below p_t ≈ 0.30 both models equal treat-all (difference ≤ 0.005). C2 + trajectory exceeds treat-all by 0.001–0.002
+at p_t 0.10–0.20, with CI lower bounds at 0.000, which is clinically negligible. Between 0.35 and 0.50 the models exceed
+the better default by +0.007 to +0.063, but every CI includes 0 (e.g. C2 at 0.50: +0.063, −0.051 to +0.110). Above
+0.55 they are at or below treat-none (C2 + trajectory at 0.75: −0.072, −0.149 to −0.005). There is no threshold range
+with a net benefit that is clearly positive and of a useful size.
+
+### Verdict under the pre-specified rule (`rule.csv`)
+
+| Rule item | Result | Verdict |
+|---|---|---|
+| T1: C2 + trajectory − C2 ≥ +0.03 with CI excluding 0 (intended use, trained on all) | −0.008 (−0.074 to +0.052) | **Fails** |
+| T2: some q with ≥ 20% low risk and IPCW NPV lower bound ≥ 0.85 (C2 or C2 + trajectory) | best lower bound 0.515 (C2 + trajectory, 20%); best point 0.669 | **Fails** (all 6 rows) |
+| **Overall** | neither T1 nor T2 | **NO-GO on MU-Glioma-Post alone** |
+
+**Conclusion (fixed wording of the plan):** no triage model is supported on this data. Neither a longitudinal volume
+trajectory nor any rule-out threshold of the deployed model reaches a triage-useful operating point after RT. New data,
+labels (e.g. imaging-adjudicated progression rather than documented clinical progression) or modalities (e.g.
+perfusion, diffusion, spectroscopy, which separate true progression from treatment effect) are required.
+
+### Deviations and notes
+
+- **No DEVIATION** from the plan. Every pre-specified quantity was computed as written. The only computation before
+  the run was the feature table and the leakage check (no labels).
+- The quantile thresholds are taken from the evaluation predictions themselves. This uses no labels, but in practice
+  the threshold would be fixed from training data. With CIs this wide, the difference would not change the verdict.
+- The decision curve uses C2's predictions as they are. Their calibration slope in intended use is 0.53 (0.43 with
+  trajectory), so they are too spread out, which pushes the high-threshold net benefit below zero. Recalibration was not
+  pre-specified and was not done. It cannot raise the NPV or AUC, which depend only on the ranking.
+- Secondary result worth noting: refitted inside intended use, C2 + trajectory is +0.020 (−0.038 to +0.067), below the
+  +0.03 bar and with a CI spanning 0. It is not a rule item.
+- `paper/` and the other docs are untouched.
