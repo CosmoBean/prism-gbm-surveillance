@@ -3,7 +3,7 @@
 Code: `prism/analyses/intended_use.py` (`python -m prism intendeduse`). Outputs:
 `outputs/results/analyses/intended_use/`.
 
-Status: plan written and committed before any of the new quantities below was computed.
+Status: plan committed before any of the new quantities was computed (74eaaf5); full run 2026-10-21 (Results below).
 
 ## 0. Why
 
@@ -124,3 +124,132 @@ same three contrasts. Counts of recoded scans are reported per analysis set.
 
 **Run** (step 2): `python -m prism intendeduse --workers <n>`. It only rescores stored OOF predictions (bootstraps
 only), so a few minutes on CPU.
+
+## Results
+
+Run on 2026-10-21 (`run_info.json`: 32 workers, 1000 bootstrap draws, 19 s; Slurm allocation, CPU only). All files are
+in `outputs/results/analyses/intended_use/`. Plan snapshot: `PLAN_snapshot.md` (git 74eaaf5). AUC = mean over the 5
+repeats of the pooled-OOF IPCW AUC(120 d), 95% paired patient-cluster bootstrap CIs (1000 draws).
+
+**Checks** (`checks.csv`). The stored OOF predictions reproduce every published AUC to < 0.0006: core 0.698, C2 0.678,
+core + nested radiomics 0.666, core + fine-tuned stack 0.708, post-RT R2 0.549 and R2 + I2 0.610, and the refitted
+intended-use core 0.617 / C2 0.595. The bootstrap point estimate of each scheme equals the `evaluate_repeated` point
+estimate (asserted to 1e-9).
+
+### R1. Counts (`counts.csv`)
+
+| Set | Scans / patients | Events | Non-events | Censored | Deaths w/o progression ≤ 120 d (recoded in S2) |
+|---|---|---|---|---|---|
+| Grade 4, full | 249 / 126 | 93 | 117 | 39 | 14 |
+| … removed by the rule (pre-RT as of the scan) | 76 / 50 | 5 | 33 | 38 | 14 |
+| **Grade 4, intended use** | **173 / 86** | **88** | **84** | **1** | **0** |
+| … during RT | 6 / 6 | 5 | 1 | 0 | 0 |
+| … within 12 weeks after RT | 98 / 76 | 47 | 51 | 0 | 0 |
+| … later post-RT | 69 / 40 | 36 | 32 | 1 | 0 |
+| Grade 4, post-RT (phase-ladder cohort) | 167 / 84 | 83 | 83 | 1 | 0 |
+| All gliomas, full | 308 / 155 | 100 | 156 | 52 | 16 |
+| All gliomas, intended use | 193 / 95 | 90 | 98 | 5 | 0 |
+
+The rule removes 38 of the 39 censored grade-4 scans and all 14 deaths without progression within 120 d. Inside the
+intended-use population (and the post-RT cohort) both sensitivities therefore change essentially nothing. This is a
+property of the data, not of the methods: every death without documented progression within 120 d follows a pre-RT scan.
+
+### R2. C2 in the intended-use population (`headline.csv`, `contrasts.csv`)
+
+Marginal KM within the population (headline estimator). Calibration: O/E = KM risk at 120 d / mean prediction; slope
+IPCW-weighted.
+
+| Population | Model | AUC (95% CI) | Δ vs core (95% CI) | O/E | Slope | Brier |
+|---|---|---|---|---|---|---|
+| Grade 4, intended use | **C2, trained on all scans (PRIMARY)** | **0.601 (0.515–0.686)** | −0.028 (−0.060 to −0.002) | 1.01 | 0.53 | 0.245 |
+| | core, trained on all scans | 0.629 (0.547–0.714) | – | 1.01 | 0.65 | 0.240 |
+| | C2, refitted in intended use | 0.595 (0.517–0.682) | −0.022 (−0.047 to −0.002) | 0.98 | 0.71 | 0.245 |
+| | core, refitted in intended use | 0.617 (0.539–0.703) | – | 0.98 | 0.75 | 0.240 |
+| All gliomas, intended use | C2, trained on all scans | 0.637 (0.550–0.721) | −0.015 (−0.049 to +0.013) | 1.03 | 0.91 | 0.236 |
+| | C2, refitted in intended use | 0.661 (0.579–0.741) | −0.013 (−0.045 to +0.014) | 0.99 | 0.93 | 0.230 |
+| Grade 4, full (reference) | C2 | 0.678 (0.596–0.755) | −0.020 (−0.043 to +0.000) | 1.04 | 0.85 | 0.223 |
+
+Under the pre-specified wording: in grade 4 the deployed model shows **discrimination above chance in the
+intended-use population** (lower bound 0.515 > 0.5, by a small margin), and **calibration in the large is adequate**
+(O/E 1.01). It loses 0.077 AUC compared with the full cohort, because the easy pre-RT controls leave the evaluation set.
+The calibration slope of 0.53 means that, inside intended use, the full-cohort model's predictions are too spread out:
+part of their range encodes the pre-RT vs post-RT difference, which no longer varies here. Refitting in the population
+gives slope 0.71 without improving AUC. All gliomas: 0.637 (0.550–0.721), above chance, O/E 1.03.
+
+### R3. Within-phase AUCs inside intended use (`within_phase.csv`)
+
+Marginal KM within the intended-use population. CIs only for strata with ≥ 10 verified events and non-events.
+
+| Phase (events / non-events) | C2, all scans (PRIMARY) | core, all scans | C2, refitted | core, refitted |
+|---|---|---|---|---|
+| during RT (5 / 1) | 0.400 (descriptive only) | 0.440 | 0.040 | 0.160 |
+| within 12 weeks after RT (47 / 51) | 0.631 (0.518–0.734) | 0.663 (0.556–0.765) | 0.613 (0.499–0.720) | 0.639 (0.528–0.739) |
+| later post-RT (36 / 32) | 0.583 (0.431–0.742) | 0.598 (0.447–0.755) | 0.529 (0.375–0.687) | 0.552 (0.404–0.713) |
+| **pooled within-phase pairs** (88 / 84) | **0.616 (0.524–0.698)** | 0.642 (0.555–0.724) | 0.585 (0.498–0.671) | 0.610 (0.526–0.697) |
+
+All gliomas, C2 (all scans): early post-RT 0.660 (0.553–0.762), later 0.637 (0.490–0.773), pooled within-phase 0.652
+(0.568–0.732).
+
+The pooled within-phase AUC of C2 (0.616) is close to its intended-use AUC (0.601), so little of the intended-use
+discrimination comes from ranking one phase against another. The later post-RT CI spans 0.5.
+
+### R4. Sensitivity 1 (phase-specific censoring) and Sensitivity 2 (deaths as non-events)
+
+Source: `schemes.csv`, `contrasts.csv`. S1 = `phase5_km`; S2 = `deaths_nonevent_km` (deaths recoded, remaining
+censoring by marginal KM). The existing unweighted `deaths_as_controls` scheme gives the same values to ±0.002 and is
+in the files. Under S1 and S2, CIs come from `phase_censoring.bootstrap` (weights re-estimated in every draw).
+
+**C2 headline**
+
+| Set | Marginal (headline) | S1 phase-specific weights | S2 deaths as non-events |
+|---|---|---|---|
+| Grade 4, full | 0.678 (0.596–0.755) | 0.734 (0.648–0.814); Δ vs marginal +0.056 (+0.025 to +0.091) | 0.706 (0.628–0.787); Δ +0.028 (+0.011 to +0.050) |
+| Grade 4, intended use (C2 all scans) | 0.601 (0.515–0.686) | 0.601 (0.518–0.684); Δ −0.000 | 0.601 (identical: nothing recoded) |
+| All gliomas, full | 0.706 (0.628–0.777) | 0.740 (0.671–0.810) | 0.723 (0.655–0.794) |
+| All gliomas, intended use (C2 all scans) | 0.637 (0.550–0.721) | 0.637 (0.557–0.716) | 0.637 (identical) |
+
+S2 also improves calibration in the full cohort (grade 4 C2: O/E 1.04 → 0.99, slope 0.85 → 0.99).
+
+**Imaging contrasts (grade 4)**: ΔAUC (95% CI), and the change vs marginal (difference of differences).
+
+| Contrast | Marginal | S1 phase-specific weights | S2 deaths as non-events |
+|---|---|---|---|
+| core + nested radiomics − core (full) | −0.032 (−0.077 to +0.017) | −0.021 (−0.061 to +0.019); change +0.011 (−0.005 to +0.029) | −0.035 (−0.075 to +0.010); change −0.002 (−0.011 to +0.005) |
+| core + fine-tuned stack − core (full) | +0.009 (−0.021 to +0.042) | +0.011 (−0.012 to +0.035); change +0.002 (−0.008 to +0.010) | +0.009 (−0.018 to +0.038); change −0.000 |
+| R2 + I2 − R2 (post-RT surveillance) | +0.061 (−0.033 to +0.155) | +0.061 (−0.032 to +0.155); change +0.000 | +0.061 (−0.033 to +0.155); nothing recoded |
+
+Secondary, descriptive (scored on intended-use scans only, marginal KM within the subset): core + nested radiomics −
+core −0.033 (−0.097 to +0.034); core + fine-tuned stack − core +0.010 (−0.031 to +0.054).
+
+The sensitivities move the absolute AUCs of the full cohort (because they mostly reweight pre-RT controls), but they
+move the imaging contrasts by at most 0.011. That is expected: both arms of each contrast share the same censoring
+weights, and the reweighted scans are ones every model ranks the same way.
+
+### R5. Verdict under the pre-specified rule (`rule.csv`)
+
+| Rule item | Result | Verdict |
+|---|---|---|
+| Any imaging contrast with ΔAUC ≥ +0.03 and CI excluding 0 under S1 or S2 | Radiomics −0.021 / −0.035; fine-tuned +0.011 / +0.009; R2 + I2 +0.061 / +0.061, but its CI includes 0 under both (lower −0.032 / −0.033) | **No: imaging conclusions hold** |
+| C2 headline lower CI > 0.5 in grade 4 under marginal, S1, S2 | 0.596 / 0.648 / 0.628 | **Holds** |
+| C2 (trained on all scans) in grade-4 intended use | 0.601 (0.515–0.686), O/E 1.01 | **"Discrimination above chance in the intended-use population"; calibration in the large adequate** |
+| Same, all gliomas | 0.637 (0.550–0.721), O/E 1.03 | Above chance; adequate |
+
+**Headline conclusions hold.** The R2 + I2 point gain stays above +0.03 under both sensitivities (unchanged from the
+primary phase-ladder result, where it is "not supported", permutation p = 0.208). Its CI still includes 0, so it does not
+meet the bar.
+
+### R6. Deviations and notes
+
+- **DEVIATION (procedure).** Before the 1000-draw run, the module was run once as a pipeline test with 50 bootstrap
+  draws on the real labels (grade 4 only). That test wrote `PLAN_snapshot.md`, from the committed plan text (git
+  74eaaf5). The plan was not changed after it. The point estimates do not depend on the number of draws.
+- **DEVIATION (minor).** The rule's "C2 headline under marginal" item in `rule.csv` uses the scheme bootstrap CI
+  (0.598–0.763), not the `evaluate_repeated` CI (0.596–0.755) that the plan names for the headline. Both lower bounds
+  are > 0.5, so the verdict is the same. The tables above report the `evaluate_repeated` CI.
+- Inside intended use the 5-level phase has no pre-RT levels, so S1 there is the same as stratifying by the 3
+  remaining phases. With 1 censored scan (grade 4) or 5 (all gliomas), any weighting gives the same AUC to 0.001.
+- During RT (5 events / 1 non-event) has no interpretable AUC (values from 0.04 to 0.44 depend on one control).
+- **Suggested text for the paper** (not applied; `paper/` untouched): define the intended use as "scans on or after the
+  documented start of radiotherapy", which can be checked on the scan day. Report the deployed model there as 0.601
+  (0.515–0.686), O/E 1.01, slope 0.53, with within-phase pooled 0.616 (0.524–0.698). Use this in place of the
+  `rt_pathway` statement (0.625), which needs future information.
