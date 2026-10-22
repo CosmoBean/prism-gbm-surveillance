@@ -263,3 +263,31 @@ Stacking:
   - **Ridge:** c3 BASE_PRE with the verified ridge (`c3.fit_predict`), seed = repeat.
   - **Within-phase CIs:** only for strata with ≥ 10 positives and ≥ 10 negatives (`phase_censoring.MIN_STRATUM`).
   - **LUMIERE previous scan:** the most recent strictly earlier study not rated Pre-Op with a usable segmentation.
+
+### EXPLORATORY (post hoc, 2026-10-22): how much of "imaging only" (I) is imaging?
+
+Added after the results, not prespecified. I contains three inputs that encode timing rather than the image: days
+since the previous scan, the has-previous flag, and a nadir window that starts at the documented RT start or end. On
+their own in the grade-4 intended use: days since previous 0.740, has-previous 0.726. Re-run with pure image inputs
+(`scripts/exploratory_pure_imaging_detection.py`; same folds, ridge, bootstrap):
+- **I_scan:** volumes + morphology / relative intensities at the scan only.
+- **I_pure:** I_scan + log volume ratios to the previous scan (0 if none) + ET / lesion ratio to the smallest volume
+  over the whole history (no RT-dependent window). No days, no flags.
+
+Grade 4, intended use, primary negatives (62/84, 80 patients):
+
+| arm | AUC (95% CI) | later post-RT (56/32) | phase-stratified |
+|---|---|---|---|
+| B1 (timing + treatment + clinical) | 0.822 (0.749–0.902) | 0.638 (0.488–0.799) | 0.640 (0.508–0.784) |
+| I (as run) | 0.806 (0.747–0.865) | 0.627 (0.523–0.720) | 0.664 (0.576–0.750) |
+| **I_pure** | **0.709 (0.630–0.781)** | 0.650 (0.541–0.742) | **0.677 (0.580–0.767)** |
+| I_scan | 0.659 (0.567–0.733) | 0.655 (0.542–0.755) | 0.680 (0.573–0.777) |
+| B1 + I_pure | 0.821 (0.744–0.894) | 0.622 (0.477–0.771) | 0.654 (0.527–0.790) |
+
+Contrasts: I − I_pure +0.097 (+0.047 to +0.153) overall but −0.013 (−0.057 to +0.037) within phase, so the extra
+0.10 of I was timing. I_pure − B1 −0.113 (−0.227 to −0.012) overall, +0.037 (−0.150 to +0.194) within phase.
+B1 + I_pure − B1 −0.001 (−0.052 to +0.046). All scans gives the same picture (I_pure 0.712).
+
+Reading: images alone detect progression at about 0.71 and, compared within a phase of care, at about 0.68, at least
+as well as timing within a phase (0.64). Timing wins across phases (0.82) because progression scans come late. The
+two views overlap: combining them does not beat timing.
