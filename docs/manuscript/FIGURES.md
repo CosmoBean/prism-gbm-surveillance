@@ -21,12 +21,13 @@ that states what the figure must show, and are replaced automatically once the f
 | Manuscript | Content | File | Status |
 |---|---|---|---|
 | Figure 1 | PRISM architecture and data flow | `fig5a_architecture.pdf` | done |
-| Figure 2 | **Study design**: cohorts and outcome; initial split → 500 splits → 5×5 repeated CV, LUMIERE locked test, CFB-GBM CV; prespecified questions pointing to Table 4 | `fig_study_design.pdf` | **placeholder** (spec in the box and in `main.tex`) |
+| Figure 2 | **Study design**: cohorts and outcome; initial split → 500 splits → 5×5 repeated CV, LUMIERE locked test, CFB-GBM CV; prespecified questions pointing to Table 4 | `fig_study_design.pdf` | done (2026-10-21; `prism/analyses/figures_extra.py`) |
 | Figure 3 | Initial evaluation split (old "Figure 1") | `fig1_single_split.pdf` | done |
 | Figure 4 | 500 splits (old "Figure 2") | `fig2_split_variance.pdf` | done |
 | Figure 5 | Ablation ladder, ΔAUC forest, SHAP shares (old "Figure 3") | `fig3_clinical_vs_radiomics.pdf` | done |
 | Figure 6 | Phase of care (old "Figure 4") | `fig4_phase_of_care.pdf` | done |
-| Figure 7 | (A) example v2 report; (B) risk–coverage | `fig6a_example_report_v2.pdf`, `fig5_system_risk_coverage.pdf` | done |
+| Figure 7 | Imaging examples: patient across phases with masks; dataset vs resegmented ET; ET volume noise (selection rules in the module docstring) | `fig_imaging_examples.pdf` | done (2026-10-21; `figures_extra.py`) |
+| Figure 8 | (A) example report; (B) risk–coverage | `fig6a_example_report_v2.pdf`, `fig5_system_risk_coverage.pdf` | done |
 | Graphical abstract | Optional journal extender (could adapt Figure 1 or 2) | — | not planned |
 
 Tables (main text): 1 cohorts; 2 single split vs 500 splits vs CV; 3 imaging branches vs core (ΔAUC); **4 prespecified

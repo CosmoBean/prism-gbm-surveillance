@@ -347,7 +347,7 @@ apparent discrimination on mixed cohorts comes from the phase of care.
 \textbf{Imaging, as tested here, showed no gain.} Even at the scan where progression was documented, volumes
 separated it from negatives with an AUC of only 0.68. Three features of the data explain this. The label is a
 documentation event: one in eight grade 4 events was documented on clinical grounds alone. Volume series were noisy:
-ET changed more between scans less than 14 days apart (median 3.2-fold) than between scans 45 to 90 days apart. And
+ET changed more between scans less than 14 days apart (median 3.2-fold) than between scans 45 to 90 days apart (Figure~\ref{fig:imaging}C--D). And
 the cohort is small: by the Riley criteria even the core model would need about ten times more scans
 \citep{riley2020}. Small effects cannot be excluded: the upper confidence bounds for imaging reach 0.02 to 0.16, and
 training the encoder on the label gave +0.009. Where imaging performs well in the literature, it uses diffusion and
@@ -682,18 +682,12 @@ flags), from which the grounded report is written.}
 % Figure 2 (PLANNED): docs/manuscript/figures/fig_study_design.pdf; spec in docs/manuscript/FIGURES.md, "Figure plan"
 \begin{figure}[!htbp]
 \centering
-\figslot{fig_study_design.pdf}{0.40\textheight}{To be drawn. Three columns, left to right.
-(1) \textbf{Data}: MU-Glioma-Post (155 patients, 308 index scans; grade 4: 126 / 249), LUMIERE (61 / 132, external),
-CFB-GBM (77 patients with ADC); index-scan rule; label = documented progression within 120 days, censoring at last
-follow-up or death.
-(2) \textbf{Evaluation}: the first split (29 test patients) $\rightarrow$ 500 splits of the same design
-$\rightarrow$ 5 $\times$ 5 repeated cross-validation grouped by patient (every fitted step inside the training fold;
-nested selection; stacking); LUMIERE locked external test; CFB-GBM 20 $\times$ 5 cross-validation.
-(3) \textbf{Questions}: ablation of the five branches, phase ladder R0--R3 $\times$ I1--I4, the five imaging
-explanations, audit (P1, P2) and reports, each pointing to its rule in Table~4.
-Vector PDF, colour, same palette and font as Figures 3 to 5.}
-\caption[Study design]{\textbf{Study design.} The three cohorts, the outcome, the three ways of evaluating the same
-model and the prespecified questions (rules and answers in Table~\ref{tab:4}).}
+\includegraphics[width=\linewidth,height=0.40\textheight,keepaspectratio]{fig_study_design.pdf}
+\caption[Study design]{\textbf{Study design.} (A) MU-Glioma-Post was used for development, LUMIERE as a locked
+external test and CFB-GBM for the diffusion analysis. (B) Evaluation moved from one split to 500 splits of the same
+design and then to repeated cross-validation grouped by patient, with every fitted step inside the training fold.
+(C) PRISM's core model, its optional imaging branches, the per-scan audit record and the grounded report, and the
+questions tested against prespecified rules (Table~\ref{tab:4}).}
 \label{fig:design}
 \end{figure}
 
@@ -762,9 +756,15 @@ Diamond, prespecified primary contrast (R2 + I2 vs R2; Table~\ref{tab:4}); the p
 % Figure (imaging examples): docs/manuscript/figures/fig_imaging_examples.pdf (prism/analyses/figures_extra.py)
 \begin{figure}[!htbp]
 \centering
-\figslot{fig_imaging_examples.pdf}{0.45\textheight}{Being drawn. (A) One grade 4 patient across phases of care, T1c
-with mask contours; (B) original vs resegmented ET; (C) ET volume over time for closely spaced scans.}
-\caption[Imaging examples]{\textbf{Imaging examples.} \todo{PENDING legend.}}
+\includegraphics[width=\linewidth,height=0.62\textheight,keepaspectratio]{fig_imaging_examples.pdf}
+\caption[Imaging examples]{\textbf{Why imaging struggles on this task.} MU-Glioma-Post images (TCIA, CC BY 4.0;
+\citealp{mahmoud2025}). (A) One grade 4 patient across phases of care, chosen by a fixed rule (the patient with a
+progression scan whose index scans cover the most phases): axial T1c and FLAIR at the slice of largest enhancing
+tumour, with mask contours, the day since diagnosis, the phase and the 120-day outcome. (B) Enhancing tumour from the
+dataset mask and from the BraTS 2021 SwinUNETR resegmentation, for the grade 4 scan with the median Dice (0.83). (C)
+Enhancing tumour volume over time in four patients with scans 14 days or less apart (highlighted, with the fold
+change). (D) Fold change in enhancing tumour volume between consecutive scans by interval, with medians: volumes
+changed by a median of 3.2-fold over 14 days or less, no less than over longer intervals.}
 \label{fig:imaging}
 \end{figure}
 
