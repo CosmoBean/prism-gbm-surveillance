@@ -127,6 +127,24 @@ not now, perhaps later in the paper; if never, the reserve.
   the AUC only by teaching the model the treatment timeline" is a finding.
 - British spelling with -ise; SI units upright (journal rules: [JOURNAL_RULES.md](JOURNAL_RULES.md)).
 
+**Voice: what Claude's default sounds like, and what to write instead**
+
+Rules about arrangement do not stop a writer's default voice from coming back. Claude's default is recognisable,
+and the author noticed it in abstract draft 2. Check every draft for these and rewrite them:
+- slogans built on contrast: "X, not Y", "not X but Y", "says how well…, not what…";
+- dramatic short sentences that announce instead of explain: "Taking the evidence apart showed why.";
+- abstractions doing things: "the record grounds a report", "the images held their own", "the evidence speaks";
+- colon reveals, triplets, and a closing line written to be quoted;
+- the same rhythm in every sentence.
+
+Write instead as a scientist explaining to a colleague what they did and what they found:
+- "we" and the past tense for what we did; the present for what is true;
+- reasoning carried by ordinary connectives (because, so, which suggested, we therefore);
+- sentences whose length follows the thought, some long, some short, none written for effect;
+- concrete subjects: patients, scans, models, dates, not "the evidence" or "the story".
+
+Watson & Crick's first sentence is modest and plain. Feynman reasons out loud. Neither uses a slogan.
+
 **Before and after, from our first draft**
 
 | First draft | Why it fails | Rewritten |
@@ -193,3 +211,6 @@ Add each reaction as a dated, one-line rule.
   body with its intended-use result; the abstract need not quote it.
 - 2026-10-23: "exposes leaks that the AUC hid" reads as self-contradictory in a paper full of AUCs. Say what an
   AUC cannot tell (what the model uses), not that the AUC was wrong.
+- 2026-10-23: draft 2 fell back into Claude's default voice (contrast slogans, staccato, abstractions as subjects).
+  The rules above were about arrangement; voice needs its own check (section 6, "Voice"). Best remedy: imitate a
+  sample of the author's own writing or a paragraph they choose, not rules alone.
