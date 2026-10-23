@@ -23,16 +23,19 @@ Alternatives:
   → give the images more structure step by step and watch where each gain comes from → what is left in the
   intended use → what a system can honestly offer.
 
-## Abstract (draft 3, 149 words, one number)
+## Abstract (draft 4 = draft 1 with a new ending, 149 words)
 
-> We set out to predict, from a surveillance MRI, whether a glioma would progress; our first model reached an AUC of
-> 0.80 on held-out patients. A model given no images scored higher on the same patients, so we asked what our model
-> had learned to see. We therefore built PRISM so that the evidence from the images and from the treatment timeline
-> is kept apart and recorded for every scan. On MU-Glioma-Post, the timeline explained most of what any model could
-> do, because progression is usually called late in treatment and a model that knows the date can find it. Each
-> assumption we built into the image model raised its score mostly by giving it that date. Among scans from the same
-> phase of care, the images were as informative as the timeline. PRISM's record shows what the model used, and its
-> reports can be checked against that record.
+> Models that predict glioma progression from surveillance MRI can score well without learning much about the
+> tumour. We built PRISM, which keeps image and treatment-timeline evidence apart and records what each contributed
+> at every scan. On MU-Glioma-Post, PRISM's first evaluation reached an AUC of 0.80 on one test split, but a model
+> with no images did better on the same split, and over 500 splits the result averaged 0.72. At the scan where
+> progression was called, clinical and timeline data alone reached 0.82. Each assumption built into the image model
+> raised its AUC, from 0.66 to 0.81, but only by encoding the timeline; within a phase of care, images held at about
+> 0.68, as much as the timeline. PRISM therefore shows both kinds of evidence side by side for every scan, and flags
+> the weeks after radiotherapy, when pseudoprogression is common and neither has been shown to be reliable.
+
+Draft 1's last two sentences (120-day AUC 0.60; "leaks the AUC hid"; reports) were removed at the author's request
+(2026-10-23). Drafts 2 and 3 are in git history; the author preferred draft 1's voice.
 
 ## The argument in figures
 

@@ -214,3 +214,7 @@ Add each reaction as a dated, one-line rule.
 - 2026-10-23: draft 2 fell back into Claude's default voice (contrast slogans, staccato, abstractions as subjects).
   The rules above were about arrangement; voice needs its own check (section 6, "Voice"). Best remedy: imitate a
   sample of the author's own writing or a paragraph they choose, not rules alone.
+- 2026-10-23: the author preferred abstract draft 1's voice (direct, concrete numbers, semicolon-joined contrasts) to
+  drafts 2 and 3; only its ending was wrong. Revise conservatively: change the sentences that are wrong, keep the
+  ones that work, do not rewrite a whole passage to fix one part.
+- 2026-10-23: agree on the results and the story (STORY.md) before writing prose.
