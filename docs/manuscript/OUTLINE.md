@@ -23,16 +23,16 @@ Alternatives:
   → give the images more structure step by step and watch where each gain comes from → what is left in the
   intended use → what a system can honestly offer.
 
-## Abstract (draft, 146 words)
+## Abstract (draft 2, 150 words, one number)
 
-> Models that predict glioma progression from surveillance MRI can score well without learning much about the
-> tumour. We built PRISM, which keeps image and treatment-timeline evidence apart and records what each contributed
-> at every scan. On MU-Glioma-Post, PRISM's first evaluation reached an AUC of 0.80 on one test split, but a model
-> with no images did better on the same split, and over 500 splits the result averaged 0.72. At the scan where
-> progression was called, clinical and timeline data alone reached 0.82. Each assumption built into the image model
-> raised its AUC, from 0.66 to 0.81, but only by encoding the timeline; within a phase of care, images held at about
-> 0.68, as much as the timeline. From the start of radiotherapy, PRISM's 120-day risk reached an AUC of 0.60. Its
-> audit exposed leaks the AUC hid, and all 249 reports passed a faithfulness check.
+> A model that predicts glioma progression from surveillance MRI can score well without looking at the tumour. An
+> AUC says how well a model ranks scans, not what it has learned to see. We built PRISM to keep apart the two kinds
+> of evidence a clinician weighs, images and the treatment timeline, and to record what each contributed. On MU-
+> Glioma-Post, PRISM's first forecast of progression reached an AUC of 0.80, yet a model with no images did better
+> on the same test set. Taking the evidence apart showed why. Progression is called late in treatment, so the
+> timeline alone detected it almost as well as everything combined, and each assumption built into the image model
+> raised its score mainly by teaching it the timeline. Within a phase of care, the images held their own. The same
+> record exposed shortcuts in the model and grounds a report a clinician can check.
 
 ## The argument in figures
 
@@ -101,8 +101,9 @@ Each figure makes one claim; its caption's first sentence is that claim.
 
 ## Open decisions for the author
 1. Title.
-2. Whether the paper keeps both questions (120-day risk and detection) or leads with detection. The outline keeps
-   both: 120-day risk is the clinical motivation, and detection is where the images' contribution can be measured.
+2. ~~Both questions or detection first~~ (author, 2026-10-23): 120-day risk is not the headline. It is the
+   setting of the first 0.80 (Results 1) and gets one paragraph with its intended-use result (Results 4); the
+   argument is carried by detection at the scan, where the evidence can be taken apart.
 3. The PRISM name (clash with arXiv 2610.13510) and the relation to Christodoulou 2026.
 
 ## Numbers still to confirm before prose

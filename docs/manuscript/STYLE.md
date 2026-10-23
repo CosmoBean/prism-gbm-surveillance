@@ -59,8 +59,9 @@ buries the argument and signals defensiveness.
 Selection is not concealment. The line is drawn here:
 
 **Always in the main text (never withheld). These would change what a reader concludes:**
-- the headline number in the setting where the system is meant to be used (the intended-use AUC of 0.60 for
-  120-day risk), next to the more flattering number;
+- for any task the paper presents the system as doing, its performance where the system is meant to be used,
+  next to the more flattering number. This belongs in the Results; the abstract carries it only if the abstract
+  makes a claim about that task. (120-day risk: the intended-use AUC of 0.60 stays in the Results and Discussion.);
 - the strongest baseline: what timing and treatment alone achieve, whenever we report a model that uses them;
 - the within-phase result, whenever an across-phase number could be read as image signal;
 - which analyses were planned in advance and which were exploratory (one word in place is enough);
@@ -95,6 +96,11 @@ not now, perhaps later in the paper; if never, the reserve.
   the full model scored 0.84.
 - **Contrasts beat levels.** Readers remember "the same model fell from 0.87 to 0.72", not two separate AUCs in
   two paragraphs.
+- **The abstract carries one or two numbers**, the ones the claim cannot do without. A sequence of numbers (a
+  ladder, a list of AUCs) is told in words in the abstract and shown in a figure in the paper.
+- **Do not argue against the metric you lean on.** AUC measures how well a model ranks scans; the audit shows what
+  it uses. Frame the two as complementary ("an AUC cannot say what a model has learned to see"), never as "the
+  audit found what the AUC hid" next to a column of AUCs.
 - **Precision:** two decimals in prose (0.82); three in tables only when differences are small. No p-values when an
   interval says the same thing.
 - **Name things by what they are, not by codes.** "The timing model", "images alone", "the full model": not B1,
@@ -181,3 +187,9 @@ Add each reaction as a dated, one-line rule.
   necessarily another model.
 - 2026-10-23: tight, about 80%; leave the other 20% to the reviewers' curiosity. Not disinformation: selection of
   what to reveal, and when, for a better story.
+- 2026-10-23: the abstract had too many numbers (0.66 → 0.81 and four others). Keep one or two; tell sequences in
+  words.
+- 2026-10-23: 120-day risk is not the headline. It is where the problem was found (the first 0.80) and stays in the
+  body with its intended-use result; the abstract need not quote it.
+- 2026-10-23: "exposes leaks that the AUC hid" reads as self-contradictory in a paper full of AUCs. Say what an
+  AUC cannot tell (what the model uses), not that the AUC was wrong.
