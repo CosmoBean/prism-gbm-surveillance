@@ -23,16 +23,16 @@ Alternatives:
   → give the images more structure step by step and watch where each gain comes from → what is left in the
   intended use → what a system can honestly offer.
 
-## Abstract (draft 3, 152 words, one number)
+## Abstract (draft 3, 149 words, one number)
 
 > We set out to predict, from a surveillance MRI, whether a glioma would progress; our first model reached an AUC of
 > 0.80 on held-out patients. A model given no images scored higher on the same patients, so we asked what our model
 > had learned to see. We therefore built PRISM so that the evidence from the images and from the treatment timeline
 > is kept apart and recorded for every scan. On MU-Glioma-Post, the timeline explained most of what any model could
-> do, because progression tends to be called late in treatment and a model that knows the date can find it. Each
+> do, because progression is usually called late in treatment and a model that knows the date can find it. Each
 > assumption we built into the image model raised its score mostly by giving it that date. Among scans from the same
-> phase of care, the images were as informative as the timeline. PRISM's record shows a clinician what the model
-> used, and its reports can be checked against that record.
+> phase of care, the images were as informative as the timeline. PRISM's record shows what the model used, and its
+> reports can be checked against that record.
 
 ## The argument in figures
 
