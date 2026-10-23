@@ -1,73 +1,112 @@
-# Manuscript outline (2026-10-15, PRISM-paper framing)
+# Outline: the argument of the PRISM paper (layer 1)
 
-**Framing (decided by the user, 2026-10-15).** This is the PRISM paper. PRISM (Post-treatment Response Intelligence
-and Surveillance Monitor) is the authors' own, unpublished system (first version: `report/original_prism_report/`).
-PRISM = the full multimodal pipeline (clinical + treatment phase + volumes + radiomics + deep encoder), every branch
-ablated honestly; the deployed configuration is the clinical + treatment-phase **core model** with the imaging branches
-as optional modules. The report generator is kept and rebuilt on the per-scan audit record (grounded; every statement
-traceable to a record field), with a faithfulness evaluation (`docs/results/REPORT_AGENT.md`).
-The original 0.80 single-split result is "our initial single-split evaluation": a transparent self-correction.
+**Status: draft for the author's reaction (2026-10-23).** It replaces the 2026-10-15 outline (in git history).
+Rules: [STYLE.md](STYLE.md). Left for reviewers: [RESERVE.md](RESERVE.md). Once this outline is settled, the next
+layer is the skeleton (first sentences only), then prose in `paper/main.tex`.
 
-Source of truth: `paper/main.tex`, `paper/supplement.tex`. Number sources: `paper/SOURCE_MAP.md`. Figures:
-[FIGURES.md](FIGURES.md).
+## Title
 
-**Title.** *PRISM: an auditable, phase-aware pipeline for post-treatment glioma surveillance — rigorous evaluation of
-imaging, clinical and treatment-course information* (alternatives in [DRAFT_NOTES.md](DRAFT_NOTES.md)).
+**What has a glioma surveillance model learned to see? Separating image and treatment-timeline evidence with PRISM**
 
-**One-sentence message.** PRISM predicts documented progression within 120 days of a post-treatment glioma MRI and
-returns an audit record and a grounded clinician report; its initial 0.80 came from a favourable split (composition,
-phase of care, a treatment-date leak in a comparator), and under rigorous evaluation its clinical + treatment-phase
-core reaches about 0.70 while radiomics and deep imaging branches add nothing measurable.
+Alternatives:
+- *Images or the calendar? An auditable system for glioma surveillance MRI*
+- *PRISM: keeping image and treatment-timeline evidence apart in glioma surveillance*
 
-## Terminology (defined once in the text)
-- **PRISM v1** — the initial pipeline: calibrated radiomics LR + random-weight SwinUNETR-style encoder + late-fusion
-  MLP + agentic report (RANO rules, concordance, GPT-4.1-mini).
-- **PRISM's initial radiomics model** (was "PRISM report model"); **initial radiomics pipeline** (its feature
-  re-selection per split); **initial PRISM fusion pipeline** (v1 fusion MLP).
-- **Our initial evaluation split** (was "PRISM report split"; seed 62 of v1's split search).
-- **Core model** = clinical + timing + as-of-scan treatment, ridge (= "baseline" in tables, figures, Supplement).
-- Never "published" for PRISM.
+## The question, the claim, the investigation
 
-## 1. Introduction
-1. Clinical problem: surveillance MRI, pseudoprogression, documented progression as a pragmatic endpoint; need for a
-   checkable probability.
-2. Imaging literature on the task; Christodoulou 2026 (separate work), Rai 2026; none returns a checkable account.
-3. Known problems: split variance, external drops, missing clinical comparators.
-4. Phase of care as an unrecognised confounder; leakage of future treatment.
-5. PRISM's design goals: prediction, interpretability, auditable clinician report; PRISM v1 and our initial split.
-6. Contributions: (i) rebuilt PRISM (as-of inputs, ablatable branches, audit record, grounded report); (ii)
-   self-correction of the initial evaluation; (iii) branch-by-branch ablation, internal/external/third cohort, phase
-   of care as driver; (iv) audit layer and report generator against pre-specified criteria.
+- **Question:** when a model of glioma surveillance MRI scores well, what has it learned to see?
+- **Claim:** mostly, where the patient is in treatment. Kept apart and audited, the two kinds of evidence each
+  speak for what they are. The treatment timeline separates scans *between* phases of care. The images carry a
+  smaller signal that holds *within* a phase, and they stand on their own where no treatment dates exist. Neither
+  is reliable in the weeks after radiotherapy, where pseudoprogression lives.
+- **Investigation:** 0.80 on one split → the split's mix of phases explains it → separate the two kinds of evidence
+  → give the images more structure step by step and watch where each gain comes from → what is left in the
+  intended use → what a system can honestly offer.
 
-## 2. Methods
-2.1 **PRISM: architecture and data flow** (Fig 5A) — five branches, one ridge predictor, audit layer, report
-generator; PRISM v1 and what changed (legacy reproduction numbers); deployed configuration.
-2.2 Study design and reporting · 2.3 Data sources · 2.4 Index scans and outcome · 2.5 Predictors: PRISM's input
-branches · 2.6 Initial radiomics model, initial evaluation split, as-of correction · 2.7 Split variance · 2.8 Repeated
-CV and component ablation · 2.9 Phase of care · 2.10 Label, positive controls, re-segmentation · 2.11 External and
-diffusion · 2.12 Audit layer · 2.13 **Report generator and faithfulness evaluation** · 2.14 Further
-analyses and software.
+## Abstract (draft, 146 words)
 
-## 3. Results
-3.1 Cohorts · 3.2 **PRISM's initial single-split result and why it misled** (re-scored split; treatment-date leak;
-composition and phase of care) · 3.3 Split variance (500 splits) · 3.4 **Component ablation** (clinical → timing →
-treatment; radiomics branch; deep branch; credit ≠ value) · 3.5 Phase of care · 3.6 Label, positive controls,
-segmentation · 3.7 External (LUMIERE) and CFB-GBM · 3.8 Calibration and utility of the core model · 3.9 Audit layer
-(P1 met, P2 not met, four problems found) · 3.10 **Report generator** (primary 236/249 = 0.948, target 0.95 not met by one report; arms B and C; stress test).
+> Models that predict glioma progression from surveillance MRI can score well without learning much about the
+> tumour. We built PRISM, which keeps image and treatment-timeline evidence apart and records what each contributed
+> at every scan. On MU-Glioma-Post, PRISM's first evaluation reached an AUC of 0.80 on one test split, but a model
+> with no images did better on the same split, and over 500 splits the result averaged 0.72. At the scan where
+> progression was called, clinical and timeline data alone reached 0.82. Each assumption built into the image model
+> raised its AUC, from 0.66 to 0.81, but only by encoding the timeline; within a phase of care, images held at about
+> 0.68, as much as the timeline. From the start of radiotherapy, PRISM's 120-day risk reached an AUC of 0.60. Its
+> audit exposed leaks the AUC hid, and all 249 reports passed a faithfulness check.
 
-## 4. Discussion
-Summary of four findings → **What PRISM contributes** (auditable, phase-aware, honest about uncertainty; no triage
-benefit) → **Why our initial evaluation misled** (reporting rules) → Phase of care as a confounder → **What imaging did
-not add, and why** (incl. credit ≠ value; imaging kept as optional modules) → External validity → Comparison with other
-work → Limitations (incl. report faithfulness ≠ clinical usefulness) → Conclusion.
+## The argument in figures
 
-## Figures and tables
-1. PRISM's initial single-split result (panel labels still say "PRISM report"; regenerate).
-2. Our initial evaluation split among 500 splits (same).
-3. Component ablation: ladder, ΔAUC forest, SHAP shares.
-4. Phase of care.
-5. PRISM: (A) architecture `fig5a_architecture.pdf`, (B) example grounded report `fig5a_example_report.pdf` (both from
-   the report-generator work stream; red placeholder via `\IfFileExists` until they exist), (C) risk–coverage
-   `fig5_system_risk_coverage.png`.
-Table 1 cohort; Table 2 single split vs 500 splits vs CV (rows renamed); Table 3 imaging branches vs core model.
-Supplement: S7 now also covers PRISM v1's encoder and fusion components; new S19 report generator (Tables S26–S27).
+Each figure makes one claim; its caption's first sentence is that claim.
+
+| # | Claim the figure makes | Content | Source |
+|---|---|---|---|
+| **Fig 1** | PRISM keeps two kinds of evidence apart and records what each contributed. | System diagram redrawn around two pathways (images; treatment timeline + clinical) → risk → audit record → report; the phase of care marked on every scan. Replaces the current architecture and study-design figures (study design to the supplement). | redraw of `fig5a_architecture` |
+| **Fig 2** | A score of 0.80 measured the test set as much as the model. | (A) first split: radiomics 0.80, timeline model 0.87, the no-training rule "scan is after RT" 0.74; (B) the same models over 500 splits, with the first split's rank; (C) per-split AUC against the split's phase mix. | merge of current Figs 3 and 4 |
+| **Fig 3** | Each assumption built into the image model buys AUC by encoding the timeline; within a phase, images hold their own. | The ladder for detection at the scan: single scan → + comparison with earlier scans → + scan-schedule context, beside the timeline model and both together; bars for all scans and for pairs within the same phase. Inset or panel: fine-tuned networks given none of these assumptions score at the level of a shuffled-label control. | new; `DETECTION_TASK.md` exploratory section, `DETECTION_DEEP.md` |
+| **Fig 4** | Where the system is reliable, and where it says it is not. | Scans along the treatment course (before RT, during, ≤ 12 weeks after, later) with events per phase; performance per phase for the timeline and the images; the early post-RT window flagged (4 progression scans among 55). | new, from `within_phase.csv` files; reuse of current Fig 6 (phase) panels where possible |
+| **Fig 5** | The audit record shows what the AUC hides, and the report can be checked against it. | (A) the leaks the audit found and their effect; (B) a grounded report with its citations. | current Fig 8A plus a new panel from Section 3.5 |
+
+**Tables**
+- **Table 1:** cohorts (unchanged, trimmed).
+- **Table 2: the evidence by pathway and task.** Rows: timeline only, images only, both. Columns: 120-day risk
+  (all scans; intended use), detection at the scan (all scans; within phase), LUMIERE. The one table a reader needs
+  to see the claim in numbers. It must not repeat Fig 3's ladder; it holds the levels, Fig 3 holds the steps.
+- **Table 3: questions fixed in advance and their answers** (condensed from the current Table 4; keeps the
+  planned / exploratory distinction visible).
+- Report evaluation (current Table 5) moves to the supplement; one sentence in the text.
+
+## Sections
+
+**1. Introduction (four paragraphs)**
+1. Surveillance MRI after glioma treatment, and why progression is hard to call (pseudoprogression in the weeks
+   after RT; progression is a documented event).
+2. Reported AUCs are high, and that should make us curious: single splits, missing clinical comparators, and a
+   cohort that mixes phases of care with very different event rates.
+3. The question.
+4. What we did and found, directly: PRISM keeps the two kinds of evidence apart; the timeline explains most of the
+   score; images hold a smaller within-phase signal; the audit and report make the system checkable.
+
+**2. Methods** (in the order the Results need them)
+- 2.1 PRISM: two pathways, the audit record, the report.
+- 2.2 Data, the two questions (120-day risk; detection at the scan), phases of care and the intended use.
+- 2.3 Evaluation: repeated grouped cross-validation, comparisons within a phase of care, planned vs exploratory.
+
+**3. Results** (one step each; the heading states the finding)
+1. *One split overstated the model* → Fig 2. Ends: what made that split easy?
+2. *The treatment timeline carries most of the score* → Table 2. Timeline alone: 0.70 for 120-day risk in grade 4,
+   0.82 at detection; 56 of 62 progression scans late. Ends: then what do the images bring?
+3. *What each assumption buys the images* → Fig 3. Ladder 0.66 → 0.71 → 0.81; within phase about 0.68 throughout;
+   networks without these assumptions at chance. For 120-day risk, no imaging branch added to the timeline (one
+   sentence; the variants in the reserve). Ends: what is left where the system will be used?
+4. *In the intended use* → Fig 4. 120-day risk 0.60; detection with both kinds of evidence; the early post-RT
+   window where neither is reliable, and how PRISM flags it; LUMIERE, where there are no treatment dates and the
+   images carry more.
+5. *An audit that sees what the AUC cannot* → Fig 5. The leaks and the corrected model; reports faithful 249 / 249.
+
+**4. Discussion**
+1. The answer to the question, in the first sentence.
+2. What it means for people who build and evaluate such models: report the timeline baseline and within-phase
+   results; name the assumptions built into a model and what each buys.
+3. What PRISM offers a clinician: both kinds of evidence side by side, each with its reliability, and a flag where
+   neither holds.
+4. Scope: one development centre, documented rather than expert-read progression, the ladder is exploratory, no
+   clinician has read the reports.
+5. Close on the idea: ask not only how well a surveillance model scores but what it has learned to see.
+
+## Moves to the supplement or the reserve
+- The five "giving imaging every chance" tests (label, segmentation, cohort, modality, encoder): one sentence in
+  Results 3; details in the supplement.
+- Censoring sensitivity, calibration detail, gradient boosting, SHAP, conformal sets and selective prediction (P1,
+  P2), the report generator's comparison arms, the imaging-examples figure, the study-design figure.
+
+## Open decisions for the author
+1. Title.
+2. Whether the paper keeps both questions (120-day risk and detection) or leads with detection. The outline keeps
+   both: 120-day risk is the clinical motivation, and detection is where the images' contribution can be measured.
+3. The PRISM name (clash with arXiv 2610.13510) and the relation to Christodoulou 2026.
+
+## Numbers still to confirm before prose
+- Images alone for 120-day risk, with the timing proxies removed as in the detection ladder (current best estimate
+  0.683 in `IMAGING_VS_NONIMAGING.md` may include them).
+- Within-phase AUC of the timeline and the images for 120-day risk, to fill Table 2.
+- LUMIERE images-only for detection (only the full transportable model and its no-imaging reference were run).
