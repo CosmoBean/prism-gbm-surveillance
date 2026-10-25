@@ -224,3 +224,10 @@ Add each reaction as a dated, one-line rule.
 - 2026-10-25: the author did not like the five-step outline brief given in chat (step 1 "a good score that
   measured the test set" → step 5 "where the system says it isn't reliable"). Reasons not yet given; revisit the
   outer story with the UCSF results in hand before writing a skeleton. The RANO argument is out of the paper.
+- 2026-10-26: do not accuse the field ("nobody knows what they have learned"). Lead with what our models and system
+  can do, shown with moderate claims; present the difficulties of surveillance data as known challenges, each paired
+  with the part of the system that mitigates it. Split variance and the Christodoulou-style replication are supporting
+  evidence for why the system tests the way it does, not the story.
+- 2026-10-26: the author sees PRISM as modular: clinical/timeline features, simple engineered image features, deep
+  segmentation feeding measurements and the report, and a confidence (card tier + conformal set). Deep networks are
+  described as the segmenters, not as failed classifiers.
