@@ -16,7 +16,10 @@ Read, in this order:
 2. `docs/manuscript/OUTLINE.md`: the current argument spine. If the requested change conflicts with it, raise that
    with the author before writing; do not drift the story silently.
 3. `docs/manuscript/RESERVE.md`: what is deliberately left for reviewers, and the answers.
-4. `docs/manuscript/JOURNAL_RULES.md`: the journal's hard constraints (abstract ≤ 150 words, ≤ 3 keywords,
+4. `docs/manuscript/LOCKED.md`: passages the author approved. Never change them without explicit approval; flag
+   problems and propose the smallest edit.
+5. `docs/manuscript/STORY.md`: the agreed story and every result mapped to its place.
+6. `docs/manuscript/JOURNAL_RULES.md`: the journal's hard constraints (abstract ≤ 150 words, ≤ 3 keywords,
    British -ise, back-matter order).
 
 ## Workflow

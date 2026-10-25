@@ -23,7 +23,7 @@ Alternatives:
   → give the images more structure step by step and watch where each gain comes from → what is left in the
   intended use → what a system can honestly offer.
 
-## Abstract (draft 4 = draft 1 with a new ending, 149 words)
+## Abstract (LOCKED 2026-10-24: the approved text is in [LOCKED.md](LOCKED.md))
 
 > Models that predict glioma progression from surveillance MRI can score well without learning much about the
 > tumour. We built PRISM, which keeps image and treatment-timeline evidence apart and records what each contributed
