@@ -218,3 +218,6 @@ Add each reaction as a dated, one-line rule.
   drafts 2 and 3; only its ending was wrong. Revise conservatively: change the sentences that are wrong, keep the
   ones that work, do not rewrite a whole passage to fix one part.
 - 2026-10-23: agree on the results and the story (STORY.md) before writing prose.
+- 2026-10-25: every result in the main text must answer "so what?" in the author's internal dialogue: what does
+  the reader now believe that they did not before? If there is no answer, it goes to the supplement. The report
+  generator gets little space; deep learning only as much as it adds to the argument.

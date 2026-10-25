@@ -114,3 +114,14 @@ Each figure makes one claim; its caption's first sentence is that claim.
   0.683 in `IMAGING_VS_NONIMAGING.md` may include them).
 - Within-phase AUC of the timeline and the images for 120-day risk, to fill Table 2.
 - LUMIERE images-only for detection (only the full transportable model and its no-imaging reference were run).
+
+## Decisions log (author, 2026-10-25)
+1. Task and framing: B (detection at the scan) is the task, C (a system that shows what a model uses) is the
+   framing, A (120-day forecast) is the origin story.
+2. External data: UCSF-ALPTDG obtained (DUA); it enters this paper if its labels allow. Burdenko and UCSD-PTGBM are
+   the follow-up.
+3. RANO 12-week rule: pending; proposed as two sentences in Results 2 that explain why the timeline works.
+4. Christodoulou 2026 and Tikhonov 2025: mentioned concisely for context, with their results and a line on method.
+5. Figures: new figures built for this story; the existing ones are not binding.
+6. Space by contribution to the argument. Report generator: little (one or two sentences and a figure panel at
+   most). Deep learning: only as much as it adds to the story.
