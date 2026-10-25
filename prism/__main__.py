@@ -43,6 +43,8 @@ Analyses (read the prepared tables, write to $PRISM_OUTPUTS/results):
     figures       manuscript figures 1-4 and tables (re-fits the PRISM report split and the clipped split-variance arm)
     card          reliability card (EXPLORATORY): lookup of measured results by situation, pathway agreement,
                   card-augmented report records, the checker's card rule on the existing reports
+    system        the full PRISM system for detection at the scan: per-scan system records (scores, segmentation
+                  measurements, card, conformal sets, flags) and the pre-specified S1-S4 (SYSTEM_PLAN.md)
 
 Every stage takes -h for its options.
 """
@@ -83,6 +85,7 @@ STAGES = {
     "reportuse": "prism.analyses.report_usefulness",
     "figures": "prism.analyses.paper_figures",
     "card": "prism.analyses.reliability_card",
+    "system": "prism.analyses.system",
 }
 PIPELINES = {"data": ("mu", "lumiere", "measurements")}
 
