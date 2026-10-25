@@ -133,3 +133,16 @@ Grade 4, scan 2 (29 progression / 40 stable); all gliomas 48 / 78 give the same 
   cohort's labelling decides what a model learns: the timeline on MU, enhancement on UCSF. This fits the paper's
   question ("what has the model learned to see?") and needs a story decision with the author.
 - UCSF's own train/test split: the timeline model 0.45 vs median 0.72 over 100 random splits (split variance again).
+
+## The full system (2026-10-26; SYSTEM_PLAN.md e7cba80; SYSTEM_RESULTS.md, REPORT_V3.md, RELIABILITY_CARD.md)
+
+| | MU | LUMIERE | UCSF |
+|---|---|---|---|
+| conformal coverage, combined score, α 0.2 (target 0.78) | 0.82 | 0.87 | 0.78 |
+| reports faithful (frozen checker) | 114/114 | 0/178 (prompt asks for a fact not in the record) | 140/140 |
+| tier stated where evidence is thin | 71/71 | 19/19 | 140/140 |
+
+- Pathway disagreement is the flag that picks out errors on MU (S2 +0.31; S3 +0.08 beyond case mix). "Any flag"
+  marks 91–100% of scans (unusable as one warning). The card tier measures evidence, not accuracy.
+- Perturbations: reports followed the changed field in 29/30.
+- Literature (SYSTEM_LANDSCAPE.md): components exist separately; the combination appears new (moderate claim).
