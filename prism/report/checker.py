@@ -195,6 +195,8 @@ def check(claims: list[dict] | None, F: dict, cited: bool = True, context: dict 
     """Full report check. cited=False: prose without citations, numbers checked against every field of `context`
     (default F) and, separately, against the record facts F. card=True (and card.* facts present): the reliability
     card rule (card_check) is added and must also pass."""
+    if F.get("system.version") == "v3":
+        return check_v3(claims, F, card=card)
     if claims is None:
         return {"parsed": False, "n_claims": 0, "n_unsupported": None, "all_flags_mentioned": False, "pass": False}
     res = [check_claim(c, F) for c in claims] if cited else [check_claim(c, context or F, any_field=True) for c in claims]
@@ -216,4 +218,178 @@ def check(claims: list[dict] | None, F: dict, cited: bool = True, context: dict 
     if card and "card.tier" in F:
         out["card"] = card_check(claims, F, cited)
         out["pass"] = out["pass"] and out["card"]["card_pass"]
+    return out
+
+
+# ---------------------------------------------------------------- report v3 (detection at the scan; system record)
+# docs/results/REPORT_V3.md. Applied when the facts are facts_v3 (F["system.version"] == "v3"); every earlier
+# evaluation (v1, v2, card) goes through the code above unchanged. Frozen before the evaluation reports (hash in
+# REPORT_V3.md).
+V3_SECTIONS = ("scan", "pathways", "combined", "trust")
+NEG_LOCAL = r"\b(no|not|none|without|neither|nor|never)\b"
+V3_FLAG_WORDS = {
+    "pathways_disagree": r"\bdisagree\w*|\b(do|does) not agree\b|point(s|ed)? in (opposite|different) directions|"
+                         r"\bopposite sides\b",
+    "out_of_range": r"outside (of )?(the )?(model's )?training range|out of (the )?(model's )?training range|"
+                    r"out[- ]of[- ]range|outside the range",
+    "card_tier": None,  # the tier's own words (CARD_TIER_WORDS)
+    "conformal_both": r"both outcomes|both progression and no progression|both possible outcomes",
+}
+V3_FLAG_SOURCES = {"pathways_disagree": ("pathways.agree", "pathways.agreement_statement"),
+                   "out_of_range": (), "card_tier": ("card.tier", "card.tier_statement"),
+                   "conformal_both": ("conformal.combined.80.set", "conformal.combined.80.statement")}
+V3_SPURIOUS = {"out_of_range": r"outside (of )?(the )?(model's )?training range|out of (the )?(model's )?training range|"
+                               r"out[- ]of[- ]range"}
+AGREE_POS = r"\b(agree|agreement|concordant|point(s|ed)? in the same direction)\b"
+CONF_WORDS = {"both outcomes": r"both outcomes|both progression and no progression|both possible outcomes",
+              "no progression only": r"no[- ]progression only|only (the )?no[- ]progression",
+              "progression only": r"(?<!no )(?<!no-)\bprogression only|only (the )?progression\b(?! scan)",
+              "empty (no outcome)": r"\bempty\b"}
+CONF_MENTION = r"conformal|prediction set"
+SIDE_PAT = re.compile(r"\b(timeline|image|combined)\b(?:[^.;:]|\.(?=\d)){0,90}?\b(above|below)\b", re.I)
+SIDE_KEY = {"timeline": "timeline", "image": "images", "combined": "combined"}
+NUMBER_WORDS = re.compile(r"\b(three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|"
+                          r"sixteen|seventeen|eighteen|nineteen|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety|"
+                          r"hundred|thousand|half|quarter|twice|double|triple|tenfold)\b", re.I)
+V3_FORBIDDEN = {
+    "diagnosis": [r"\b(shows?|showing|indicates?|indicating|signals?|means?|proves?)\s+(that\s+)?(there\s+is\s+)?"
+                  r"(true\s+|tumou?r\s+|disease\s+)?(progression|recurrence|pseudo-?progression|radiation necrosis)\b",
+                  r"\b(is|was|be)\s+(a|the)\s+progression scan\b", r"\bhas progressed\b|\bis progressing\b"],
+    "management": [r"\bshould\b", r"\bmust\b", r"\bneeds?\s+to\b", r"\bought\b", r"\bnext steps?\b",
+                   r"\b(clinician|clinical|specialist|expert|radiologist)\s+review\b", r"\breview(ed)? by\b",
+                   r"\bwe suggest\b|\bit is suggested\b", r"\binterven\w*", r"\bactionable\b",
+                   r"\b(decision|decide|deciding)\b"],
+    "verbal_probability": [r"\b(likely|unlikely|probabl[ey]|improbable)\b", r"\b(high|low|elevated|increased|reduced|"
+                           r"moderate)\s+(risk|probability|chance|likelihood)\b", r"\breassur\w*|\bworr\w*|\balarm\w*|"
+                           r"\bconcerning\b|\bbenign\b|\bfavou?rable\b"],
+}
+
+
+def forbidden_v3(text: str) -> dict:
+    out = forbidden(text)
+    for cat, pats in V3_FORBIDDEN.items():
+        out[cat] = sorted(set(out.get(cat, [])) | {m.group(0) for p in pats for m in re.finditer(p, text, re.I)})
+    return out
+
+
+def _cites(c: dict, prefixes) -> bool:
+    return any(k.startswith(p) for k in c.get("fields", []) for p in prefixes)
+
+
+def conformal_check(claims: list[dict], F: dict) -> dict:
+    """Each claim about a conformal set must cite the set it describes (conformal.<p>.<level>.*) and use exactly
+    the fixed phrase(s) of the cited set(s): 'both outcomes', 'progression only', 'no progression only', 'empty'.
+    The combined score's 80% set must be stated."""
+    wrong, uncited, stated80 = [], [], False
+    for c in claims:
+        t = c["text"]
+        keys = {k.rsplit(".", 1)[0] for k in c.get("fields", []) if k.startswith("conformal.") and
+                k.rsplit(".", 1)[0] + ".set" in F}
+        if F.get("flags.conformal_both.active") is True and _cites(c, ("flags.conformal_both.",)):
+            keys.add("conformal.combined.80")  # the flag's reason is the combined 80% set
+        said = {ph for ph, pat in CONF_WORDS.items() if re.search(pat, t, re.I)}
+        if not keys:
+            if re.search(CONF_MENTION, t, re.I) and said:
+                uncited.append(t)
+            continue
+        expected = {F[k + ".set"] for k in keys}
+        if said != expected:
+            wrong.append({"text": t, "expected": sorted(expected), "said": sorted(said)})
+        elif "conformal.combined.80" in keys:
+            stated80 = True
+    return {"wrong": wrong, "uncited": uncited, "combined_80_stated": stated80,
+            "conformal_pass": not wrong and not uncited and stated80}
+
+
+def agreement_check(claims: list[dict], F: dict) -> dict:
+    """Agreement must be stated (a claim citing pathways.agree / pathways.agreement_statement), and no claim may
+    describe it the other way. A claim that places a pathway's score above / below its median while citing that
+    pathway must match its side."""
+    agree = F["pathways.agree"] == "yes"
+    wrong, stated, side_wrong = [], False, []
+    for c in claims:
+        t = c["text"]
+        dis = re.search(V3_FLAG_WORDS["pathways_disagree"], t, re.I)
+        pos = re.search(AGREE_POS, t, re.I)
+        if dis or pos:
+            says_agree = not dis
+            if says_agree != agree:
+                wrong.append(t)
+            elif _cites(c, ("pathways.agree", "pathways.agreement_statement", "flags.pathways_disagree")):
+                stated = True
+        for m in SIDE_PAT.finditer(t):
+            p = SIDE_KEY[m.group(1).lower()]
+            if _cites(c, (f"pathway.{p}.", "pathways.agreement_statement", "flags.pathways_disagree")) and \
+                    f"pathway.{p}.side" in F and m.group(2).lower() != F[f"pathway.{p}.side"]:
+                side_wrong.append({"text": t, "pathway": p, "said": m.group(2).lower()})
+    return {"agree": agree, "stated": stated, "wrong": wrong, "side_wrong": side_wrong,
+            "agreement_pass": stated and not wrong and not side_wrong}
+
+
+def flag_check_v3(claims: list[dict], F: dict) -> dict:
+    out = {}
+    tier = F["card.tier"]
+    for f, pat in V3_FLAG_WORDS.items():
+        active = F.get(f"flags.{f}.active") is True
+        pat = pat or CARD_TIER_WORDS.get(tier, r"(?!x)x")
+        hit = [c for c in claims if re.search(pat, c["text"], re.I)
+               and _cites(c, (f"flags.{f}.",) + V3_FLAG_SOURCES[f])]
+        sp = V3_SPURIOUS.get(f)
+        raised = [c["text"] for c in claims if sp and re.search(sp, c["text"], re.I)
+                  and not re.search(NEG_LOCAL, c["text"], re.I)]
+        out[f] = {"active": active, "mentioned": bool(hit), "spurious": (not active) and bool(raised)}
+    return out
+
+
+def required_v3(claims: list[dict], F: dict) -> dict:
+    """Content every v3 report must carry: each pathway's score (a claim citing pathway.<p>.score or .statement that
+    writes the score), and the enhancing volume when measured."""
+    miss = []
+    for p in ("timeline", "images", "combined"):
+        s = f"{F[f'pathway.{p}.score']:.2f}"
+        if not any(_cites(c, (f"pathway.{p}.score", f"pathway.{p}.statement")) and
+                   any(abs(float(n) - float(s)) < 1e-9 for n in numbers(c["text"])) for c in claims):
+            miss.append(f"pathway.{p}.score")
+    if F.get("meas.available") == "yes" and "meas.enhancing_cc" in F:
+        v = F["meas.enhancing_cc"]
+        if not any(_cites(c, ("meas.enhancing_cc",)) and matches(f"{v:.1f}", [float(n) for n in numbers(c["text"])], False)
+                   for c in claims):
+            miss.append("meas.enhancing_cc")
+    return {"missing": miss, "required_pass": not miss}
+
+
+def check_v3(claims: list[dict] | None, F: dict, card: bool = True) -> dict:
+    """Full v3 report check. Pass = every claim supported (numbers from cited fields; no number words) AND every
+    active flag mentioned, none spurious AND conformal sets described correctly AND agreement stated and described
+    correctly AND required content present AND no forbidden content (v1 patterns + v3 diagnosis, advice / decision
+    and verbal-probability patterns) AND (card=True) the reliability-card rule (tier stated when few cases / not
+    tested, no off-card performance number, no overclaim)."""
+    if claims is None:
+        return {"parsed": False, "n_claims": 0, "pass": False, "card_tier_stated": False}
+    res = [check_claim(c, F) for c in claims]
+    for r in res:
+        w = NUMBER_WORDS.findall(r["text"])
+        r["number_words"] = w
+        r["supported"] = r["supported"] and not w
+    text = " ".join(c["text"] for c in claims)
+    fl = flag_check_v3(claims, F)
+    act = [n for n, v in fl.items() if v["active"]]
+    fb = forbidden_v3(text)
+    cf, ag, rq = conformal_check(claims, F), agreement_check(claims, F), required_v3(claims, F)
+    out = {"parsed": True, "n_claims": len(claims), "n_unsupported": sum(not r["supported"] for r in res),
+           "n_invalid_citations": sum(len(r["invalid_fields"]) for r in res),
+           "unsupported": [r for r in res if not r["supported"]],
+           "active_flags": act, "flags_omitted": [n for n in act if not fl[n]["mentioned"]],
+           "flags_spurious": [n for n, v in fl.items() if v["spurious"]],
+           "all_flags_mentioned": all(fl[n]["mentioned"] for n in act),
+           "forbidden": fb, "any_forbidden": any(fb.values()),
+           "conformal": cf, "agreement": ag, "required": rq}
+    out["pass"] = (out["n_unsupported"] == 0 and out["all_flags_mentioned"] and not out["flags_spurious"]
+                   and not out["any_forbidden"] and cf["conformal_pass"] and ag["agreement_pass"]
+                   and rq["required_pass"])
+    cc = card_check(claims, F, cited=True)
+    out["card"] = cc
+    out["card_tier_required"], out["card_tier_stated"] = cc["tier_required"], cc["tier_mentioned"]
+    if card:
+        out["pass"] = out["pass"] and cc["card_pass"]
     return out
