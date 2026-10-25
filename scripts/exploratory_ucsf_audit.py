@@ -4,6 +4,8 @@ Reads the existing UCSF outputs (scans.csv, imaging_features.csv, locked/scores.
 MU detection frame for comparison. Changes nothing; prints aggregate numbers only (no SubjectIDs).
 
     PYTHONPATH=. .venv/bin/python scripts/exploratory_ucsf_audit.py
+    PYTHONPATH=. .venv/bin/python scripts/exploratory_ucsf_audit.py --within-et-increased   # 2026-10-26 section only
+    (the 2026-10-26 section writes aggregate AUCs to outputs/results/analyses/ucsf/audit/within_et_increased_cis.csv)
 """
 
 from __future__ import annotations
@@ -281,5 +283,92 @@ def main():
         print(f"  oof set {n}: rows {len(g)}, scan_id unique {g.scan_id.is_unique}, patients {pid.nunique()}")
 
 
+# ---------------------------------------------------------------- EXPLORATORY (2026-10-26): CIs within "ET Increased"
+DEEP_LOCKED = ("MU_G1", "MU_G3")
+DEEP_UCSF = ("G1", "G3", "T1")
+
+
+def _boot_rows(y, scores, groups, n_boot=1000, seed=20261025):
+    """Patient-cluster bootstrap on shared draws. A score is (R x n): AUC = mean over the R rows (R = 1 for a single
+    score), as in prism.analyses.ucsf_deep.boot."""
+    auc_ = lambda S, i: float(np.mean([roc_auc_score(y[i], s[i]) for s in S]))
+    rng = np.random.default_rng(seed)
+    by = {g: np.where(groups == g)[0] for g in np.unique(groups)}
+    pats = np.array(list(by))
+    draws = {k: [] for k in scores}
+    for _ in range(n_boot):
+        i = np.concatenate([by[p] for p in rng.choice(pats, len(pats))])
+        if len(np.unique(y[i])) < 2:
+            continue
+        for k, S in scores.items():
+            draws[k].append(auc_(S, i))
+    ia = np.arange(len(y))
+    return [{"arm": k, "auc": auc_(S, ia), "lo": np.percentile(draws[k], 2.5), "hi": np.percentile(draws[k], 97.5),
+             "n_draws": len(draws[k]), "n_pos": int(y.sum()), "n_neg": int((1 - y).sum())} for k, S in scores.items()]
+
+
+def within_et_increased(out_csv=True):
+    """CIs for every image arm within scans UCSF rated "ET Increased" at scan 2 (primary label, scan 2), grade 4 and
+    all gliomas. Locked arms use the population's own locked models (@grade4 / @all_glioma). UCSF-trained tabular arms:
+    Part B OOF averaged over the 5 repeats (ranking only, as in the rest of this audit). Deep arms: locked = mean logit of
+    the 4 MU networks; UCSF-trained = (R x n) outer-test logits, AUC = mean over repeats (as in ucsf_deep.evaluate)."""
+    from prism.analyses import ucsf_deep as ud
+    s = pd.read_csv(U / "scans.csv", dtype={"subject_id": str})
+    f = pd.read_csv(U / "imaging_features.csv", dtype={"SubjectID": str})
+    sc = pd.read_csv(R / "locked" / "scores.csv", dtype={"patient_id": str})
+    oof_all = pd.read_csv(R / "internal" / "oof.csv.gz")
+    upop = ud.UPop()
+    deep = {}
+    for arm in DEEP_LOCKED:
+        z = np.load(ud.locked_path(arm))
+        assert (z["scan_id"] == upop.scan_id).all()
+        deep[f"deep locked_{arm[3:]}"] = z["logit"].mean(0)[None]
+    for arm in DEEP_UCSF:
+        nrep = ud.complete_repeats(arm)
+        if nrep:
+            deep[f"deep UCSF {arm}" + (" (transfer)" if arm == "T1" else "")] = ud.collect(arm, upop, nrep)[0]
+    pos_deep = {sid: j for j, sid in enumerate(upop.scan_id)}
+    u = s.merge(f[["scan_id", "log_et_cc"]], on="scan_id", validate="one_to_one").merge(sc, on="scan_id",
+                                                                                        validate="one_to_one",
+                                                                                        suffixes=("", "_sc"))
+    u["neg"] = u.neg_class.isin(NEG)
+    rows = []
+    for pop, mask, setname, mod in (("grade4", u.grade4.astype(bool), "grade4|scan2|pos_s2_pm30", "grade4"),
+                                    ("all_glioma", pd.Series(True, index=u.index), "all|scan2|pos_s2_pm30",
+                                     "all_glioma")):
+        P = u[u.timepoint.eq(2) & mask & (u.pos_s2_pm30.eq(1) | u.neg)].copy()
+        o = oof_all[oof_all.set.eq(setname)].set_index("scan_id")
+        assert len(o) == len(P) and set(o.index) == set(P.scan_id), (pop, len(o), len(P))
+        o = o.reindex(P.scan_id)
+        y_all = P.pos_s2_pm30.eq(1).astype(int).to_numpy()
+        assert (o.label.to_numpy() == y_all).all()
+        inc = P.et_change.eq("Increased").to_numpy()
+        y = y_all[inc]
+        cols = {f"locked A-{a}": P[f"A-{a}@{mod}"].to_numpy(float)[None] for a in ("Iscan", "Ipure", "Timg", "T")}
+        for a in ("Iscan", "Ipure", "Timg"):
+            cols[f"UCSF-trained {a}"] = o[[f"{a}#r{r}" for r in range(5)]].mean(axis=1).to_numpy(float)[None]
+        di = np.array([pos_deep[sid] for sid in P.scan_id])
+        cols.update({k: v[:, di] for k, v in deep.items()})
+        cols["log ET volume"] = P.log_et_cc.to_numpy(float)[None]
+        sc_ = {k: v[:, inc] for k, v in cols.items()}
+        assert all(np.isfinite(v).all() for v in sc_.values())
+        print(f"\n=== within ET Increased, {pop}: n = {inc.sum()} ({y.sum()} pos / {(1 - y).sum()} neg), "
+              f"of {len(P)} primary-set scans")
+        for r in _boot_rows(y, sc_, P.subject_id.to_numpy()[inc]):
+            r.update(population=pop, subset="ET Increased", n_scans=int(inc.sum()))
+            rows.append(r)
+            print(f"  {r['arm']:28s} {r['auc']:.3f} ({r['lo']:.3f}-{r['hi']:.3f}) [{r['n_pos']}/{r['n_neg']}]")
+    res = pd.DataFrame(rows)
+    if out_csv:
+        (R / "audit").mkdir(exist_ok=True)
+        res.to_csv(R / "audit" / "within_et_increased_cis.csv", index=False)
+    return res
+
+
 if __name__ == "__main__":
-    main()
+    import sys
+    if "--within-et-increased" in sys.argv:  # EXPLORATORY 2026-10-26 section only
+        within_et_increased()
+    else:
+        main()
+        within_et_increased()

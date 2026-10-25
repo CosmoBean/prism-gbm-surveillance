@@ -206,3 +206,43 @@ bound below 0.5). Within "ET Increased" scans it is 0.53.
 > therefore measure agreement with an enhancement-based clinical call made at the same scan, and are higher than on
 > MU because the UCSF case mix is easier to separate (a quarter of negatives had no enhancement), not because the
 > models generalise better."
+
+## EXPLORATORY (2026-10-26): intervals within the "ET Increased" scans
+
+Post hoc. Check 4 gave point estimates only for the scans UCSF rated "ET Increased" at scan 2. These are the intervals
+for every image arm, plus log ET volume alone. Primary label, scan 2, primary negatives. Patient-cluster bootstrap
+(one scan per patient), 1000 draws, seed 20261025, the same draws for every arm. Locked arms use the population's own
+locked models (`@grade4` / `@all_glioma`). UCSF-trained tabular arms: Part B OOF averaged over the 5 repeats, as in the
+rest of this audit. Deep arms: locked = mean logit of the 4 MU networks; UCSF-trained = AUC averaged over the 5 repeats,
+as in `ucsf_deep.evaluate`. A-T is not image-only: it is A-Timg + clinical + log days since surgery + early post-RT flag + has-previous + log days
+from the previous scan.
+
+Script: `scripts/exploratory_ucsf_audit.py --within-et-increased` (function `within_et_increased`). Output:
+`outputs/results/analyses/ucsf/audit/within_et_increased_cis.csv`.
+
+| arm | grade 4 (27 / 10) | all gliomas (40 / 11) |
+|---|---|---|
+| locked A-Iscan | 0.652 (0.444–0.836) | 0.573 (0.391–0.759) |
+| locked A-Ipure | 0.530 (0.302–0.738) | 0.511 (0.320–0.701) |
+| locked A-Timg | 0.756 (0.563–0.909) | 0.575 (0.395–0.759) |
+| locked A-T | 0.870 (0.722–0.974) | 0.798 (0.642–0.931) |
+| UCSF-trained Iscan | 0.704 (0.463–0.906) | 0.570 (0.356–0.757) |
+| UCSF-trained Ipure | 0.696 (0.462–0.888) | 0.623 (0.400–0.822) |
+| UCSF-trained Timg | 0.811 (0.610–0.976) | 0.789 (0.585–0.939) |
+| deep, locked G1 | 0.422 (0.215–0.638) | 0.373 (0.185–0.568) |
+| deep, locked G3 | 0.391 (0.177–0.625) | 0.380 (0.200–0.550) |
+| deep, UCSF-trained G1 | 0.417 (0.229–0.607) | 0.368 (0.207–0.534) |
+| deep, UCSF-trained G3 | 0.414 (0.220–0.618) | 0.371 (0.197–0.546) |
+| deep, transfer T1 | 0.421 (0.215–0.623) | 0.366 (0.188–0.548) |
+| log ET volume | 0.741 (0.556–0.897) | 0.643 (0.475–0.805) |
+
+- Every image arm's interval includes 0.5 except UCSF-trained Timg (0.811, lower bound 0.61 in grade 4; 0.789, 0.59 in
+  all gliomas). Timg is the LUMIERE image set (ET, necrosis + cavity and SNFH volumes plus their ratios to scan 1), fitted
+  on UCSF itself; its locked MU version gives 0.756 / 0.575 with intervals that include 0.5.
+- A-T keeps 0.87 (0.72–0.97) in grade 4, but it holds the scan-1 → scan-2 interval, which alone gives 0.72 inverted
+  (check 2). It is not evidence for the images.
+- The deep networks fall below 0.5 (0.37–0.42) within the "ET Increased" scans; upper bounds are 0.61–0.64 in grade 4
+  and 0.53–0.57 in all gliomas. Their 0.71–0.76 on the full set therefore comes entirely from separating "ET Increased" scans from the
+  rest.
+- With 10–11 negatives the intervals are 0.35–0.45 wide. This subset cannot show that any image arm adds signal
+  beyond UCSF's own enhancement call.

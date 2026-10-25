@@ -106,3 +106,42 @@ Feature version (final run): git HEAD `bea5b7c`, `tabular.py` unmodified (`run_i
 `baseline` and `baseline_rad` use the final as-of-scan treatment features. The baseline's seed-62 value (naive 0.871, IPCW
 0.851) equals the head-to-head stage (`outputs/results/c3/prism_report_split/head_to_head.csv`). The PRISM report models
 do not depend on `tabular.py`.
+
+## EXPLORATORY (2026-10-26): image-only models on the first split and over 500 splits
+
+Post hoc, not in the plan. Question: how does a model that sees only the images do on the PRISM report split and over the
+500 design splits, beside the PRISM report model, the baseline ridge and clinical only? Script:
+`scripts/exploratory_split_variance_images.py`, outputs in `outputs/results/analyses/split_variance_images/`
+(`per_split_auc.csv`, `summary.csv`, `seed62_single_split.csv`, `run_info.json`); existing outputs untouched.
+
+- **Same design as above.** Same MU all-glioma cohort (`c3.load("all_glioma")`, 308 scans), same test patients per split
+  (read from `split_variance/per_split_auc.csv`), training on `label_120`, scoring with the naive 120-d label (500 splits)
+  and IPCW AUC(120) (475 splits). Same pipeline as `baseline`: `c3.fit_predict`, ridge.
+- **Arms.** I_scan = volumes + morphology / relative intensity at the scan (19 inputs). I_pure = I_scan + log volume ratios
+  to the previous scan (0 if none) + ET / lesion log ratio to the smallest volume over the whole history (27 inputs); no
+  days, no flags (as in `exploratory_pure_imaging_forward_lumiere.py`). Clinical only (age, sex, IDH, MGMT) was also run
+  over the 500 splits; before this it had only the single-split row.
+- **Checks.** The refitted baseline equals the stored per-split AUCs (max |Δ| 1e-16). On seed 62, baseline and clinical
+  reproduce table 2 exactly (0.851 [0.735, 0.947]; 0.782 [0.638, 0.897]).
+- Seed-62 CIs: patient-cluster bootstrap over the 29 test patients (82 scans, 22 positives), 1000 draws, as in table 2.
+
+| Model | Seed 62: naive | Seed 62: IPCW [95% CI] | Seed 62: Δ IPCW vs baseline [95% CI] | 500 splits: naive mean ± SD (2.5–97.5%) | rank of seed 62 | 475 splits: IPCW mean ± SD (2.5–97.5%) | rank of seed 62 | beats baseline (naive / IPCW) |
+|---|---|---|---|---|---|---|---|---|
+| PRISM report model (seed 62: shipped; splits: re-selected per split) | 0.802 | 0.817 [0.690, 0.920] | −0.034 [−0.186, +0.109] | 0.720 ± 0.055 (0.610–0.819) | 92% | 0.727 ± 0.058 (0.602–0.832) | 94% | 12% / 25% |
+| Baseline ridge | 0.871 | 0.851 [0.735, 0.947] | – | 0.801 ± 0.052 (0.694–0.895) | 91% | 0.769 ± 0.056 (0.654–0.876) | 92% | – |
+| Clinical only (ridge) | 0.791 | 0.782 [0.638, 0.897] | −0.069 [−0.215, +0.058] | 0.647 ± 0.061 (0.522–0.754) | 99% | 0.644 ± 0.061 (0.513–0.757) | 99% | 1% / 3% |
+| **I_scan** (images, scan alone) | 0.793 | 0.787 [0.671, 0.878] | −0.064 [−0.205, +0.059] | 0.716 ± 0.056 (0.601–0.814) | 92% | 0.727 ± 0.061 (0.600–0.842) | 83% | 12% / 30% |
+| **I_pure** (images + change) | 0.783 | 0.786 [0.675, 0.892] | −0.065 [−0.197, +0.077] | 0.718 ± 0.056 (0.605–0.819) | 86% | 0.730 ± 0.061 (0.612–0.839) | 81% | 12% / 32% |
+
+Rank = share of splits with a strictly lower AUC than the model's own seed-62 value. The PRISM report rows' seed-62
+naive / IPCW are the shipped model (0.802 / 0.817); its re-selected re-run on seed 62 is 0.801 / 0.816.
+
+Reading:
+- **Images alone do as well as the PRISM report pipeline.** Over the 500 splits, I_scan and I_pure (0.72 naive, 0.73
+  IPCW) match the re-selected PRISM report pipeline (0.720 / 0.727), with the same spread. On seed 62 they give 0.79
+  (IPCW 0.79), within 0.03 of the shipped 0.80 / 0.82.
+- **The baseline stays ahead.** Images lose to the clinical + timing + treatment ridge in 88% of splits (naive; 68–70%
+  IPCW), by about 0.08 naive and 0.04 IPCW on average. On seed 62 the gap is −0.06 with a CI that crosses 0.
+- **Seed 62 is favourable for every model,** images included (81–92%), and most of all for clinical only (99%): its 0.79
+  on seed 62 is far above its usual 0.65.
+- The change inputs add almost nothing here: I_pure − I_scan is +0.003 ± 0.017 naive (+0.003 ± 0.019 IPCW) per split.
