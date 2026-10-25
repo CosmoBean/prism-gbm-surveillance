@@ -23,7 +23,7 @@ and [results/EXTERNAL_LUMIERE.md](results/EXTERNAL_LUMIERE.md).
 
 | Related work | What it gives us | How we use it |
 |---|---|---|
-| Christodoulou 2026 (same MU task, AUC 0.80, one split) | The direct comparator | Re-implement on our folds (B2): reported 0.80 vs 0.64–0.70 under repeated CV. Central comparison row |
+| Christodoulou 2026 (same MU task, AUC 0.80, one split) | The direct comparator | Re-implement on our folds (B2): reported 0.80; correction (2026-10-26): a re-implementation of their setting (CHRISTODOULOU_REPLICATION.md, 2026-10-26) gives 0.565 under repeated CV on our detection label; the earlier "0.64–0.70" was a 120-day ridge model, not their setting. Central comparison row |
 | Rai 2026; Hashim 2026 (MU-Glioma-Post) | Other MU numbers with different endpoints | Comparison table; explain why their labels (volume-defined, PFS) are not ours |
 | Suter 2024; TRACE; Tikhonov (LUMIERE) | LUMIERE ceilings (~0.75 AUC, macro F1 ≤ 0.71) | Shows our 0.72 external result is at the field's level, and that volumes alone transport poorly |
 | Booth 2022; Bhandari 2022; Park 2020 (reviews) | High risk of bias, few external tests, missing clinical baselines | Introduction: the gap we fill. Discussion: our study as the "done properly" case |

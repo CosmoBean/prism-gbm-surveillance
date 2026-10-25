@@ -8,7 +8,7 @@ Snapshot of the chat answer that accompanied [MANUSCRIPT_ONE_WEEK_PLAN.md](MANUS
 
 - **Our numbers are normal for this field.** Models using only conventional MRI land at about 0.65–0.77 AUC once tested properly (Booth 2022 pooled ≈ 0.77; Moassefi 2022 0.76; Suter 2024 0.75 on LUMIERE-type data). Only perfusion or diffusion MRI pushes past 0.85, and MU-Glioma-Post has neither.
 - **Radiomics adds little over clinical information for survival.** Abler 2025, Bae 2018 and Vils 2021 already found this. We extend it to 120-day progression during follow-up, which is the core argument of the paper.
-- **Christodoulou 2026 is the direct comparator.** It works on the same MU-Glioma-Post task and reports AUC 0.80 from one split. Re-running that setting with repeated CV gives 0.64–0.70.
+- **Christodoulou 2026 is the direct comparator.** It works on the same MU-Glioma-Post task and reports AUC 0.80 from one split. Correction (2026-10-26): a re-implementation of their setting (CHRISTODOULOU_REPLICATION.md, 2026-10-26) gives 0.565 under repeated CV on our detection label; the earlier "0.64–0.70" was a 120-day ridge model, not their setting.
 
 ## Must fix (reviewer-blocking)
 
