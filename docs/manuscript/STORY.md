@@ -90,3 +90,25 @@ The step ends on the question: what made the split easy? Answer: its mix of phas
 2. Images alone on LUMIERE (the transportable model without clinical and timing inputs).
 3. Bootstrap interval for "within a phase, images vs timeline" (I_pure − B1 phase-stratified: +0.04, −0.15 to +0.19;
    wide; supports "as much as", not "more than").
+
+## Gaps filled (2026-10-24, exploratory; `scripts/exploratory_pure_imaging_forward_lumiere.py`)
+
+**120-day risk, grade 4 (IPCW AUC, marginal KM; images = volumes, shape, intensity, change from the previous scan,
+ratio to the whole-history smallest volume; no days, no flags):**
+
+| | images alone | corrected core (timeline + clinical) | both |
+|---|---|---|---|
+| all scans (249) | 0.65 (0.57–0.73) | 0.68 (0.60–0.76) | 0.69 (0.62–0.77) |
+| all scans, within phase | 0.62 (0.54–0.71) | 0.61 (0.53–0.69) | 0.64 |
+| intended use (173) | 0.62 (0.54–0.70) | 0.60 (0.52–0.68) | 0.62 |
+| intended use, within phase | 0.62 (0.52–0.71) | 0.62 (0.52–0.70) | 0.63 |
+
+- Images alone − core in the intended use: +0.02 (−0.10 to +0.14). Both − core: +0.015 (−0.08 to +0.10).
+- Before RT, images rank scans (0.78, descriptive; few events) where the core model does not (0.49).
+- Comparison with earlier scans adds nothing for 120-day risk (+0.002); the timing proxies cost 0.01.
+- Reading: for 120-day risk, images and timeline are equally weak (about 0.62 where PRISM is meant to be used), and
+  combining them does not help.
+
+**LUMIERE detection, locked, image inputs only** (ET, necrosis + cavity, oedema volumes and their ratios to the
+previous scan): 0.66 (0.57–0.73). Clinical + timeline only 0.69 (0.60–0.81). Both 0.77 (0.68–0.86). On LUMIERE the
+two pathways are complementary: together they beat either alone.
