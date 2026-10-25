@@ -146,9 +146,55 @@ def parse_structured(raw: str) -> list[dict] | None:
         return None
 
 
-def check(claims: list[dict] | None, F: dict, cited: bool = True, context: dict | None = None) -> dict:
+# ---------------------------------------------------------------- reliability card rule (EXPLORATORY, post hoc;
+# docs/results/RELIABILITY_CARD.md). Only applied with check(..., card=True) and facts that contain card.* keys, so
+# every earlier evaluation (which predates the card) is unchanged.
+PERFORMANCE = re.compile(r"\bAUCs?\b|area under|c-?statistic|concordance (index|statistic)|discriminat\w*|\bperformance\b(?!\s+status)|"
+                         r"\bperforms?\b|accura\w*|"
+                         r"\breliab\w*|\bconfiden(ce|t)\b(?!\s+interval)", re.I)
+OVERCLAIM = re.compile(r"\b(high|good|strong|excellent|robust|reliable|proven|validated)\b[^.;]{0,40}?\b(confidence|"
+                       r"reliability|performance|accuracy|discrimination)\b|\bwell[- ](validated|tested|established)\b|"
+                       r"\b(tested|validated|proven) (in|for) (this|such) (situation|setting|scan|case)", re.I)
+CARD_TIER_WORDS = {"few cases": r"few (cases|scans|progression)|too few|small number|limited (number|data|cases|evidence)|"
+                              r"\bonly \d+",
+                   "not tested": r"not (been |yet )?(tested|measured|evaluated)|untested|never (been )?tested|"
+                                 r"no (scans?|cases|measured|tested)"}
+
+
+def card_check(claims: list[dict], F: dict, cited: bool = True) -> dict:
+    """(1) Every number in a claim about performance (AUC, discrimination, accuracy, reliability, confidence other
+    than 'confidence interval') must equal a number held by a card.* field: no AUC or confidence that differs from
+    the card. (2) When the card's tier is 'few cases' or 'not tested', a claim must state it (cited: the claim cites
+    card.tier or card.tier_statement; prose: keywords only), and no claim may give the other tier's words.
+    (3) When the tier is not 'tested', no unnegated qualitative overclaim ('high confidence', 'well validated')."""
+    card_vals = [x for k, v in F.items() if k.startswith("card.") for x in _field_numbers(v)]
+    tier = F["card.tier"]
+    perf, unsup, over = 0, [], []
+    for c in claims:
+        t = c["text"]
+        if PERFORMANCE.search(t):
+            perf += 1
+            bad = [n for n, pc in numbers(t, with_percent=True) if not matches(n, card_vals, pc)]
+            if bad:
+                unsup.append({"text": t, "numbers": bad})
+        if tier != "tested" and OVERCLAIM.search(t) and not re.search(NEGATION, t, re.I):
+            over.append(t)
+    required = tier in CARD_TIER_WORDS
+    cite_ok = lambda c: not cited or any(k in ("card.tier", "card.tier_statement") for k in c.get("fields", []))
+    mentioned = (not required) or any(re.search(CARD_TIER_WORDS[tier], c["text"], re.I) and cite_ok(c) for c in claims)
+    wrong = [w for w, pat in CARD_TIER_WORDS.items() if w != tier
+             and any(re.search(pat, c["text"], re.I) and any(k.startswith("card.tier") for k in c.get("fields", []))
+                     for c in claims)] if cited else []
+    return {"tier": tier, "tier_required": required, "tier_mentioned": mentioned, "tier_inconsistent": bool(wrong),
+            "n_performance_claims": perf, "unsupported_performance": unsup, "overclaims": over,
+            "card_pass": mentioned and not wrong and not unsup and not over}
+
+
+def check(claims: list[dict] | None, F: dict, cited: bool = True, context: dict | None = None,
+          card: bool = False) -> dict:
     """Full report check. cited=False: prose without citations, numbers checked against every field of `context`
-    (default F) and, separately, against the record facts F."""
+    (default F) and, separately, against the record facts F. card=True (and card.* facts present): the reliability
+    card rule (card_check) is added and must also pass."""
     if claims is None:
         return {"parsed": False, "n_claims": 0, "n_unsupported": None, "all_flags_mentioned": False, "pass": False}
     res = [check_claim(c, F) for c in claims] if cited else [check_claim(c, context or F, any_field=True) for c in claims]
@@ -167,4 +213,7 @@ def check(claims: list[dict] | None, F: dict, cited: bool = True, context: dict 
            "all_flags_mentioned": all(fl[n]["mentioned"] for n in act),
            "forbidden": fb, "any_forbidden": any(fb.values()), **tc}
     out["pass"] = out["n_unsupported"] == 0 and out["all_flags_mentioned"]
+    if card and "card.tier" in F:
+        out["card"] = card_check(claims, F, cited)
+        out["pass"] = out["pass"] and out["card"]["card_pass"]
     return out

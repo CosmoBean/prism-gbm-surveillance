@@ -41,6 +41,8 @@ Analyses (read the prepared tables, write to $PRISM_OUTPUTS/results):
                   permuted control; G5 triage retest), same network and cross-fit design as finetune
     reportuse     report generator v2: horizon fix, public-report style comparison, usefulness evaluation, LUMIERE
     figures       manuscript figures 1-4 and tables (re-fits the PRISM report split and the clipped split-variance arm)
+    card          reliability card (EXPLORATORY): lookup of measured results by situation, pathway agreement,
+                  card-augmented report records, the checker's card rule on the existing reports
 
 Every stage takes -h for its options.
 """
@@ -80,6 +82,7 @@ STAGES = {
     "finetune_det": "prism.analyses.finetune_detection",
     "reportuse": "prism.analyses.report_usefulness",
     "figures": "prism.analyses.paper_figures",
+    "card": "prism.analyses.reliability_card",
 }
 PIPELINES = {"data": ("mu", "lumiere", "measurements")}
 
