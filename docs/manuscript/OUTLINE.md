@@ -1,6 +1,6 @@
 # Outline: the argument of the PRISM paper (layer 1)
 
-**Status: draft 2 (2026-10-26), for the author's reaction.** It folds in the UCSF results, the two locked external
+**Status: draft 2.1 (2026-10-26), for the author's reaction; adds the split, replication and card results.** It folds in the UCSF results, the two locked external
 tests, the reliability card and the decisions since 2026-10-23. Draft 1 (2026-10-23) is in git history; the author
 did not like its brief. Rules: [STYLE.md](STYLE.md). Reserve: [RESERVE.md](RESERVE.md). Results map:
 [STORY.md](STORY.md). Next layer: skeleton (first sentences only), then prose in `paper/main.tex`.
@@ -43,8 +43,8 @@ proposed once the outline settles.
 | **Fig 2** | The models hold up at two external centres without refitting. | AUC by pathway (images, timeline, both) × cohort (MU internal, LUMIERE locked, UCSF locked, UCSF-trained). |
 | **Fig 3** | Each design choice in the image model buys AUC, and the audit shows what it buys. | The MU ladder: single scan 0.66 → + change 0.71 → + schedule context 0.81; the last step encodes the timeline; between vs within phase. Deep networks as one panel (at control level on MU; tracking ET volume on UCSF). |
 | **Fig 4** | The same kind of model leans on different evidence in different cohorts. | MU: the timeline's gain is between phases (+0.11 overall, −0.02 within). UCSF: ET volume alone 0.88; among enhancement-increased scans images fall to 0.53–0.65. |
-| **Fig 5** | One split can move a score more than any model choice. | MU first split vs 500 splits (clinical alone 0.79 vs 0.62); UCSF's own split vs 100 random splits (timeline 0.45 vs 0.72). |
-| (Fig 6 or panel of 1) | Where the system says it does not know. | Reliability card tiers by situation; the early post-RT window (4 progression scans of 55). |
+| **Fig 5** | One split can move a score more than any model choice. | (A) MU first split vs 500 splits for every model (clinical alone 0.79 vs 0.65; images 0.79 vs 0.72; PRISM's first model 0.80 vs 0.72). (B) A single-scan radiomics setting of the kind reported at 0.80: 0.57 under repeated CV, 1 of 100 single splits ≥ 0.80. (C) UCSF's own split vs 100 random splits (timeline 0.45 vs 0.72). |
+| **Fig 6** | Where the system says it does not know. | Reliability card: situations (phase × enhancement) by cohort with their tier; 35 of 249 report scans in a tested situation; no early post-RT situation has more than 3 progressions; when the pathways disagree, the timeline is usually right on MU and the images on UCSF. |
 
 **Tables**
 - Table 1: the three cohorts (what each has: images, RT dates, labels, n).
@@ -74,10 +74,12 @@ proposed once the outline settles.
 2. *What each design choice buys the images* → Fig 3. The ladder; deep networks in one sentence.
 3. *The evidence a model leans on depends on the cohort* → Fig 4. MU: the timeline; UCSF: enhancement. PRISM's
    audit is what tells them apart.
-4. *One split can move a score more than any model choice* → Fig 5. Our first 0.80; UCSF's split; the
-   literature's single held-out sets.
-5. *Where PRISM says it does not know* → card / Fig 6. The early post-RT window; enhancement that grows without
-   progression; how the card reports it. The audit's leaks and the report: one paragraph.
+4. *One split can move a score more than any model choice* → Fig 5. Our first split flattered every model by
+   0.07–0.14; a single-scan radiomics setting of the kind reported at 0.80 gives 0.57 under repeated CV and reaches
+   0.80 in 1 of 100 splits; UCSF's own split put the timeline at 0.45 against 0.72.
+5. *Where PRISM says it does not know* → Fig 6. For most scans the evidence behind any score is thin: 35 of 249
+   are in a situation tested on ≥ 10 progression and ≥ 10 stable scans. Pathway disagreement resolves differently
+   by cohort. The audit's leaks and the report: one paragraph.
 
 **4. Discussion**
 1. The answer to the question, first sentence.
@@ -98,11 +100,10 @@ Censoring, calibration, GBM, SHAP, conformal sets, the report's comparison arms,
 tests, UCSF label sensitivities and the audit detail, 120-day risk detail.
 
 ## Work needed for this outline
-- Build the reliability card (lookup of measured results by situation; extend the faithfulness checker).
-- Image-only model on the MU first split and over the 500 splits (offered, cheap).
-- Re-run the Christodoulou-style model on current folds (offered; few CPU hours); the author's note on their
-  closed-source data needs the repository link.
-- Intervals for the UCSF within-enhancement subset.
+- Done 2026-10-26: reliability card (RELIABILITY_CARD.md), image-only on the first split (SPLIT_VARIANCE.md),
+  Christodoulou-style re-implementation (CHRISTODOULOU_REPLICATION.md), UCSF subset intervals (UCSF_AUDIT.md).
+- Open: the author's note that Christodoulou used closed-source data needs the repository link and their wording.
+- Open: card design choice (exact cells, no pooling across cohorts) for the author.
 
 ## Decisions log (author, 2026-10-25)
 1. Task and framing: B (detection at the scan) is the task, C (a system that shows what a model uses) is the
