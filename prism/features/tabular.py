@@ -83,9 +83,10 @@ def treatment(cohort: pd.DataFrame, index: pd.DataFrame | None = None) -> pd.Dat
     }, index=cohort.index)
 
 
-def measurement_groups(cohort: pd.DataFrame) -> dict[str, pd.DataFrame]:
-    """Image measurements split into volumes, morphology/intensity and past-only change ("delta")."""
-    m = load_measurements(cohort.scan_id)
+def measurement_groups(cohort: pd.DataFrame, meas: pd.DataFrame | None = None) -> dict[str, pd.DataFrame]:
+    """Image measurements split into volumes, morphology/intensity and past-only change ("delta").
+    `meas`: a measurement table with a scan_id column (default: the cached MU table), e.g. an external cohort's."""
+    m = load_measurements(cohort.scan_id) if meas is None else meas.set_index("scan_id").reindex(cohort.scan_id)
     m.index = cohort.index
     log1p = lambda s: np.log1p(s.clip(lower=0))
     slog = lambda s: np.sign(s) * np.log1p(s.abs())

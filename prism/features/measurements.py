@@ -37,8 +37,13 @@ def reference_mask(brain: np.ndarray, abnormal: np.ndarray, margin_mm: float = N
 
 def scan_concepts(args: tuple[str, str]) -> dict:
     pid, tp = args
-    paths = mu_scan_paths(pid, tp)
-    row = {"scan_id": f"{pid}_{tp}", "patient_id": pid, "timepoint": tp}
+    return concepts_from_paths(mu_scan_paths(pid, tp), {"scan_id": f"{pid}_{tp}", "patient_id": pid, "timepoint": tp})
+
+
+def concepts_from_paths(paths: dict, row: dict) -> dict:
+    """Compartment concepts for one timepoint given its t1c / flair / mask paths (MU label mapping; also used for
+    external cohorts in BraTS space, e.g. prism.features.ucsf_imaging)."""
+    row = dict(row)
     try:
         img = nib.load(str(paths["mask"]))
         spacing = tuple(float(z) for z in img.header.get_zooms()[:3])
