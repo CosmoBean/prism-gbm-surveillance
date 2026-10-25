@@ -291,3 +291,25 @@ B1 + I_pure − B1 −0.001 (−0.052 to +0.046). All scans gives the same pictu
 Reading: images alone detect progression at about 0.71 and, compared within a phase of care, at about 0.68, at least
 as well as timing within a phase (0.64). Timing wins across phases (0.82) because progression scans come late. The
 two views overlap: combining them does not beat timing.
+
+### EXPLORATORY (2026-10-25): images + clinical, no timeline
+
+The model a dataset with images and clinical data but no treatment dates could build. Clinical = age, sex, IDH,
+MGMT (B0, C2 rules). Same folds, ridge and bootstrap (`scripts/exploratory_images_clinical_detection.py`). Grade 4,
+intended use (62/84):
+
+| arm | AUC (95% CI) | phase-stratified |
+|---|---|---|
+| clinical alone (B0) | 0.530 (0.450–0.606) | 0.532 |
+| images, scan alone (I_scan) | 0.659 (0.567–0.733) | 0.680 |
+| clinical + I_scan | 0.662 (0.570–0.735) | 0.684 |
+| images (I_pure) | 0.709 (0.630–0.781) | 0.677 |
+| clinical + I_pure | 0.706 (0.622–0.780) | 0.670 |
+| timeline + clinical (B1) | 0.822 (0.749–0.902) | 0.640 |
+| B1 + I_pure | 0.821 (0.744–0.894) | 0.654 |
+
+- Clinical + I_pure − I_pure: −0.003 (−0.020 to +0.015); within phase −0.007. The clinical data add nothing to the
+  images.
+- Clinical + I_pure − clinical: +0.176 (+0.084 to +0.271). The images carry everything the no-timeline model knows.
+- B1 + I_pure − clinical + I_pure: +0.114 (+0.035 to +0.196) overall, −0.016 (−0.134 to +0.109) within phase. The
+  timeline's gain is all between phases.
