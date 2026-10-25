@@ -121,8 +121,10 @@ Each figure makes one claim; its caption's first sentence is that claim.
    framing, A (120-day forecast) is the origin story.
 2. External data: UCSF-ALPTDG obtained (DUA); it enters this paper if its labels allow. Burdenko and UCSD-PTGBM are
    the follow-up.
-3. RANO 12-week rule: undecided. The image features do not use the timeline, so the rule does not bear on the image
-   results; it only explains part of the timeline's lead. Decide whether to include it when drafting Results 2.
+3. RANO 12-week rule: not part of the paper (author, 2026-10-25). The transportable model holds on LUMIERE
+   (0.80 internal, 0.77 external) with images carrying more there, so the timeline is not just the labelling rule; the
+   calendar follows the biology as well. The timeline is described as where the patient is in treatment, without
+   arguing why it works.
 4. Christodoulou 2026 and Tikhonov 2025: mentioned concisely for context, with their results and a line on method.
 5. Figures: new figures built for this story; the existing ones are not binding.
 6. Space by contribution to the argument. Report generator: little (one or two sentences and a figure panel at
