@@ -123,6 +123,152 @@ None of these needed a council: each follows from "same quantity as on MU" or fr
    bootstrap and seed.
 8. **Added outputs (EXPLORATORY):** the univariable input AUCs and the coefficient table. Neither enters Q1 or Q2.
 
+## Part B
+
+**Models trained on UCSF (internal).** Code: `prism/analyses/ucsf_internal.py`
+(`PYTHONPATH=. .venv/bin/python -m prism.analyses.ucsf_internal`, about 3 min on 6 CPUs). Outputs:
+`outputs/results/analyses/ucsf/internal/`: auc.csv, contrasts.csv, within_phase.csv, counts.csv,
+split_variance.csv, permutation_control.csv, q3_b_minus_a.csv, oof.csv.gz, ucsf_split_scores.csv.gz, run_info.json.
+
+**Method (as planned).**
+- Pipeline: the verified ridge of `prism.analyses.detection` (`c3.fit_predict(c3.BASELINES[0])`), which picks C by
+  inner patient-grouped CV. Each model is trained on the evaluation set of its analysis.
+- Cross-validation: patient-grouped and label-stratified, 5 × 5 (`StratifiedGroupKFold`, seed 20261025 + repeat). The
+  seeds were fixed in code before the run.
+- AUC is the mean over repeats of the pooled out-of-fold AUC. CIs and paired contrasts come from a patient-cluster
+  bootstrap: 1,000 draws, seed 20261025.
+- In the scan-2 sets each patient contributes one row.
+
+**The sets are small.** Primary: 29 positives and 40 negatives. WHO GBM: 21 and 20. The all-glioma scan-2 set
+(48 / 78) gives the most stable estimate.
+
+### Scan 2, `pos_s2_pm30` vs primary negatives (AUC, 95% CI)
+
+| arm | **grade 4, PRIMARY (29/40/69)** | **all gliomas (48/78/126)** | WHO GBM (21/20/41) |
+|---|---|---|---|
+| B0 (clinical) | 0.407 (0.314–0.494) | 0.568 (0.475–0.666) | 0.402 (0.283–0.521) |
+| B-Tl (UCSF timeline) | 0.669 (0.549–0.784) | 0.634 (0.544–0.719) | 0.581 (0.418–0.729) |
+| Iscan | 0.826 (0.729–0.909) | 0.794 (0.714–0.872) | 0.770 (0.617–0.889) |
+| **Ipure** | **0.863 (0.772–0.934)** | **0.855 (0.785–0.918)** | 0.789 (0.644–0.905) |
+| B0+Iscan | 0.813 (0.721–0.901) | 0.795 (0.715–0.874) | 0.760 (0.597–0.887) |
+| B0+Ipure | 0.860 (0.774–0.931) | 0.854 (0.782–0.917) | 0.783 (0.642–0.898) |
+| Timg | 0.913 (0.843–0.967) | 0.905 (0.846–0.953) | 0.889 (0.780–0.966) |
+| B-Tl+Ipure | 0.871 (0.790–0.938) | 0.859 (0.792–0.919) | 0.783 (0.638–0.905) |
+
+Pre-specified paired contrasts (ΔAUC, 95% CI):
+
+| contrast | grade 4 | all gliomas | WHO GBM |
+|---|---|---|---|
+| B0+Ipure − B0 | +0.453 (+0.336 to +0.563) | +0.286 (+0.188 to +0.382) | +0.382 (+0.217 to +0.529) |
+| B-Tl+Ipure − B-Tl | +0.203 (+0.089 to +0.316) | +0.225 (+0.142 to +0.313) | +0.202 (+0.045 to +0.345) |
+| Ipure − Iscan | +0.037 (−0.018 to +0.095) | +0.061 (+0.024 to +0.106) | +0.019 (−0.072 to +0.114) |
+| B-Tl − B0 | +0.262 (+0.145 to +0.374) | +0.066 (−0.026 to +0.157) | +0.179 (+0.035 to +0.319) |
+
+Reading:
+- **On UCSF the images carry the signal; clinical data carry none.**
+  - B0 lies at or below 0.5. The permuted-label control lands in the same range, so this is the usual negative bias
+    of cross-validation under the null, not a reversed signal.
+  - Images add +0.2 to +0.45 to clinical data, with or without the timeline.
+  - The timeline adds about 0.01 once the images are in: B-Tl+Ipure 0.871 vs Ipure 0.863.
+- **Change from the previous scan adds little to the current scan when the model is trained on UCSF.** Ipure − Iscan
+  is +0.04 in grade 4 (CI covers 0) and +0.06 in all gliomas.
+- **Timg does best everywhere (0.89–0.91),** even though it has only 6 inputs.
+- **Within phase.** The later post-RT subset of the primary set (27 / 38) gives the same picture: Ipure 0.875
+  (0.789–0.944), Timg 0.927 (0.861–0.978), B-Tl 0.662, B0 0.410. The set is almost all later post-RT, so there is no
+  phase contrast for the timeline to exploit.
+- **Caution.** These are internal estimates on a two-scan cohort. The UCSF progression call was probably made largely
+  from these same scans (see Part A, single inputs), so part of the image–label agreement may be built in.
+
+**EXPLORATORY validity check (not in the plan).** Labels were permuted across patients (20 permutations, the same
+folds). Iscan, Ipure, Timg and B-Tl+Ipure then give mean AUCs of 0.40–0.46 (maximum 0.62) in grade 4 and 0.42–0.44 in
+all gliomas. So the pipeline does not leak.
+
+### Sensitivity and secondary sets (grade 4, AUC, 95% CI)
+
+| arm | scan 2 `pos_s2_between` (39/40) | scan 2, verified negatives only (29/33) | *reference only:* `et_increased` (71/69) |
+|---|---|---|---|
+| B0 | 0.551 (0.434–0.667) | 0.441 (0.322–0.548) | 0.526 (0.443–0.605) |
+| B-Tl | 0.708 (0.601–0.805) | 0.720 (0.593–0.828) | 0.688 (0.611–0.761) |
+| Iscan | 0.843 (0.752–0.920) | 0.843 (0.744–0.927) | 0.844 (0.778–0.901) |
+| Ipure | 0.847 (0.752–0.920) | 0.862 (0.763–0.940) | 0.945 (0.906–0.974) |
+| B0+Ipure | 0.841 (0.751–0.914) | 0.860 (0.762–0.936) | 0.943 (0.904–0.972) |
+| Timg | 0.893 (0.811–0.951) | 0.922 (0.852–0.974) | 0.960 (0.924–0.985) |
+| B-Tl+Ipure | 0.859 (0.773–0.929) | 0.886 (0.796–0.952) | 0.937 (0.896–0.968) |
+
+- The contrast signs are the same as in the primary set. B0+Ipure − B0 and B-Tl+Ipure − B-Tl exclude 0 in every set
+  (contrasts.csv).
+- `et_increased` is defined on the images, so it is an upper reference and not a result.
+
+All scans (`pos_s2_pm30` + `pos_s1_at` vs primary negatives), single-scan inputs only:
+
+| arm | grade 4 (34/103/97) | all gliomas (60/231/210) |
+|---|---|---|
+| B0 | 0.427 (0.333–0.518) | 0.522 (0.447–0.596) |
+| Iscan | 0.858 (0.777–0.924) | 0.791 (0.723–0.854) |
+| B0+Iscan | 0.835 (0.749–0.906) | 0.790 (0.722–0.854) |
+
+### UCSF's own TRAIN / TEST split vs 100 random patient-grouped splits
+
+Each model was fitted on the TRAIN rows of the set and tested on its TEST rows. The 100 random splits hold out the same
+number of test patients. The split CI is the patient bootstrap on the test rows.
+
+| arm | grade 4: UCSF split (6/10 test) | grade 4: random, median (2.5–97.5%) | all gliomas: UCSF split (8/14 test) | all gliomas: random, median (2.5–97.5%) |
+|---|---|---|---|---|
+| B0 | 0.517 (0.214–0.813) | 0.508 (0.291–0.801) | 0.670 (0.425–0.897) | 0.629 (0.367–0.795) |
+| B-Tl | **0.450** (0.143–0.750) | 0.717 (0.492–0.940) | 0.705 (0.474–0.908) | 0.671 (0.474–0.906) |
+| Iscan | 0.917 (0.714–1.000) | 0.874 (0.708–1.000) | 0.821 (0.628–0.964) | 0.821 (0.663–0.967) |
+| Ipure | 0.900 (0.717–1.000) | 0.875 (0.723–1.000) | 0.875 (0.708–1.000) | 0.876 (0.755–0.991) |
+| Timg | 0.983 (0.900–1.000) | 0.937 (0.831–1.000) | 0.929 (0.795–1.000) | 0.909 (0.809–1.000) |
+| B-Tl+Ipure | 0.850 (0.603–1.000) | 0.889 (0.763–1.000) | 0.893 (0.733–1.000) | 0.887 (0.776–0.991) |
+
+- One 16-patient test split ranges over about ±0.15 AUC for the image arms and ±0.25 for the clinical and timeline
+  arms.
+- In grade 4, UCSF's split lands at the 1st percentile of the random splits for B-Tl. On that split alone, the timeline
+  would look worse than chance (0.45), while repeated CV gives 0.67.
+- This repeats on new data the split-variance point made on MU. The GBM and 120-day rows are in split_variance.csv.
+
+### Q3: does training on UCSF beat the locked MU model?
+
+B is out-of-fold and A is Part A's locked scores.csv, on the same rows, with a paired patient bootstrap. Grade-4 and
+GBM rows use the grade-4 MU model; all-glioma rows use the all-glioma MU model.
+
+| set | B-Ipure | A-Ipure | B − A (95% CI) |
+|---|---|---|---|
+| **grade 4 (plan)** | 0.863 | 0.726 | **+0.137 (+0.033 to +0.257)** |
+| all gliomas | 0.855 | 0.747 | +0.108 (+0.043 to +0.185) |
+| WHO GBM | 0.789 | 0.740 | +0.048 (−0.088 to +0.191) |
+
+- **Yes for Ipure,** in grade 4 and all gliomas. The plan calls this comparison descriptive.
+- *EXPLORATORY:* the same comparison for the other image arms (grade 4):
+  - Iscan +0.031 (−0.052 to +0.116);
+  - Timg +0.024 (−0.039 to +0.083);
+  - B0+Ipure +0.110 (+0.014 to +0.219).
+- So the locked MU single-scan and LUMIERE image models are about as good as models trained on UCSF. What the MU
+  models lose is the change inputs, whose UCSF distribution is much narrower than MU's (Part A; UCSF_IMAGING.md).
+
+### Deviations and decisions (Part B)
+
+No council was needed.
+1. **Age is the patient's age at scan 1 on both rows.** It is constant within a patient, so it cannot encode the
+   timepoint in the all-scan sets. Part A instead derived age at diagnosis for the locked models. The two differ by a
+   constant shift within a patient, at most a few years, and this is immaterial for a model refitted on UCSF.
+2. **B-Tl coding:**
+   - raw days, as in MU timing;
+   - days from RT start: NaN when RT has not started or its date is unknown, imputed in-fold with an indicator
+     (BASE_PRE);
+   - "on treatment" as two flags, on chemo and on RT, with "unknown" (2 scans) as NaN;
+   - surgeries before scan 2 = surgeries before scan 1 + the 2nd / 3rd surgeries dated between the scans;
+   - days since the previous scan in the scan-2 sets only;
+   - chemo started is constant in the primary set.
+3. **All-scan sets** use only B0, Iscan and B0+Iscan. Ipure, Timg and the timeline encode the timepoint or rise with
+   it: days from diagnosis always increases from scan 1 to scan 2.
+4. **Random splits.** Each draws as many test patients as UCSF's TEST split has in that set (seed 20261025). A split is
+   redrawn until both sides have at least 2 positives and 2 negatives. The ridge seed is 0 for every single split.
+5. **Additions, all EXPLORATORY:**
+   - the permuted-label control;
+   - the WHO GBM column for every analysis;
+   - Q3 for arms other than Ipure.
+
 ## 120-day (locked)
 
 This is the plan's secondary origin task. Models were fitted once on MU index scans (`mu_cohort`, verified
@@ -160,3 +306,38 @@ Deviations and decisions (120-day):
 2. **Populations.** The plan does not name one for this analysis. Grade 4 with grade-4 models is treated as primary,
    matching Part A. WHO GBM and all gliomas (with all-glioma models) are extra rows.
 3. **Plain AUC, no IPCW,** as the plan says. Unknown-follow-up scans are excluded, not weighted.
+
+## 120-day (internal)
+
+**Label (scan 1).**
+- Positive: progression 1–120 d after scan 1.
+- Negative: progression > 120 d after scan 1, or no progression with ≥ 120 d of dated follow-up.
+- Excluded: progression at scan 1 (−7 to < 1 d), an earlier progression, and unknown follow-up. The rules are the same
+  as for the locked 120-day analysis.
+- Method: the same pipeline, 5 × 5 CV and bootstrap as Part B. B-Tl has no days-since-previous input, because scan 1
+  has no previous scan.
+
+| arm | **grade 4 (45/63/108)** | all gliomas (68/153/221) | WHO GBM (30/33/63) |
+|---|---|---|---|
+| B0 | 0.415 (0.339–0.490) | 0.577 (0.507–0.648) | 0.357 (0.261–0.444) |
+| B-Tl | 0.522 (0.432–0.615) | 0.693 (0.629–0.763) | 0.444 (0.339–0.565) |
+| **Iscan** | **0.709 (0.605–0.802)** | 0.775 (0.709–0.837) | 0.669 (0.539–0.789) |
+| B0+Iscan | 0.696 (0.591–0.789) | 0.769 (0.702–0.831) | 0.626 (0.489–0.750) |
+| B-Tl+Iscan | 0.703 (0.600–0.797) | 0.783 (0.717–0.845) | 0.636 (0.499–0.758) |
+
+| contrast | grade 4 | all gliomas | WHO GBM |
+|---|---|---|---|
+| B0+Iscan − B0 | +0.280 (+0.165 to +0.384) | +0.192 (+0.126 to +0.257) | +0.270 (+0.142 to +0.409) |
+| B-Tl+Iscan − B-Tl | +0.181 (+0.065 to +0.284) | +0.090 (+0.034 to +0.146) | +0.191 (+0.067 to +0.328) |
+| B-Tl − B0 | +0.107 (+0.034 to +0.187) | +0.116 (+0.055 to +0.176) | +0.088 (+0.007 to +0.179) |
+
+- **The scan-1 image predicts progression within 120 d** (grade 4: 0.709), close to the locked F-Iscan (0.668).
+  - Clinical data and the timeline add nothing to it.
+  - Later post-RT only (grade 4, 40 / 51): Iscan 0.697, B-Tl 0.573.
+- **In all gliomas the timeline carries some signal of its own (0.69).** It adds little to the image (B-Tl+Iscan 0.783
+  vs Iscan 0.775).
+- **The UCSF split, grade 4 (8 / 14 test), against the random-split median (2.5–97.5%):**
+  - Iscan 0.786, vs 0.733 (0.535–0.930);
+  - B-Tl 0.464, vs 0.580 (0.359–0.806).
+- **Caution.** Many 120-day positives are the same patients as the scan-2 positives. The scans are a median of 56 d
+  apart, so a scan 1 that already shows growing disease is likely to precede a progression call at scan 2.
