@@ -107,7 +107,8 @@ Each figure makes one claim; its caption's first sentence is that claim.
 2. ~~Both questions or detection first~~ (author, 2026-10-23): 120-day risk is not the headline. It is the
    setting of the first 0.80 (Results 1) and gets one paragraph with its intended-use result (Results 4); the
    argument is carried by detection at the scan, where the evidence can be taken apart.
-3. The PRISM name (clash with arXiv 2610.13510) and the relation to Christodoulou 2026.
+3. ~~The PRISM name~~ (author, 2026-10-25): keep PRISM as a name, with no acronym; one Methods sentence may tie it
+   to splitting a score into its parts. The relation to Christodoulou 2026 is still open.
 
 ## Numbers still to confirm before prose
 - Images alone for 120-day risk, with the timing proxies removed as in the detection ladder (current best estimate
@@ -120,8 +121,12 @@ Each figure makes one claim; its caption's first sentence is that claim.
    framing, A (120-day forecast) is the origin story.
 2. External data: UCSF-ALPTDG obtained (DUA); it enters this paper if its labels allow. Burdenko and UCSD-PTGBM are
    the follow-up.
-3. RANO 12-week rule: pending; proposed as two sentences in Results 2 that explain why the timeline works.
+3. RANO 12-week rule: undecided. The image features do not use the timeline, so the rule does not bear on the image
+   results; it only explains part of the timeline's lead. Decide whether to include it when drafting Results 2.
 4. Christodoulou 2026 and Tikhonov 2025: mentioned concisely for context, with their results and a line on method.
 5. Figures: new figures built for this story; the existing ones are not binding.
 6. Space by contribution to the argument. Report generator: little (one or two sentences and a figure panel at
    most). Deep learning: only as much as it adds to the story.
+7. Name: PRISM, no acronym (the old expansion, "Post-treatment Response Intelligence and Surveillance Monitor",
+   is dropped from main.tex when the prose is rewritten). Mythical names were considered and rejected as too much
+   for a scientific paper.
