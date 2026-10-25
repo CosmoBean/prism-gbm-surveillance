@@ -1,6 +1,7 @@
 # Outline: the argument of the PRISM paper (layer 1)
 
-**Status: draft for the author's reaction (2026-10-23).** It replaces the 2026-10-15 outline (in git history).
+**Status: draft (2026-10-23); the author did not like the 2026-10-25 brief of it, to be reworked after the UCSF
+results (2026-10-26).** It replaces the 2026-10-15 outline (in git history).
 Rules: [STYLE.md](STYLE.md). Left for reviewers: [RESERVE.md](RESERVE.md). Once this outline is settled, the next
 layer is the skeleton (first sentences only), then prose in `paper/main.tex`.
 

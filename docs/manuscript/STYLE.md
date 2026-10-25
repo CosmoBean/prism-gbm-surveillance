@@ -221,3 +221,6 @@ Add each reaction as a dated, one-line rule.
 - 2026-10-25: every result in the main text must answer "so what?" in the author's internal dialogue: what does
   the reader now believe that they did not before? If there is no answer, it goes to the supplement. The report
   generator gets little space; deep learning only as much as it adds to the argument.
+- 2026-10-25: the author did not like the five-step outline brief given in chat (step 1 "a good score that
+  measured the test set" → step 5 "where the system says it isn't reliable"). Reasons not yet given; revisit the
+  outer story with the UCSF results in hand before writing a skeleton. The RANO argument is out of the paper.
