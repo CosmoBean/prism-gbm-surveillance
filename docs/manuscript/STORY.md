@@ -112,3 +112,24 @@ ratio to the whole-history smallest volume; no days, no flags):**
 **LUMIERE detection, locked, image inputs only** (ET, necrosis + cavity, oedema volumes and their ratios to the
 previous scan): 0.66 (0.57–0.73). Clinical + timeline only 0.69 (0.60–0.81). Both 0.77 (0.68–0.86). On LUMIERE the
 two pathways are complementary: together they beat either alone.
+
+## UCSF-ALPTDG results (2026-10-26; plan pre-specified at 0e7c9fe; details in docs/results/UCSF_RESULTS.md, UCSF_AUDIT.md)
+
+Grade 4, scan 2 (29 progression / 40 stable); all gliomas 48 / 78 give the same picture.
+
+| | locked MU model | trained on UCSF |
+|---|---|---|
+| clinical alone | 0.50 | 0.41 |
+| UCSF timeline (no RT end date; B1 not buildable) | – | 0.67 |
+| images, scan alone | 0.80 | 0.83 |
+| images + change | 0.73 | 0.86 |
+| LUMIERE image set | 0.89 | 0.91 |
+| deep networks (G1 / G3 / transfer) | 0.75 / 0.71 / – | 0.74 / 0.74 / 0.75 |
+| deep, permuted labels | – | 0.54 |
+
+- Audit: no leakage, but enhancing-tumour volume alone gives 0.88; 27 of 29 positives are UCSF-rated "ET increased";
+  within ET-increased scans the images fall to 0.53–0.65; every deep score tracks ET volume (r ≈ 0.8).
+- Reading: on UCSF the label is an enhancement call at the same scan, so images score high by re-detecting it. The
+  cohort's labelling decides what a model learns: the timeline on MU, enhancement on UCSF. This fits the paper's
+  question ("what has the model learned to see?") and needs a story decision with the author.
+- UCSF's own train/test split: the timeline model 0.45 vs median 0.72 over 100 random splits (split variance again).
