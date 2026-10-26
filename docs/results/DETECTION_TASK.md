@@ -313,3 +313,14 @@ intended use (62/84):
 - Clinical + I_pure − clinical: +0.176 (+0.084 to +0.271). The images carry everything the no-timeline model knows.
 - B1 + I_pure − clinical + I_pure: +0.114 (+0.035 to +0.196) overall, −0.016 (−0.134 to +0.109) within phase. The
   timeline's gain is all between phases.
+
+### EXPLORATORY: clinical alone on LUMIERE (added 2026-10-26 for Figure 2; not pre-specified)
+
+- Model: age, sex, IDH, MGMT with the C2 rules (the first four inputs of Tbase; B0 on MU). Fitted once on the MU
+  grade-4 detection training rows exactly as Tbase (181 rows, positives + primary negatives, all phases) and applied
+  once to the 178 LUMIERE detection scans (73 / 105 / 79 patients; no missing clinical values). Plain AUC, patient
+  bootstrap, 1,000 draws, seed 20261021. Code: `scripts/exploratory_lumiere_clinical_alone.py` (reuses
+  `prism.analyses.detection`; output `outputs/results/analyses/detection/lumiere_clinical_alone.json`).
+- **LUMIERE: 0.554 (0.458-0.635).** MU internal (same model = B0, OOF, grade 4, intended use, 62/84/80):
+  **0.530 (0.450-0.606)**, reproducing the stored B0 value exactly. Clinical alone is at chance on both.
+

@@ -293,6 +293,7 @@ All: LUM (73 / 105 / 79), plain AUC, patient bootstrap 1,000 draws. Source: DETE
 | Transport-failure flag (AUC < 0.65) | not raised | PLANNED rule |
 | Strongest single inputs | log ET 0.662, log oedema 0.657, oedema / ET change 0.646 / 0.628; log days since surgery 0.608 | EXPLORATORY |
 | Clinical alone (locked) | **not available** (Mismatch 12) | |
+| Clinical alone (age, sex, IDH, MGMT; fitted once as Tbase, applied once) | **0.554 (0.458-0.635)**; MU internal OOF (= B0, grade 4, IU) 0.530 (0.450-0.606) | EXPLORATORY (2026-10-26; DETECTION_TASK.md EXPLORATORY section; `scripts/exploratory_lumiere_clinical_alone.py`; resolves Mismatch 12) |
 
 Pathway statement: images alone 0.65, timeline alone 0.69, both 0.77 (complementary).
 
