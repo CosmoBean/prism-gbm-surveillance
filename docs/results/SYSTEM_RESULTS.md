@@ -212,3 +212,79 @@ Specification details, fixed before evaluation:
   - Mondrian sets break on both.
 - The MU tier flag is tied to phase of care, so S2 for the tier mixes phase with evidence.
 - LUMIERE "any flag" rests on 12 scans.
+
+## EXPLORATORY: reduced confidence design
+
+**EXPLORATORY.** This design was chosen after S1–S4 had been read, so none of it is pre-specified. The motivation:
+- "any flag" marks 91–100% of scans;
+- out of range picks out no errors in any cohort;
+- the tier is reversed on MU.
+
+The four rules below are tested on the same records, with the same metrics and bootstrap as S2 / S3
+(patient-cluster, 1,000 draws, seed 20261026; S3 reference of 100 draws per bootstrap draw and 1,000 for the point).
+Populations are grade 4 primary only: MU intended use (out-of-fold, mean over 5 repeats), LUMIERE, and UCSF grade-4
+scan 2.
+
+- **D1:** the pathways disagree.
+- **D2:** combined conformal set {0, 1} at α = 0.2.
+- **D3:** D1 OR D2.
+- **D4:** D1 AND D2.
+
+Code: `scripts/exploratory_reduced_flags.py`. It imports `prism.analyses.system` and changes nothing there.
+Outputs are in `outputs/results/analyses/system/exploratory_reduced_flags/` (`selective.csv`, `error_by_flag.csv`,
+`checks.csv`). The checks:
+- the rebuilt cohorts reproduce the published AUCs;
+- their repeat-0 flags equal the flags in `records_{mu,lumiere,ucsf}.jsonl`;
+- the D1 and D2 rows equal the pre-specified S2 / S3 rows of `selective.csv` exactly.
+
+Error is measured at the cohort-median threshold of the combined score, as in S4.
+
+| cohort | rule | flagged | AUC unflagged / flagged | S2 diff (95% CI) | S3 retained − matched (95% CI) | error flagged / unflagged |
+|---|---|---|---|---|---|---|
+| MU grade 4 | D1 disagree | 40% | 0.901 / 0.594 | **+0.307 (+0.175 to +0.432)** | **+0.083 (+0.046 to +0.123)** | 0.43 / 0.14 |
+| | D2 conformal | 25% | 0.860 / 0.633 | **+0.228 (+0.074 to +0.370)** | +0.024 (−0.000 to +0.048) | 0.37 / 0.22 |
+| | D3 or | 52% | 0.930 / 0.650 | **+0.279 (+0.176 to +0.375)** | **+0.090 (+0.048 to +0.134)** | 0.38 / 0.12 |
+| | D4 and | 12% | 0.845 / 0.511 | **+0.334 (+0.125 to +0.515)** | **+0.023 (+0.010 to +0.041)** | 0.52 / 0.22 |
+| LUMIERE | D1 disagree | 57% | 0.826 / 0.721 | +0.105 (−0.049 to +0.266) | +0.051 (−0.028 to +0.144) | 0.36 / 0.22 |
+| | D2 conformal | 38% | 0.814 / 0.567 | **+0.248 (+0.102 to +0.412)** | +0.041 (−0.016 to +0.092) | 0.48 / 0.20 |
+| | D3 or | 68% | 0.860 / 0.730 | +0.130 (−0.003 to +0.258) | **+0.086 (+0.004 to +0.171)** | 0.36 / 0.19 |
+| | D4 and | 27% | 0.818 / 0.518 | **+0.300 (+0.129 to +0.519)** | **+0.047 (+0.005 to +0.085)** | 0.54 / 0.22 |
+| UCSF | D1 disagree | 55% | 0.850 / 0.869 | −0.019 (−0.218 to +0.175) | −0.004 (−0.112 to +0.103) | 0.26 / 0.29 |
+| | D2 conformal | 36% | 0.921 / 0.833 | +0.087 (−0.070 to +0.291) | **+0.073 (+0.014 to +0.138)** | 0.32 / 0.25 |
+| | D3 or | 68% | 0.929 / 0.863 | +0.066 (−0.130 to +0.229) | +0.086 (−0.006 to +0.190) | 0.26 / 0.32 |
+| | D4 and | 23% | 0.890 / 0.850 | +0.040 (−0.148 to +0.309) | **+0.038 (+0.001 to +0.087)** | 0.38 / 0.25 |
+
+Bold marks a CI that excludes 0. On LUMIERE the matched reference is plain random removal, because there is a single
+stratum.
+
+The CI of the error difference (flagged − unflagged) for D4 is:
+- MU +0.30 (+0.17 to +0.43);
+- LUMIERE +0.33 (+0.13 to +0.48);
+- UCSF +0.13 (−0.13 to +0.40).
+
+Reading:
+- **No reduced rule passes both S2 and S3 in all three cohorts.**
+- **D4 (disagree and {0, 1}) is the only rule whose S3 lower bound is above 0 in every cohort.** It also passes S2
+  on MU and LUMIERE.
+  - It flags 12–27% of scans.
+  - Flagged scans are wrong at the median threshold about half the time on MU and LUMIERE (0.52, 0.54) and 0.38 on
+    UCSF. Unflagged scans are wrong 0.22–0.25 of the time.
+  - Its S3 gains are small: +0.02 to +0.05, with lower bounds of 0.010, 0.005 and 0.001. Abstaining on so few scans
+    moves the retained AUC little.
+  - The flagged MU set is small: at least 5 progressions and 4 non-progressions per repeat.
+- **D3 (or)** gives the largest retained gain on MU (+0.090) and LUMIERE (+0.086). It flags 52–68% of scans, which is
+  too many to act on. Its S2 fails on LUMIERE and UCSF.
+- **Disagreement alone** carries no information on UCSF (S2 −0.019; flagged error 0.26 against 0.29 unflagged).
+- **The conformal set alone** is the most consistent single signal. It passes S2 on MU and LUMIERE, and S3 on UCSF.
+
+**Proposed confidence statement for the report (EXPLORATORY).** The card is worded as evidence, the conformal set
+gives the number, and disagreement on an undecided set is the warning:
+
+> *Evidence:* in this situation the system was tested on N progression and M non-progression scans
+> (AUC and CI when "tested"; otherwise "few cases"). *At 80% confidence the answer is* {1} / {0} / {0, 1}
+> (both answers possible). *Warning*, shown only when the set is {0, 1} and the pathways point opposite ways: in
+> development and external testing, scans like this were misclassified about half the time (MU 0.52, LUMIERE 0.54,
+> UCSF 0.38), against about one in four otherwise.
+
+On its own, disagreement is stated as a fact in the card, not as a warning, because it is uninformative on UCSF. The
+tier and out of range are not used as flags. This design would have to be tested on new data before it is claimed.
