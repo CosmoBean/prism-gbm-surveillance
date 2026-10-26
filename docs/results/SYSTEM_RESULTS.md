@@ -288,3 +288,131 @@ gives the number, and disagreement on an undecided set is the warning:
 
 On its own, disagreement is stated as a fact in the card, not as a warning, because it is uninformative on UCSF. The
 tier and out of range are not used as flags. This design would have to be tested on new data before it is claimed.
+
+## EXPLORATORY: analyses requested in internal review (2026-10-26)
+
+**EXPLORATORY.** These analyses were added after internal review round 3
+([round3_reviewer2.md](../manuscript/council/round3_reviewer2.md), M2, M3, M4 and M6, plus NUMBERS.md mismatch 8).
+None is pre-specified, except the UCSF calibration row under F (UCSF_PLAN.md, secondary).
+
+The populations are those of S1–S4:
+- MU grade 4, intended use: 62 / 84 / 80 patients, out-of-fold, mean over 5 repeats;
+- LUMIERE: 73 / 105 / 79;
+- UCSF grade 4, scan 2: 29 / 40 / 69.
+
+Bootstrap: patient-cluster, 1,000 draws. Draw i uses `rng([20261026, i])`, as in `system.boot_job` (A–D). Two
+exceptions:
+- E uses `detection.evaluate_set` (seed 20261021), so it is paired with the other ladder intervals.
+- F uses the UCSF plan's calibration bootstrap (seed 20261025), so the pre-specified UCSF row reproduces exactly.
+
+Code: `scripts/exploratory_review_round3.py`. Outputs: `outputs/results/analyses/review_round3/` (CSVs A–F,
+`checks.csv`, `run_info.json`, `run.log`).
+
+The run stops unless every check passes. All of these did:
+- the ladder AUCs (0.659 / 0.709 / 0.806) and the I − I_pure CI;
+- the rebuilt locked scores (max deviation 0);
+- the pre-specified S2 / S3 rows for disagreement and conformal;
+- the class coverage points against `conformal.csv`;
+- UCSF log ET 0.878;
+- the UCSF A-T calibration against `ucsf/locked/calibration.csv`.
+
+### A. Agreement with medians fixed on MU (combined score; S2 / S3 as in system.py)
+
+How the medians are set:
+- **MU.** The pre-specified rule already uses the MU OOF median. A fold-held-out variant was added: each test fold
+  uses the median of the OOF scores of the other four folds in the same repeat.
+- **External.** Each locked pathway model's median over its 181 MU training rows: timeline 0.387; images 0.356 for
+  LUMIERE T_img (0.348 for the 3-volume model) and 0.299 for UCSF A-Ipure. The cohorts' own timeline medians were
+  0.459 (LUMIERE) and 0.642 (UCSF).
+- **Effect.** Agreement status changes for 31% of LUMIERE scans and 48% of UCSF scans.
+
+| cohort | rule | flagged | AUC unflagged / flagged | S2 (95% CI) | S3 (95% CI) |
+|---|---|---|---|---|---|
+| MU | own (= MU OOF) median, pre-specified | 40% | 0.901 / 0.594 | **+0.307 (+0.175 to +0.432)** | **+0.083 (+0.046 to +0.123)** |
+| | fold-held-out MU median | 40% | 0.902 / 0.589 | **+0.313 (+0.184 to +0.431)** | **+0.082 (+0.047 to +0.119)** |
+| | fold-held-out median AND {0, 1} | 12% | 0.845 / 0.469 | **+0.376 (+0.166 to +0.552)** | **+0.023 (+0.009 to +0.040)** |
+| LUMIERE | own median, pre-specified | 57% | 0.826 / 0.721 | +0.105 (−0.049 to +0.266) | +0.051 (−0.028 to +0.144) |
+| | **MU median** | 60% | 0.889 / 0.667 | **+0.222 (+0.102 to +0.337)** | **+0.115 (+0.049 to +0.190)** |
+| | MU median AND {0, 1} | 30% | 0.811 / 0.583 | **+0.227 (+0.054 to +0.398)** | +0.037 (−0.004 to +0.081) |
+| UCSF | own median, pre-specified | 55% | 0.850 / 0.869 | −0.019 (−0.218 to +0.175) | −0.004 (−0.112 to +0.103) |
+| | **MU median** | 48% | 0.879 / 0.745 | +0.134 (−0.096 to +0.397) | +0.023 (−0.086 to +0.099) |
+| | MU median AND {0, 1} | 25% | 0.874 / 0.850 | +0.024 (−0.162 to +0.322) | +0.023 (−0.028 to +0.076) |
+
+For comparison, the own-median AND {0, 1} rule (reduced D4) gave:
+- LUMIERE: S2 +0.300, S3 +0.047 (+0.005 to +0.085);
+- UCSF: S2 +0.040, S3 +0.038 (+0.001 to +0.087).
+
+Reading:
+- **Fixing the medians on MU does not weaken the rule. It strengthens it externally.** Disagreement alone now
+  passes S2 and S3 on LUMIERE. On UCSF it moves in the expected direction, but the CI includes 0: only 8
+  progressions are flagged.
+- **The AND rule loses its external S3 lower bounds** (LUMIERE −0.004, UCSF −0.028).
+- **On MU the fold-held-out median changes nothing.**
+
+### B. Class-conditional coverage of the combined set at α = 0.2
+
+| cohort | kind | progression (95% CI) | non-progression (95% CI) | all | singleton share, prog / non-prog |
+|---|---|---|---|---|---|
+| MU | standard | 0.819 (0.748–0.888) | 0.826 (0.731–0.908) | 0.823 | 0.66 / 0.82 |
+| | Mondrian | 0.868 (0.797–0.934) | 0.729 (0.633–0.815) | 0.788 | 0.82 / 0.85 |
+| LUMIERE | standard | **0.767 (0.671–0.872)** | 0.943 (0.857–1.000) | 0.871 | 0.49 / 0.71 |
+| | Mondrian | 0.849 (0.760–0.931) | **0.514 (0.392–0.642)** | 0.652 | 0.97 / 0.92 |
+| UCSF | standard | 0.966 (0.880–1.000) | **0.650 (0.511–0.791)** | 0.783 | 0.69 / 0.60 |
+| | Mondrian | 0.966 (0.880–1.000) | **0.175 (0.062–0.308)** | 0.507 | 1.00 / 0.93 |
+
+Reading:
+- **Standard sets keep coverage in both classes only on MU.**
+  - LUMIERE under-covers progression: 0.77, with the CI reaching 0.67.
+  - UCSF under-covers non-progression: 0.65 (0.51–0.79).
+- **Mondrian sets do not fix this externally.** The MU class thresholds do not transfer under the shift in score
+  distribution, so exchangeability with MU does not hold class by class.
+
+### C. Raw enhancing-tumour baselines (no fitting; larger = progression)
+
+| cohort | log ET volume (95% CI) | log ET ratio to previous scan (95% CI) | ratio, scans with a previous scan only |
+|---|---|---|---|
+| MU-IU (146) | 0.622 (0.530–0.717) | 0.488 (0.399–0.580) | 0.486 (0.380–0.585), 62 / 46 |
+| LUMIERE (163 with ET; 168 for the ratio) | 0.662 (0.563–0.751) | 0.628 (0.532–0.722) | 0.633 (0.530–0.732), 66 / 92 |
+| UCSF (69) | **0.878 (0.793–0.948)** | 0.822 (0.707–0.930) | same: every scan 2 has scan 1 |
+
+Reading:
+- On MU, ET volume alone (0.62) is below the image pathway (0.71), and ET change is at chance.
+- On LUMIERE, ET volume alone (0.66) matches the locked image pathway (0.65), and the combined score (0.77) is above
+  both.
+- On UCSF, ET volume alone (0.88) exceeds the locked image pathway (0.73) and matches the combined score (0.86).
+- UCSF_AUDIT.md's MU log ET value of 0.635 is for a different MU row set; on MU-IU it is 0.622.
+
+### D. Sensitivity and specificity of the combined score at the MU median threshold
+
+| cohort | threshold | sensitivity (95% CI) | specificity (95% CI) | called positive | error rate | own-median reference (sens / spec) |
+|---|---|---|---|---|---|---|
+| MU | OOF median over MU-IU, per repeat (mean 0.402) | 0.787 (0.705–0.872) | 0.712 (0.614–0.813) | 50% | 0.256 | – |
+| LUMIERE | locked T median on its MU training rows (0.363) | 0.890 (0.817–0.959) | 0.495 (0.357–0.636) | 66% | 0.343 | 0.740 / 0.667 |
+| UCSF | locked A-T median on its MU training rows (0.363) | 1.000 (1.000–1.000) | **0.175 (0.061–0.297)** | 90% | 0.478 | 0.759 / 0.700 |
+
+Reading:
+- A threshold fixed on MU does not hold its operating point externally. It calls 66% (LUMIERE) and 90% (UCSF) of
+  scans positive.
+- This is consistent with the overprediction in F (UCSF O/E 0.72): the combined model's timing inputs
+  extrapolate at UCSF.
+
+### E. The ladder's middle step (MU-IU; paired patient bootstrap)
+
+| contrast | all scans (95% CI) | phase-stratified (95% CI) |
+|---|---|---|
+| I_pure − I_scan (+ change from earlier scans) | **+0.050 (−0.003 to +0.106)**, P(≤ 0) = 0.03 | −0.003 (−0.095 to +0.080) |
+| I − I_pure (+ schedule context; check) | +0.097 (+0.047 to +0.153) | −0.013 (−0.057 to +0.037) |
+
+The middle step's interval includes 0, and within phase the step is nil.
+
+### F. External calibration of the locked combined model
+
+| cohort | model | slope (95% CI) | O/E (95% CI) | calibration-in-the-large | mean risk / observed |
+|---|---|---|---|---|---|
+| LUMIERE (EXPLORATORY) | T | 1.45 (0.85–2.54) | 0.97 (0.81–1.14) | −0.07 | 0.42 / 0.41 |
+| UCSF (PLANNED secondary, UCSF_PLAN.md; reproduced) | A-T | 3.29 (1.96–6.28) | 0.72 (0.55–0.91) | −0.73 | 0.59 / 0.42 |
+
+Reading:
+- **LUMIERE.** Calibration in the large holds. The slope is above 1, so the predictions are somewhat compressed, but
+  the CI includes 1.
+- **UCSF.** The model overpredicts and is strongly compressed. It ranks well but is not calibrated there.

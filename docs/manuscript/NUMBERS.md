@@ -376,7 +376,7 @@ On MU the same networks learned nothing: inner OOF AUC 0.491 (G1), 0.565 (G3). E
 | Rung | AUC (95% CI) | Within phase | Source |
 |---|---|---|---|
 | Single scan (I_scan) | 0.659 (0.567-0.733) | later post-RT 0.655; phase-stratified 0.680 | DETECTION_TASK.md |
-| + change from earlier scans (I_pure) | 0.709 (0.630-0.781); difference +0.050 (CI -0.00 to +0.11 per STORY, **unverified**) | 0.650; 0.677 | same; Mismatch 8 |
+| + change from earlier scans (I_pure) | 0.709 (0.630-0.781); difference +0.050 (-0.003 to +0.106), verified in section 12 (E); within phase -0.003 (-0.095 to +0.080) | 0.650; 0.677 | same; Mismatch 8 |
 | + schedule context (I as run; adds days since previous scan, has-previous flag, RT-anchored nadir) | 0.806 (0.747-0.865); I - I_pure +0.097 (+0.047 to +0.153) | 0.627; 0.664; difference within phase -0.013 (-0.057 to +0.037) | same |
 | Timeline B1 | 0.822 (0.749-0.902) | 0.638; 0.640 | PLANNED |
 
@@ -592,3 +592,36 @@ Source: CHRISTODOULOU_REPLICATION.md. Their reported result: test AUC 0.80 (abst
 | Fig 4B | S2 / S3 table (disagreement) | 6 |
 | Fig 4C | card cells | 6 |
 | Fig 5 | v3.1 counts by cohort | 7 |
+
+---
+
+## 12. EXPLORATORY: analyses requested in internal review round 3 (2026-10-26)
+
+Added after review (round3_reviewer2.md, M2, M3, M4 and M6), not pre-specified. The exception is F for UCSF, which is
+the planned secondary of UCSF_PLAN.md.
+- Source: SYSTEM_RESULTS.md, section "EXPLORATORY: analyses requested in internal review (2026-10-26)".
+- CSVs: `outputs/results/analyses/review_round3/` (all checks passed).
+- Sets: MU-IU, LUM, UCSF-P.
+- Bootstrap: patient-cluster, 1,000 draws, seed 20261026. E uses the detection seed 20261021; F uses the UCSF plan
+  seed 20261025.
+
+| Item | Value (95% CI) | Source (CSV) | Status |
+|---|---|---|---|
+| A. Agreement, MU-fixed medians (locked models' MU training-set medians); disagreement alone, S2 / S3 | LUM +0.222 (+0.102 to +0.337) / +0.115 (+0.049 to +0.190); UCSF +0.134 (-0.096 to +0.397) / +0.023 (-0.086 to +0.099); MU fold-held-out median +0.313 (+0.184 to +0.431) / +0.082 (+0.047 to +0.119) | A_agreement_mu_fixed.csv | EXPLORATORY |
+| A. MU-fixed disagreement AND conformal {0,1}, S2 / S3 | MU +0.376 (+0.166 to +0.552) / +0.023 (+0.009 to +0.040); LUM +0.227 (+0.054 to +0.398) / +0.037 (-0.004 to +0.081); UCSF +0.024 (-0.162 to +0.322) / +0.023 (-0.028 to +0.076) | same | EXPLORATORY |
+| A. Flagged share (MU-fixed disagreement); status changed vs own median | LUM 60%, 31% changed; UCSF 48%, 48% changed; MU 40% | same; run_info.json | EXPLORATORY |
+| B. Combined set, alpha 0.2, coverage progression / non-progression (standard) | MU 0.819 (0.748-0.888) / 0.826 (0.731-0.908); LUM **0.767 (0.671-0.872)** / 0.943 (0.857-1.000); UCSF 0.966 (0.880-1.000) / **0.650 (0.511-0.791)** | B_class_conditional_coverage.csv | EXPLORATORY CIs (points PLANNED, conformal.csv) |
+| B. Same, Mondrian | MU 0.868 / 0.729 (0.633-0.815); LUM 0.849 / 0.514 (0.392-0.642); UCSF 0.966 / 0.175 (0.062-0.308) | same | EXPLORATORY |
+| B. Singleton share, progression / non-progression (standard) | MU 0.66 / 0.82; LUM 0.49 / 0.71; UCSF 0.69 / 0.60 | same | EXPLORATORY |
+| C. log ET volume alone (raw, larger = progression) | MU-IU 0.622 (0.530-0.717); LUM 0.662 (0.563-0.751; 163 scans with ET, 68 / 95); UCSF 0.878 (0.793-0.948) | C_et_baselines.csv | EXPLORATORY |
+| C. log ET ratio to the previous scan alone | MU-IU 0.488 (0.399-0.580); LUM 0.628 (0.532-0.722); UCSF 0.822 (0.707-0.930). With a previous scan only: MU 0.486 (62 / 46), LUM 0.633 | same | EXPLORATORY |
+| D. Combined score at the MU median: sensitivity / specificity | MU (OOF median) 0.787 (0.705-0.872) / 0.712 (0.614-0.813); LUM (locked T, MU median 0.363) 0.890 (0.817-0.959) / 0.495 (0.357-0.636); UCSF (A-T, 0.363) 1.000 (1.000-1.000) / 0.175 (0.061-0.297); called positive 50% / 66% / 90% | D_operating_point.csv | EXPLORATORY |
+| E. Ladder middle step I_pure - I_scan (MU-IU, paired) | **+0.050 (-0.003 to +0.106)**; within phase -0.003 (-0.095 to +0.080) | E_ladder_contrasts.csv | EXPLORATORY |
+| F. Locked combined calibration, slope / O/E | LUM T 1.45 (0.85-2.54) / 0.97 (0.81-1.14); UCSF A-T 3.29 (1.96-6.28) / 0.72 (0.55-0.91) | F_calibration.csv; UCSF = ucsf/locked/calibration.csv | LUM EXPLORATORY; UCSF PLANNED secondary |
+
+Prose cautions:
+- **MU log ET.** MU-IU log ET is 0.622. UCSF_AUDIT.md's 0.635 is for another MU row set; use 0.622 beside Fig 2's
+  MU-IU bars.
+- **"Each step raised AUC".** Mismatch 8 is now resolved: the middle step's CI includes 0, so do not write "each step
+  raised AUC" with CI support.
+- **A threshold fixed on MU does not transfer.** At UCSF it calls 90% of scans positive.
