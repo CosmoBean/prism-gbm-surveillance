@@ -48,8 +48,12 @@ MODELS = {
     "qwen3.5-4b": ("Qwen/Qwen3.5-4B", "851bf6e806efd8d0a36b00ddf55e13ccb7b8cd0a", NT, ()),
     "qwen3.5-9b": ("Qwen/Qwen3.5-9B", "c202236235762e1c871ad0ccb60c8ee5ba337b9a", NT, ()),
     "qwen3.8-27b": ("Qwen/Qwen3.8-27B", "1d4bf0f2ff6012fd82039f2fa52739d0dd7c60c0", NT, ()),
-    "qwen3.5-35b-a3b": ("Qwen/Qwen3.5-35B-A3B", "59d61f3ce65a6d9863b86d2e96597125219dc754", NT, ()),
-    # FP8 of the same model: used only if bf16 does not fit one H100 (plan section 4; a deviation when used)
+    # bf16 fits (64.7 GiB weights) but has 158 Mamba state blocks at gpu_memory_utilization 0.90, fewer than the
+    # default 256 sequences: max_num_seqs 128 (serving only; a deviation)
+    "qwen3.5-35b-a3b": ("Qwen/Qwen3.5-35B-A3B", "59d61f3ce65a6d9863b86d2e96597125219dc754", NT,
+                        ("--max-num-seqs", "128")),
+    # FP8 of the same model: the plan's fallback if bf16 did not fit. bf16 does fit, so this run is EXPLORATORY
+    # (it ran automatically after the first bf16 attempt failed on max_num_seqs, not on memory)
     "qwen3.5-35b-a3b-fp8": ("Qwen/Qwen3.5-35B-A3B-FP8", "9d1823d2dee688a6b25e77009dc727688c44936e", NT, ()),
     "gemma-4-e4b-it": ("google/gemma-4-E4B-it", "ee0ef6023621cff504d758262d4e04895a5af4a2", {},
                        ("--mm-limit", '{"image": 0, "video": 0, "audio": 0}')),
