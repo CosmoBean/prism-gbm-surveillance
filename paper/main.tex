@@ -1,5 +1,9 @@
 % main.tex -- manuscript. SOURCE OF TRUTH from 2026-10-15 (docs/manuscript/DRAFT.md is a frozen snapshot).
 % Build: ./build.sh (tectonic). Figures are read from ../docs/manuscript/figures/ (see macros.tex).
+% LAYER: SKELETON (2026-10-26). Built on docs/manuscript/OUTLINE.md draft 3. Each paragraph holds its first sentence
+% (the claim) only; the comment under it lists what the paragraph will carry and where each number comes from.
+% Prose comes in the next layer, after the author has reacted to this skeleton. The previous prose draft (120-day
+% story) is in git history (commit 9446e40 and earlier).
 \documentclass[largeformat]{interact} % Taylor & Francis template (CMBBE: Imaging & Visualization)
 \input{macros}
 
@@ -11,400 +15,210 @@
 \title{\papertitle}
 
 \author{
-\name{\todo{PENDING: A.~N. Author}\textsuperscript{a}\thanks{CONTACT \todo{PENDING: A.~N. Author. Email: \ldots; ORCID: \ldots}}
-  and \todo{PENDING: B.~N. Author}\textsuperscript{b}}
-\affil{\textsuperscript{a}\todo{PENDING: Affiliation, address}; \textsuperscript{b}\todo{PENDING: Affiliation, address}}
+\name{\todo{PENDING: first author's full name}\textsuperscript{a}\thanks{CONTACT \todo{PENDING: first author. Email: \ldots; ORCID: \ldots}}
+  and Jessica Zhang\textsuperscript{b}}
+\affil{\textsuperscript{a}Department of Biomedical Engineering, Carnegie Mellon University, Pittsburgh, PA, USA;
+\textsuperscript{b}Department of Mechanical Engineering, Carnegie Mellon University, Pittsburgh, PA, USA}
 }
 
 \maketitle
 
-% Unstructured abstract, 100--150 words (journal instructions). Longer structured version: DRAFT_NOTES.md.
+% Unstructured abstract, 100--150 words (journal instructions).
+% PROPOSED 2026-10-26 (149 words), to replace the abstract locked on 2026-10-24 (docs/manuscript/LOCKED.md), which
+% predates the external tests and the system results. Not locked until the author approves it.
 \begin{abstract}
-PRISM predicts documented progression within 120 days of a glioma surveillance MRI and returns an audit record and a clinician report per scan. Its first version scored AUC 0.80 on one MU-Glioma-Post test split but averaged 0.72 over 500 similar splits; that split was easy because of its mix of scans before radiotherapy. Under repeated cross-validation, clinical and treatment-course variables reached 0.70 in grade 4, or 0.68 after removing leaks found by its own audit. Radiomics, frozen and fine-tuned deep encoders, resegmentation, a cleaner label and diffusion showed no measurable gain, and a locked model scored 0.61 externally. The phase of care drove discrimination: in surveillance after radiotherapy, the intended use, AUC was 0.60. Reports written from the audit record by a local language model passed a faithfulness check for all 249 grade 4 scans and contained every prespecified content item in 247; clinicians have not yet assessed them.
+\flag{[PROPOSED, awaiting approval]} Models of post-treatment glioma MRI face known challenges: most datasets lack
+treatment dates, centres document progression differently, cohorts are small and the hardest situations have few
+cases. We built PRISM, a modular system that keeps image and treatment-timeline evidence in separate pathways,
+measures the tumour by automatic segmentation, attaches a confidence to every scan and writes a report with a local
+language model. On MU-Glioma-Post, the timeline pathway detected the scan at which progression was called with an
+AUC of 0.82 and the image pathway with 0.71. Fitted once and locked, the models reached 0.77 on LUMIERE, and
+single-scan images reached 0.80 on UCSF-ALPTDG, about as high as models trained there. An audit showed what each
+score rested on: the treatment timeline at MU, enhancing tumour volume at UCSF. Conformal sets kept their coverage at
+all three centres, and every evaluation report passed a deterministic check against its record.
 \end{abstract}
 
 % No more than 3 keywords (journal instructions).
 \begin{keywords}
-glioma surveillance; prediction model evaluation; auditable decision support
+glioma surveillance; external validation; clinical decision support
 \end{keywords}
 
+% =====================================================================================================
 \section{Introduction}\label{sec:1}
 
-Most patients with high-grade glioma progress after surgery and chemoradiotherapy, and they are followed with MRI
-every few months. At each surveillance scan the team asks how likely it is that progression will be documented
-before the next decision point. Two things make this hard. Enhancement can increase after radiotherapy (RT)
-without tumour growth. This pseudoprogression is most common in the first 12 weeks after chemoradiotherapy and
-more frequent with MGMT promoter methylation \citep{brandes2008,taal2008}, which is why the RANO criteria ask for
-confirmation of progression in that window \citep{wen2010,wen2023}. And in routine data, progression is a
-documentation event. It depends on imaging, on symptoms and on when the next scan happens to be scheduled. A
-model for this endpoint is a prognostic aid for deciding whether to bring the next scan forward or act on an
-equivocal finding. For that use, a calibrated probability, an honest interval and a way to check what the model
-knew matter as much as a high AUC.
+After surgery and chemoradiotherapy, patients with glioma are followed with MRI every few months, and at each scan
+the team must decide whether the tumour has progressed.
+% Why this is hard: enhancement can grow after RT without tumour growth (pseudoprogression, most common in the first
+% weeks after chemoradiotherapy, more frequent with MGMT methylation) \citep{brandes2008,taal2008}; progression in
+% routine records is documented from imaging, symptoms and the scan schedule. No RANO.
 
-Most imaging work addresses a neighbouring question: telling pseudoprogression from true progression at a lesion
-that is already suspicious. There, machine learning models pool to an AUC of about 0.77 \citep{booth2022}, and
-diffusion and perfusion measures reach 0.90 to 0.93 \citep{taylor2022}. Forward prediction from every
-surveillance scan has had less attention. On the public MU-Glioma-Post dataset \citep{mahmoud2025}, a calibrated
-radiomics model reported AUC 0.80 on one held-out set of patients \citep{christodoulou2026}.
+Models for this task meet five challenges that come from the data rather than from any one method.
+% C1 most datasets have images but no treatment dates (LUMIERE, UCSF);
+% C2 centres document progression differently, so a score can rest on different evidence;
+% C3 cohorts are small and a single split can move a score more than a model choice \citep{an2021};
+% C4 the hardest situations (early after RT, growing enhancement) have few cases;
+% C5 volumes are noisy, the clinician must see what was measured, and patient data cannot leave the hospital.
+% External tests are uncommon in this field (\todo{cite Shi 2025, Neuro-Oncology: 3 of 20}; \citealp{yu2022}).
+% Neutral: properties of the data, not a judgement of earlier work.
 
-Three problems can make such numbers mislead. Single train--test splits are unstable in small radiomics cohorts:
-in one brain tumour dataset, one random split tested at 0.667 and another at 0.911 \citep{an2021}. Performance
-drops on external data, by 0.10 or more for about a quarter of externally validated deep learning algorithms
-\citep{yu2022}. And clinical comparators are rarely reported, although where they are, they hold their own
-\citep{leone2023,gomaa2025,abler2025}. A fourth problem is specific to surveillance. A cohort mixes scans taken
-before RT, during it, in the 12 weeks after it and in later follow-up, and event rates differ sharply between
-these phases of care. Time since the end of RT was an input to both of the best documented clinical comparators
-\citep{gomaa2025,leone2023}. A model that only recognises the phase can rank scans well whenever the test set
-holds many easy phases, and treatment fields recorded once per patient can leak the future into a scan taken
-before treatment started \citep{kapoor2023}.
+We asked whether a system could give the clinician, at each post-treatment scan, the image evidence and the
+treatment-timeline evidence separately, carry to other centres without refitting, and say how far each can be trusted
+there.
 
-We built PRISM (Post-treatment Response Intelligence and Surveillance Monitor) for this task. From what is known
-on the scan day, it estimates the risk of documented progression within 120 days, records how the estimate was
-made, and writes a short report that can be checked against that record. Its first evaluation, on one split of 30
-test patients, gave an AUC of 0.80. We tested that number before relying on it, and each of the problems above
-applied. This paper describes PRISM and what a rigorous evaluation showed: why the single split misled, that the
-phase of care rather than MRI carries the signal, and how the audit record and the report make a modest model
-transparent and checkable.
+PRISM is a modular system built for this, and we tested it on one development cohort and two external cohorts with
+models fitted once and plans written in advance.
+% One sentence per module (Fig 1) and the headline findings in words: the pathways transport; the audit shows what
+% each score rests on; the confidence keeps its coverage; the reports are faithful to the record.
 
+% =====================================================================================================
 \section{Methods}\label{sec:2}
 
 \subsection{PRISM}\label{sec:2.1}
 
-PRISM takes one MRI (T1, T1c, T2 and FLAIR with a four-compartment tumour mask) and the patient's clinical tables
-and returns three things for each scan: a risk, an audit record and a report (Figure~\ref{fig:arch}). Every input
-is read as it stood on the scan day.
+PRISM handles each scan in five modules, each answering one of the challenges above (Figure~\ref{fig:1}).
+% Module list; the challenge -> module pairing is Table 2 in the outline (C1--C5).
 
-\textbf{The risk.} A ridge logistic model combines the inputs available on the scan day: clinical and molecular
-data, the treatment course and, optionally, imaging. The reference configuration is the \emph{core model} of
-clinical and treatment-course variables (Section~\ref{sec:2.3}). Three imaging branches can be added: imaging
-measurements (volumes, morphology and change), radiomics, and a SwinUNETR image encoder, frozen or fine-tuned.
-Any branch can be switched off, which is how we ablate it.
+The timeline pathway scores a scan from clinical data and the patient's position in treatment.
+% Age, sex, IDH, MGMT; days since diagnosis and surgery; RT start and end; chemotherapy; previous scans. Ridge,
+% patient-grouped. On cohorts without treatment dates, the transportable version (days since surgery, early post-RT
+% flag). Sources: DETECTION_TASK.md (B1, Tbase).
 
-\textbf{The audit record.} An audit layer wraps the model, locks it with a model card (code version, hashes of
-every input table, each input's definition, source and as-of rule, intended and excluded uses) and writes one
-record per scan. The record holds each input with its source and the day it became known; the phase of care; the
-risk with a 95\% interval from 200 bootstrap refits; the exact contribution of each input group to the log odds; a
-split conformal prediction set at $\alpha$ = 0.2; and referral flags with reasons. A scan is flagged if it falls in
-the 12 weeks after RT, if an input lies outside the training range or a molecular marker is unknown, or if its
-conformal set is \{0, 1\}.
+The image pathway scores a scan from simple measurements of the segmented tumour.
+% Volumes (enhancing, necrosis, FLAIR hyperintensity, cavity), shape, relative intensity; log ratios to the previous
+% scan and to the smallest earlier volume. No timing inputs. Sources: DETECTION_TASK.md (I_scan, I_pure).
 
-\textbf{The report.} A local language model (Qwen3.8-27B at a pinned revision, greedy decoding, run offline on
-our own GPUs) writes the report from one scan's audit record and nothing else, in the findings and impression form
-of radiology reports. Every number must be copied from a record field and every sentence must cite the fields it
-uses. Beyond the risk, the report states what a reader needs next to the number: how the risk compares with the
-model's average, the risk at the previous scan, the phase of care and why it matters, the main drivers, every
-active flag with its reason, what the model did not see (the images themselves), and any input not known on the
-scan day. Diagnoses, RANO categories, management advice and unhedged certainty are forbidden. A deterministic
-checker scores every sentence: cited fields must exist, every number must match a cited value, every active flag
-must be mentioned, no inactive flag may be described as raised, and no forbidden pattern may appear.
+A deep segmentation network supplies these measurements and the images shown in the report.
+% BraTS21 SwinUNETR (MU, LUMIERE: the cohorts' own masks or resegmentation; UCSF: provided masks) -- check per cohort
+% in UCSF_IMAGING.md and RESEGMENTATION.md. The segmentation figure is drawn by code; the language model never sees
+% an image. Source: SEG_FIGURE.md.
 
-PRISM's first version used a calibrated radiomics model, an untrained image encoder fused with it, and a report
-from fixed RANO rules and a commercial language model. Its encoder carried no signal and its fusion did not beat
-the radiomics input (Supplementary S7); the components above replace them.
+Each scan's confidence has three parts: a conformal set, a pathway-agreement statement and a reliability card.
+% Patient-level split conformal, alpha 0.2 (and 0.1), calibrated on MU; agreement = both scores on the same side of
+% their cohort medians; card = measured AUCs by situation (phase x enhancement), tier tested / few cases / not tested.
+% Sources: SYSTEM_PLAN.md, RELIABILITY_CARD.md.
 
-\subsection{Data, outcome and intended use}\label{sec:2.2}
+A local language model writes the report from the scan's record, and a deterministic checker tests every sentence
+against that record.
+% Two sentences only in the main text (decision 6). Qwen3.8-27B, offline, temperature 0; checker: numbers, flags,
+% conformal and agreement phrases, forbidden wording (diagnosis, advice, probability words). Detail: supplement.
 
-MU-Glioma-Post \citep{mahmoud2025} was the development cohort: MRI after surgery from a single centre, with
-four-compartment masks (enhancing tumour, ET; non-enhancing core; surrounding FLAIR signal; resection cavity) and a
-clinical workbook giving the day of each scan, surgery, RT, chemotherapy, first progression and death, and age,
-sex, grade, IDH and MGMT. LUMIERE \citep{suter2022} was the external cohort: glioblastoma follow-up scans with an
-expert RANO rating, automatic segmentations, IDH and MGMT, but no treatment dates. CFB-GBM \citep{cfbgbm} supported
-a diffusion analysis: 264 patients imaged at RT planning and twice afterwards, with ADC and volumetric RANO 2.0
-labels; we used only its released tables.
+\subsection{Cohorts and the task}\label{sec:2.2}
 
-An index scan is an MRI before first documented progression and before later lines of treatment, with all four
-sequences, a mask and a known date. Each patient contributes every eligible scan, and every analysis keeps a
-patient's scans together. Grade 4 glioma was the primary population, fixed in advance (Table~\ref{tab:1}; study
-design in Figure~\ref{fig:design}). The outcome is documented first progression within 120 days of the scan. A
-scan counts as negative only if follow-up without progression reaches 120 days; otherwise it is censored, and
-death without progression censors at the day of death. Discrimination is the AUC at 120 days weighted by the
-inverse probability of censoring (IPCW AUC; \citealp{uno2007,blanche2013}). In LUMIERE, progression is the first
-expert rating of progressive disease.
+PRISM was developed on MU-Glioma-Post and tested, locked, on LUMIERE and UCSF-ALPTDG (Table~\ref{tab:1}).
+% \citep{mahmoud2025,suter2022}, \todo{cite UCSF-ALPTDG}. What each cohort has: images, treatment dates, how
+% progression is documented. UCSF: one scan pair per patient, so the evaluation is restricted to scan 2
+% (UCSF_PLAN.md). UCSF obtained under a data use agreement.
 
-PRISM's intended use is surveillance after treatment has begun: scans taken on or after the documented start of
-RT, a condition known on the scan day. Scans before RT are scored but flagged as outside the intended use
-(Section~\ref{sec:3.3}).
+The task is detection at the scan: is this the scan at which progression is called?
+% Positives and negatives as in DETECTION_TASK.md and UCSF_PLAN.md; grade 4 primary; the intended use on MU (scans
+% from the start of RT). 120-day risk as the secondary task, one sentence.
 
-Reporting follows TRIPOD+AI \citep{collins2024} and CLEAR (\citealp{kocak2023} \flag{[CHECK]}; Supplementary
-S17). For each analysis called prespecified, the plan and its decision rule were written down before any of its
-model outputs were seen, and for the later analyses committed to the public project repository first; the rules
-and answers are collected in Table~\ref{tab:4} (Supplementary S1). None was registered with an external registry.
+\subsection{Evaluation}\label{sec:2.3}
 
-\subsection{Predictors}\label{sec:2.3}
+On MU, every model was evaluated by repeated patient-grouped cross-validation, because a single split moved scores
+more than any model choice (Supplementary Figure~\todo{S-split}).
+% 5 x 5, patient-cluster bootstrap 1000 draws. Supporting evidence in one or two sentences: MU first split vs 500
+% splits (0.80 vs 0.72); UCSF's own split vs 100 random splits. The single-scan radiomics setting goes to the
+% supplement (CHRISTODOULOU_REPLICATION.md).
 
-All predictors are defined as of the scan day (Supplementary S4). Clinical: age, sex, IDH and MGMT. Timing: days
-since diagnosis and since RT ended, a flag for the 12 weeks after RT and its interaction with MGMT methylation, and
-visit number. Treatment: whether RT and chemotherapy had started and whether RT was complete, the prescription, and
-the days of surgery and RT start. A treatment fact enters only once its documented start is on or before the scan
-day. These variables form the core model. A compact alternative replaces timing and treatment with four phases of
-care: before RT, during RT, within 12 weeks after RT, and later. Imaging measurements are compartment volumes,
-morphology and change from earlier scans only. Radiomics cover all four sequences (Supplementary S5). Deep features
-are pooled from SwinUNETR encoders with BraTS 2021 or BrainSegFounder weights (\citealp{cox2024} \flag{[CHECK]}),
-with untrained weights as a control (Supplementary S6). Unknown values are imputed within each training fold.
+For the external tests, each model was fitted once on MU and applied once, under plans committed before any external
+label was read.
+% UCSF_PLAN.md (0e7c9fe), SYSTEM_PLAN.md (e7cba80), REPORT_V3_1_PLAN.md (4f7e7b9). Questions fixed in advance and
+% their answers: Table~\ref{tab:2}.
 
-\subsection{Evaluation}\label{sec:2.4}
+Analyses that were not planned are labelled exploratory wherever they appear.
+% The image-model ladder; the reduced confidence design; the report v3.1 run (a second evaluation after a seen
+% failure); within-phase and within-enhancement comparisons are diagnostics (decision 8).
 
-\textbf{One split, then many.} The first evaluation used one split from PRISM's own split search: for a given seed,
-20,000 random draws of 30 test patients, keeping the draw closest to 96 test scans and 53 positives. With the final
-cohort it holds 126 training and 29 test patients (82 test scans). We rescored it with the final labels and reran
-the same search for seeds 0 to 499, refitting the models on each split, to see where the first split ranks and how
-each split's AUC relates to its mix of phases (Supplementary S8).
-
-\textbf{Repeated cross-validation.} All main estimates use one shared set of 5 $\times$ 5 repeated folds, grouped
-by patient and stratified by outcome and grade. Every fitted step (imputation, clipping, scaling, feature
-selection, stacking and hyperparameters) is fitted inside the training fold \citep{varma2006,cawley2010}. The
-estimate is the mean over repeats of the pooled held-out IPCW AUC; 95\% CIs and paired differences come from 1,000
-bootstrap draws over patients, with all models scored on the same draws.
-
-\textbf{What carries the signal.} Each branch is added to, or removed from, the core model. Radiomics enters
-through 70 configurations and frozen deep features through 32; one configuration is chosen inside each outer
-training fold by inner cross-validation (nested selection). To test the phase of care, we built bases without
-imaging (R0 clinical; R1 plus timing; R2 clinical plus phase; R3 the core model), added imaging blocks to each, and
-repeated the analysis within the surveillance cohort, the scans taken after RT was complete (grade 4: 167 scans, 84
-patients). Because censoring turned out to be concentrated before RT, we re-estimated the censoring weights
-separately within each phase and refitted after excluding patients whose RT was never documented.
-
-\textbf{Giving imaging every chance.} When imaging added nothing, we tested five explanations. \emph{The label}:
-progressions documented on clinical grounds alone were censored, giving an imaging-defined label. \emph{The
-segmentation}: we checked volumes, labels and dates against their sources and resegmented all 594 complete MU scans
-with the MONAI BraTS 2021 SwinUNETR and with BrainSegFounder. \emph{The cohort}: models trained on all MU scans were
-applied unchanged to LUMIERE; without treatment dates, the transportable model used clinical variables, timing and
-volumes (Supplementary S13). \emph{The modality}: in CFB-GBM, with one row per patient, we tested whether ADC
-radiomics add to conventional radiomics for volumetric RANO 2.0 progression between the two scans after RT
-(Supplementary S18). \emph{The encoder}: we fine-tuned the BraTS 2021 SwinUNETR on the 120-day label inside the
-shared folds. The two deepest stages and a small head were trained on a cube around the lesion and cavity, with
-fixed hyperparameters and early stopping on held-out training patients; four networks per outer fold gave
-out-of-fold scores for stacking onto the core model (100 fine-tunes per arm). A copy trained on shuffled outcomes
-showed what an uninformative score does to the stack (Supplementary S22).
-
-\textbf{The audit layer} was evaluated on two prespecified quantities: conformal coverage on test scans with a
-known outcome (P1), and whether withholding the least confident 30\% of scans raises the AUC of the rest more than
-removing the same number at random within each phase (P2). It also probed shortcuts by refitting without the
-indicators for unknown markers and with treatment or timing alone (Supplementary S15). Every fitted step, including
-the conformal calibration split, stays inside the shared training folds.
-
-\textbf{The reports} were evaluated on 249 grade 4 records from a cross-validation repeat not used in development.
-The prompt and checker were developed on the 59 scans of other grades and then frozen. The primary quantities were
-the share of reports the checker passes (no unsupported claim and every active flag stated) and the share that
-contains every item of the required content listed above. We also ran PRISM's original prompt on the same records,
-a smaller model (Qwen3.5-9B), and 30 perturbed records to check that a report follows a changed risk or flag. No
-public set of surveillance reports exists, so we used 230 glioma MRI reports from RadGenome-Brain MRI and the MRI
-descriptions of 181 published glioblastoma case reports (MultiCaRe) for form only (Supplementary S21).
-
+% =====================================================================================================
 \section{Results}\label{sec:3}
 
-\subsection{Cohorts}\label{sec:3.1}
+\subsection{Each pathway carries evidence on MU-Glioma-Post}\label{sec:3.1}
 
-Table~\ref{tab:1} describes the cohorts. In the primary population, 249 grade 4 scans from 126 patients, 93 scans
-were followed by documented progression within 120 days. The scans spread across the phases of care: 76 were taken
-before RT, 6 during RT, 98 within 12 weeks after RT and 69 later.
+In the intended use on MU-Glioma-Post, the timeline pathway detected the scan at which progression was called with an
+AUC of 0.82, and the image pathway with 0.71.
+% Combined 0.82; clinical data alone at chance (0.53). Interval on the headline numbers only. Source:
+% DETECTION_TASK.md, exploratory images + clinical section.
 
-\subsection{One split overstated performance}\label{sec:3.2}
+\subsection{The pathways hold at two external centres}\label{sec:3.2}
 
-Rescored with the final cohort and labels, the first split was generous to every model (Figure~\ref{fig:1}A;
-Table~\ref{tab:2}). PRISM's initial radiomics model reached 0.80, but the core model, which uses no imaging,
-reached 0.87, and age, sex, IDH and MGMT alone reached 0.79. The intervals were wide and overlapped.
+Fitted once on MU and applied unchanged, the combined model reached 0.77 on LUMIERE, and single-scan image
+measurements reached 0.80 on UCSF-ALPTDG (Figure~\ref{fig:2}).
+% LUMIERE: images alone 0.66, timeline alone 0.69, both 0.77 (complementary). UCSF: models trained on UCSF reach 0.83
+% for single-scan images, so the locked model is about as high (claim transport, not better performance; decision 10).
+% Clinical alone at chance in all cohorts. Sources: DETECTION_TASK.md, UCSF_RESULTS.md.
 
-The test set rewarded any model that recognises the phase of care. Of its 60 negative scans, 36 were taken before
-RT and none of them was followed by documented progression, whereas 10 of the 68 scans before RT with a known
-outcome in the whole cohort were (15\%; Figure~\ref{fig:1}B). So 60\% of the positive--negative pairs set a
-progression scan against a fresh postoperative scan, and a rule with no training at all, ``the scan was taken after
-RT'', scored 0.740 on this test set.
+\subsection{What each score rests on depends on the cohort}\label{sec:3.3}
 
-Across 500 splits of the same design (Figure~\ref{fig:2}A; Table~\ref{tab:2}), PRISM's initial radiomics pipeline,
-reselecting its features on each split, scored higher on the first split than on 92\% of the others, and the core
-model ranked at the 91st percentile. Each split's AUC followed the mix of phases in its test set (Figure~\ref{fig:2}B):
-about two thirds of the first split's excess came from its mix of scans, and the rest from its particular
-patients. Under repeated cross-validation the same core model scored 0.720 in all gliomas, against 0.871 on the
-first split.
+The audit shows that on MU the scores rest mainly on where the patient is in treatment, and on UCSF on how much the
+tumour enhances (Figure~\ref{fig:3}).
+% MU: the timeline's gain lies between phases of care (+0.11 overall, -0.02 within phase; diagnostic).
+% UCSF: enhancing volume alone 0.88; 27 of 29 progression scans were rated enhancement increased.
 
-\subsection{The phase of care carries the signal}\label{sec:3.3}
+Each step of the image model's design raised its AUC on MU, and the audit shows what each step added.
+% EXPLORATORY ladder: single scan 0.66 -> + change 0.71 -> + schedule context 0.81; the last step encodes the
+% timeline. One sentence on the deep networks: as segmenters they supply PRISM's measurements; their direct scores
+% track enhancing volume (r about 0.8) -- framed as segmenters, not failed classifiers (STYLE 2026-10-26).
 
-Under repeated cross-validation, discrimination in grade 4 rose from 0.585 with clinical features alone to 0.644
-with timing and 0.698 with treatment status: the core model (Figure~\ref{fig:3}A; Table~\ref{tab:2}). It was
-calibrated in the large (ratio of observed to expected events 1.04; slope 0.89; Supplementary S12), and gradient
-boosting did not beat ridge.
+\subsection{The confidence keeps its coverage at all three centres}\label{sec:3.4}
 
-Most of this signal is the phase of care. Four phase categories recovered most of the gain over clinical features
-(R2 0.664 against R0 0.585; Figure~\ref{fig:4}A), and treatment features alone scored 0.701, as high as the full
-core model. Within the surveillance cohort, where the phase varies little, no base model discriminated well (0.549
-to 0.604).
+At the 80\% level, the conformal sets of the combined score covered 0.82 of MU scans, 0.87 of LUMIERE scans and 0.78
+of UCSF scans, at a nominal level of 0.80 and a threshold of 0.78 fixed in advance.
+% Figure~\ref{fig:4}A. Per-pathway coverage in the supplement (images on LUMIERE and timeline on UCSF below target).
 
-\textbf{The phase signal survives censoring, but lies between phases.} Of the 39 censored grade 4 scans, 38 were
-taken before RT, from 31 patients whose RT and chemotherapy were never documented. The 37 patients in that group
-were older, were scanned around surgery and had a median follow-up of 36 days after each scan (317 days for
-patients with RT documented); 14 died without documented progression. Censoring weights estimated within each phase
-raised the gain of R2 over R0 from +0.080 to +0.124, and excluding these patients left +0.057, so the prespecified
-rule for a robust finding was met (Table~\ref{tab:4}). If every censored scan had progressed, the gain would vanish,
-which seems unlikely but cannot be excluded. And the phase separates scans between phases, not within them:
-counting only pairs within the same phase, R2 scored 0.577 against 0.595 for R0 (Supplementary S20).
+When the two pathways disagreed on MU, the combined score was less accurate, and setting those scans aside raised
+the AUC of the rest more than removing the same number at random.
+% S2 +0.31, S3 +0.08 (Figure~\ref{fig:4}B). Disagreement does not pick out errors on UCSF. The reduced design
+% (disagreement AND conformal set with both outcomes) is EXPLORATORY: flags 12--27\%, wrong about half the time vs a
+% quarter otherwise, in all three cohorts (SYSTEM_RESULTS.md).
 
-\textbf{In the intended use.} On scans taken on or after the start of RT (173 grade 4 scans from 86 patients, 88
-events, 1 censored), the corrected core model, trained on all scans, scored 0.601 (0.515--0.686): above chance,
-but modest. It was calibrated in the large (observed to expected 1.01) but spread its predictions too widely
-(slope 0.53), because part of their range encodes the difference between scans before and after RT; refitting within
-the population did not improve discrimination (0.595). Within phases it scored 0.631 in the 12 weeks after RT and
-0.583 later, and 0.616 over pairs within the same phase, so little of its discrimination here comes from ranking one
-phase against another (Supplementary S23). The rule for scan-day eligibility removed 38 of the 39 censored scans and
-all 14 deaths without progression, so the censoring question largely disappears in the intended use. In the full
-cohort, phase-specific weights or counting deaths as non-events raised absolute AUCs (corrected model 0.734 and
-0.706) but moved no imaging contrast by more than 0.011 (Table~\ref{tab:4}).
+For most scans the evidence behind any score is thin, and the reliability card says so.
+% 35 of 249 MU scans in a situation tested on >= 10 progression and >= 10 non-progression scans; every UCSF situation
+% has few cases; the card states evidence, not accuracy (Figure~\ref{fig:4}C). Source: RELIABILITY_CARD.md.
 
-\subsection{Imaging adds nothing measurable}\label{sec:3.4}
+\subsection{The reports are faithful to the record}\label{sec:3.5}
 
-No imaging branch showed a measurable gain (Table~\ref{tab:3}; Figure~\ref{fig:3}B). In the prespecified primary
-analysis, nested radiomics changed the grade 4 core model by $-$0.032, and in grade 4 none of the 70 configurations
-had a CI above 0. Frozen pretrained encoders changed it by $-$0.004. Their features did carry an image signal (0.652
-alone, against 0.566 with untrained weights), but it tracked tumour volume (r = 0.58). Radiomics also made the
-model overconfident (calibration slope 0.60). A model can give imaging credit without needing it: where volumes,
-morphology and change were included they took about half of the SHAP credit, yet the models scored no better than
-the core model (Figure~\ref{fig:3}C).
+Every evaluation report written by the local model passed the deterministic check against its record: 114 of 114 on
+MU, 162 of 162 on LUMIERE and 130 of 130 on UCSF (Figure~\ref{fig:5}).
+% Disclose: second evaluation after a failure seen in the first (the LUMIERE rater flag; first evaluation 0 of 178),
+% with the checker unchanged (REPORT_V3_1.md). Tier stated wherever evidence is thin; reports followed a changed
+% field in 28 of 30. Models smaller than 27B left required content out (ladder in the supplement).
 
-None of the five explanations rescued imaging (Table~\ref{tab:4}).
-\begin{itemize}
-\item \textbf{After RT}, where the phase cannot do the work, adding all imaging measurements to clinical and phase
-variables moved the AUC from 0.549 to 0.610, within the range of the permutation null (p = 0.21;
-Figure~\ref{fig:4}B).
-\item \textbf{The label} was not the bottleneck: with progression on clinical grounds alone censored, the core model
-plus imaging scored 0.722 against 0.696.
-\item \textbf{Nor was the segmentation.} Our volumes reproduced the dataset's own table (r $\geq$ 0.996), yet across
-all gliomas imaging separated the progression scan itself from verified negatives with an AUC of only 0.68, and ET
-was larger at the progression scan than at the scan before in only 49\% of 74 pairs. Resegmentation agreed with the
-original masks (median Dice 0.80 for ET) but did not improve detection (0.665; Figure~\ref{fig:imaging};
-Supplementary S14).
-\item \textbf{The external cohort} showed no imaging effect: on LUMIERE the locked model with volumes scored 0.608,
-against 0.610 for clinical variables and timing alone (Supplementary S13).
-\item \textbf{Diffusion} did not change the result: in 77 CFB-GBM patients with ADC (19 events), ADC radiomics added
-+0.007 to conventional radiomics.
-\item \textbf{Training the encoder on the task} did not help either. The fine-tuned image score alone reached 0.644,
-again tracking tumour volume (r = 0.57) more than the core model (r = 0.13), and added +0.009 to the core model, at
-most about +0.04 within its interval. The shuffled-outcome control alone scored 0.476, as intended, but its stack
-gained +0.005, slightly above the limit of 0 we had set for a valid run: an uninformative score buys about half
-of the observed gain. Other weights, all gliomas, and a network that also saw the previous scan gave $-$0.005 to
-+0.017 (Supplementary S22).
-\end{itemize}
-
-\subsection{What the audit found}\label{sec:3.5}
-
-The audit layer reproduced the core model's predictions exactly, and the contributions summed to every logit.
-Conformal coverage met its target (P1; Table~\ref{tab:4}), but almost every scan before RT received the set \{0\},
-so all 5 grade 4 progressions before RT fell outside their sets. Selective prediction did not help (P2 not met):
-withholding the least confident scans raised the AUC of the rest only by changing the phase mix, since it kept
-97.6\% of scans taken before RT (Figure~\ref{fig:report}B).
-
-The audit's value was what it found, none of which showed in the cross-validated AUC.
-\begin{enumerate}
-\item A missingness shortcut: IDH was unknown in none of 93 progression scans but in 6 of 117 scans without
-progression, and removing the indicators for unknown markers lowered the grade 4 AUC by 0.023.
-\item A treatment-course model: treatment features alone scored 0.701.
-\item A molecular look-ahead: IDH and MGMT were used at 8 grade 4 scans taken 1 to 58 days before diagnosis.
-\item The cause of external miscalibration: IDH was unknown in 40.9\% of LUMIERE scans, and the same shortcut
-explained most of the gap between observed and expected events there.
-\item A documentation leak: the flag for the 12 weeks after RT was missing when the RT end date was missing, which
-told a scan whose RT would be documented later apart from one whose RT never would be.
-\end{enumerate}
-Removing these gave the \emph{corrected core model}, PRISM's reference configuration: 0.678 (0.596--0.755) in grade 4,
-$-$0.020 against the original, equally well calibrated (observed to expected 1.04, slope 0.85), and 0.706 in all
-gliomas. On LUMIERE it scored 0.635 against 0.608 and fixed the calibration (observed to expected 0.99, was 1.33;
-slope 0.97, was 0.38).
-
-\subsection{Reports that can be checked}\label{sec:3.6}
-
-On the 249 evaluation records, the checker passed all 249 reports (1.000; Wilson 95\% CI 0.985--1.000), none
-omitted any of the 262 active flags or contained forbidden content, and 247 contained every item of the required
-content (Table~\ref{tab:5}; Figure~\ref{fig:report}A). The two exceptions named a flag without its reason. Reports
-had a median of 190 words, about a minute to read, at a reading grade of 9.7. Grounding mattered more than the
-model: PRISM's original prompt, given the same facts, gave management advice in 99\% of its reports, a diagnosis
-in 51\% and a RANO category in 41\%, while the smaller model with the grounded prompt passed 243 of 249. Reports
-followed the changed field in all 30 perturbed records. A first grounded prompt failed the checker in 13 of 249
-reports for one reason, a risk sentence that stated the horizon without citing its field; the final prompt cites a
-single field holding the whole risk statement (Supplementary S19 and S21). No clinician has yet read the reports.
-
+% =====================================================================================================
 \section{Discussion}\label{sec:4}
 
-PRISM was built to predict progression from surveillance MRI, and its evaluation changed what PRISM is: a modest
-clinical and treatment-course model whose every estimate comes with a record of what it knew and a report that can
-be checked against it. Three lessons emerged.
+PRISM gives the clinician separate image and treatment-timeline evidence at each scan, carries to two external
+centres without refitting, and states how far its scores can be trusted there.
+% The answer to the question, first sentence.
 
-\textbf{A single split can measure the split.} The first 0.80 was real for that test set, but the test set was easy:
-60\% of its pairs set a progression scan against a fresh postoperative scan, a contrast that any model able to
-recognise the phase of care will win. The same split lifted the core model from 0.720 under repeated
-cross-validation to 0.871. This adds a mechanism to the known instability of single splits \citep{an2021}: when
-phases with very different event rates are mixed, the composition of a small test set explains much of the
-variance, and a split search that matches the number of scans and positives does not control it. We suggest four
-reporting rules for this task: repeated grouped cross-validation; the distribution over splits whenever a single
-split is reported; results within phases of care; and a clinical comparator that knows the treatment course.
+Because its modules are separate, PRISM runs where data are incomplete.
+% The image pathway works without treatment dates (LUMIERE, UCSF); the timeline is added without a new model; a new
+% cohort adds rows to the card.
 
-\textbf{The phase of care is a confounder.} A scan before RT is rarely followed by documented progression within
-120 days; a scan in the 12 weeks after RT often is, partly because of pseudoprogression and the follow-up it
-triggers \citep{brandes2008,taal2008,wen2023}. Four phase categories recovered most of the core model's gain, and
-two published clinical comparators also found time since RT influential \citep{gomaa2025,leone2023}. Imaging models
-that pool scans from all phases can therefore report high AUCs for recognising the phase rather than tumour biology.
-The signal survived censoring corrections but ranks scans between phases, not within them, and part of it reflects
-who stays in follow-up. This is why PRISM places every scan in its phase, flags the 12 weeks after RT, and is intended for scans from the start of RT onwards. There its AUC is 0.60, which shows how much of the
-apparent discrimination on mixed cohorts comes from the phase of care.
+Consider a scan eight weeks after radiotherapy in which the enhancing tumour has grown.
+% Scenario: the pathways disagree, the conformal set holds both outcomes, the card says this situation has few
+% cases. PRISM states this; it does not decide.
 
-\textbf{Imaging, as tested here, showed no gain.} Even at the scan where progression was documented, volumes
-separated it from negatives with an AUC of only 0.68. Three features of the data explain this. The label is a
-documentation event: one in eight grade 4 events was documented on clinical grounds alone. Volume series were noisy:
-ET changed more between scans less than 14 days apart (median 3.2-fold) than between scans 45 to 90 days apart (Figure~\ref{fig:imaging}C--D). And
-the cohort is small: by the Riley criteria even the core model would need about ten times more scans
-\citep{riley2020}. Small effects cannot be excluded: the upper confidence bounds for imaging reach 0.02 to 0.16, and
-training the encoder on the label gave +0.009. Where imaging performs well in the literature, it uses diffusion and
-perfusion to classify a lesion that is already suspicious \citep{kim2019,taylor2022}, a different question from
-forward risk at every scan. PRISM keeps its imaging branches as optional modules so that larger cohorts can test them
-again. Attribution is no guide: imaging took half of the SHAP credit without improving discrimination, so a claim of
-imaging value needs a paired difference with an interval.
+Each of PRISM's components has been described before, but we found no system that combines them.
+% Concise, neutral (SYSTEM_LANDSCAPE.md): segmentation and volumetrics; clinical + volumetric fusion (Jabal 2026);
+% conformal prediction in imaging; model cards. Avoid "first". Literature comparison: Christodoulou 2026 (label at
+% the patient level, one held-out set; one neutral sentence) \citep{christodoulou2026}, Tikhonov 2025, Chen 2026
+% \citep{chen2026}.
 
-\textbf{What PRISM offers.} At an AUC of about 0.70, PRISM does not offer better triage: abstention raised the AUC of
-the remaining scans only by changing their phase mix, and the conformal sets met their target mainly by calling every
-scan before RT negative. What it offers is a record of what the model knew on the scan day, where the scan sits in
-the treatment course, how uncertain the estimate is and which inputs drove it. Running the audit found a missingness
-shortcut, a molecular look-ahead, a documentation leak and the cause of the external miscalibration, none of which
-the AUC revealed. Grounding the language model in that record and checking every sentence against it gave reports
-that restate the record without verdicts or advice, and that put the number in context: how it compares with the
-average, how it changed since the last scan, what the model could not see and why the phase matters. We think this is
-the honest use of a modest model: to make its reasoning and its failure modes visible, not to claim better decisions.
-Whether clinicians find the reports useful is the next question; a protocol for a randomised reader study is in
-Supplementary S21.
+This study has limits.
+% One development centre; documented, not expert-read, progression; small subgroups; the ladder and the reduced
+% confidence design are exploratory; the report checker is lexical; no clinician has read the reports.
 
-\textbf{Comparison with other work.} The grade 4 core model (0.698) is close to clinical comparators for
-neighbouring tasks (0.69 in \citealp{leone2023}; 0.727 externally in \citealp{gomaa2025}). It is below the single
-test set result of 0.80 on MU-Glioma-Post \citep{christodoulou2026}, which used a different label (the progression
-status of each scan) and which we did not re-evaluate. Higher AUCs for forward recurrence prediction elsewhere use
-different cohorts, horizons and units, and some fall externally (0.887 to 0.762 in \citealp{chen2026}).
-
-\subsection*{Limitations}
-
-The development cohort comes from one centre, with 126 grade 4 patients and 93 events at 120 days, far below
-recommended sample sizes. The outcome is documented progression from routine records, not a blinded RANO read, and
-its timing depends on scheduling. MU images carry no acquisition metadata, so scanner effects could not be studied.
-Censoring was concentrated in patients whose RT was never documented; phase-specific weights and their exclusion
-left the phase finding intact, but censoring that depends on the outcome itself cannot be ruled out. Our bootstrap
-intervals resample fixed held-out predictions and do not include the variability of refitting, so they are likely
-too narrow. The external cohort is small, uses a different segmenter and lacks treatment dates, so the full core
-model was not tested externally. Several imaging tests were added after the first imaging result was known,
-although each had its rule fixed before its own run. Radiomics used a fixed bin count rather than the fixed bin
-width recommended by IBSI \citep{zwanenburg2020}. The fine-tuned encoder was trained on about 100 scans per network
-with fixed hyperparameters, and its shuffled-outcome control slightly missed its validity limit. The ablation and
-phase analyses use the original core model; the corrected model scores 0.020 lower. The report checker is
-lexical: it verifies numbers, citations, flags and forbidden patterns, not meaning. The required content was defined
-by us, so meeting it shows that the reports say what we specified, not that they help; the public reference reports
-describe preoperative or published cases rather than routine surveillance; and no clinician has assessed the reports. Finally, at an AUC of 0.60 in its intended use, PRISM is not ready to
-guide care; a triage model would need larger multicentre cohorts, a label read from images by experts, and perfusion
-or diffusion imaging, and would need to be tested prospectively.
+The next step is to pool the rare situations across cohorts and train on them.
+% Long tail: early post-RT progression, growing enhancement without progression; Burdenko and UCSD-PTGBM; a clinician
+% reader study.
 
 \subsection*{Conclusion}
 
-PRISM's first AUC of 0.80 came from one favourable split. Under repeated cross-validation its core of clinical and
-treatment-course variables reached about 0.70, or 0.68 after removing leaks found by its own audit, and radiomics,
-deep features (frozen or fine-tuned), resegmentation, a cleaner label and diffusion added no measurable
-discrimination. The phase of care drives discrimination on this task and should be reported as a stratum and
-treated as a confounder. In surveillance from the start of RT, PRISM's intended use, its corrected core model reached an AUC of 0.60, which
-is not enough to guide care. What PRISM provides is a way to build and test such models honestly: every prediction
-is recorded, explained and reported in a form that can be checked, and the audit exposed leaks that the AUC hid.
+PRISM shows that a surveillance system can keep its kinds of evidence apart, carry them to other centres and say
+where they have and have not been shown to work.
 
-
+% =====================================================================================================
 \section*{Acknowledgements}
 \todo{PENDING AUTHOR DECISION}.
 
@@ -414,381 +228,99 @@ declare.''} If any author serves on the editorial or advisory board of this jour
 
 \section*{Declaration of generative AI use}
 \todo{DRAFT, PENDING AUTHOR CONFIRMATION:} Generative AI is part of the system studied. PRISM's report generator uses
-a local language model (Qwen3.8-27B; Qwen3.5-9B in a comparison arm), and a second local model (Gemma 4 31B) rated
-reports in an exploratory check (Supplementary S21); all ran offline on the authors' hardware, saw only derived audit records, and are
-described in Sections~\ref{sec:2.1} and~\ref{sec:3.6}. An AI assistant (Claude, Anthropic) was used to write and run
-analysis code, to read 15 generated reports against their records (Supplementary S19), and to draft and edit the
-manuscript under the authors' direction. Patient data did not leave the authors' computing cluster. The authors
-reviewed all code, results and text and take full responsibility for the content of this article.
+a local language model (Qwen3.8-27B; six other open-weight models in a comparison); all ran offline on the authors'
+computing cluster and saw only derived system records. An AI assistant (Claude, Anthropic) was used to write and run
+analysis code and to draft and edit the manuscript under the authors' direction; it was given no patient-level
+data through any hosted service. The authors reviewed all code, results and text and take full responsibility for
+the content of this article.
 
 \section*{Funding}
 \todo{PENDING AUTHOR DECISION: ``This work was supported by the [Funding Agency] under Grant [number].'' If there was
 no funding: ``No funding was obtained for this work.''}
 
 \section*{Ethics statement}
-\todo{PENDING AUTHOR DECISION: secondary analysis of public de-identified datasets
-(MU-Glioma-Post, LUMIERE, CFB-GBM); state the institutional determination or waiver and cite the source
-datasets' approvals.} No registered protocol. Analysis plans and dated plan snapshots are in the repository
-(Supplementary S1). Patient and public involvement: none.
+\todo{PENDING AUTHOR DECISION: secondary analysis of de-identified datasets (MU-Glioma-Post and LUMIERE, public;
+UCSF-ALPTDG under a data use agreement); state the institutional determination or waiver and cite the source
+datasets' approvals.} No registered protocol. Analysis plans were committed to the repository before each external
+test. Patient and public involvement: none.
 
 \section*{Data availability statement}
-\todo{PENDING AUTHOR DECISION: MU-Glioma-Post (TCIA,
-doi:10.7937/\allowbreak 7K9K-3C83), LUMIERE (figshare; \citealp{suter2022}) and CFB-GBM (TCIA,
-doi:10.7937/v9pn-2f72) are public; derived tables, fold assignments and locked model files; state what is
-released and give a DOI or other persistent identifier.} Code: \todo{PENDING: public repository link and release
-tag.}
+\todo{PENDING AUTHOR DECISION: MU-Glioma-Post (TCIA, doi:10.7937/\allowbreak 7K9K-3C83) and LUMIERE (figshare;
+\citealp{suter2022}) are public; UCSF-ALPTDG is available from its provider under a data use agreement; state which
+derived tables, fold assignments and locked model files are released, with a DOI.} Code: \todo{PENDING: public
+repository link and release tag.}
 
 \section*{Supplemental material}
-Supplemental data for this article (Supplementary S1--S23, Tables S1--S45) are provided as a separate file.
+Supplemental data for this article are provided as a separate file.
 
 \section*{Notes on contributors}
 \todo{PENDING: a short biographical note for each author (no more than 200 words each).}
 
-% Reference list: Entries from docs/literature/COMPARABLE_RESULTS.md (verified) or
-% docs/literature/RELATED_WORK.md; [CHECK] entries carry note = {CHECK} in refs.bib. References cited only in
-% the Supplement (and two listed but not yet cited in the text: Welch 2019, Yun 2025) are included via \nocite
-% so that the list matches the draft's 39 entries.
-\nocite{demircioglu2021,vangriethuysen2017,welch2019,yun2025,cfbgbm}
 \bibliography{refs}
-
 
 % =====================================================================================================
 \clearpage
 \section*{Tables}
 
-% Source: docs/manuscript/TABLE1_COHORT.md
 \begin{table}[!htbp]
 \centering
-\small
-\begin{threeparttable}
-\caption[Cohort characteristics]{\textbf{Cohort characteristics.} Index scans are MRIs before
-first documented progression. Values are n (\%) or median [IQR]. Patient rows use each patient's first index
-scan. Full table with definitions: Supplementary S2.}
+\caption[The three cohorts]{\textbf{The three cohorts.} \todo{SKELETON: per cohort, what it has (images, treatment
+dates, how progression is documented), patients, scans in the detection task, positives and negatives; grade 4
+primary. Sources: TABLE1\_COHORT.md (MU, LUMIERE), UCSF\_DATA.md.}}
 \label{tab:1}
-\begin{tabularx}{\linewidth}{@{}L R{3.25cm} R{3.25cm} R{3.0cm}@{}}
-\toprule
- & MU all gliomas & MU grade 4 & LUMIERE \\
-\midrule
-Patients / index scans & 155 / 308 & 126 / 249 & 61 / 132 \\
-Index scans per patient, median (range) & 2 (1--6) & 2 (1--6) & 2 (1--10) \\
-Age, years & 61 [47--69] & 62 [53--70] & 62 [53--70] \\
-Male sex & 80 (52\%) & 66 (52\%) & 32 (52\%) \\
-IDH wild type / mutant / unknown & 120 (77\%) / 22 (14\%) / 13 (8\%) & 112 (89\%) / 8 (6\%) / 6 (5\%) & 38 (62\%) / 1 (2\%) / 22 (36\%) \\
-MGMT methylated / unmethylated / unknown & 53 (34\%) / 73 (47\%) / 29 (19\%) & 45 (36\%) / 62 (49\%) / 19 (15\%) & 26 (43\%) / 28 (46\%) / 7 (11\%) \\
-WHO grade 4 & 126 (81\%) & 126 (100\%) & 61 (100\%) \\
-Radiotherapy documented & 102 (66\%) & 89 (71\%) & not recorded \\
-Initial chemotherapy documented & 96 (62\%) & 88 (70\%) & not recorded \\
-Days from origin to scan\tnote{a} & 97 [46--186] & 96 [54--182] & 119 [82--226] \\
-RT completed by scan day (scans) & 185 (60\%) & 167 (67\%) & not recorded \\
-Within 12 weeks after RT\tnote{b} (scans) & 104 (34\%); unknown 94\tnote{c} & 98 (39\%); unknown 65\tnote{c} & 27 (20\%) \\
-Gap to next MRI, days & 77 [50--103] & 74 [49--98] & 91 [77--117] \\
-Death without documented progression (scans) & 22 (7\%) & 20 (8\%) & 7 (5\%) \\
-120 d: progression / no progression / censored & 100 / 156 / 52 & 93 / 117 / 39 & 47 / 76 / 9 \\
-90 d & 65 / 195 / 48 & 62 / 152 / 35 & 24 / 101 / 7 \\
-180 d & 144 / 105 / 59 & 131 / 75 / 43 & 62 / 61 / 9 \\
-\bottomrule
-\end{tabularx}
-\begin{tablenotes}\footnotesize
-\item[a] MU: days since diagnosis; LUMIERE: days since first surgery.
-\item[b] MU: 0--84 days after the documented RT end date; LUMIERE: rater's ``< 3 months after RT'' flag.
-\item[c] RT never documented (92 scans, all gliomas; 63, grade 4) or RT end date missing (2 scans). Every scan is
-still assigned a phase of care (Section~\ref{sec:2.3}).
-\end{tablenotes}
-\end{threeparttable}
 \end{table}
 
-\clearpage
-% Full table and sources: docs/manuscript/figures/table2_single_split_vs_cv.{md,csv}
-\begin{landscape}
 \begin{table}[!htbp]
 \centering
-\footnotesize
-\begin{threeparttable}
-\caption[The same models on a single split, across 500 splits and under repeated
-cross-validation]{\textbf{The same models on a single split, across 500 splits and under repeated
-cross-validation.} IPCW AUC(120 d) with 95\% bootstrap over patients CI unless stated. Single split = PRISM's first evaluation split (all gliomas; 29 test patients, 82 scans). 500 splits = PRISM v1's split design (naive
-label; for PRISM's initial radiomics model, its pipeline with features reselected per split). Core model = PRISM's
-reference model of clinical, timing and treatment variables (the reference for every imaging comparison). 5 $\times$ 5 CV = repeated
-cross-validation grouped by patient on the final cohort. }
+\caption[Questions fixed in advance and their answers]{\textbf{Questions fixed in advance and their answers.}
+\todo{SKELETON: MU detection (DETECTION\_TASK.md), LUMIERE, UCSF Q1--Q4 (UCSF\_PLAN.md), system S1--S7
+(SYSTEM\_PLAN.md, REPORT\_V3\_1\_PLAN.md); each with its rule, result and met / not met.}}
 \label{tab:2}
-\begin{tabularx}{\linewidth}{@{}L R{1.3cm} R{3.0cm} R{3.5cm} R{4.0cm} R{3.0cm} R{3.0cm}@{}}
-\toprule
-Model & Single split: naive AUC & Single split: IPCW AUC [95\% CI] & $\Delta$ vs core ridge [95\% CI] & 500 splits: naive mean $\pm$ SD (2.5--97.5\%) & 5 $\times$ 5 CV, all gliomas & 5 $\times$ 5 CV, grade 4 \\
-\midrule
-PRISM initial radiomics model & 0.802 & 0.817 [0.690, 0.920] & $-$0.034 [$-$0.186, +0.109] & 0.720 $\pm$ 0.055 (0.610--0.819) & n/a (fixed model) & n/a (fixed model) \\
-Core model (ridge) & 0.871 & 0.851 [0.735, 0.947] & -- & 0.801 $\pm$ 0.052 (0.694--0.895) & 0.720 [0.638, 0.792] & 0.698 [0.615, 0.774] \\
-Core model (GBM) & 0.844 & 0.824 [0.690, 0.916] & $-$0.027 [$-$0.127, +0.062] & not run & 0.718 [0.642, 0.792] & 0.687 [0.601, 0.768] \\
-Core + legacy radiomics & 0.862 & 0.845 [0.746, 0.936] & $-$0.006 [$-$0.081, +0.090] & 0.799 $\pm$ 0.053 (0.674--0.892) & 0.743 [0.678, 0.803] & 0.703 [0.627, 0.774] \\
-Clinical only (ridge) & 0.791 & 0.782 [0.638, 0.897] & $-$0.069 [$-$0.215, +0.058] & not run & 0.619 [0.540, 0.696] & 0.585 [0.496, 0.666] \\
-\bottomrule
-\end{tabularx}
-\end{threeparttable}
-\end{table}
-\end{landscape}
-
-\clearpage
-% Source: docs/manuscript/figures/table3_forest.csv
-\begin{table}[!htbp]
-\centering
-\small
-\begin{threeparttable}
-\caption[Do PRISM's imaging branches add to its core model?]{\textbf{Do PRISM's imaging branches add to its core model? Paired
-$\Delta$AUC with 95\% bootstrap over patients CI.} Reference: PRISM's core model (clinical + timing + treatment, ridge)
-unless stated in the section heading. Grade 4 (G4) is primary. * = CI excludes 0 (uncorrected; 3 of the 32 intervals in Figure~\ref{fig:3}B). The fine-tuned encoder and CFB-GBM rows
-are not in Figure~\ref{fig:3}B. Decision rules and answers: Table~\ref{tab:4}.}
-\label{tab:3}
-\begin{tabularx}{\linewidth}{@{}L R{4.1cm} R{4.1cm}@{}}
-\toprule
-Analysis & G4 $\Delta$AUC [95\% CI] & All gliomas $\Delta$AUC [95\% CI] \\
-\midrule
-\addlinespace
-\multicolumn{3}{@{}l}{\textbf{Radiomics branch vs core model}} \\
-Nested over 70 configurations (prespecified primary) & $-$0.032 [$-$0.084, +0.017] & +0.028 [$-$0.017, +0.071] \\
-Legacy top-10, concatenated (single configuration) & +0.005 [$-$0.059, +0.067] & +0.024 [$-$0.026, +0.075] \\
-Legacy PCA-10, stacked (best post hoc, optimistic) & +0.023 [$-$0.013, +0.057] & +0.035 [+0.002, +0.068]* \\
-\addlinespace
-\multicolumn{3}{@{}l}{\textbf{Frozen deep encoder branch vs core model}} \\
-Nested over 32 (BraTS21 SwinUNETR + BrainSegFounder) & $-$0.004 [$-$0.069, +0.063] & +0.011 [$-$0.032, +0.056] \\
-BraTS21 SwinUNETR, lesion PCA-10 stacked & +0.016 [$-$0.029, +0.059] & +0.017 [$-$0.014, +0.050] \\
-BrainSegFounder, lesion PCA-10 stacked & +0.014 [$-$0.029, +0.057] & +0.024 [$-$0.013, +0.064] \\
-Untrained encoder, nested (control) & $-$0.049 [$-$0.085, $-$0.014]* & $-$0.009 [$-$0.032, +0.009] \\
-\addlinespace
-\multicolumn{3}{@{}l}{\textbf{Fine-tuned deep encoder branch vs core model}} \\
-BraTS21 SwinUNETR, fine-tuned (prespecified primary) & +0.009 [$-$0.022, +0.040] & +0.017 [$-$0.009, +0.044] \\
-BrainSegFounder, fine-tuned & $-$0.005 [$-$0.030, +0.019] & -- \\
-BraTS21 SwinUNETR, fine-tuned with the previous scan & +0.014 [$-$0.010, +0.040] & -- \\
-BraTS21 SwinUNETR, shuffled outcomes (control) & +0.005 [$-$0.006, +0.015] & -- \\
-\addlinespace
-\multicolumn{3}{@{}l}{\textbf{Imaging-defined label (progression on clinical grounds alone censored)}} \\
-Core + volumes/change vs core (prespecified rule) & +0.027 [$-$0.033, +0.082] & +0.008 [$-$0.036, +0.049] \\
-\addlinespace
-\multicolumn{3}{@{}l}{\textbf{Surveillance scans (after RT) only}} \\
-Clinical + phase + imaging vs clinical + phase (prespecified primary) & +0.061 [$-$0.038, +0.156] & +0.033 [$-$0.054, +0.128] \\
-Core + imaging measurements vs core & +0.017 [$-$0.069, +0.093] & +0.005 [$-$0.075, +0.082] \\
-Core + radiomics (nested) vs core & +0.005 [$-$0.070, +0.075] & +0.024 [$-$0.030, +0.076] \\
-\addlinespace
-\multicolumn{3}{@{}l}{\textbf{Resegmentation (reference: same model on MU masks)}} \\
-Clinical + phase + imaging, BraTS21 SwinUNETR masks & +0.030 [$-$0.008, +0.069] & +0.029 [$-$0.010, +0.069] \\
-Clinical + phase + imaging, BrainSegFounder masks & +0.008 [$-$0.023, +0.040] & +0.003 [$-$0.025, +0.032] \\
-\addlinespace
-\multicolumn{3}{@{}l}{\textbf{LUMIERE, locked (reference: clinical + timing)}} \\
-+ volumes & $-$0.001 [$-$0.073, +0.057] & $-$0.006 [$-$0.075, +0.055] \\
-+ deep features & +0.057 [$-$0.132, +0.235] & +0.064 [$-$0.011, +0.144] \\
-+ volumes + deep vs + volumes & +0.089 [$-$0.026, +0.215] & +0.050 [+0.002, +0.109]* \\
-\addlinespace
-\multicolumn{3}{@{}l}{\textbf{CFB-GBM (77 patients, 19 events; reference: conventional radiomics)}} \\
-+ ADC radiomics (prespecified primary) & +0.007 [$-$0.019, +0.035] (permutation p = 0.151) & -- \\
-\bottomrule
-\end{tabularx}
-\end{threeparttable}
-\end{table}
-
-\clearpage
-% Sources: docs/results/*.md (each analysis document's prespecified plan and results section)
-\begin{table}[!htbp]
-\centering
-\footnotesize
-\begin{threeparttable}
-\caption[Prespecified questions, rules and answers]{\textbf{Prespecified questions, rules and answers.} Each rule was
-fixed before its analysis was run (Supplementary S1). Grade 4 glioma unless stated. $\Delta$AUC is the paired
-difference in IPCW AUC at 120 days with 95\% bootstrap CI over patients; ``CI $>$ 0'' means the interval excludes 0.
-Core = PRISM's core model; R0 = clinical; R2 = clinical + phase of care; I2 = all imaging measurements except
-radiomics.}
-\label{tab:4}
-\begin{tabularx}{\linewidth}{@{}>{\raggedright\arraybackslash}p{3.3cm} >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}p{3.6cm} >{\raggedright\arraybackslash}p{1.6cm}@{}}
-\toprule
-Question & Rule & Result & Answer \\
-\midrule
-\multicolumn{4}{@{}l}{\textbf{Does imaging add to PRISM's core model?}} \\
-Radiomics (primary development analysis) & Core + nested radiomics vs core; report the paired $\Delta$AUC & $-$0.032 [$-$0.084, +0.017] & No gain \\
-Imaging after RT, where the phase cannot help & R2 + I2 vs R2 in surveillance scans; permutation test & +0.061 [$-$0.038, +0.156]; p = 0.21 & Not supported \\
-Is the label the bottleneck? & Imaging-defined label: imaging gains $\geq$ 0.03 with CI $>$ 0 & +0.027 [$-$0.033, +0.082] & Not met \\
-Is the segmentation the bottleneck? (all gliomas) & New masks raise detection of the progression scan by $\geq$ 0.05 with CI $>$ 0, or ET is larger at progression in $>$ 65\% of pairs & Detection 0.681 to 0.665; ET larger in 45\% & Not met \\
-Does diffusion add? (CFB-GBM) & ADC radiomics adds $\geq$ 0.03 to conventional radiomics with CI $>$ 0 & +0.007 [$-$0.019, +0.035]; p = 0.151 & Not met \\
-Does fine-tuning the encoder help? & Core + fine-tuned score gains $\geq$ 0.03 with CI $>$ 0; validity: shuffled-outcome control scores about 0.5 alone (CI covering 0.5) and gains $\leq$ 0 in the stack & +0.009 [$-$0.022, +0.040]; control 0.476 [0.438, 0.514] alone, +0.005 [$-$0.006, +0.015] in the stack & Not met; control limit missed \\
-\addlinespace
-\multicolumn{4}{@{}l}{\textbf{Do the findings survive censoring?}} \\
-Phase signal under censoring & R2 $-$ R0 $\geq$ 0.040 with phase-specific censoring weights and after excluding patients whose RT was never documented & +0.124 [+0.039, +0.232]; +0.057 [+0.009, +0.117] & Robust \\
-\addlinespace
-Imaging contrasts under censoring sensitivities & No imaging contrast gains $\geq$ 0.03 with CI $>$ 0 with phase-specific weights or with deaths counted as non-events & Largest change in any contrast 0.011; radiomics $-$0.021 and $-$0.035; fine-tuned +0.011 and +0.009 & Conclusions hold \\
-\addlinespace
-\multicolumn{4}{@{}l}{\textbf{Does the audit layer work?}} \\
-P1: conformal coverage & Coverage $\geq$ 0.78 on test scans with a known outcome & 0.841 [0.790, 0.885] & Met \\
-P2: selective prediction & Abstaining on the least confident 30\% beats random removal within phase, CI $>$ 0 & +0.006 [$-$0.023, +0.036] & Not met \\
-\addlinespace
-\multicolumn{4}{@{}l}{\textbf{Are the reports faithful and complete?}} \\
-Faithful and complete & Checker passes $\geq$ 95\% of reports; every required content item in $\geq$ 90\%; more required content than the first grounded prompt (paired CI $>$ 0); forbidden content $\leq$ 2\% and no active flag omitted\tnote{a} & 100\%; 99.2\%; +0.325 [+0.312, +0.337]; 0\%, none & Met \\
-\bottomrule
-\end{tabularx}
-\begin{tablenotes}\footnotesize
-\item[a] Evaluated on 249 records from a cross-validation repeat not used in development. A first grounded prompt,
-evaluated on another repeat against a checker pass target of $\geq$ 0.95, passed 236/249 = 0.948 [0.913, 0.969] and
-was revised (Section~\ref{sec:3.6}).
-\end{tablenotes}
-\end{threeparttable}
-\end{table}
-
-% Source: docs/results/REPORT_USEFULNESS.md, "v1 vs v2" (summary_eval.csv), v2 column
-\begin{table}[!htbp]
-\centering
-\small
-\begin{threeparttable}
-\caption[Evaluation of PRISM's reports]{\textbf{Evaluation of PRISM's reports on 249 grade 4 records} from a
-cross-validation repeat not used in development. Required content was fixed before the evaluation; the checker is
-deterministic.}
-\label{tab:5}
-\begin{tabularx}{\linewidth}{@{}L R{3.2cm}@{}}
-\toprule
- & Reports \\
-\midrule
-Passed the checker (no unsupported claim, every active flag stated) & 249 (100\%) \\
-Contained every applicable required item & 247 (99.2\%) \\
-\addlinespace
-\multicolumn{2}{@{}l}{\emph{Required content: reports containing each item}} \\
-Risk with its 95\% interval and the 120-day horizon & 249 of 249 \\
-Reference frame (risk tier or the model's average risk) & 249 of 249 \\
-Phase of care, and why it matters after RT & 249 of 249 \\
-Main drivers of the risk & 249 of 249 \\
-What the model did not see & 249 of 249 \\
-Each active flag with its reason & 178 of 180 \\
-Change since the previous scan & 123 of 123 \\
-Input not known on the scan day & 8 of 8 \\
-\addlinespace
-\multicolumn{2}{@{}l}{\emph{Safety and form}} \\
-Forbidden content (diagnosis, RANO category, advice) & 0 \\
-Active flags omitted & 0 of 262 \\
-Words, median [IQR] & 190 [158--214] \\
-Reading grade (Flesch--Kincaid), median & 9.7 \\
-Reading time at 200 words per minute, median & 57 s \\
-\bottomrule
-\end{tabularx}
-\end{threeparttable}
 \end{table}
 
 % =====================================================================================================
 \clearpage
 \section*{Figure legends}
 
-% Figure 1: docs/manuscript/figures/fig5a_architecture.pdf
 \begin{figure}[!htbp]
 \centering
-\includegraphics[width=\linewidth,height=0.40\textheight,keepaspectratio]{fig5a_architecture.pdf}
-\caption[PRISM architecture]{\textbf{PRISM architecture and data flow.} Inputs read as of the scan day feed the
-reference core model (ridge on clinical and treatment-course variables). The imaging branches (volumes, radiomics,
-deep encoder; dashed) are optional and switched off in the reference configuration; volumes enter the record only as indicative values. The risk,
-with its interval and tier, goes into the per-scan audit record (contributions, 80\% conformal set, referral
-flags), from which the grounded report is written.}
-\label{fig:arch}
-\end{figure}
-
-% Figure 2 (PLANNED): docs/manuscript/figures/fig_study_design.pdf; spec in docs/manuscript/FIGURES.md, "Figure plan"
-\begin{figure}[!htbp]
-\centering
-\includegraphics[width=\linewidth,height=0.40\textheight,keepaspectratio]{fig_study_design.pdf}
-\caption[Study design]{\textbf{Study design.} (A) MU-Glioma-Post was used for development, LUMIERE as a locked
-external test and CFB-GBM for the diffusion analysis. (B) Evaluation moved from one split to 500 splits of the same
-design and then to repeated cross-validation grouped by patient, with every fitted step inside the training fold.
-(C) PRISM's core model, its optional imaging branches, the per-scan audit record and the grounded report, and the
-questions tested against prespecified rules (Table~\ref{tab:4}).}
-\label{fig:design}
-\end{figure}
-
-% Figure 1. DRAFT.md legend pointer: "File: figures/fig1_single_split.{png,pdf}"
-\begin{figure}[!htbp]
-\centering
-\includegraphics[width=\linewidth,height=0.55\textheight,keepaspectratio]{fig1_single_split.pdf}
-\caption[PRISM's first evaluation split]{\textbf{PRISM's first evaluation split.} Discrimination on the first
-evaluation split (all gliomas; 126 training / 29 test patients, 82 test scans, 22 naive positives). Every
-model except PRISM's initial radiomics model was fitted once on the training patients; the initial radiomics model
-enters with its shipped test-set probabilities. (A) IPCW AUC with 95\% bootstrap over patients CI (1,000 draws;
-dot and bar) and naive AUC (tick). (B) Naive AUC decomposed by the type of negative scan: 36 of the 60 negative
-test scans were taken before RT started, and none of them progressed, so 60\% of positive--negative pairs compare a
-progression scan with a scan taken before RT; solid bars, positives against negatives taken before RT; light bars, positives against
-other negatives. (C) The same models on the 42 test scans taken after RT (19 patients). Intervals are wide and overlap
-throughout.}
+\figslot{fig1_system.pdf}{0.40\textheight}{PRISM is built of modules, each answering a known challenge: scan and
+record; segmentation and measurements; the timeline pathway; the image pathway; the combined score; the confidence
+(conformal set, agreement, card); the local report. One worked example scan. No RANO.}
+\caption{\textbf{PRISM is built of modules, each answering a known challenge.} \todo{legend}}
 \label{fig:1}
 \end{figure}
 
-% Figure 2. DRAFT.md legend pointer: "File: figures/fig2_split_variance.{png,pdf}"
 \begin{figure}[!htbp]
 \centering
-\includegraphics[width=\linewidth,height=0.55\textheight,keepaspectratio]{fig2_split_variance.pdf}
-\caption[Where the first split sits among 500 splits of the same design]{\textbf{Where the first split sits among
-500 splits of the same design.} PRISM's split search was run for seeds 0--499; seed 62 reproduces the first split. (A) Test AUC (naive label) per split for PRISM's initial radiomics
-pipeline with features reselected per split (honest estimate), the shipped features refitted (optimistic upper
-bound), the core ridge model and the core model + legacy radiomics. Violin and points, 500 splits; grey dot and
-line, mean and 2.5--97.5\% range; diamond, each model's own value on the first split with its percentile rank; dashed line, the reported 0.802. (B) Per-split AUC against the AUC of the no-training rule ``scan
-is after RT'' on that test set (higher = more negatives and fewer events before RT); lines, least-squares fits;
-Spearman $\rho$ +0.57 (core model) and +0.22 (initial radiomics pipeline).}
+\figslot{fig2_transport.pdf}{0.40\textheight}{AUC by pathway (clinical alone, timeline, images, combined) and cohort
+(MU internal; LUMIERE and UCSF locked; UCSF-trained as a reference).}
+\caption{\textbf{The pathways hold at two external centres without refitting.} \todo{legend}}
 \label{fig:2}
 \end{figure}
 
-% Figure 3. DRAFT.md legend pointer: "File: figures/fig3_clinical_vs_radiomics.{png,pdf}"
 \begin{figure}[!htbp]
 \centering
-\includegraphics[width=\linewidth,height=0.62\textheight,keepaspectratio]{fig3_clinical_vs_radiomics.pdf}
-\caption[Component ablation: clinical, treatment-phase and imaging branches]{\textbf{Component ablation: clinical,
-treatment-phase and imaging branches under repeated cross-validation.} (A) Feature ladder (ridge; 5 $\times$ 5
-repeated CV grouped by patient; IPCW AUC(120 d) with 95\% bootstrap over patients CI): clinical $\rightarrow$ +
-timing $\rightarrow$ + treatment status on the scan day (= PRISM's core model, B); the last three points each add one imaging
-branch to B (volumes; radiomics, nested over 70 configurations; frozen deep features, nested over 32). (B) Paired
-$\Delta$AUC with 95\% CI against the reference named in each section (Table~\ref{tab:3}). Asterisks mark CIs
-excluding 0 (3 of 32, uncorrected; about 1.6 expected by chance). (C) Share of mean absolute group SHAP in grade 4
-held-out explanations: imaging blocks take 45--51\% of the credit in the full models without improving
-discrimination.}
+\figslot{fig3_evidence.pdf}{0.40\textheight}{(A) MU: the timeline's gain lies between phases of care. (B) UCSF:
+enhancing volume alone matches the image model. (C) The image-model ladder (exploratory).}
+\caption{\textbf{What each score rests on depends on the cohort.} \todo{legend}}
 \label{fig:3}
 \end{figure}
 
-% Figure 4. DRAFT.md legend pointer: "File: figures/fig4_phase_of_care.{png,pdf}"
 \begin{figure}[!htbp]
 \centering
-\includegraphics[width=\linewidth,height=0.60\textheight,keepaspectratio]{fig4_phase_of_care.pdf}
-\caption[Phase of care]{\textbf{Phase of care.} (A) Bases without imaging (ridge, grade 4) in the full cohort (249
-scans), the surveillance cohort (scans after RT; 167 scans, 84 patients, 83 events) and the later surveillance cohort (> 12 weeks after RT
-end; 69 scans), each trained and evaluated within the cohort. R0 clinical; R1 + timing; R2 + four-level phase of
-care; R3 core model. In the later surveillance cohort the bases fall below 0.5, a known bias of cross-validation for nearly null
-models in small samples, so contrasts there are not interpretable. (B) $\Delta$AUC from adding each imaging block
-(I1 volumes; I2 all imaging measurements other than radiomics; I3 radiomics; I4 deep) to each base within grade 4 surveillance scans.
-Diamond, prespecified primary contrast (R2 + I2 vs R2; Table~\ref{tab:4}); the permutation null itself averages
-+0.03.}
+\figslot{fig4_confidence.pdf}{0.40\textheight}{(A) Conformal coverage at the 80\% level by cohort and pathway. (B) AUC
+with and without the disagreement warning. (C) The reliability card: situations by cohort with their evidence tier.}
+\caption{\textbf{The confidence keeps its coverage and points to doubtful scans.} \todo{legend}}
 \label{fig:4}
 \end{figure}
 
-% Figure 6. (A) docs/manuscript/figures/fig6a_example_report_v2.pdf (v1: fig5a_example_report.pdf, Supplementary); (B) fig5_system_risk_coverage.pdf
-% Figure (imaging examples): docs/manuscript/figures/fig_imaging_examples.pdf (prism/analyses/figures_extra.py)
 \begin{figure}[!htbp]
 \centering
-\includegraphics[width=\linewidth,height=0.62\textheight,keepaspectratio]{fig_imaging_examples.pdf}
-\caption[Imaging examples]{\textbf{Why imaging struggles on this task.} MU-Glioma-Post images (TCIA, CC BY 4.0;
-\citealp{mahmoud2025}). (A) One grade 4 patient across phases of care, chosen by a fixed rule (the patient with a
-progression scan whose index scans cover the most phases): axial T1c and FLAIR at the slice of largest enhancing
-tumour, with mask contours, the day since diagnosis, the phase and the 120-day outcome. (B) Enhancing tumour from the
-dataset mask and from the BraTS 2021 SwinUNETR resegmentation, for the grade 4 scan with the median Dice (0.83). (C)
-Enhancing tumour volume over time in four patients with scans 14 days or less apart (highlighted, with the fold
-change). (D) Fold change in enhancing tumour volume between consecutive scans by interval, with medians: volumes
-changed by a median of 3.2-fold over 14 days or less, no less than over longer intervals.}
-\label{fig:imaging}
+\figslot{fig5_report.pdf}{0.40\textheight}{One rendered report (segmentation figure, pathways, combined score,
+confidence) and faithfulness by cohort.}
+\caption{\textbf{The report states the evidence, faithful to the record.} \todo{legend}}
+\label{fig:5}
 \end{figure}
-
-\begin{figure}[!htbp]
-\centering
-\begin{minipage}[t]{0.40\linewidth}\raggedright\textbf{A}\par\centering
-\includegraphics[width=\linewidth,height=0.45\textheight,keepaspectratio]{fig6a_example_report_v2.pdf}\end{minipage}\hfill
-\begin{minipage}[t]{0.58\linewidth}\raggedright\textbf{B}\par\centering
-\includegraphics[width=\linewidth,height=0.45\textheight,keepaspectratio]{fig5_system_risk_coverage.pdf}
-\end{minipage}
-\caption[A grounded report and selective prediction]{\textbf{A grounded report and selective prediction.} (A) Grounded report for the first evaluation scan in the 12 weeks after RT, chosen by a prespecified rule: sections
-rendered from the audit record and a local language model summary, with findings and an impression, in which every
-sentence cites record fields. The checker found every claim supported. By the required-content rule this is one of the 2 of 249 incomplete reports: it names the active flags without their reasons. (B) Risk--coverage curves for the core model
-(5 $\times$ 5 CV, pooled held-out predictions, mean over repeats), grade 4 (left) and all gliomas (right). Top,
-IPCW AUC(120 d); bottom, IPCW Brier score of the scans kept when the least confident scans (lowest max(p, 1 $-$ p))
-are withheld first (solid), against random removal (dashed) and random removal matched by phase (dotted; band,
-2.5--97.5\% of the matched draws). The gain over random removal is almost entirely matched by the phase-matched
-reference (prespecified P2 at about 70\% coverage, grade 4; Table~\ref{tab:4}).}
-\label{fig:report}
-\end{figure}
-
-
-\clearpage
 
 \end{document}

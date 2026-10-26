@@ -1,6 +1,6 @@
 # Outline: the argument of the PRISM paper (layer 1)
 
-**Status: draft 3 (2026-10-26), for the author's reaction.** Rebuilt on the author's framing of 2026-10-26
+**Status: draft 3 (2026-10-26), accepted by the author 2026-10-26; skeleton in `paper/main.tex`.** Rebuilt on the author's framing of 2026-10-26
 (STYLE.md section 10): lead with what the system does, present the difficulties of surveillance data as known
 challenges each paired with the module that handles it, PRISM as a modular system, no accusation of the field, no
 RANO anywhere (text, figures, reports). Draft 2.1 and draft 1 are in git history. Rules: [STYLE.md](STYLE.md).
@@ -108,7 +108,7 @@ Censoring, calibration, SHAP, the full flag set, the card's cells, UCSF label se
 
 ## Open for the author
 - Split variance as supporting evidence (one paragraph + supplementary figure), or a short Results section?
-- The new abstract, once this outline is accepted.
+- The proposed abstract (in `paper/main.tex`, flagged) to replace the locked one: approve or edit.
 
 ## Decisions log
 1. (2026-10-25) Task and framing: detection at the scan is the task, a system that shows what a model uses is the
