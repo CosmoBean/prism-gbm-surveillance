@@ -59,7 +59,32 @@ class TestFactsV31(unittest.TestCase):
 
     def test_other_values_unchanged(self):
         F3, F = facts_v3(record()), facts_v3_1(record())
-        self.assertEqual({k: v for k, v in F.items() if k != "system.facts_version"}, F3)
+        drop = ("system.facts_version", "meas.label")
+        self.assertEqual({k: v for k, v in F.items() if k not in drop}, {k: v for k, v in F3.items() if k not in drop})
+
+
+class TestNoRano(unittest.TestCase):
+    """Author decision 2026-10-26: v3.1 facts, prompt, limitations and figure title do not mention RANO; v3 does."""
+
+    def test_facts_and_prompt(self):
+        for rec in (record(), lumiere(), lumiere(measured=False)):
+            F = facts_v3_1(rec)
+            self.assertFalse([k for k, v in F.items() if isinstance(v, str) and "RANO" in v])
+            self.assertNotIn("RANO", system_prompt(F))
+        self.assertEqual(facts_v3_1(record())["meas.label"], "volumes from the automatic segmentation; indicative")
+        self.assertIn("response categories such as progressive disease", system_prompt(facts_v3_1(record())))
+
+    def test_renderer(self):
+        from prism.report import sections_v3, seg_figure
+        F31, F3 = facts_v3_1(lumiere()), facts_v3(lumiere())
+        md31 = sections_v3.render_md("S", F31, None)
+        self.assertNotIn("RANO", md31)
+        self.assertNotIn("RANO", sections_v3.render_html("S", F31, None))
+        self.assertIn("PRISM report (v3.1)", md31)
+        self.assertIn("rater recorded this scan as within 3 months", md31)
+        self.assertIn("not a RANO assessment", sections_v3.render_md("S", F3, None))  # v3 unchanged
+        self.assertIn("PRISM report (v3)", sections_v3.render_md("S", F3, None))
+        self.assertNotIn("RANO", seg_figure.TITLE_V3_1)
 
 
 class TestCheckerOnV31(unittest.TestCase):

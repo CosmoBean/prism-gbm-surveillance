@@ -12,6 +12,7 @@ Steps
   generate   local vLLM run, offline, one GPU (prism.report.vllm_run); --model picks a ladder model
   evaluate   frozen checker (v3 rules; facts keep system.version "v3") -> S5, S6; stress set -> S7
   stress     the new 30-record perturbation set (seed 1, 6 per kind) from the v3.1 evaluation records
+  render     markdown reports (no figure); examples: 3 HTML reports with the figure (v3.1 title, no RANO)
   ladder     one table over the ladder models (plan section 4)
 v3 (prism/analyses/report_v3.py, outputs/results/analyses/report_v3/) is untouched. Labels are never read: only the
 membership column of the *_EVALUATION_ONLY.csv files (via report_v3._members).
@@ -310,6 +311,55 @@ def stress_evaluate(tg=""):
     print(sm.to_string(index=False), flush=True)
 
 
+# ---------------------------------------------------------------- rendering (no RANO: figure title and limitations)
+def figure_v3_1(rec: dict):
+    """The segmentation figure re-rendered with the v3.1 title (no RANO) into report_v3_1/figures; the v3 figures
+    in system/figures are left as they are. None if the scan has no v3 figure (no images)."""
+    if R3.figure_path(rec) is None:
+        return None
+    from prism.report import seg_figure
+    p = OUT / "figures" / rec["cohort"] / f"{rec['scan_id']}.png"
+    if not p.exists():
+        seg_figure.render(rec["cohort"], rec["scan_id"], p, title=seg_figure.TITLE_V3_1)
+    return p
+
+
+def render_set(s: str, ids=None, tg="", html_too=False):
+    from prism.report import prompts_v3_1 as P, sections_v3
+    recs, outs = load_set(s), load_outputs(s, tg)
+    d = OUT / "reports" / f"{s}{tg}"
+    d.mkdir(parents=True, exist_ok=True)
+    for rid, rec in recs.items():
+        if ids is not None and rid not in ids:
+            continue
+        F = _facts(rec)
+        o = outs.get(f"{s}|{rid}")
+        prose = P.sectioned(o["text"]) if o else None
+        fig = figure_v3_1(rec) if html_too else None
+        name = rid.replace("|", "__")
+        (d / f"{name}.md").write_text(sections_v3.render_md(rec["scan_id"], F, prose, str(fig) if fig else None))
+        if html_too:
+            (d / f"{name}.html").write_text(sections_v3.render_html(rec["scan_id"], F, prose, fig))
+
+
+def render_step(sets, model=PRIMARY, tag=""):
+    for s in sets:
+        render_set(s, tg=_tag(model, tag))
+        print(f"rendered {s}{_tag(model, tag)}", flush=True)
+
+
+def examples_step(_sets=None, model=PRIMARY, tag=""):
+    """Per cohort, the first evaluation record id (sort order) that has a segmentation figure (rule as v3)."""
+    recs = load_set("eval")
+    pick = []
+    for coh in ("mu", "lumiere", "ucsf"):
+        ids = sorted(k for k, r in recs.items() if r["cohort"] == coh and R3.figure_path(r) is not None)
+        pick += ids[:1]
+    render_set("eval", ids=set(pick), tg=_tag(model, tag), html_too=True)
+    (OUT / "examples.json").write_text(json.dumps(pick, indent=1))
+    print("examples:", len(pick), flush=True)
+
+
 # ---------------------------------------------------------------- model ladder (plan section 4)
 def _serving(path: Path) -> dict:
     meta = json.loads(Path(str(path) + ".meta.json").read_text()) if Path(str(path) + ".meta.json").exists() else {}
@@ -357,7 +407,7 @@ def main(argv=None) -> None:
     a = ap.parse_args(argv)
     for s in a.steps:
         fn = globals()[f"{s}_step"]
-        if s in ("generate", "evaluate"):
+        if s in ("generate", "evaluate", "render", "examples"):
             fn(a.sets, model=a.model, tag=a.tag)
         elif s == "ladder":
             fn(tag=a.tag)

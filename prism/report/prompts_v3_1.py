@@ -3,7 +3,9 @@
 The v3.3 prompt (prompts_v3.py, frozen for v3) with one structural change: the system prompt is built from the facts
 present. A line about a field (the rater flag, necrosis and cavity, the change from the smallest earlier volume, the
 card's agreement statistic, the previous-scan changes, the volumes) is included only when that field exists, so no
-model is asked about something the record does not hold. Output schema and section tags as v3.
+model is asked about something the record does not hold. RANO is not mentioned (author decision 2026-10-26, before
+the freeze): rule 4 names the response categories without the word, rule 9 and line b say "indicative" only.
+Output schema and section tags as v3.
 """
 
 from __future__ import annotations
@@ -21,12 +23,12 @@ Content rules:
 1. Use only information in FACTS. Add no medical knowledge, no image interpretation and nothing that is not in FACTS.
 2. Every number you write must be copied exactly from a FACTS value, as digits (never as words). Never compute, round differently or combine numbers.
 3. For each sentence, list in "fields" the keys of ALL FACTS fields whose information or numbers the sentence uses. Only list keys that exist in FACTS.
-4. Do not diagnose. Never say or imply that the scan shows, is, suggests or is consistent with progression, recurrence, pseudoprogression, radiation necrosis or treatment effect. Do not use RANO response categories. A score is a score, not a finding.
+4. Do not diagnose. Never say or imply that the scan shows, is, suggests or is consistent with progression, recurrence, pseudoprogression, radiation necrosis or treatment effect. Do not use response categories such as progressive disease, stable disease, partial or complete response. A score is a score, not a finding.
 5. Give no recommendation, advice or decision of any kind: no imaging, follow-up, biopsy, surgery, drugs, steroids, review or referral, and no words such as should, must, need to, consider, recommend, review or decide. Do not add disclaimers; the report has a fixed limitations section.
 6. Do not describe scores with probability words such as likely, unlikely, probable, high risk, low risk, reassuring or concerning. Place a score only by copying its statement (above or below its cohort median).
 7. Do not use the words confidence, reliable, reliability, accuracy or performance, except that an AUC may be copied from card.tier_statement when the tier is tested.
 8. Copy these fixed phrases exactly and cite their keys: the tier phrase at the start of card.tier_statement ("tested", "few cases" or "not tested"); the conformal set phrase ("both outcomes", "progression only", "no progression only"); the agreement wording of pathways.agreement_statement ("agree" or "disagree").
-9. Call volumes indicative and not a RANO assessment. Use British spelling (tumour, favour, colour).
+9. Call volumes indicative. Use British spelling (tumour, favour, colour).
 
 Style: every sentence starts with a capital letter and ends with a full stop; complete sentences of 10 to 30 words, plain words, no lists, no headings, no underscores. Keep the whole text under 260 words. Do not repeat a fact. The flag sentences (j) are required: never leave them out.
 
@@ -48,8 +50,8 @@ def _scan_lines(F: dict) -> list[str]:
                         ("meas.necrosis_and_cavity_cc", "necrosis with cavity")):
             if k in F:
                 parts.append(f"{name} ({k})")
-        out.append(' b. The volumes, said to be from the automatic segmentation and "indicative, not a RANO '
-                   'assessment" (cite meas.label): ' + ", ".join(parts[:-1]) + " and " + parts[-1] + ".")
+        out.append(' b. The volumes, said to be from the automatic segmentation and "indicative" (cite meas.label): '
+                   + ", ".join(parts[:-1]) + " and " + parts[-1] + ".")
     else:
         out.append(" b. One sentence that no segmentation volumes are available for this scan (cite meas.available).")
     if F.get("scan.previous_available") == "yes":

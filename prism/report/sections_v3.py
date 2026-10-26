@@ -22,6 +22,17 @@ LIMITATIONS = (
     "automatic segmentation and are indicative, not a RANO assessment. The reliability card is a lookup of results "
     "already measured, defined after those results were seen; few situations have enough scans to be tested. "
     "Conformal sets are calibrated on MU-Glioma-Post. No clinician has evaluated this report.")
+# v3.1 (facts_version "v3.1"; REPORT_V3_1.md): no RANO (author decision 2026-10-26). v3 facts render as before.
+LIMITATIONS_V3_1 = LIMITATIONS.replace("are indicative, not a RANO assessment.", "are indicative.")
+assert "RANO" not in LIMITATIONS_V3_1
+
+
+def _version(F: dict) -> str:
+    return F.get("system.facts_version", "v3")
+
+
+def limitations(F: dict) -> str:
+    return LIMITATIONS_V3_1 if _version(F) == "v3.1" else LIMITATIONS
 
 
 def _v(F, k, fmt="{}"):
@@ -33,7 +44,9 @@ def tables(F: dict) -> dict:
     rows = [("Timing", F["scan.phase"] + (f"; {F['scan.days_since_previous']} days after the previous scan"
                                           if "scan.days_since_previous" in F else "; no previous scan")
              + (f"; rater: within 3 months after RT: {F['scan.rater_within_3_months_after_rt']}"
-                if "scan.rater_within_3_months_after_rt" in F else ""))]
+                if "scan.rater_within_3_months_after_rt" in F else "")
+             + (f"; {F['scan.rater_statement'][0].lower()}{F['scan.rater_statement'][1:].rstrip('.')}"
+                if "scan.rater_statement" in F else ""))]
     if F["meas.available"] == "yes":
         for k, n in (("enhancing", "Enhancing tumour"), ("flair_hyperintensity", "FLAIR hyperintensity")):
             prev = (f"{F[f'meas.{k}_change_since_previous_cc']:+.1f} cc"
@@ -74,7 +87,7 @@ def tables(F: dict) -> dict:
 
 
 def render_md(scan_label: str, F: dict, prose: dict | None, figure: str | None = None) -> str:
-    L = [f"# PRISM report (v3): {scan_label}", "", f"Detection at the scan; cohort: {F['system.cohort']}.", ""]
+    L = [f"# PRISM report ({_version(F)}): {scan_label}", "", f"Detection at the scan; cohort: {F['system.cohort']}.", ""]
     if figure:
         L += [f"![Segmentation]({figure})", ""]
     for s, (head, rows) in tables(F).items():
@@ -82,7 +95,7 @@ def render_md(scan_label: str, F: dict, prose: dict | None, figure: str | None =
               "| " + " | ".join(head) + " |", "|" + "---|" * len(head)]
         L += ["| " + " | ".join(str(x) for x in r) + " |" for r in rows]
         L.append("")
-    L += ["## Limitations", "", LIMITATIONS, ""]
+    L += ["## Limitations", "", limitations(F), ""]
     return "\n".join(L)
 
 
@@ -99,8 +112,8 @@ td,th{border:1px solid var(--line);padding:4px 6px;vertical-align:top;text-align
 def render_html(scan_label: str, F: dict, prose: dict | None, figure_path: str | Path | None = None) -> str:
     e = html.escape
     B = [f"<!doctype html><html lang='en-GB'><head><meta charset='utf-8'><meta name='viewport' "
-         f"content='width=device-width,initial-scale=1'><title>PRISM report v3</title><style>{CSS}</style></head><body>",
-         f"<h1>PRISM report (v3): {e(scan_label)}</h1>",
+         f"content='width=device-width,initial-scale=1'><title>PRISM report {_version(F)}</title><style>{CSS}</style></head><body>",
+         f"<h1>PRISM report ({_version(F)}): {e(scan_label)}</h1>",
          f"<p class='muted'>Detection at the scan; cohort: {e(F['system.cohort'])}. The text below each heading is "
          "written by a local language model from the fields in the tables only; the model does not see the images.</p>"]
     if figure_path and Path(figure_path).exists():
@@ -116,5 +129,5 @@ def render_html(scan_label: str, F: dict, prose: dict | None, figure_path: str |
             B.append("<tr>" + "".join(f"<td class='{'raised' if str(x).startswith('RAISED') else ''}'>{e(str(x))}</td>"
                                       for x in r) + "</tr>")
         B.append("</table></div>")
-    B.append(f"<h2>Limitations</h2><p class='muted'>{e(LIMITATIONS)}</p></body></html>")
+    B.append(f"<h2>Limitations</h2><p class='muted'>{e(limitations(F))}</p></body></html>")
     return "\n".join(B)

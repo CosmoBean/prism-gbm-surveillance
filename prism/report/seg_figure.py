@@ -325,7 +325,11 @@ def _note(scan: Scan, rule: str) -> str:
     return ""
 
 
-def render(cohort: str, scan_id: str, out: Path) -> dict:
+TITLE = "Segmentation of this scan (automatic; indicative volumes, not RANO)"  # v3 figures (as rendered)
+TITLE_V3_1 = "Segmentation of this scan (automatic; indicative volumes)"  # v3.1: no RANO (author decision 2026-10-26)
+
+
+def render(cohort: str, scan_id: str, out: Path, title: str = TITLE) -> dict:
     t0 = time.time()
     ctx = context(cohort, scan_id)
     names = NAME_LUMIERE if cohort == "lumiere" else NAME
@@ -338,7 +342,7 @@ def render(cohort: str, scan_id: str, out: Path) -> dict:
     axA1, axA2, axB1, axB2 = (fig.add_subplot(gs[0, i]) for i in range(4))
     axC = fig.add_subplot(gs[1, :3])
     axT = fig.add_subplot(gs[1, 3])
-    fig.text(0.03, 0.968, "Segmentation of this scan (automatic; indicative volumes, not RANO)", fontsize=16,
+    fig.text(0.03, 0.968, title, fontsize=16,
              weight="bold", color=INK)
     fig.text(0.03, 0.937, f"{cohort.upper()}  |  this scan: {ctx['time']}"
              + ("" if ctx["time"].startswith("scan") else f" (scan {ctx['position']})") +
