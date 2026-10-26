@@ -49,6 +49,8 @@ MODELS = {
     "qwen3.5-9b": ("Qwen/Qwen3.5-9B", "c202236235762e1c871ad0ccb60c8ee5ba337b9a", NT, ()),
     "qwen3.8-27b": ("Qwen/Qwen3.8-27B", "1d4bf0f2ff6012fd82039f2fa52739d0dd7c60c0", NT, ()),
     "qwen3.5-35b-a3b": ("Qwen/Qwen3.5-35B-A3B", "59d61f3ce65a6d9863b86d2e96597125219dc754", NT, ()),
+    # FP8 of the same model: used only if bf16 does not fit one H100 (plan section 4; a deviation when used)
+    "qwen3.5-35b-a3b-fp8": ("Qwen/Qwen3.5-35B-A3B-FP8", "9d1823d2dee688a6b25e77009dc727688c44936e", NT, ()),
     "gemma-4-e4b-it": ("google/gemma-4-E4B-it", "ee0ef6023621cff504d758262d4e04895a5af4a2", {},
                        ("--mm-limit", '{"image": 0, "video": 0, "audio": 0}')),
     "gemma-4-31b-it": ("google/gemma-4-31B-it", "842da3794eaa0b77d5f08bae87a17459d91ff475", {}, ()),
@@ -173,9 +175,10 @@ def run_vllm(model: str, req: Path, out: Path, max_len=8192, gpu_mem=0.90):
     print(f"{out.name} done in {time.time() - t:.0f}s", flush=True)
 
 
-def generate_step(sets, model=PRIMARY, tag=""):
+def generate_step(sets, model=PRIMARY, tag="", gpu_mem=0.90):
     for s in sets:
-        run_vllm(model, OUT / "llm" / f"requests_{s}.jsonl", OUT / "llm" / f"outputs_{s}{_tag(model, tag)}.jsonl")
+        run_vllm(model, OUT / "llm" / f"requests_{s}.jsonl", OUT / "llm" / f"outputs_{s}{_tag(model, tag)}.jsonl",
+                 gpu_mem=gpu_mem)
 
 
 def load_outputs(s, tg=""):
@@ -404,10 +407,13 @@ def main(argv=None) -> None:
     ap.add_argument("--sets", nargs="+", default=["dev"])
     ap.add_argument("--model", default=PRIMARY, choices=list(MODELS))
     ap.add_argument("--tag", default="", help="suffix for development iterations, e.g. _iter1")
+    ap.add_argument("--gpu-mem", type=float, default=0.90, help="vLLM gpu_memory_utilization (generate)")
     a = ap.parse_args(argv)
     for s in a.steps:
         fn = globals()[f"{s}_step"]
-        if s in ("generate", "evaluate", "render", "examples"):
+        if s == "generate":
+            fn(a.sets, model=a.model, tag=a.tag, gpu_mem=a.gpu_mem)
+        elif s in ("evaluate", "render", "examples"):
             fn(a.sets, model=a.model, tag=a.tag)
         elif s == "ladder":
             fn(tag=a.tag)
