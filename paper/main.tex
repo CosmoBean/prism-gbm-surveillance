@@ -242,8 +242,8 @@ clinical data and images, 0.11 (0.04--0.20) across phases, fell to $-$0.02 ($-$0
 timeline 0.64 (0.51--0.78), so there the images carried about as much evidence as the timeline.
 
 % Sources: UCSF_AUDIT.md sections 3--6 and Overall verdict; NUMBERS.md 5.
-At UCSF-ALPTDG the scores rest on enhancement. Enhancing tumour volume alone gave an AUC of 0.88 (0.79--0.95), about
-as high as the best locked model, and UCSF rated enhancement as increased at 27 of the 29 progression scans
+At UCSF-ALPTDG the scores rest on enhancement. Enhancing tumour volume alone gave an AUC of 0.88 (0.79--0.95), higher
+than the locked single-scan image model, and UCSF rated enhancement as increased at 27 of the 29 progression scans
 (Figure~\ref{fig:3}B). Progression was dated a median of 7 days after the evaluated scan, and time since diagnosis,
 which separates the classes at MU-Glioma-Post, gave 0.54 at UCSF-ALPTDG. The UCSF AUCs therefore measure agreement
 with a call made from enhancement at the same scan. The combined score's higher AUC at UCSF-ALPTDG
@@ -254,7 +254,7 @@ with a call made from enhancement at the same scan. The combined score's higher 
 Each step of the image model's design raised its AUC on MU, and the audit shows what each step added (exploratory;
 Figure~\ref{fig:3}C). Measurements of the current scan alone reached 0.66, and adding change from earlier scans gave
 the image pathway of Section~\ref{sec:3.1}. Adding the interval since the previous scan, a flag for whether there was
-one and a nadir window anchored to radiotherapy gave 0.81, close to the timeline itself. Within a phase of care the
+one and the smallest earlier volume counted only from the end of radiotherapy gave 0.81, close to the timeline itself. Within a phase of care the
 last step added nothing ($-$0.01, $-$0.06 to $+$0.04), because those three inputs encode the scan schedule. They
 form the imaging block of the planned model, and they are the reason PRISM's image pathway stops at the second step.
 
@@ -456,8 +456,8 @@ Phase of care in the detection set & Progression: 56 of 62 later after radiother
 and LUMIERE, and all grade 4 patients at UCSF-ALPTDG.
 \item[b] Positives are the scan at which progression was called; negatives are defined per cohort in
 Section~\ref{sec:2.2}. The LUMIERE detection set has more patients than the 120-day cohort because it includes patients
-who contribute only a progression scan. At MU-Glioma-Post, 47 progression scans of patients without an index scan are
-excluded.
+who contribute only a progression scan. At MU-Glioma-Post, 47 progression scans of patients with no earlier non-progression scan
+are excluded.
 \item[c] UCSF-ALPTDG gives only the first radiotherapy start; the phase assumes a six-week course. Two scans were
 early after radiotherapy and two had no radiotherapy date.
 \end{tablenotes}
@@ -502,7 +502,9 @@ L1. Smallest model passing S5 in every cohort & Descriptive & Qwen3.8-27B (Secti
 \item Plans: detection, \code{DETECTION\_TASK.md} (commit 2b4c927); UCSF-ALPTDG, \code{UCSF\_PLAN.md} (0e7c9fe);
 system, \code{SYSTEM\_PLAN.md} (e7cba80); second report evaluation, \code{REPORT\_V3\_1\_PLAN.md} (4f7e7b9). Matched
 removal keeps the phase-of-care mix of the removed scans (plain random removal at LUMIERE, which has no phase). The
-second report evaluation followed a failure seen in the first, with the checker unchanged.
+second report evaluation followed a failure seen in the first, with the checker unchanged. The tests S2 to S4 were
+fixed in advance, but the agreement rule and the card tiers they test were defined after the cohort results had been
+seen (exploratory).
 \end{tablenotes}
 \end{threeparttable}
 \end{table}
