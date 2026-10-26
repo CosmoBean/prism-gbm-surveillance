@@ -16,7 +16,7 @@
 \title{\papertitle}
 
 \author{
-\name{\todo{PENDING: first author's full name}\textsuperscript{a}\thanks{CONTACT \todo{PENDING: first author. Email: \ldots; ORCID: \ldots}}
+\name{Sri Datta Ganesh Bandreddi\textsuperscript{a}\thanks{CONTACT Sri Datta Ganesh Bandreddi. Email: sbandred@andrew.cmu.edu; ORCID: \todo{PENDING}}
   and Jessica Zhang\textsuperscript{b}}
 \affil{\textsuperscript{a}Department of Biomedical Engineering, Carnegie Mellon University, Pittsburgh, PA, USA;
 \textsuperscript{b}Department of Mechanical Engineering, Carnegie Mellon University, Pittsburgh, PA, USA}
@@ -35,15 +35,16 @@
 % the card ("stating where evidence is thin"), the schedule finding ("when in treatment patients were scanned") and the
 % image pathway on MU (0.71, exploratory model). 149 words. Sources: NUMBERS.md sections 1, 3, 4 and 12B.
 \begin{abstract}
-\flag{[PROPOSED, awaiting approval]} Treatment effects can mimic glioma progression on MRI; most datasets lack
-treatment dates, centres document progression differently, and the hardest scans are few. PRISM scores each scan
-through separate treatment-timeline and image pathways, so the clinician sees what each score uses, attaches a
-confidence stating where evidence is thin, and writes a checked report with a local language model. On MU-Glioma-Post
-the timeline pathway reached AUC 0.82 and the image pathway 0.71. Applied unchanged, the combined score reached 0.77
-on LUMIERE; on UCSF-ALPTDG single-scan measurements 0.80 and the image pathway 0.73 (0.86 when trained there). An
-audit found the scores rested mainly on when in treatment patients were scanned at MU-Glioma-Post and on enhancing
-volume at UCSF-ALPTDG. Conformal sets met planned coverage on average at every centre but fell short for one outcome
-at both external centres, and after one revision every report passed a check against its record.
+Surveillance MRI after treatment for glioblastoma and other aggressive gliomas must be interpreted with prior imaging
+and the treatment course. A progression score alone does not show the clinician the evidence that produced it or what
+it leaves out. We built PRISM, a modular system that combines image-derived measurements, treatment context, separate
+image and timeline pathways, uncertainty and provenance in a locally generated, checked report. On MU-Glioma-Post,
+the timeline and image pathways reached AUCs of 0.82 and 0.71. Applied unchanged, the combined score reached 0.77 on
+LUMIERE; at UCSF-ALPTDG, single-scan image measurements reached 0.80 and the image pathway 0.73. The evidence behind
+the scores differed by cohort: treatment timing at MU-Glioma-Post and enhancing volume at UCSF-ALPTDG. In a second,
+cross-cohort report evaluation, 406 of 406 reports passed a lexical check against their structured records. PRISM is
+designed to make evidence inspectable, not to replace clinical judgement; its effect on clinical decisions needs a
+reader study.
 \end{abstract}
 
 % No more than 3 keywords (journal instructions).
@@ -55,43 +56,36 @@ glioma surveillance; external validation; clinical decision support
 \section{Introduction}\label{sec:1}
 
 % Sources: OUTLINE.md (Introduction 1); refs taal2008, brandes2008.
-After surgery and chemoradiotherapy, patients with glioma are followed with MRI every few months, and at each scan
-the team must decide whether the tumour has progressed. The decision is hardest in the months after radiotherapy,
-when treatment can increase contrast enhancement without tumour growth. This pseudoprogression is most common in the
-first weeks after chemoradiotherapy and more frequent when the promoter of MGMT, a DNA-repair gene, is methylated
-\citep{taal2008,brandes2008}. In routine care, progression is therefore documented from the images together with
-symptoms and the course of treatment, and the date on which it is recorded depends on when the patient was scanned,
-so a model trained on such records can learn from the schedule as well as from the images.
+Glioblastoma and other aggressive gliomas require repeated MRI surveillance after surgery and chemoradiotherapy. At
+each scan, the clinical team interprets the current images against earlier images and the course of treatment. The
+decision is hardest soon after radiotherapy, when treatment can increase contrast enhancement without tumour growth.
+This pseudoprogression is most common in the first weeks after chemoradiotherapy and more frequent when the promoter
+of MGMT, a DNA-repair gene, is methylated \citep{taal2008,brandes2008}. The information needed for that judgement is
+longitudinal: images and their change, treatment timing and the parts of the record that are known on the scan day.
 
 % Sources: OUTLINE.md (spine C1--C5); SYSTEM_LANDSCAPE.md rows 1.7, 6.3; refs an2021, varoquaux2018, yu2022.
-Surveillance data set five challenges for a model of this task. First, most public
-surveillance datasets hold images but few treatment dates. Second, centres document progression differently, from
-dated clinical decisions to expert ratings of each scan, so a model can score well at two centres for different
-reasons. Third, cohorts are small, and one test split can move the area under the receiver operating characteristic curve
-(AUC) by more than a change of model
-\citep{an2021,varoquaux2018}. Fourth, the situations in which the decision is hardest, early after radiotherapy or
-when enhancement grows, hold few cases in any one cohort. Fifth, segmented volumes are noisy, so the clinician
-needs to see what was measured; and patient records often cannot leave the hospital, so the report has to be written
-there. Repeated cross-validation addresses the third challenge and external tests the second, which 3 of 20 studies in
-a recent systematic review of automated response assessment included \citep{shi2025}; we planned two.
+Radiomics and other prediction models can quantify image patterns, but a probability alone is not a surveillance
+summary. It does not show the treatment context, the measurements behind an image input, the uncertainty around a
+score, or what the model did not use. These omissions matter because public surveillance datasets often contain images
+but few treatment dates; centres document progression differently; the hardest situations are uncommon; and segmented
+volumes need to be inspected rather than accepted as a hidden input. Small cohorts also make a single test split an
+unstable account of performance \citep{an2021,varoquaux2018}. Only 3 of 20 studies in a recent systematic review of
+automated response assessment included external evaluation \citep{shi2025}.
 
 % Sources: OUTLINE.md (question).
-We asked whether a system could give the clinician, at each post-treatment scan, the image evidence and the
-treatment-timeline evidence separately, transfer to other centres without refitting, and say how far each can be
-trusted there. We also wanted it to explain each score in a short report written inside the hospital.
+Our initial radiomics work on MU-Glioma-Post motivated a broader question: can a system turn the evidence available at
+a post-treatment scan into a report that a clinician can inspect? We asked whether PRISM could retain image and
+treatment-timeline evidence separately, evaluate those components at other centres without refitting, and state where
+the evidence is thin, while writing the resulting report inside the hospital.
 
 % Sources: OUTLINE.md (claim); NUMBERS.md sections 3--7.
-We present PRISM, a modular system that scores each post-treatment scan through two pathways, one from clinical data
-and the treatment timeline and one from measurements of the segmented tumour, and shows a combined score beside
-them. The confidence has three parts, a conformal prediction set, a statement of whether the pathways agree and a
-reliability card; a local language model writes the report, and a checker tests it against the scan's record.
-
-We developed PRISM on MU-Glioma-Post (MU) and tested it on LUMIERE and UCSF-ALPTDG (UCSF) with models fitted once
-and external tests planned in advance. On MU both pathways detected the scan at which progression was documented;
-the ranking of scans by the models fitted there transferred to LUMIERE, and by the image measurements to UCSF. When we audited the scores,
-the models at MU used mainly the patient's position in treatment, and at UCSF mainly the enhancing tumour volume. The
-conformal sets for the combined score met their pre-specified coverage on average at all three centres, but not
-within each outcome class, and after one revision of the prompt every report passed a check against its record.
+PRISM is that system. It turns each scan into a structured evidence record: clinical and treatment-timeline inputs,
+measurements from the segmented tumour, separate image and timeline scores, a combined score, uncertainty fields and
+their provenance. A local language model writes the narrative from that record, and a deterministic checker tests the
+narrative against it. We developed PRISM on MU-Glioma-Post (MU) and tested locked models on LUMIERE and
+UCSF-ALPTDG (UCSF). The component models ranked scans at the external centres, but the evidence carrying a score
+differed by cohort. The report makes that distinction visible; its lexical grounding and required content were tested,
+but no clinician reader outcome was measured.
 
 % =====================================================================================================
 \section{Methods}\label{sec:2}
@@ -99,11 +93,12 @@ within each outcome class, and after one revision of the prompt every report pas
 \subsection{PRISM}\label{sec:2.1}
 
 % Sources: OUTLINE.md (spine table); SYSTEM_PLAN.md section 1.
-PRISM handles each scan in five modules (Figure~\ref{fig:1}). The timeline pathway and the image pathway keep the two
-kinds of evidence apart, so that the image pathway can run where no treatment dates exist and the audit can show which
-evidence a score used. Segmentation masks supply the measurements and the images the clinician sees. With each score
-the clinician sees a set of plausible outcomes and how many scans like this one the system has been tested on; the
-report is written inside the hospital, so the record never leaves it.
+PRISM handles each scan in five modules (Figure~\ref{fig:1}) and writes their outputs to one structured evidence
+record. The timeline pathway and the image pathway keep the two kinds of evidence apart, so that the image pathway
+can run where no treatment dates exist and the audit can show which evidence a score used. Segmentation masks supply
+the measurements and images displayed in the report. The record also carries a set of plausible outcomes, agreement
+between pathways, how many scans like this one have been tested and the provenance of every displayed value. The
+report is written locally from that record, so patient data do not leave the hospital.
 
 % Sources: DETECTION_TASK.md (Plan, B1, B0; External test, Tbase); UCSF_RESULTS.md deviation 3; NUMBERS.md 2.1.
 The timeline pathway scores a scan from clinical data and the patient's position in treatment. On MU its inputs are
@@ -166,7 +161,7 @@ at MU, as an expert rating of response at each scan at LUMIERE and as a progress
 UCSF.
 
 % Sources: DETECTION_TASK.md (Plan, Cohort, External test); UCSF_PLAN.md; INTENDED_USE.md.
-The task is to decide, at each scan, whether this is the scan at which progression is documented. On MU a positive is the first
+The primary task is to decide, at each scan, whether this is the scan at which progression is documented. On MU a positive is the first
 scan on or after the documented progression date, and a negative is a scan followed by at least 120 days without
 progression. At LUMIERE a positive is the first scan rated as progressive disease, and a negative is an earlier scan
 rated stable or responding. At UCSF a positive is a second scan with progression dated within 30 days of it and
@@ -207,7 +202,13 @@ within a phase of care or within an enhancement category serve as diagnostics of
 % =====================================================================================================
 \section{Results}\label{sec:3}
 
-\subsection{Both pathways detect the progression scan on MU}\label{sec:3.1}
+The initial radiomics exercise showed why a progression model could be useful, but not what a clinician should see at a
+surveillance scan. PRISM therefore treats a score as one field in a longitudinal evidence record, alongside the
+measurements, treatment context, uncertainty and the inputs not available to the model. We first evaluate the two
+model pathways, then test whether their behaviour transfers and whether the report faithfully presents the resulting
+record.
+
+\subsection{The pathways provide distinct evidence at the development centre}\label{sec:3.1}
 
 % Sources: DETECTION_TASK.md (Primary table; EXPLORATORY pure imaging, images + clinical); INTENDED_USE.md; NUMBERS.md 3.
 In the intended use on MU (146 scans; Table~\ref{tab:1}), the image pathway\expl{} detected the progression scan
@@ -220,7 +221,7 @@ fell short of its pre-specified gain of 0.03 (Table~\ref{tab:2}). Predicting pro
 the model reached 0.60 (0.52--0.69) in the intended use (Supplementary Section~S23). A timeline pathway needs treatment dates, which the two
 external cohorts largely lack, so we next tested how each pathway transfers to them.
 
-\subsection{The models rank scans at two external centres without refitting}\label{sec:3.2}
+\subsection{The components rank scans at two external centres without refitting}\label{sec:3.2}
 
 % Sources: DETECTION_TASK.md (External test; EXPLORATORY clinical alone on LUMIERE); UCSF_RESULTS.md Part A; NUMBERS.md 4;
 % enhancing volume alone: NUMBERS.md 12C (MU 0.622 on MU-IU, not 0.635).
@@ -250,7 +251,7 @@ before reading it as a probability or applying a threshold (\todo{Supplementary 
 thresholds}). Because similar AUCs at different centres can come from different evidence, we audited what each score
 used.
 
-\subsection{What each score rests on depends on the cohort}\label{sec:3.3}
+\subsection{The evidence behind a score differs by cohort}\label{sec:3.3}
 
 % Sources: DETECTION_TASK.md (Cohort by phase; within phase; EXPLORATORY images + clinical); STORY.md gap 3.
 When we audited what each score used\expl, the scores at MU depended mainly on where the patient was in treatment,
@@ -282,7 +283,7 @@ image pathway measures. Deep networks fine-tuned on UCSF scans learned above a p
 MU and UCSF}). Because the evidence behind a score differs by cohort and by situation, PRISM attaches
 a confidence to each score.
 
-\subsection{The confidence keeps its coverage on average and states where the evidence is thin}\label{sec:3.4}
+\subsection{The report states where its evidence is thin}\label{sec:3.4}
 
 % Sources: SYSTEM_RESULTS.md S1 and Specification; NUMBERS.md 6 and mismatch 13; by outcome NUMBERS.md 12B. Council ruling 4.
 At the 80\% level, the conformal sets of the combined score covered 78\% to 87\% of scans in the three cohorts,
@@ -316,32 +317,33 @@ scans. Tested situations had lower error than few-case situations at LUMIERE, wi
 early after radiotherapy, which the models score easily. The clinician reads these statements in the report, which
 we evaluated next.
 
-\subsection{Every report passes a check of its numbers, flags and wording against the record}\label{sec:3.5}
+\subsection{The report passes an automatic check against its structured record}\label{sec:3.5}
 
 % Sources: REPORT_V3_1.md (S5--S7, ladder); REPORT_V3.md (S5 failure); NUMBERS.md 7 and mismatches 9, 10. Council ruling 5.
-Every evaluation report written by the local model passed a lexical check of its numbers, flags and wording
-against its record (114, 162 and 130 reports at MU, LUMIERE and UCSF; Figure~\ref{fig:5}); the check cannot judge
-emphasis, order or what a clinician would infer from the wording. These counts come from a second
-evaluation\expl, after one revision of the prompt; its records exclude the 10 LUMIERE and 10 UCSF patients used to
-develop the revision and are otherwise those of the first evaluation. The first evaluation had failed at LUMIERE (0 of 178) because one sentence quoted a
-number that was in no cited field; we corrected the prompt and left the checker unchanged. The reports stated the
-evidence tier wherever the card had few or no cases, and followed a changed field in 28 of 30 perturbed records
-(Table~\ref{tab:2}; \todo{Supplementary section: second report evaluation and model comparison}). A clinician
-reading a report therefore sees the segmentation figure and its volumes, the two scores and the confidence, with
-every number, flag and statement taken from the record.
+In the second report evaluation\expl, every report written by the local model passed the frozen lexical check of its
+numbers, flags and wording against its structured record (114, 162 and 130 reports at MU, LUMIERE and UCSF; 406 in
+total; Figure~\ref{fig:5}). The check cannot judge emphasis, order, readability or what a clinician would infer from
+the wording. Its records exclude the 10 LUMIERE and 10 UCSF patients used to develop the revision. The first
+evaluation had failed at LUMIERE (0 of 178) because one sentence quoted a number that was in no cited field; we
+revised the prompt and left the checker unchanged. In the second evaluation, all 220 reports requiring a few-case or
+untested tier stated it, and 28 of 30 perturbed records met the prespecified follows rule
+(Table~\ref{tab:2}; \todo{Supplementary section: report v3.1}). Thus the report gives the clinician the
+segmentation figure and its volumes, separate pathway scores, confidence fields and the limits of the record, with
+each checked statement traceable to a record field. No clinician has yet evaluated whether this presentation helps a
+real surveillance decision.
 
 % =====================================================================================================
 \section{Discussion}\label{sec:4}
 
 % Sources: OUTLINE.md (Discussion 1); NUMBERS.md 3--6.
-PRISM gives the clinician separate image and treatment-timeline evidence at each scan, ranks scans at two external
-centres without refitting, and states, in a report written inside the hospital, how far each score has been tested
-in the scan's situation. For most scans at MU and all at UCSF, the card has few cases. At the development centre the
-timeline provided most of the evidence, largely because of when patients were scanned; within a phase of care the
-images provided about as much. At UCSF enhancing volume provided the score, and enhancing volume alone did as well as
-the image pathway trained there. Because training at the centre raised the image pathway, the locked results measure
-transfer, and a model fitted at the centre can do better. What transferred was the ranking, so a group deploying PRISM at a new centre would recalibrate
-the score and set its threshold on local scans.
+PRISM is a system for making longitudinal surveillance evidence inspectable. It gives the clinician separate image
+and treatment-timeline evidence at each scan, the measurements and context behind those fields, and a report written
+inside the hospital that states where the evidence is thin. The component models ranked scans at two external centres
+without refitting, but their evidence differed by setting. At the development centre the timeline provided most of the
+evidence, largely because of when patients were scanned; within a phase of care the images provided about as much. At
+UCSF enhancing volume provided the score, and enhancing volume alone did as well as the image pathway trained there.
+The locked results therefore establish transfer of ranking, not a portable risk scale: a group deploying PRISM at a
+new centre would recalibrate a probability and set any threshold on local scans.
 
 % Sources: OUTLINE.md (Discussion 2); SYSTEM_PLAN.md. Council ruling 7 (combined score definition).
 Because its modules are separate, PRISM runs where data are incomplete. The image pathway needs only the scans and
