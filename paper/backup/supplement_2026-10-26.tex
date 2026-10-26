@@ -1,0 +1,2394 @@
+% supplement.tex -- Supplementary Material. SOURCE OF TRUTH from 2026-10-15
+% (docs/manuscript/SUPPLEMENT.md is a frozen snapshot). Build: ./build.sh (tectonic).
+% Cross-references to the main text are by section name/number as printed in main.pdf ("M2.4", "main Table 2").
+\documentclass[11pt,a4paper]{article}
+\input{macros}
+\renewcommand{\thesection}{S\arabic{section}}
+\renewcommand{\thesubsection}{\thesection.\arabic{subsection}}
+\captionsetup[table]{name=Supplementary Table}
+\captionsetup[figure]{name=Supplementary Figure}
+\fancyhead[R]{\small Supplementary Material}
+
+\begin{document}
+\linenumbers
+
+\begin{flushleft}
+{\Large\bfseries Supplementary Material\par}
+\vspace{0.8em}
+{\large\bfseries \papertitle\par}
+\end{flushleft}
+
+\emph{Draft, 2026-10-15. Every number below is copied from the result documents in
+\code{docs/results/} and
+\code{docs/manuscript/} or from
+\code{outputs/results/}; the file is named in each section.
+``Grade 4'' (G4)
+is the primary population; ``all'' = all gliomas. AUC = IPCW AUC(120 d), mean over 5 repeats of the per-repeat
+pooled out-of-fold value, with 95\% patient-cluster bootstrap CI (1,000 draws), unless stated otherwise.
+PRISM v1 is the first version of PRISM, described in an unpublished internal report; ``PRISM's initial radiomics
+model'' and ``our initial evaluation split'' are its radiomics model and its seed-62 test split. ``Baseline'' =
+PRISM's core model (clinical + timing + as-of-scan treatment, ridge), the deployed configuration and the reference
+for every imaging comparison.}
+
+\section*{Contents}
+\makeatletter\@starttoc{toc}\makeatother
+
+\FloatBarrier
+\section{Pre-specification register}\label{sec:S1}
+
+\begin{table}[H]
+\centering
+\footnotesize
+\begin{tabularx}{\linewidth}{@{}R{3.1cm} L R{3.0cm} R{3.0cm} R{3.3cm}@{}}
+\toprule
+Analysis & Status & Plan record & Decision rule / primary quantity & Outcome \\
+\midrule
+Radiomics vs baseline, nested over 70 configurations, grade 4 & Pre-specified primary (development) & Publication plan \S{}3.3 & $\Delta$AUC with 95\% CI & $-$0.032 [$-$0.084, +0.017]; no gain \\
+LUMIERE locked clinical + timing + volumes, grade-4-trained & Pre-specified external model & \code{EXTERNAL\_LUMIERE.md} & Pooled IPCW AUC & 0.608 / 0.620 (ridge / boosting) \\
+Phase-of-care ladder, post-RT R2 + I2 vs R2 & Pre-specified primary; plan in module docstring, not separately committed; a smoke run printed some I0--I2 numbers before the full run; plan unchanged & \code{PHASE\_LADDER.md} \S{}1 & $\Delta$AUC with CI and 100-permutation p & +0.061 [$-$0.038, +0.156], p = 0.21; not supported \\
+Imaging-defined (clean) label & Pre-specified; plan snapshot saved before the run & \code{outputs/results/analyses/clean\_label/PLAN\_snapshot.md} & $\Delta$AUC $\geq$ 0.03 with CI excluding 0 & +0.027 [$-$0.033, +0.082]; not met \\
+Re-segmentation & Rule written before any result was seen & \code{RESEGMENTATION.md} & Detection $\Delta$ $\geq$ 0.05 with CI > 0, or ET larger at progression in > 65\% of pairs & $-$0.016 [$-$0.057, +0.025]; 45\%; not met \\
+CFB-GBM ADC & Pre-specified; plan snapshot saved before the run & \code{outputs/results/analyses/cfb\_adc/PLAN\_snapshot.md} & $\Delta$(d $-$ c) $\geq$ 0.03 with CI excluding 0 & +0.007 [$-$0.019, +0.035], p = 0.151; not met \\
+Audit layer P1 (coverage) and P2 (abstention beyond case mix) & Pre-specified; plan snapshot saved before the run & \code{outputs/results/analyses/audit\_system/PLAN\_snapshot.md} & P1 coverage $\geq$ 0.78; P2 CI above 0 & P1 0.841 [0.790, 0.885], met; P2 +0.006 [$-$0.023, +0.036], not met \\
+Split variance (500 splits) & Descriptive; designed after the single-split result was known & \code{SPLIT\_VARIANCE.md} & --- & --- \\
+Positive controls, SHAP, feature conflicts, imbalance, schedule coupling, baselines, sensitivity, utility & Secondary or exploratory & respective documents & --- & --- \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Sequence: the clean-label, re-segmentation, CFB-GBM and audit analyses were designed after the main imaging
+result (no added value) was known. Each had its own rule fixed before its own run. Contrasts beyond the
+primary ones are not corrected for multiplicity.
+
+\FloatBarrier
+\section{Cohort flow}\label{sec:S2}
+
+Source: \code{docs/manuscript/FLOW.md}
+(\code{outputs/data/mu\_flow.csv},
+\code{outputs/results/analyses/tables/lumiere\_flow.csv}).
+Figure: \code{docs/manuscript/cohort\_flow.png}
+(Figure S1).
+
+\begin{table}[H]
+\centering
+\small
+\renewcommand{\thetable}{S1a}\renewcommand{\theHtable}{S1a}
+\caption{\textbf{MU-Glioma-Post.}}
+\label{tab:S1a}
+\begin{tabularx}{\linewidth}{@{}L R{0.88cm} R{1.40cm} R{1.40cm}@{}}
+\toprule
+Step & Scans & Patients & Excluded \\
+\midrule
+All timepoints & 596 & 203 & -- \\
+All four sequences and mask present & 594 & 203 & 2 \\
+Tumour (labels 1--3) present & 592 & 203 & 2 \\
+MRI day known & 589 & 202 & 3 \\
+MRI day plausible ($\geq$ $-$365 d, not before an earlier timepoint) & 588 & 202 & 1 \\
+Progression date known for progressors & 588 & 202 & 0 \\
+MRI not after recorded death & 580 & 202 & 8 \\
+Before late treatment (2nd-line, immunotherapy, new treatment) & 501 & 199 & 79 \\
+\textbf{Before first progression (index scans)} & \textbf{308} & \textbf{155} & 193 \\
+Grade 4 subset & 249 & 126 & -- \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\begin{table}[H]
+\centering
+\small
+\renewcommand{\thetable}{S1b}\renewcommand{\theHtable}{S1b}
+\caption{\textbf{LUMIERE.}}
+\label{tab:S1b}
+\begin{tabularx}{\linewidth}{@{}L R{1.22cm} R{1.40cm} R{1.40cm}@{}}
+\toprule
+Step & Studies & Patients & Excluded \\
+\midrule
+All rated studies & 616 & 91 & -- \\
+Post-operative (week $\geq$ 2 after surgery) & 456 & 81 & 160 \\
+Rated SD / PR / CR / Post-Op & 199 & 70 & 257 \\
+Before first progression & 132 & 61 & 67 \\
+\textbf{Not after recorded death (index scans)} & \textbf{132} & \textbf{61} & 0 \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Censored scans (52 MU, 39 grade 4, 9 LUMIERE at 120 d) stay in the cohort and are handled by the
+censoring-aware labels and IPCW.
+
+\textbf{Table S2.} The full cohort table with definitions is
+\code{docs/manuscript/TABLE1\_COHORT.md}
+(\code{table1.csv}). Additional rows not in main Table 1: last documented follow-up after scan, median [IQR]
+days 275 [107--471] (all), 285 [112--478] (G4), 462 [238--721] (LUMIERE); time to progression or censoring 125
+[50--237], 111 [48--208], 168 [91--287]; progression documented after the scan at any time 220 (71\%), 190
+(76\%), 122 (92\%); LUMIERE T1c field strength 1.5 T / 3 T / other or missing 81 (61\%) / 44 (33\%) / 7; MU
+field strength not distributed. WHO grade in all gliomas: grade 1, 3 (2\%); grade 2, 23 (15\%); grade 3, 2
+(1\%); ``3 vs 4'', 1 (1\%); grade 4, 126 (81\%).
+
+\FloatBarrier
+\section{Outcome, censoring rules and label formulations}\label{sec:S3}
+
+Source: \code{docs/results/FIX\_LABELS.md},
+\code{docs/results/C1\_endpoint.md},
+\code{docs/results/C1\_full\_tables.md}.
+
+\textbf{Estimand.} Documented first progression within H = 120 d of the index scan (90 / 180 d as
+sensitivities). Death without documented progression censors at the death day. Label 0 requires progression
+after H or progression-free follow-up $\geq$ H. Composite (progression or death) is a sensitivity analysis
+only.
+
+\begin{table}[H]
+\centering
+\small
+\renewcommand{\thetable}{S3}\renewcommand{\theHtable}{S3}
+\caption{\textbf{Rules adopted in the label audit.}}
+\label{tab:S3}
+\begin{tabularx}{\linewidth}{@{}R{0.7cm} L L@{}}
+\toprule
+\# & Problem found & Rule \\
+\midrule
+1 & Death without documented progression treated as a verified negative at every horizon & Death censors at the death day (primary); composite event as sensitivity \\
+1b & MRIs dated after the recorded death (15/96 MU deaths) & If more than one dated record follows the death day, the death date is ignored (7 patients, 3 with cohort scans); if exactly one, that scan is excluded \\
+2 & Progression flag 0 with a progression date (3 patients); two date fields disagree (29 patients) & Any patient with a progression date is a progressor; primary date \code{date\_of\_first\_progression}; reverse order as sensitivity \\
+3 & One MRI day of $-$965; progressor who died before progression & MRI day $\geq$ $-$365 and not before an earlier timepoint; death-before-progression flagged \\
+4 & Hazard formulation counted scans censored mid-interval as surviving the interval & Censored scans contribute only fully observed intervals \\
+5 & Follow-up extended by non-imaging dates & Kept as primary; imaging-only follow-up as sensitivity \\
+6 & Unknown RT end coded as ``not early post-RT'' & \code{early\_post\_rt} is 1 / 0 / missing (94 scans missing, 65 grade 4) \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Effect: six scans left the cohort (314 $\rightarrow$ 308; grade 4 253 $\rightarrow$ 249). At 120 d, 17
+negatives became censored (16 deaths within 120 d without progression, 1 ignored death date) and 1 negative
+became positive; no positive changed.
+
+\begin{table}[H]
+\centering
+\small
+\renewcommand{\thetable}{S4}\renewcommand{\theHtable}{S4}
+\caption{\textbf{Label counts (positive / verified negative / censored).}}
+\label{tab:S4}
+\begin{tabularx}{\linewidth}{@{}R{3.42cm} L R{2.38cm} R{2.55cm} R{2.55cm}@{}}
+\toprule
+Population & Label & H = 90 & H = 120 & H = 180 \\
+\midrule
+All (308 / 155) & primary & 65 / 195 / 48 & 100 / 156 / 52 & 144 / 105 / 59 \\
+All & composite & 79 / 195 / 34 & 116 / 156 / 36 & 161 / 105 / 42 \\
+All & alternative progression date & 63 / 191 / 54 & 99 / 151 / 58 & 141 / 102 / 65 \\
+All & imaging-only follow-up & 65 / 187 / 56 & 100 / 149 / 59 & 144 / 99 / 65 \\
+Grade 4 (249 / 126) & primary & 62 / 152 / 35 & 93 / 117 / 39 & 131 / 75 / 43 \\
+Grade 4 & composite & 74 / 152 / 23 & 107 / 117 / 25 & 146 / 75 / 28 \\
+LUMIERE (132 / 61) & primary & 24 / 101 / 7 & 47 / 76 / 9 & 62 / 61 / 9 \\
+LUMIERE & composite & 26 / 101 / 5 & 51 / 76 / 5 & 66 / 61 / 5 \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+LUMIERE gives a survival time without a death indicator; a recorded survival time is read as a death and used
+only as a censoring time in the primary label.
+
+\textbf{IPCW AUC.} Cumulative/dynamic AUC at 120 d with Kaplan--Meier censoring weights
+\citep{uno2007,blanche2013}. Cases are scans with an event by 120 d, weighted by the inverse of the censoring
+survival at their event time; controls are scans event-free beyond 120 d. The vectorised implementation
+matches scikit-survival to \num{2e-16} (\code{FIX\_EVALUATION.md} \S{}1). In the bootstrap, censoring
+weights are re-estimated in each resample; if a resample has no censoring, G = 1.
+
+\begin{table}[H]
+\centering
+\small
+\renewcommand{\thetable}{S5}\renewcommand{\theHtable}{S5}
+\caption{\textbf{Label formulations, grade 4, H = 120 d} (\code{C1\_endpoint.md}; $\Delta$AUC vs naive).}
+\label{tab:S5}
+\begin{tabularx}{\linewidth}{@{}L R{1.92cm} R{3.60cm} R{4.12cm} R{0.80cm} R{0.88cm}@{}}
+\toprule
+Features & Formulation & AUC [95\% CI] & $\Delta$AUC vs naive [95\% CI] & O/E & Slope \\
+\midrule
+volumes + clinical & naive & 0.651 [0.567, 0.727] & --- & 1.14 & 0.95 \\
+ & verified & 0.657 [0.577, 0.732] & +0.006 [$-$0.020, +0.030] & 0.95 & 0.91 \\
+ & IPCW & 0.656 [0.578, 0.731] & +0.005 [$-$0.021, +0.029] & 0.97 & 0.92 \\
+ & hazard & 0.653 [0.574, 0.726] & +0.002 [$-$0.018, +0.022] & 0.87 & 0.50 \\
+legacy radiomics + clinical & naive & 0.648 [0.553, 0.736] & --- & 1.13 & 0.52 \\
+ & verified & 0.655 [0.575, 0.730] & +0.007 [$-$0.021, +0.038] & 0.96 & 0.51 \\
+ & IPCW & 0.654 [0.575, 0.730] & +0.006 [$-$0.022, +0.036] & 0.98 & 0.51 \\
+ & hazard & 0.669 [0.583, 0.746] & +0.021 [$-$0.027, +0.068] & 0.90 & 0.33 \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+All 36 $\Delta$AUC CIs (2 populations $\times$ 2 feature sets $\times$ 3 horizons $\times$ 3 formulations)
+include 0. The naive label under-predicts risk in all 12 settings (O/E 1.12--1.19 against 0.95--0.99 for
+verified / IPCW). The legacy radiomics pipeline in C1 predates the clipping fix (S5).
+
+\FloatBarrier
+\section{Predictor definitions and the as-of-scan treatment rule}\label{sec:S4}
+
+Source: \code{prism/features/tabular.py};
+\code{docs/results/FIX\_TREATMENT\_ASOF.md};
+\code{docs/results/FIX\_FEATURES.md}; audit record input tables
+(\code{outputs/results/analyses/audit\_system/records.md}).
+
+\begin{table}[H]
+\centering
+\small
+\renewcommand{\thetable}{S6}\renewcommand{\theHtable}{S6}
+\caption{\textbf{Baseline predictors (23 raw; 31 design columns after missingness indicators).}}
+\label{tab:S6}
+\begin{tabularx}{\linewidth}{@{}R{1.6cm} U{3.4cm} L R{4.6cm}@{}}
+\toprule
+Group & Predictor & Definition (as of scan day) & Source column(s) \\
+\midrule
+Clinical & age & age at diagnosis, years & \code{clinical\_age\_at\_diagnosis} \\
+ & male & sex at birth & \code{clinical\_sex\_at\_birth} \\
+ & idh\_mutant, idh\_unknown & IDH1/IDH2 mutant; neither documented & \code{clinical\_idh1\_mutation}, \code{clinical\_idh2\_mutation} \\
+ & mgmt\_methylated, mgmt\_unknown & MGMT promoter methylated; unknown code & \code{clinical\_mgmt\_methylation} \\
+Timing & days\_from\_diagnosis & scan day & \code{days\_from\_diagnosis\_to\_mri} \\
+ & days\_since\_rt\_end & days since documented RT end; missing until RT completed & RT end day vs scan day \\
+ & rt\_date\_unknown & no completed RT with known end date at the scan & RT end day \\
+ & early\_post\_rt & 0--84 d after RT end (RANO 12-week window); missing if RT end unknown & RT end day \\
+ & early\_post\_rt\_x\_mgmt\_methylated & interaction & RT end day $\times$ MGMT \\
+ & visit\_index & rank of the scan among the patient's MRIs & MRI days \\
+Treatment & rt\_started & RT start day $\leq$ scan day & \code{clinical\_radiation\_therapy} + RT start day \\
+ & rt\_completed & RT end day $\leq$ scan day & RT end day \\
+ & rt\_dose\_gy, rt\_fractions, rt\_hypofractionated & prescription, visible once RT started; hypofractionation $\leq$ 15 fractions & \code{clinical\_dose}, \code{clinical\_number\_of\_fractions} \\
+ & rt\_start\_day & days from diagnosis to RT start, visible once started & RT start day \\
+ & rt\_duration\_days & RT end $-$ start, visible once completed & RT start and end days \\
+ & chemo\_started & initial TMZ / lomustine start $\leq$ scan day & initial chemotherapy fields \\
+ & surgery\_day, biopsy\_before\_resection & visible once the first surgery has happened & first surgery fields \\
+ & previous\_brain\_tumor & history, known at any scan & \code{clinical\_previous\_brain\_tumor} \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Unknown values are imputed in-fold with the training median plus a missingness indicator; nothing is
+zero-filled silently. Therapy marked given without a start date (2 RT, 2 chemotherapy patients) is assumed to
+have started before the scan.
+
+\begin{table}[H]
+\centering
+\small
+\renewcommand{\thetable}{S7}\renewcommand{\theHtable}{S7}
+\caption{\textbf{What leaked before the as-of-scan fix} (scans affected, grade 4 / all gliomas).}
+\label{tab:S7}
+\begin{tabularx}{\linewidth}{@{}R{4.6cm} L R{4.2cm}@{}}
+\toprule
+Feature & Problem & Affected \\
+\midrule
+\code{rt\_given}, \code{chemo\_given} & ``will receive RT / chemotherapy'', true for scans before the course started & 13 / 23 (RT), 13 / 21 (chemo) \\
+dose, fractions, hypofractionation, \code{rt\_start\_day} & prescription and start date of a course that had not started & 13 / 19--23 \\
+\code{rt\_duration\_days} & duration of a course not yet finished (also reveals early stopping) & 17 / 29 \\
+\code{days\_since\_rt\_end}, \code{rt\_date\_unknown} & negative values from the future RT end date & 17 / 29 \\
+\code{surgery\_day}, \code{biopsy\_before\_resection} & one scan precedes the first surgery & 1 / 1 \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Progression, death, last follow-up and late-treatment dates are used only for labels, censoring and
+eligibility. Change features use earlier scans only.
+
+\textbf{Effect on repeated CV (intermediate inputs; earlier repeat-averaged estimator;
+\code{FIX\_TREATMENT\_ASOF.md} \S{}3).} Baseline ridge grade 4 0.694 [0.613, 0.775]
+$\rightarrow$ 0.729
+[0.648, 0.811]; all gliomas 0.719 [0.648, 0.788] $\rightarrow$ 0.749 [0.675, 0.820]. Boosting grade 4 0.723
+[0.633, 0.806] $\rightarrow$ 0.731 [0.641, 0.813]; all gliomas 0.743 [0.666, 0.816] $\rightarrow$ 0.740
+[0.663, 0.815]. Timing-only boosting fell (grade 4 0.718 $\rightarrow$ 0.696; all 0.735 $\rightarrow$ 0.705):
+part of its earlier signal came from the future RT end date. The MGMT $\times$ window flag changed repeated-CV
+AUC by $\leq$ 0.008. These intermediate values are superseded by the final run (main Table 2).
+
+\textbf{Molecular look-ahead found by the audit (exploratory).} IDH and MGMT are used at scans taken before
+the diagnosis date: 8 grade 4 scans (7 patients; 1 event, 4 non-events, 3 censored) and 11 all-glioma scans,
+1--58 days before diagnosis (\code{AUDIT\_SYSTEM.md} \S{}2). Its effect on the baseline AUC was not
+quantified.
+
+\textbf{Imaging measurements.} Volumes (ET, NETC, SNFH, RC, tumour = ET + NETC, lesion), morphology (ET
+fraction, multifocality, largest axial ET area, ET-to-cavity distance and proximity, T1c / FLAIR intensities
+relative to brain > 10 mm (Euclidean) from lesion and cavity), and past-only change (from previous scan and
+nadir, growth rate, \code{vol\_pd\_flag} requiring a measurable nadir $\geq$ 0.1 cc,
+\code{et\_new\_from\_zero\_nadir}, missingness flags for
+undefined relative change; 25 change columns). For
+LUMIERE transport, necrosis and cavity were merged
+(\code{log\_necrosis\_cavity\_cc}) because DeepBraTumIA
+labels the cavity as necrosis (\code{FIX\_FEATURES.md} \S{}1).
+
+\FloatBarrier
+\section{Radiomics: extraction, configurations and outlier clipping}\label{sec:S5}
+
+Source: \code{docs/results/C3\_radiomics.md},
+\code{docs/results/FIX\_RADIOMICS\_CLIP.md},
+\code{docs/results/FIX\_FEATURES.md} \S{}6,
+\code{prism/features/radiomics.py}.
+
+\textbf{Extraction.} PyRadiomics \citep{vangriethuysen2017}. \emph{Legacy} features are those of PRISM's
+initial radiomics model: T1c and FLAIR, original, LoG and wavelet images, 2,446 columns. Under the legacy within-lesion z-score
+and fixed bin width the texture matrices are effectively two-level (GLCM joint entropy $\leq$ 2 bits), so
+legacy texture behaves as a binary habitat descriptor (above vs below lesion mean). \emph{Corrected} (v2)
+features use a whole-brain z-score, a fixed bin count of 32 (joint entropy 4.7--6.3 bits), no second N4
+correction, and are extracted per compartment (ET, NETC, SNFH, core, lesion, 5 mm peri-cavity rim, shape) and
+for all four sequences (2,316 columns). Known limitations: a fixed bin count rather than the IBSI-recommended
+fixed bin width \citep{zwanenburg2020}; the ICC stability pass covers T1c and FLAIR texture and first-order
+features only (1,116 of 2,316 columns); the 5 mm rim uses a city-block dilation.
+
+\textbf{Configurations (70).} Variant (legacy; corrected whole lesion; corrected per compartment; corrected
+all four sequences) $\times$ stability filter (none; ICC $\geq$ 0.75 under 1-voxel erosion, in-fold) $\times$
+selection (top-10 or top-30 univariate F; L1 with non-zero coefficients only, at most 30; PCA-10;
+decorrelation + top-20) $\times$ integration (concatenation with the baseline; or a stacked radiomics score
+from inner out-of-fold predictions). Nested choice: inner 3-fold patient-grouped AUC in each outer training
+fold. Missing compartments are imputed with the median and one indicator per missingness pattern.
+
+\textbf{Outlier clipping.} Three legacy columns (FLAIR LoG $\sigma$ = 1, 2, 3 mm NGTDM Coarseness) held the
+PyRadiomics sentinel $10^{6}$ in four scans (two grade 4); other values in these columns have medians of
+$10^{-4}$ to \num{8e-4}. One such value inflates a training SD by orders of magnitude and makes PCA and the
+stacked score depend on these scans. Before the fix, the stacked score had inner-OOF training values of
+$-10^{4}$ to $-$\num{4.6e6} in 20/25 grade 4 fits. The fix, \code{QuantileClip(q = 0.01)}, is fitted in each
+training (and inner) fold, clips to the fold's 1st/99th order statistics, and applies the same bounds to test
+scans. It does not look at labels and applies to all configurations and to deep features.
+
+\begin{table}[H]
+\centering
+\footnotesize
+\renewcommand{\thetable}{S8}\renewcommand{\theHtable}{S8}
+\caption{\textbf{Effect of the clipping fix} (\code{FIX\_RADIOMICS\_CLIP.md}).}
+\label{tab:S8}
+\begin{tabularx}{\linewidth}{@{}R{1.9cm} L L R{1.7cm}@{}}
+\toprule
+Population & Nested AUC before $\rightarrow$ after & $\Delta$AUC before $\rightarrow$ after & Cal. slope \\
+\midrule
+Grade 4 & 0.672 [0.597, 0.743] $\rightarrow$ 0.666 [0.586, 0.739] & $-$0.026 [$-$0.073, +0.017] $\rightarrow$ $-$0.032 [$-$0.084, +0.017] & 0.50 $\rightarrow$ 0.60 \\
+All gliomas & 0.732 [0.664, 0.794] $\rightarrow$ 0.747 [0.678, 0.811] & +0.012 [$-$0.029, +0.050] $\rightarrow$ +0.028 [$-$0.017, +0.071] & 0.77 $\rightarrow$ 0.85 \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Largest change in any single configuration: 0.020. Single configurations with CI above 0: grade 4 0/70 before
+and after (below 0: 12/70 $\rightarrow$ 8/70); all gliomas 0/70 $\rightarrow$ 1/70
+(\code{legacy|none|pca10|stack|ridge}, 0.754, +0.035 [+0.002, +0.068], p($\Delta$ $\leq$ 0) = 0.021). Not
+covered by the fix: the radiomics group of the feature-group search (S10), the C1 radiomics feature set (S3),
+and the feature-conflict B + radiomics row (S12).
+
+\begin{landscape}
+\begin{table}[H]
+\centering
+\small
+\renewcommand{\thetable}{S9}\renewcommand{\theHtable}{S9}
+\caption{\textbf{Radiomics results by population} (\code{C3\_radiomics.md};
+\code{outputs/results/c3/\{grade4,all\_glioma\}/results.csv}).}
+\label{tab:S9}
+\begin{tabularx}{\linewidth}{@{}L R{3.6cm} R{4.3cm} R{1.0cm} R{3.6cm} R{4.3cm} R{1.0cm}@{}}
+\toprule
+Model & Grade 4 AUC & $\Delta$ [95\% CI] & Slope & All gliomas AUC & $\Delta$ [95\% CI] & Slope \\
+\midrule
+Baseline ridge & 0.698 [0.615, 0.774] & --- & 0.89 & 0.720 [0.638, 0.792] & --- & 0.88 \\
+Baseline boosting & 0.687 [0.601, 0.768] & $-$0.012 [$-$0.072, +0.048] & 0.82 & 0.718 [0.642, 0.792] & $-$0.002 [$-$0.052, +0.047] & 0.87 \\
+Best post hoc (legacy PCA-10 stack) & 0.721 [0.638, 0.793] & +0.023 [$-$0.013, +0.057] & 0.92 & 0.754 [0.685, 0.823] & +0.035 [+0.002, +0.068] & 0.96 \\
+\textbf{Nested over 70 (honest)} & \textbf{0.666 [0.586, 0.739]} & \textbf{$-$0.032 [$-$0.084, +0.017]} & 0.60 & \textbf{0.747 [0.678, 0.811]} & \textbf{+0.028 [$-$0.017, +0.071]} & 0.85 \\
+\bottomrule
+\end{tabularx}
+\end{table}
+\end{landscape}
+
+Median $\Delta$AUC by variant, grade 4: legacy +0.005, v2 all four sequences $-$0.016, v2 compartments
+$-$0.017, v2 lesion $-$0.001; all gliomas +0.024, +0.000, $-$0.005, +0.005. Nested choices: legacy in 18/25
+(grade 4) and 25/25 (all) outer folds. Stacking beat concatenation in grade 4 (median $\Delta$ $-$0.003 vs
+$-$0.027).
+
+\FloatBarrier
+\section{Frozen deep features}\label{sec:S6}
+
+Source: \code{docs/results/DEEP\_FEATURES.md};
+\code{outputs/results/analyses/deep/}.
+
+\textbf{Encoders.} MONAI SwinUNETR (four channels FLAIR / T1c / T1 / T2, feature size 48), encoder only: BraTS
+2021 weights; BrainSegFounder (UK Biobank self-supervised pretraining, BraTS fine-tuning; \citealp{cox2024}
+\flag{[CHECK]}); and random weights (seed 0) as the control. \textbf{Input.} Skull-stripped 1 mm volumes,
+z-scored within the brain, reoriented to LPS, zero-padded to a multiple of 32; eight flip test-time
+augmentations. \textbf{Features.} Mask-weighted mean pooling at stages 0--3 (48 + 96 + 192 + 384 = 720 per
+region); MU regions lesion, ET, NETC, SNFH, 5 mm rim and ET $\cup$ SNFH; LUMIERE regions ET, SNFH, ET $\cup$
+SNFH and lesion. The 768-d bottleneck was not used (between-scan SD \num{3e-4} for BraTS 2021 weights).
+\textbf{Families.} D1 pretrained, 32 configurations (2 encoders $\times$ \{lesion, compartments\} $\times$ 4
+selections $\times$ 2 integrations); D0 random, 16; D1b deep + legacy radiomics stacked, 16; DS shared
+regions, 16. \textbf{Licences.} BraTS 2021 SwinUNETR weights Apache-2.0; BrainSegFounder weights under the UK
+Biobank material transfer agreement (not redistributed).
+
+\begin{table}[H]
+\centering
+\footnotesize
+\renewcommand{\thetable}{S10}\renewcommand{\theHtable}{S10}
+\caption{\textbf{Deep features on MU.}}
+\label{tab:S10}
+\begin{tabularx}{\linewidth}{@{}L R{2.75cm} R{3.5cm} R{2.75cm} R{3.5cm}@{}}
+\toprule
+Arm & Grade 4 AUC & Grade 4 $\Delta$ [95\% CI] & All AUC & All $\Delta$ [95\% CI] \\
+\midrule
+Baseline & 0.698 [0.615, 0.774] & --- & 0.720 [0.638, 0.792] & --- \\
+D1 pretrained, nested over 32 & 0.694 & $-$0.004 [$-$0.069, +0.063] & 0.731 & +0.011 [$-$0.032, +0.056] \\
+D0 random weights, nested over 16 & 0.649 & $-$0.049 [$-$0.085, $-$0.014] & 0.711 & $-$0.009 [$-$0.032, +0.009] \\
+D1b deep + legacy radiomics, nested over 16 & 0.709 & +0.011 [$-$0.032, +0.054] & 0.751 & +0.031 [$-$0.003, +0.066] \\
+DS shared regions, nested over 16 & 0.699 & +0.001 [$-$0.057, +0.060] & 0.725 & +0.005 [$-$0.035, +0.046] \\
+Baseline + volumes + D1 vs baseline + volumes & 0.694 vs 0.702 & $-$0.008 [$-$0.045, +0.033] & 0.739 vs 0.733 & +0.007 [$-$0.021, +0.036] \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Single configurations with CI above 0: 0/80 (grade 4); 3/80 (all gliomas; +0.035 to +0.040, lower bounds
++0.001 to +0.004); about 2 of 80 expected by chance. Image-only stacked score, grade 4: pretrained 0.652
+(modal configuration), random 0.566; correlation with log tumour volume r = 0.58 and with the baseline score r
+= 0.28. Calibration slope of nested D1: 0.55 (grade 4), 0.79 (all).
+
+\FloatBarrier
+\section{PRISM v1: the initial radiomics model, the initial evaluation split and the fusion components}\label{sec:S7}
+
+Source: \code{docs/results/SHAP\_PRISM\_SPLIT.md};
+\code{docs/manuscript/FIGURES.md} (Figure 1);
+\code{outputs/results/analyses/
+shap\_prism\_split/};
+\code{outputs/results/analyses/paper\_figures/single\_split\{,\_pairs\}.csv}.
+
+\textbf{Reconstruction.} The input matrix was rebuilt from the legacy feature files plus the clinical codes
+using PRISM v1's case table; the shipped bundle reproduced the stored test predictions on all 84 rows
+(maximum absolute difference \num{1.1e-15} calibrated, \num{1.4e-15} raw). The model is an L2 logistic
+regression (liblinear, C = 0.0087, balanced class weights) on 46 standardised columns (two of 48 selected
+columns are dropped by a correlation filter), with a monotone Platt calibrator. Exact linear SHAP reproduced
+the shipped importance table (Spearman 0.997, identical top 10). Modality shares: T1c 52\%, FLAIR 26\%,
+clinical codes 22\% (share of mean absolute per-scan group sum).
+
+\begin{table}[H]
+\centering
+\small
+\renewcommand{\thetable}{S11}\renewcommand{\theHtable}{S11}
+\caption{\textbf{Composition of the test set of our initial evaluation split} (percentile among 500 design splits).}
+\label{tab:S11}
+\begin{tabularx}{\linewidth}{@{}L R{2.02cm} R{2.55cm} R{3.42cm} R{1.75cm}@{}}
+\toprule
+ & Full cohort & Initial split test set & 500 splits: mean (2.5--97.5\%) & Percentile \\
+\midrule
+Scans / patients & 308 / 155 & 82 / 29 & 84.5 / 29.8 &  \\
+Event rate, naive & 0.325 & 0.268 & 0.254 (0.165--0.348) & 62 \\
+Grade 4 / GBM & 0.81 / 0.70 & 0.80 / 0.77 & 0.82 / 0.63 & 44 / 97 \\
+IDH-mutant scans & 0.195 & 0.146 & 0.271 (0.131--0.403) & 5 \\
+Pre-RT scans & 0.373 & 0.439 & 0.353 (0.220--0.474) & 89 \\
+Event rate in pre-RT scans & 0.087 & 0.000 (0 / 36) & 0.044 (0--0.138) & 15 \\
+$\leq$ 12 weeks post-RT & 0.338 & 0.244 & 0.283 & 16 \\
+Later post-RT & 0.263 & 0.268 & 0.345 (0.243--0.450) & 6 \\
+AUC of the rule ``scan is post-RT'' & 0.677 & 0.740 & 0.675 (0.575--0.772) & 92 \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\begin{table}[H]
+\centering
+\small
+\renewcommand{\thetable}{S12}\renewcommand{\theHtable}{S12}
+\caption{\textbf{Pair decomposition (naive AUC)} (\code{single\_split\_pairs.csv}; 22
+positives, 36 pre-RT negatives, 24 other negatives; 60\% of pairs involve a pre-RT negative).}
+\label{tab:S12}
+\begin{tabularx}{\linewidth}{@{}L R{1.57cm} R{2.20cm} R{2.20cm}@{}}
+\toprule
+Model & All pairs & Positives vs pre-RT negatives & Positives vs other negatives \\
+\midrule
+PRISM initial radiomics model & 0.802 & 0.823 & 0.771 \\
+Baseline ridge & 0.871 & 0.962 & 0.735 \\
+Baseline GBM & 0.844 & 0.933 & 0.710 \\
+Baseline + legacy radiomics & 0.862 & 0.934 & 0.754 \\
+Clinical only (ridge) & 0.791 & 0.789 & 0.793 \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+On the 36 pre-RT scans the initial radiomics model's T1c features lowered the log-odds by $-$0.50 on average; the
+baseline ridge did the same through treatment ($-$0.38) and timing ($-$0.15). Our models' SHAP profiles on
+this split match their whole-cohort out-of-fold profiles at group level (baseline ridge: treatment 55\%,
+clinical 29\%, timing 16\% on the split; 52 / 29 / 19\% out of fold); the split does not lean on unusual
+features.
+
+\textbf{Post-RT test scans} (42 scans, 19 patients, 19 positives; IPCW AUC [95\% CI], naive in brackets):
+initial radiomics model 0.770 [0.604, 0.907] (0.778); baseline ridge 0.718 [0.481, 0.880] (0.730); baseline GBM
+0.699 [0.463, 0.846] (0.705); + legacy radiomics 0.758 [0.605, 0.886] (0.769); clinical only 0.818 [0.664,
+0.924] (0.826), $\Delta$ vs baseline +0.100 [$-$0.015, +0.293].
+
+\textbf{Before and after the as-of-scan fix} (30 test patients / 84 scans, naive / IPCW;
+\code{head\_to\_head\_\{before,after\}.csv}): initial radiomics
+model 0.802 / 0.811 in both; baseline ridge 0.870 /
+0.844 $\rightarrow$ 0.880 / 0.860; baseline boosting 0.901 / 0.881 $\rightarrow$ 0.869 / 0.855; baseline +
+legacy radiomics 0.869 / 0.848 $\rightarrow$ 0.871 / 0.852; baseline + corrected compartments 0.869 / 0.843
+$\rightarrow$ 0.886 / 0.870. With the final labels (29 / 82): ridge 0.871 / 0.851, boosting 0.844 / 0.824.
+
+\textbf{PRISM v1 encoder and fusion components} (source: \code{legacy/reproduction/\{README,FINDINGS,AUDIT\}.md};
+v1's own case table, labels and scoring on the 30-patient / 84-scan test set). All v1 numbers reproduced from the
+code. The v1 image encoder was a small SwinUNETR-style transformer with random, untrained weights; its embeddings
+alone gave AUC about 0.50 in fusion (linear probe 0.55 in training CV, 0.62 on the test set). The v1 late-fusion MLP
+scored AUC 0.8006, below its radiomics input alone (0.8043); its checkpoint had been selected on test loss and its
+0.48 threshold hand-tuned, so its reported recall and F1 gains over the radiomics model were an operating-point
+shift. A BraTS-pretrained SwinUNETR fine-tuned on MU (lesion-masked pooling) reached image-only test AUC 0.64--0.65,
+and late fusion with the radiomics score gave 0.790--0.809, with a patient-bootstrap CI of the difference spanning 0.
+These results motivated the frozen-encoder design with a random-weight control (S6) and the single regularised model
+with ablatable branches (main \S2.1). The v1 report generator's RANO section was computed from the radiomics score,
+not from mask measurements; the rebuilt generator is described in S19.
+
+\FloatBarrier
+\section{Split variance: full tables and verifier checks}\label{sec:S8}
+
+Source: \code{docs/results/SPLIT\_VARIANCE.md};
+\code{docs/manuscript/FIGURES.md} \S{}2 (clipped
+\code{baseline\_rad});
+\code{outputs/results/analyses/split\_variance/\{summary,summary\_clipped,per\_split\_auc\_clipped\}.csv}.
+
+\textbf{Design.} Seeds 0--499 of PRISM v1's split search gave 500 distinct test sets (82--94 test
+scans, mean 86.1; 10--33 positives). The search favours patients with many scans: all 157 patients of
+PRISM v1's case table appear, and the most frequent is in 71\% of splits. Cohort, label and features are
+PRISM v1's (315 scans / 157 patients; naive label, equal to ours on all 314 shared scans). Rank = share of
+splits with strictly lower AUC than the model's own seed-62 value re-run here.
+
+\begin{table}[H]
+\centering
+\footnotesize
+\renewcommand{\thetable}{S13}\renewcommand{\theHtable}{S13}
+\caption{\textbf{Naive AUC over 500 splits.}}
+\label{tab:S13}
+\begin{tabularx}{\linewidth}{@{}L R{2.1cm} R{1.7cm} R{1.6cm} R{1.1cm} R{1.4cm} R{1.5cm}@{}}
+\toprule
+Model & Mean $\pm$ SD & 2.5--97.5\% & Seed 62 (rank) & $\geq$ 0.802 & Beats baseline & Mean $\Delta$ vs baseline \\
+\midrule
+Initial radiomics pipeline, re-selected per split & 0.720 $\pm$ 0.055 & 0.610--0.819 & 0.801 (92\%) & 7.2\% & 12\% & $-$0.081 \\
+Initial radiomics model, shipped features refitted (optimistic) & 0.815 $\pm$ 0.044 & 0.726--0.887 & 0.802 (38\%) & 62\% & 58\% & +0.014 \\
+Baseline ridge & 0.801 $\pm$ 0.052 & 0.694--0.895 & 0.871 (91\%) & 50\% & -- & -- \\
+Baseline + legacy radiomics (clipped) & 0.799 $\pm$ 0.053 & 0.674--0.892 & 0.862 (89\%) & 50.2\% & 51.6\% & $-$0.002 \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\begin{table}[H]
+\centering
+\small
+\renewcommand{\thetable}{S14}\renewcommand{\theHtable}{S14}
+\caption{\textbf{IPCW AUC over 475 splits.}}
+\label{tab:S14}
+\begin{tabularx}{\linewidth}{@{}L R{4.82cm} R{2.55cm} R{2.20cm} R{1.15cm}@{}}
+\toprule
+Model & Mean $\pm$ SD & Seed 62 (rank) & Beats baseline & Mean $\Delta$ \\
+\midrule
+Initial radiomics pipeline, re-selected & 0.727 $\pm$ 0.058 (0.602--0.832) & 0.816 (94\%) & 25\% & $-$0.042 \\
+Shipped features refitted (optimistic) & 0.825 $\pm$ 0.045 (0.737--0.901) & 0.817 (40\%) & 81\% & +0.055 \\
+Baseline ridge & 0.769 $\pm$ 0.056 (0.654--0.876) & 0.851 (92\%) & -- & -- \\
+Baseline + legacy radiomics (clipped) & 0.774 $\pm$ 0.058 & 0.845 (92.0\%) & 56.8\% & +0.005 \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Per split, clipped minus pre-clip naive AUC of the radiomics arm: mean $-$0.002, SD 0.009. Gap between honest
+and optimistic versions of the initial radiomics pipeline: 0.095 $\pm$ 0.040.
+
+\textbf{Composition.} Baseline ridge per-split AUC correlates with the pre-RT event rate (Spearman $-$0.61
+naive, $-$0.57 IPCW), the AUC of the ``post-RT'' rule (+0.57, +0.51), the later post-RT share ($-$0.26) and
+the pre-RT share (+0.22). Nine composition variables explain CV R$^{2}$ 0.42 and predict 0.851 for seed 62
+(observed 0.871, mean 0.801). For the initial radiomics pipeline: CV R$^{2}$ 0.10 (naive), 0.15 (IPCW); strongest
+correlates IDH-mutant fraction ($-$0.30) and the ``post-RT'' rule (+0.22); predicted 0.773 for seed 62
+(observed 0.801, mean 0.720).
+
+\textbf{Verifier checks (earlier per-split table; not repeated on the final run).} (1) On seed 62 and 15 other
+splits, redoing the ranking at full cost (10 folds $\times$ 100 permutation repeats) gave 0.718 $\pm$ 0.054 on
+the 15 splits (cheap ranking 0.726 $\pm$ 0.057; cheap $-$ full +0.008 $\pm$ 0.033, r = 0.83). Re-running the
+shipped Optuna search as well gave 0.654 $\pm$ 0.054 ($-$0.064 $\pm$ 0.055 against full ranking with the
+shipped C); its inner-CV objective averaged 0.865 (optimism $\approx$ 0.21), and on seed 62 it gave 0.762, not
+0.802. (2) Against 300 fully random 30-patient splits, the design splits had more test scans (85.5 vs 59.9)
+and a narrower baseline AUC spread (SD 0.054 vs 0.069), so spread under the design underestimates what a fresh
+split would show \citep{varoquaux2018}.
+
+\FloatBarrier
+\section{Estimator and evaluation details}\label{sec:S9}
+
+Source: \code{docs/results/FIX\_EVALUATION.md}.
+
+\begin{itemize}
+\item \textbf{Headline estimator.} Mean over the 5 repeats of the per-repeat pooled-OOF IPCW AUC (and Brier,
+O/E, slope). The earlier estimator --- the AUC of the OOF prediction averaged over repeats --- is an ensemble
+of five models per scan and is optimistic, more so for unstable nested pipelines. On intermediate inputs, the
+nested radiomics $\Delta$AUC moved from +0.009 (repeat-averaged) to $-$0.002 (mean over repeats) under the
+change.
+\item \textbf{Bootstrap.} Patient-cluster bootstrap, 1,000 draws; each draw resamples patients once and
+recomputes the mean-over-repeats statistic of every model on that draw, so differences are paired. $\Delta$AUC
+is the point estimate (not the bootstrap mean) with the bootstrap CI.
+\item \textbf{Calibration.} O/E (Kaplan--Meier risk / mean prediction, or IPCW-weighted),
+calibration-in-the-large with a logit offset, calibration slope by IPCW-weighted logistic regression on the
+logit, flexible calibration curves (restricted cubic spline, 3 knots) and ICI \citep{vancalster2019}.
+\item \textbf{External estimator.} Every LUMIERE arm is scored on the same 5 $\times$ 5 patient-grouped
+LUMIERE folds (per-fold IPCW AUC averaged over 25 folds, censoring weights from the whole LUMIERE cohort);
+locked models are also scored pooled. An earlier pooled score of differently recalibrated folds produced an
+artefactual AUC of 0.414 for recalibrated ridge; recalibration leaves discrimination unchanged by
+construction.
+\item \textbf{Selection inside folds.} Feature selection, PCA, ICC filtering, stacking and hyperparameter
+choice are all inside the training fold, with inner patient-grouped CV for every choice
+\citep{varma2006,cawley2010,demircioglu2021}.
+\end{itemize}
+
+\FloatBarrier
+\section{Feature-group search with permutation control}\label{sec:S10}
+
+Source: \code{docs/results/C2\_feature\_search.md};
+\code{docs/results/FINAL\_RESULTS.md}.
+
+Six groups --- clinical, timing, volumes, morphology, change, legacy radiomics (top 20 in-fold; unclipped) ---
+give 63 combinations $\times$ 2 learners (ridge; fixed shallow boosting). The treatment block is not part of
+this search. The honest estimate selects one of the 126 candidates per outer fold by inner CV. The permutation
+control moves each patient's whole outcome block to another patient with the same number of scans, keeps
+features and folds, and re-runs the full nested pipeline 100 times; p = (1 + \#\{perm $\geq$ obs\}) / 101.
+
+\begin{table}[H]
+\centering
+\small
+\begin{tabularx}{\linewidth}{@{}R{4.6cm} L L@{}}
+\toprule
+ & Grade 4 & All gliomas \\
+\midrule
+Post-hoc best configuration (optimistic) & boosting, clinical + timing: 0.714 [0.643, 0.785] & ridge, clinical + timing + volumes + morphology + radiomics: 0.744 [0.679, 0.804] \\
+Nested over 126 (honest) & 0.664 [0.601, 0.722], slope 0.49 & 0.707 [0.647, 0.766] \\
+Permutation null mean (95th percentile) & 0.548 (0.636) & 0.528 \\
+Permutation p & 0.050 (4/100 $\geq$ observed) & 0.010 (0/100) \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Single groups, grade 4 (ridge / boosting): radiomics 0.675 / 0.628; morphology 0.650 / 0.538; volumes 0.611 /
+0.573; clinical 0.585 / 0.612; timing 0.559 / 0.649; change 0.537 / 0.565. The permutation null is centred
+above 0.5 because selecting the best of 126 configurations is optimistic even without signal. Boosting was
+chosen in 15/25 outer folds; selected boosting models had large train--test gaps (for example training AUC
+0.961 for the best grade 4 configuration).
+
+\FloatBarrier
+\section{Phase-of-care ladder: full results}\label{sec:S11}
+
+Source: \code{docs/results/PHASE\_LADDER.md};
+\code{outputs/results/analyses/phase\_ladder/\{results,cohorts,permutation,
+subset\_of\_full,nested\_choices\}.csv};
+\code{docs/manuscript/figures/fig4\_phase.csv}.
+
+\textbf{Phase definitions} (grade 4 / all-glioma scans): pre-RT, \code{rt\_started == 0}, including
+patients
+with no RT documented (76 / 115); during RT, started but not completed (6 / 8); early post-RT, completed and
+$\leq$ 84 d after RT end (98 / 104); later post-RT, > 84 d (69 / 81). RT without a documented start date
+counts as started; RT without an end date is never ``completed''.
+
+\begin{table}[H]
+\centering
+\footnotesize
+\renewcommand{\thetable}{S15}\renewcommand{\theHtable}{S15}
+\caption{\textbf{Cohorts.}}
+\label{tab:S15}
+\begin{tabularx}{\linewidth}{@{}L R{0.78cm} R{1.24cm} R{0.93cm} R{1.55cm} R{1.24cm} R{2.20cm} R{2.20cm}@{}}
+\toprule
+Population $\cdot$ cohort & Scans & Patients & Events & Non-events & Censored & EPP R2 (10 params) & EPP R2 + I2 (54) \\
+\midrule
+Grade 4 $\cdot$ full & 249 & 126 & 93 & 117 & 39 & 9.3 & 1.7 \\
+Grade 4 $\cdot$ post-RT & 167 & 84 & 83 & 83 & 1 & 8.3 & 1.5 \\
+Grade 4 $\cdot$ later post-RT & 69 & 40 & 36 & 32 & 1 & 3.6 & 0.7 \\
+All $\cdot$ full & 308 & 155 & 100 & 156 & 52 & 10.0 & 1.9 \\
+All $\cdot$ post-RT & 185 & 92 & 84 & 96 & 5 & 8.4 & 1.6 \\
+All $\cdot$ later post-RT & 81 & 46 & 37 & 40 & 4 & 3.7 & 0.7 \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+By the Riley criteria (anticipated R$^{2}$cs 15\% of maximum), the primary post-RT cohort would need about 750
+scans (375 events) for R2 and about 4,040 scans (2,022 events) for R2 + I2. Nearly all censoring is in pre-RT
+and early scans. In post-RT cohorts two phase dummies are constant, so R2 has about 8 effective parameters
+(exploratory note).
+
+\begin{table}[H]
+\centering
+\small
+\renewcommand{\thetable}{S16}\renewcommand{\theHtable}{S16}
+\caption{\textbf{Primary and key secondary results} (grade 4, post-RT, ridge).}
+\label{tab:S16}
+\begin{tabularx}{\linewidth}{@{}L R{3.42cm} R{4.12cm} R{0.88cm} R{0.80cm}@{}}
+\toprule
+Model & AUC (95\% CI) & $\Delta$ vs R2 (95\% CI) & Slope & O/E \\
+\midrule
+R2 (clinical + phase) & 0.549 (0.458--0.642) & --- & 0.76 & 0.99 \\
+R2 + I2 (primary) & 0.610 (0.529--0.688) & +0.061 ($-$0.038, +0.156) & 0.68 & 0.99 \\
+R2 + I3 (key secondary) & 0.609 (0.543--0.676) & +0.061 ($-$0.041, +0.157) & 0.44 & 0.96 \\
+R2 + I1 & 0.593 & +0.044 ($-$0.054, +0.137) & 0.60 & 0.98 \\
+R2 + I4 & 0.625 & +0.076 ($-$0.041, +0.192) & 0.30 & 0.97 \\
+R3 (baseline), reference & 0.604 (0.520--0.690) & --- & 0.85 & 0.99 \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Permutation test of the primary contrast: p = 0.208 (20 of 100 permutations $\geq$ +0.061; p = 21/101); null
+mean +0.028, median +0.025, range $-$0.104 to +0.162. The nested radiomics choice was unstable (most common
+configuration in 12 of 25 outer folds).
+
+\begin{table}[H]
+\centering
+\small
+\renewcommand{\thetable}{S17}\renewcommand{\theHtable}{S17}
+\caption{\textbf{Bases by cohort (grade 4, ridge; AUC [95\% CI])} (\code{fig4\_phase.csv}).}
+\label{tab:S17}
+\begin{tabularx}{\linewidth}{@{}R{2.02cm} L R{3.60cm} R{3.60cm}@{}}
+\toprule
+Base & Full & Post-RT & Later post-RT \\
+\midrule
+R0 clinical & 0.585 [0.496, 0.666] & 0.552 [0.456, 0.646] & 0.343 [0.281, 0.418] \\
+R1 + timing & 0.644 [0.560, 0.721] & 0.572 [0.485, 0.667] & 0.388 [0.291, 0.503] \\
+R2 + phase & 0.664 [0.569, 0.753] & 0.549 [0.458, 0.642] & 0.376 [0.294, 0.470] \\
+R3 baseline & 0.698 [0.615, 0.774] & 0.604 [0.520, 0.690] & 0.472 [0.339, 0.617] \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Full grade 4 cohort: R1 $-$ R0 +0.059 ($-$0.016, +0.133); R2 $-$ R0 +0.080 (+0.005, +0.152); R3 $-$ R0 +0.113
+(+0.026, +0.208); R3 $-$ R2 +0.034 ($-$0.027, +0.090). R2 + I1 0.696 vs R3 0.698 ($\Delta$ $-$0.002, $-$0.081
+to +0.074). Imaging on top of each base (full grade 4; I1 / I2 / I3 / I4): R0 +0.074 / +0.071 / +0.065 /
++0.063; R1 +0.030 / +0.026 / +0.008 / +0.018; R2 +0.031 / +0.023 / +0.002 / +0.020; R3 +0.004 / $-$0.007 /
+$-$0.032 / $-$0.004; no CI excludes 0. Post-RT grade 4 (I1 / I2 / I3 / I4): R0 +0.049 / +0.058 / +0.046 /
++0.079; R1 +0.030 / +0.038 / +0.042 / +0.060; R2 +0.044 / +0.061 / +0.061 / +0.076; R3 +0.008 / +0.017 /
++0.005 / +0.039; no CI excludes 0. All gliomas, full: R0 0.619, R1 0.693, R2 0.700, R3 0.720. Boosting
+(secondary): grade 4 full R2 0.698, R1 0.693; imaging never helped boosting ($-$0.027 to +0.007); post-RT R2 +
+I2 vs R2 +0.012 ($-$0.069, +0.102).
+
+\textbf{Sensitivity analyses.} Later post-RT only (grade 4: 69 scans, 40 patients, 36 events): bases below
+chance (R0 0.343, calibration slope $-$2.0), the known negative bias of CV for near-null models with few
+events; large $\Delta$AUCs there (e.g. R2 + I3 +0.250) are measured against a below-chance reference and are
+not evidence. Full-cohort models evaluated on post-RT scans only: grade 4 R2 0.570, R2 + I2 0.620, $\Delta$
++0.050 ($-$0.061, +0.157); R3 0.638, R3 + I2 $\Delta$ $-$0.014. Exploratory: age alone 0.586 in grade 4
+post-RT; age + I2 vs age +0.022 ($-$0.103, +0.145). LUMIERE could not be used: no RT dates; the rater flag
+marks 27 of 132 scans and leaves 83 scans with unknown phase.
+
+\FloatBarrier
+\section[Secondary analyses: baselines, sensitivity, imbalance, schedule, feature conflicts, SHAP, calibration and
+utility]{Secondary analyses}\label{sec:S12}
+
+\subsection{Literature baselines and tuning}\label{sec:S12.1}
+
+Source: \code{docs/results/BASELINES.md}.
+
+\begin{table}[H]
+\centering
+\footnotesize
+\renewcommand{\thetable}{S18}\renewcommand{\theHtable}{S18}
+\caption{\textbf{MU ladder (reference = baseline ridge).}}
+\label{tab:S18}
+\begin{tabularx}{\linewidth}{@{}L R{2.75cm} R{3.5cm} R{2.75cm} R{3.5cm}@{}}
+\toprule
+Model & Grade 4 AUC [95\% CI] & $\Delta$ [95\% CI] & All AUC [95\% CI] & $\Delta$ [95\% CI] \\
+\midrule
+Baseline ridge (reference) & 0.698 [0.615, 0.774] & --- & 0.720 [0.638, 0.792] & --- \\
+Clinical only & 0.585 [0.496, 0.666] & $-$0.113 [$-$0.208, $-$0.026] & 0.619 [0.540, 0.696] & $-$0.101 [$-$0.177, $-$0.031] \\
+Timing only & 0.559 [0.475, 0.637] & $-$0.139 [$-$0.214, $-$0.070] & 0.607 [0.528, 0.684] & $-$0.112 [$-$0.175, $-$0.059] \\
+Clinical + timing & 0.644 [0.560, 0.721] & $-$0.054 [$-$0.103, $-$0.012] & 0.693 [0.617, 0.766] & $-$0.027 [$-$0.061, +0.007] \\
+B0 log ET volume & 0.636 [0.541, 0.723] & $-$0.062 [$-$0.183, +0.043] & 0.673 [0.591, 0.752] & $-$0.046 [$-$0.142, +0.054] \\
+B0 $\Delta$ET vs previous & 0.546 [0.479, 0.614] & $-$0.153 [$-$0.241, $-$0.056] & 0.531 [0.465, 0.590] & $-$0.189 [$-$0.285, $-$0.101] \\
+B1 volumetric RANO-style rule & 0.551 [0.480, 0.620] & $-$0.147 [$-$0.239, $-$0.062] & 0.554 [0.488, 0.615] & $-$0.166 [$-$0.258, $-$0.087] \\
+B1 rule, RANO 2.0 window & 0.508 [0.440, 0.577] & $-$0.191 [$-$0.289, $-$0.098] & 0.509 [0.448, 0.568] & $-$0.210 [$-$0.301, $-$0.119] \\
+B4 Hashim-style Cox & 0.628 [0.538, 0.711] & $-$0.070 [$-$0.179, +0.031] & 0.678 [0.596, 0.755] & $-$0.041 [$-$0.120, +0.039] \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+The B1 rule: ET $\geq$ 40\% and $\geq$ 1 cc above the past-only nadir (measurable nadir $\geq$ 0.1 cc), or
+$\geq$ 1 cc from a $\sim$0 cc nadir; positive in 25\% of grade 4 scans. Nested hyperparameter grids: every
+tuned arm within $\pm$0.025 of the baseline, all CIs include 0 (e.g. nested over ridge + boosting $-$0.024
+[$-$0.061, +0.011], grade 4); choices were unstable.
+
+\subsection{Sensitivity of the primary comparison}\label{sec:S12.2}
+
+Source: \code{docs/results/SENSITIVITY.md}.
+
+\begin{table}[H]
+\centering
+\footnotesize
+\begin{tabularx}{\linewidth}{@{}L R{1.5cm} R{1.5cm} R{2.9cm} R{1.4cm} R{3.5cm}@{}}
+\toprule
+Sensitivity & Scans / patients & Events / censored & Baseline AUC [95\% CI] & + radiomics (nested) & $\Delta$AUC [95\% CI] \\
+\midrule
+Primary: grade 4, 120 d & 249 / 126 & 93 / 39 & 0.698 [0.615, 0.774] & 0.666 & $-$0.032 [$-$0.084, +0.017] \\
+Horizon 90 d & 249 / 126 & 62 / 35 & 0.663 [0.577, 0.739] & 0.664 & +0.001 [$-$0.057, +0.063] \\
+Horizon 180 d & 249 / 126 & 131 / 43 & 0.667 [0.573, 0.752] & 0.636 & $-$0.032 [$-$0.092, +0.022] \\
+Composite (progression or death) & 249 / 126 & 107 / 25 & 0.642 [0.566, 0.713] & 0.629 & $-$0.013 [$-$0.073, +0.052] \\
+Alternative progression date & 244 / 124 & 92 / 39 & 0.670 [0.578, 0.757] & 0.648 & $-$0.023 [$-$0.066, +0.019] \\
+Imaging-only follow-up & 249 / 126 & 93 / 43 & 0.685 [0.600, 0.761] & 0.667 & $-$0.018 [$-$0.070, +0.033] \\
+All gliomas & 308 / 155 & 100 / 52 & 0.720 [0.638, 0.792] & 0.747 & +0.028 [$-$0.017, +0.071] \\
+Excluding 12-week post-RT scans & 151 / 90 & 46 / 39 & 0.725 [0.602, 0.834] & 0.727 & +0.002 [$-$0.064, +0.067] \\
+Excluding patient 0145 (conflicting dates) & 247 / 125 & 93 / 39 & 0.691 [0.602, 0.776] & 0.687 & $-$0.004 [$-$0.058, +0.048] \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{Class imbalance}\label{sec:S12.3}
+
+Source: \code{docs/results/IMBALANCE.md}. Event shares are 44\% (grade 4) and 39\% (all
+gliomas), a mild
+imbalance. Over learners (ridge, boosting, XGBoost, LightGBM, nested variants) $\times$ re-balancing (none,
+class weights, patient-aware oversampling, SMOTE with neighbours from other patients), $\Delta$AUC against the
+ridge baseline ranged from $-$0.031 to +0.023; 4 of 190 CIs excluded 0 (ridge, all gliomas, +0.009 to +0.014).
+Re-balancing shifted predicted risk upward as expected from a prior shift (median O/E 1.01 without
+re-balancing vs 0.88--0.89 with it) and raised Brier. Grade 4 ridge with class weights: $\Delta$AUC +0.008
+[$-$0.001, +0.019], O/E 1.04 $\rightarrow$ 0.94. Fixed small-data XGBoost: +0.006 [$-$0.060, +0.072] (grade
+4); nested-tuned XGBoost had calibration slope about 0.6 and transported worse to LUMIERE (0.562 vs 0.608). No
+re-balancing is used in any reported model.
+
+\subsection{Schedule coupling}\label{sec:S12.4}
+
+Source: \code{docs/results/SCHEDULE\_COUPLING.md}. The interval to the next
+MRI is unknown at prediction time
+and partly caused by the outcome (scans are brought forward when progression is suspected), so conditioning on
+it is a conservative test. Grade 4: positive rate 0.54 when the next scan is $\leq$ 60 d away and 0.10 when >
+180 d; interval alone AUC 0.639 [0.555, 0.721]. Baseline AUC within interval tertiles 0.718 / 0.762 / 0.617;
+conditional AUC (pairs within a tertile) 0.687 [0.595, 0.768]; logit coefficient per SD 0.91 $\rightarrow$
+0.86 [0.43, 1.41] after adjusting for log interval; baseline features cannot predict the interval (grouped-CV
+R$^{2}$ $-$0.05). Excluding early post-RT scans and scans whose next scan is > 120 d away: 0.777 [0.653,
+0.891] (85 scans). Nested radiomics conditional AUC 0.654, below the baseline. In LUMIERE the interval alone
+scores 0.788 [0.703, 0.868], and the + volumes boosting model's coefficient is no longer distinguishable from
+0 after adjustment (0.37 [$-$0.14, 0.89]).
+
+\subsection{Feature conflicts}\label{sec:S12.5}
+
+Source: \code{docs/results/FEATURE\_CONFLICTS.md}. No feature group
+measurably hurts: every
+leave-one-group-out contrast that would mean ``group hurts'' has a CI including 0; adding any imaging group to
+the baseline changes AUC by $-$0.004 to +0.019 (CIs span 0). The conflict is redundancy: timing and treatment
+encode the same RT-status information (interaction $-$0.066 to $-$0.073, CI excluding 0 in 3 of 4 population
+$\times$ learner cells). Within the baseline, 9 design columns are exactly collinear (VIF = $\infty$) and 16
+have VIF > 10; ``RT completed'' appears in at least five columns. Pre-stated pruning evaluated nested:
+$\Delta$AUC $-$0.018 to +0.011, all CIs include 0; the same rule applied once globally gives +0.009 to +0.018,
+which is selection optimism.
+
+\subsection{SHAP attributions}\label{sec:S12.6}
+
+Source: \code{docs/results/SHAP.md}. Ridge: exact linear SHAP on in-fold standardised
+features; boosting:
+TreeSHAP (path-dependent), additivity checked to $10^{-6}$; explanations out of fold, 25 fits. Group share =
+mean |per-scan group sum| / sum over groups.
+
+\begin{table}[H]
+\centering
+\small
+\begin{tabularx}{\linewidth}{@{}L R{1.2cm} R{6.5cm}@{}}
+\toprule
+Model (grade 4) & OOF AUC & Group shares \\
+\midrule
+Baseline ridge & 0.698 & treatment 58\%, clinical 25\%, timing 17\% \\
+Baseline boosting & 0.687 & treatment 51\%, clinical 35\%, timing 14\% \\
+Full non-radiomics ridge & 0.692 & treatment 34\%, morphology 21\%, change 15\%, clinical 13\%, volumes 10\%, timing 8\% \\
+Full non-radiomics boosting & 0.694 & treatment 26\%, morphology 23\%, clinical 21\%, change 13\%, volumes 13\%, timing 3\% \\
+Baseline + radiomics score (post hoc configuration) & 0.721 & treatment 48\%, clinical 20\%, timing 16\%, radiomics 16\% \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Time-relative features hold 35\% (ridge) / 47\% (boosting) of feature-level credit in the baseline. Imaging
+takes 45\% / 51\% of credit in the full models without an AUC gain. On LUMIERE, the locked ridge's
+under-prediction is driven by \code{idh\_unknown} (mean $-$0.71 logits; mean |SHAP| 0.77 on LUMIERE vs
+0.13 on
+MU), by lower DeepBraTumIA ET volumes ($-$0.32 logits) and by a missingness indicator that is never set in
+LUMIERE.
+
+\subsection{Calibration, decision curves, added value and sample size}\label{sec:S12.7}
+
+Source: \code{docs/results/CLINICAL\_UTILITY.md}.
+
+\begin{table}[H]
+\centering
+\small
+\begin{tabularx}{\linewidth}{@{}L R{0.97cm} R{2.20cm} R{3.42cm} R{3.07cm} R{0.97cm}@{}}
+\toprule
+Model (grade 4) & AUC & O/E (weighted) & CITL [95\% CI] & Slope [95\% CI] & ICI \\
+\midrule
+Baseline ridge & 0.698 & 0.96 & $-$0.09 [$-$0.42, 0.28] & 0.89 [0.50, 1.43] & 0.032 \\
+Baseline boosting & 0.687 & 0.94 & $-$0.12 [$-$0.47, 0.23] & 0.82 [0.44, 1.31] & 0.039 \\
+Baseline + radiomics (nested) & 0.666 & 0.94 & $-$0.13 [$-$0.46, 0.25] & 0.60 [0.33, 0.93] & 0.063 \\
+Baseline + deep (nested D1) & 0.694 & 0.94 & $-$0.15 [$-$0.52, 0.28] & 0.55 [0.28, 0.91] & 0.085 \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\begin{table}[H]
+\centering
+\small
+\begin{tabularx}{\linewidth}{@{}L R{3.5cm} R{3.5cm} R{3.5cm}@{}}
+\toprule
+Net benefit (grade 4, IPCW) & 10\% & 20\% & 30\% \\
+\midrule
+Treat all & 0.369 & 0.291 & 0.189 \\
+Baseline ridge & 0.372 & 0.300 & 0.232 \\
+$\Delta$ radiomics (nested) & $-$0.000 [$-$0.004, 0.004] & $-$0.001 [$-$0.013, 0.011] & $-$0.020 [$-$0.038, $-$0.004] \\
+$\Delta$ boosting & $-$0.002 [$-$0.007, 0.001] & $-$0.007 [$-$0.021, 0.006] & $-$0.011 [$-$0.039, 0.013] \\
+$\Delta$ deep (nested D1) & $-$0.002 [$-$0.013, 0.006] & +0.002 [$-$0.014, 0.018] & +0.001 [$-$0.023, 0.026] \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Added value vs baseline (continuous NRI; IDI): radiomics +0.17 [$-$0.05, 0.41]; +0.000 [$-$0.030, 0.029]. Deep
++0.48 [0.24, 0.73]; +0.036 [$-$0.009, 0.082]. The positive NRI reflects upward risk shifts in events by
+over-fitted models; $\Delta$AUC and $\Delta$ net benefit are null \citep{pencina2008}. All gliomas: radiomics
+$\Delta$ net benefit +0.011 [0.004, 0.020] at 10\% and +0.014 [0.001, 0.027] at 20\%, with $\Delta$AUC +0.028
+[$-$0.017, +0.071]; nothing similar in grade 4. LUMIERE locked boosting: net benefit $\approx$ treat-all
+(0.218 vs 0.222 at 20\%).
+
+\textbf{Sample size (\citealp{riley2020}; grade 4).} 210 verified scans, 93 events, outcome proportion 0.443,
+R$^{2}$cs 0.119 (from AUC 0.698). Baseline with 31 design columns: 3.0 events per parameter; required 2,190
+scans (970 events) by the shrinkage criterion. Adding 10 radiomics features: 2,896; the full radiomics pool
+(2,477 candidate parameters): 174,942. Requirements assume independent scans, so the shortfall is understated.
+
+\FloatBarrier
+\section{External evaluation on LUMIERE: full results}\label{sec:S13}
+
+Source: \code{docs/results/EXTERNAL\_LUMIERE.md};
+\code{outputs/results/external\_lumiere/results.csv}.
+
+Shared features: age, sex, IDH and MGMT (with unknown), log days since surgery, < 3 months post-RT flag, log
+ET / necrosis + cavity / SNFH volumes (DeepBraTumIA; 14 of 132 index scans without usable volumes, imputed
+with MU training medians inside the locked pipeline).
+
+\begin{landscape}
+\begin{table}[H]
+\centering
+\small
+\renewcommand{\thetable}{S19}\renewcommand{\theHtable}{S19}
+\caption{\textbf{Models trained on MU grade 4.} Pooled locked AUC [95\% CI] and O/E; other columns are per-fold means.}
+\label{tab:S19}
+\begin{tabularx}{\linewidth}{@{}L R{1.6cm} R{1.2cm} R{3.4cm} R{1.0cm} R{1.5cm} R{1.6cm} R{1.6cm} R{1.6cm}@{}}
+\toprule
+Features & Learner & MU CV & Locked, pooled & O/E & Locked, per fold & Fine-tuned (shrink) & Fine-tuned (pooled) & LUMIERE only \\
+\midrule
+Clinical & ridge & 0.585 & 0.610 [0.487, 0.737] & 1.15 & 0.558 & 0.544 & 0.505 & 0.396 \\
+Clinical & boosting & 0.625 & 0.627 [0.514, 0.731] & 0.86 & 0.624 & --- & 0.560 & 0.520 \\
+Clinical + timing & ridge & 0.612 & 0.610 [0.497, 0.737] & 0.98 & 0.603 & 0.591 & 0.603 & 0.586 \\
+Clinical + timing & boosting & 0.664 & 0.632 [0.501, 0.748] & 0.84 & 0.643 & --- & 0.632 & 0.627 \\
+Volumes & ridge & 0.611 & 0.545 [0.410, 0.653] & 1.00 & 0.521 & 0.531 & 0.567 & 0.569 \\
+Volumes & boosting & 0.591 & 0.529 [0.389, 0.644] & 1.00 & 0.515 & --- & 0.513 & 0.518 \\
+\textbf{Clinical + timing + volumes} & \textbf{ridge} & 0.667 & \textbf{0.608 [0.469, 0.739]} & \textbf{1.33} & 0.598 & 0.606 & 0.617 & 0.580 \\
+\textbf{Clinical + timing + volumes} & \textbf{boosting} & 0.675 & \textbf{0.620 [0.495, 0.733]} & \textbf{0.99} & 0.608 & --- & 0.658 & 0.610 \\
+\bottomrule
+\end{tabularx}
+\end{table}
+\end{landscape}
+
+Recalibration equals locked per fold (pooled O/E 0.93--0.97). No adaptation arm has a $\Delta$AUC CI above 0;
+LUMIERE-only is significantly worse for clinical ridge ($\Delta$ $-$0.162 [$-$0.238, $-$0.066]). Cohort
+normalisation of volumes (rank) raised the pooled locked AUC of every volume model (+0.007 to +0.069);
+clinical + timing + volumes boosting 0.620 $\rightarrow$ 0.659 [0.529, 0.767], per-fold $\Delta$ +0.047
+[$-$0.002, +0.110]. This is transductive and a sensitivity analysis only. All-glioma-trained locked clinical +
+timing + volumes: ridge 0.599 [0.462, 0.728] (O/E 1.30), boosting 0.619 [0.477, 0.740] (O/E 1.04).
+
+\textbf{Deep features on LUMIERE} (118 scans with deep features;
+\code{deep/lumiere/locked.csv}): grade 4
+clinical + timing 0.622 $\rightarrow$ + deep 0.679 ($\Delta$ +0.057 [$-$0.132, +0.235], O/E 2.08); random
+encoder same configuration 0.667 (+0.045). With volumes: 0.635 $\rightarrow$ 0.725 (+0.089 [$-$0.026,
++0.215]). All gliomas: +0.064 [$-$0.011, +0.144]; with volumes +0.050 [+0.002, +0.109]. Pretrained vs random,
+same configuration: +0.011 to +0.069, no CI above 0. A classifier separates LUMIERE from MU on deep features
+with AUC 0.82 / 0.79 / 0.81 (BraTS 2021 / BrainSegFounder / random).
+
+\textbf{PRISM's initial radiomics model, as shipped} (legacy features re-extracted, 118 scans; files dated 2026-10-09, before
+the final LUMIERE label definition): raw 0.613 [0.500, 0.729] pooled (O/E 1.24); recalibrated O/E 0.98;
+fine-tuned 0.570 pooled.
+
+\textbf{Literature baselines on LUMIERE} (locked; \code{BASELINES.md}): clinical + timing 0.610 [0.497,
+0.737]; Hashim-style Cox 0.640 [0.508, 0.754] ($\Delta$ +0.030 [$-$0.080, +0.127]); volumetric RANO-style rule
+0.559.
+
+\textbf{Harmonisation note.} DeepBraTumIA ET and SNFH medians (grade 4: 0.61 and 19.11 cc) are far below MU's
+(5.45 and 42.85 cc). The harmonised necrosis + cavity definition is correct but did not improve transfer in a
+development run (\code{FIX\_FEATURES.md} \S{}1).
+
+\FloatBarrier
+\section{Imaging-defined label, imaging diagnostics and re-segmentation}\label{sec:S14}
+
+Source: \code{docs/results/CLEAN\_LABEL.md};
+\code{docs/results/DIAGNOSTICS\_IMAGING.md};
+\code{docs/results/RESEGMENTATION.md};
+\code{outputs/results/analyses/\{clean\_label,diagnostics\_imaging,reseg\}/}.
+
+\textbf{Imaging-defined label.} MU codes the type of first progression: imaging, clinical only, or both.
+Censoring the clinical-only progressions at their progression date changed grade 4 events from 93 (44 / 12 /
+37 by type) to 81 and censored scans from 39 to 51; no non-event changed. Primary (grade 4, full, ridge):
+clinical 0.563 (0.474--0.642); baseline 0.696 (0.610--0.776); imaging (volumes + change) 0.628 (0.549--0.701),
+$\Delta$ $-$0.068 ($-$0.167, +0.033); baseline + imaging 0.722 (0.639--0.799), $\Delta$ +0.027 ($-$0.033,
++0.082). On the original label, baseline + imaging was 0.694 ($\Delta$ $-$0.004, $-$0.060 to +0.051).
+Secondary contrasts (post-RT, all gliomas, boosting) gave baseline + imaging $\Delta$ +0.008 to +0.028 with
+all CIs including 0; imaging alone in all gliomas was worse than the baseline ($-$0.090, $-$0.176 to
+$-$0.007). Within-LUMIERE CV with the expert RANO label: every model at or below chance (ridge clinical +
+timing 0.466), so LUMIERE cannot answer the label question. Rule not met.
+
+\textbf{Volume cross-check against the dataset's own volume table (pass).} Pearson r: ET 0.9998 (exact voxel
+match 98.3\%), SNFH 0.9994 (99.7\%), RC 0.9993 (94.1\%), NETC 0.9957 (83.7\%); disagreements are concentrated
+in seven patients with extra timepoints or a second mask version in the table. Measurement volumes equal mask
+voxel counts exactly. Label mapping: diagonal agreement 0.94--0.97, off-diagonal $\leq$ 0.003. Intensities
+agree with labels (ET/brain on T1c median 1.45, > 1 in 98\% of scans; SNFH/brain on FLAIR median 1.44, > 1 in
+100\%).
+
+\textbf{Concurrent detection (positive control; fail).} Progression scan = first MRI with a mask on or after
+the documented progression date (120 scans, all gliomas).
+
+\begin{table}[H]
+\centering
+\small
+\begin{tabularx}{\linewidth}{@{}L R{4.30cm} R{2.02cm}@{}}
+\toprule
+Comparison (imaging only, 5 $\times$ 5 grouped CV; ridge / boosting) & All gliomas & Grade 4 \\
+\midrule
+Progression scans vs all index scans & 0.62 [0.57, 0.67] / 0.63 & 0.62 / 0.63 \\
+Progression scans vs verified 120-d negatives & 0.68 [0.62, 0.74] / 0.70 & 0.65 / 0.66 \\
+Both groups with a prior scan & 0.62 / 0.61 & 0.60 / 0.62 \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Progression scan vs the same patient's previous scan (74 pairs): ET larger in 49\% (Wilcoxon p = 0.54); lesion
+larger in 65\% (p = 0.033); lesion growth from nadir larger in 79\% (n = 42, p = 0.0003); ET growth from nadir
+50\% (p = 0.95). By progression type: imaging (40 pairs) ET larger in 50\%; imaging + clinical (27) 52\%;
+clinical only (7) 29\%.
+
+\textbf{Why the control fails.} Between consecutive scans $\leq$ 14 days apart (n = 25), the median change was
+3.2-fold in ET and 1.8-fold in lesion volume, larger than over 45--90 day gaps; across 389 pairs the size of
+the change was unrelated to the gap (Spearman $-$0.01, p = 0.83). Some short-gap jumps straddle a
+re-resection; others (four patients) are implausible.
+
+\textbf{Label--date alignment (pass).} The progression date coincides with an MRI for 62\% of progressors
+($\pm$7 d: 69\%; 30 d: 73\%); 22\% of progressors have no MRI on or after the progression date. Positives:
+median time to progression 66 d (IQR 44--92); 76\% are the last scan before progression. Agreement between the
+120-d label and ``the next scan is the progression scan'': 79\% ($\kappa$ = 0.53).
+
+\textbf{Horizon curve (grade 4, IPCW AUC(H); imaging / clinical + phase / both).} 60 d: 0.63 / 0.55 / 0.65; 90
+d: 0.62 / 0.63 / 0.68; 120 d: 0.60 / 0.66 / 0.69; 180 d: 0.58 / 0.59 / 0.63; 270 d: 0.59 / 0.55 / 0.63.
+Imaging stays at about 0.6 at every horizon; 30-d estimates (16 events) are not interpretable.
+
+\textbf{Data issues to report to the data owners.} Three scan pairs from different patients have identical
+masks (0018\_T5 / 0032\_T5, 0060\_T2 / 0062\_T2, 0113\_T1 / 0132\_T1) and four further pairs are
+near-identical; a few implausible within-days volume jumps; 15 of 96 recorded deaths precede a dated MRI (S3).
+
+\textbf{Re-segmentation.} BraTS 2021 SwinUNETR and BrainSegFounder were run on all 594 complete scans (sliding
+window, ROI 128$^{3}$, overlap 0.5; labels written in the MU convention; RC taken from the MU mask where the
+new map is background, because BraTS models have no cavity class and label most of the cavity as NETC, so
+tumour core is not comparable).
+
+\begin{table}[H]
+\centering
+\small
+\begin{tabularx}{\linewidth}{@{}L R{3.07cm} R{3.07cm} R{2.20cm}@{}}
+\toprule
+Agreement with MU masks & Dice ET median [IQR] & Dice WT & Pearson log-volume ET / WT \\
+\midrule
+BraTS 2021 SwinUNETR & 0.80 [0.49, 0.91] & 0.85 [0.74, 0.93] & 0.92 / 0.91 \\
+BrainSegFounder & 0.81 [0.56, 0.91] & 0.86 & 0.94 / 0.92 \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Short-gap consistency ($\leq$ 30 d, 54 pairs): median ET fold change 2.57 $\rightarrow$ 2.17 ($\Delta$ median
+|log ratio| $-$0.17 [$-$0.46, $-$0.02]); WT unchanged. Positive controls with the new masks: primary detection
+(progression scan vs verified negatives, ridge) 0.681 $\rightarrow$ 0.665, $\Delta$ $-$0.016 [$-$0.057,
++0.025] (BrainSegFounder 0.677); ET larger at progression 49\% $\rightarrow$ 45\% (BrainSegFounder 41\%).
+Forward 120-d task, imaging only: all gliomas 0.644 $\rightarrow$ 0.675, $\Delta$ +0.031 [$-$0.017, +0.084];
+clinical + phase + imaging 0.712 $\rightarrow$ 0.740, $\Delta$ +0.029 [$-$0.010, +0.069]. An exploratory
+plain-AUC boosting gain (+0.059 [+0.014, +0.107]) was one of more than 20 comparisons, not pre-specified and
+not confirmed by the IPCW ridge estimate. Verdict by the pre-specified rule: the new segmentation does not
+help.
+
+\FloatBarrier
+\section{The auditable layer: full results and an example audit record}\label{sec:S15}
+
+Source: \code{docs/results/AUDIT\_SYSTEM.md};
+\code{outputs/results/analyses/audit\_system/}.
+Run: 2026-10-15,
+\code{python -m prism audit --workers 24}, 114 s. Checks (\code{checks.csv}): CV predictions reproduce the
+baseline OOF predictions (max |$\Delta$| \num{1.7e-16}); intercept + $\Sigma$ contributions = logit (max
+error \num{1.3e-15}). Code changes after the plan were confined to an as-of rule for demographics, a NaN
+rule for one-class strata, and a shared estimator for referral subsets; none changed a model or a rule.
+
+\textbf{Locked artifact and model card.} Grade 4: 249 training scans, 126 patients, 210 verified, 93 events; C
+= 0.1; conformal threshold q at $\alpha$ = 0.2 / 0.1: 0.613 / 0.683 (all gliomas 0.529 / 0.620). Out of scope:
+pseudoprogression diagnosis; cohorts without treatment fields (including LUMIERE); other institutions without
+validation.
+
+\begin{table}[H]
+\centering
+\small
+\renewcommand{\thetable}{S20}\renewcommand{\theHtable}{S20}
+\caption{\textbf{Example audit records} (out-of-fold, repeat 0, grade 4; label shown for evaluation only).}
+\label{tab:S20}
+\begin{tabularx}{\linewidth}{@{}R{1.3cm} R{2.2cm} R{2.6cm} R{1.6cm} L R{1.9cm}@{}}
+\toprule
+Scan & Phase & Risk [95\% bootstrap] & Conformal set $\alpha$ = 0.2 & Flags & 120-d label \\
+\midrule
+0201\_T3 & pre-RT & 0.04 [0.01, 0.27] & \{0\} & OOD (MGMT unknown) & 0 \\
+0136\_T2 & during RT & 0.47 [0.36, 0.77] & \{0\} & none & 1 \\
+0117\_T1 & early post-RT & 0.50 [0.39, 0.61] & \{0, 1\} & (i) 26 d after RT; (iii) & 1 \\
+0059\_T1 & early post-RT & 0.48 [0.22, 0.77] & \{0, 1\} & (i); (ii) rt\_start\_day below training 1st percentile; (iii) & 0 \\
+0089\_T5 & later post-RT & 0.45 [0.34, 0.72] & \{0, 1\} & (ii) rt\_start\_day above 99th percentile; (iii) & 1 \\
+0014\_T4 & later post-RT & 0.63 [0.44, 0.86] & \{1\} & none & 0 (set misses) \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\textbf{Example record (PatientID\_0117\_Timepoint\_1, day 85 from diagnosis), abridged from
+\code{records.md}.}
+
+\begin{itemize}
+\item Phase of care: early post-RT ($\leq$ 84 d after RT end).
+\item Risk of documented progression within 120 d: 0.50 (95\% bootstrap interval 0.39--0.61); conformal set at
+$\alpha$ = 0.2 \{0, 1\}.
+\item Referral: REFER --- early post-RT window (scan 26 d after RT end); uncertain (the $\alpha$ = 0.2 set
+contains both classes).
+\item Log-odds: intercept $-$0.33 + clinical +0.22 + timing $-$0.14 + treatment +0.24 = $-$0.01 (check error
+\num{5.6e-17}).
+\item Inputs known by scan day: yes, all. Examples: \code{rt\_started} = 1 (source event day 21 $\leq$ scan
+day); \code{rt\_completed} = 1 (day 59);
+\code{days\_since\_rt\_end} = 26; prescription 60 Gy in 30 fractions
+(visible from day 21); \code{surgery\_day} $-$4.
+\item Largest terms: \code{early\_post\_rt} $-$0.12; \code{visit\_index} $-$0.12;
+\code{previous\_brain\_tumor} +0.07; \code{rt\_started} +0.07; \code{male}
+$-$0.07; \code{mgmt\_unknown} +0.07
+(log-odds).
+\item Evaluation only: 120-d label 1 (progression at 111 d).
+\end{itemize}
+
+The displayed risk (model fitted on the whole training fold) and the conformal set (model fitted on 70\% of
+training patients) can disagree in direction (e.g. 0136\_T2: risk 0.47, set \{0\}); this occurred in 1.8\% /
+2.9\% of singleton sets (exploratory). Median width of the 95\% bootstrap interval: 0.37 (IQR 0.32--0.44) in
+grade 4 and 0.31 in all gliomas.
+
+\begin{table}[H]
+\centering
+\footnotesize
+\renewcommand{\thetable}{S21}\renewcommand{\theHtable}{S21}
+\caption{\textbf{P1, conformal coverage at $\alpha$ = 0.2} (\code{conformal.csv}).}
+\label{tab:S21}
+\begin{tabularx}{\linewidth}{@{}R{1.6cm} R{2.9cm} L R{1.5cm} R{1.3cm} R{1.3cm} R{1.6cm} R{1.3cm}@{}}
+\toprule
+Population & Overall [95\% CI] & Pre-RT & During RT & Early post-RT & Later post-RT & Events / non-events & Singleton rate \\
+\midrule
+Grade 4 & 0.841 [0.790, 0.885] & 0.868 (0/5 events covered) & 0.567 (6 scans) & 0.871 & 0.806 & 0.824 / 0.855 & 0.595 \\
+All gliomas & 0.823 [0.776, 0.865] & 0.850 (0/10) & 0.550 (8 scans) & 0.852 & 0.790 & 0.698 / 0.904 & 0.696 \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Per-patient coverage 0.828 / 0.796. At $\alpha$ = 0.1: 0.949 [0.916, 0.975] / 0.928 [0.896, 0.955], singleton
+rate 0.296 / 0.422. Conformal model AUC 0.667 / 0.709 (cost of the 70/30 split). Displayed-risk AUC on
+singleton scans 0.732 / 0.723 (non-singletons 0.628 / 0.594).
+
+\begin{table}[H]
+\centering
+\footnotesize
+\renewcommand{\thetable}{S22}\renewcommand{\theHtable}{S22}
+\caption{\textbf{P2 and referral rules} (\code{p2.csv}, \code{referral.csv},
+\code{referral\_within\_phase.csv}).}
+\label{tab:S22}
+\begin{tabularx}{\linewidth}{@{}R{1.7cm} R{1.5cm} L R{1.9cm} R{1.5cm} R{3.6cm}@{}}
+\toprule
+ & Realised coverage & AUC retained [95\% CI] & Composition-matched & Random removal & P2 [95\% CI] \\
+\midrule
+Grade 4 & 0.671 & 0.731 [0.635, 0.812] & 0.725 & 0.698 & +0.006 [$-$0.023, +0.036] \\
+All gliomas & 0.685 & 0.735 [0.654, 0.820] & 0.733 & 0.720 & +0.003 [$-$0.031, +0.036] \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\begin{table}[H]
+\centering
+\footnotesize
+\begin{tabularx}{\linewidth}{@{}R{2.4cm} L R{1.3cm} R{1.5cm} R{2.6cm} R{2.6cm}@{}}
+\toprule
+Grade 4 rule & Referred & AUC kept & AUC referred & Random removal & Composition-matched \\
+\midrule
+(i) early post-RT & 39.4\% (98 scans, 47 events) & 0.723 & 0.663 & 0.699 [0.673, 0.723] & 0.723 (the rule itself) \\
+(ii) out of distribution & 29.8\% & 0.671 & 0.665 & 0.698 & 0.695 \\
+(iii) uncertain & 40.5\% & 0.732 & 0.628 & 0.699 & 0.734 [0.709, 0.760] \\
+any of (i)--(iii) & 72.6\% & 0.735 & 0.687 & 0.698 & 0.753 \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Within-phase AUC (grade 4 / all): pre-RT 0.555 / 0.493; during RT 0.448 / 0.671; early post-RT 0.663 / 0.678;
+later post-RT 0.597 / 0.644. On OOD-referred scans the model over-predicts (O/E 0.70, slope 0.66).
+
+\textbf{Shortcut audit.} Unknown marker share by 120-d label (progression / no progression / censored), grade
+4: IDH unknown 0/93, 6/117, 5/39; MGMT unknown 6/93, 25/117, 8/39. Dropping both unknown indicators: grade 4
+0.676 [0.592, 0.752], $\Delta$ $-$0.023 [$-$0.047, $-$0.001]; also dropping
+\code{rt\_date\_unknown} $\Delta$
+$-$0.022 [$-$0.045, $-$0.001]; all gliomas $\Delta$ $-$0.011 [$-$0.031, +0.008]. Timing only 0.559, $\Delta$
+$-$0.139 [$-$0.214, $-$0.070]; treatment only 0.701 [0.622, 0.776], $\Delta$ +0.003 [$-$0.050, +0.048] (all
+gliomas 0.710, $\Delta$ $-$0.009).
+
+\begin{table}[H]
+\centering
+\small
+\renewcommand{\thetable}{S23}\renewcommand{\theHtable}{S23}
+\caption{\textbf{Subgroups (grade 4; \textdagger{} fewer than 10 events, descriptive).}}
+\label{tab:S23}
+\begin{tabularx}{\linewidth}{@{}R{3.3cm} R{2.6cm} L R{2.0cm} R{2.7cm}@{}}
+\toprule
+Stratum & Scans / events & AUC [95\% CI] & Slope & O/E [95\% CI] \\
+\midrule
+GBM & 214 / 86 & 0.68 [0.58, 0.76] & 0.78 & 1.10 [0.90, 1.31] \\
+Non-GBM grade 4 \textdagger{} & 35 / 7 & 0.72 [0.54, 0.95] & 1.34 & 0.66 [0.30, 1.00] \\
+MGMT methylated & 88 / 34 & 0.64 [0.52, 0.77] & 0.62 & 0.99 \\
+MGMT unmethylated & 122 / 53 & 0.72 [0.61, 0.84] & 1.11 & 1.14 \\
+IDH wild type & 208 / 87 & 0.66 [0.56, 0.77] & 0.78 & 1.09 \\
+Male / female & 119 / 44, 130 / 49 & 0.67 [0.55, 0.79] / 0.72 [0.61, 0.83] & 0.85 / 0.94 & 1.02 / 1.06 \\
+Age $\leq$ 56.7 / (56.7, 67] / > 67 & 109 / 30, 68 / 35, 72 / 28 & 0.71 / 0.64 / 0.68 & 0.89 / 0.73 / 0.89 & 0.81 / 1.39 [1.07, 1.77] / 1.06 \\
+Early post-RT & 98 / 47 & 0.66 [0.55, 0.76] & 1.06 & 0.95 \\
+Later post-RT & 69 / 36 & 0.60 [0.45, 0.74] & 0.50 & 1.03 \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+The middle age tertile is under-predicted (O/E CI excludes 1); uncorrected for 19 strata. Field strength,
+scanner and race could not be audited (no acquisition metadata in MU).
+
+\textbf{LUMIERE transport audit} (shared-feature ridge, grade-4-trained; reproduces AUC 0.608, O/E 1.33).
+Largest standardised mean differences MU $\rightarrow$ LUMIERE: \code{idh\_unknown} +0.97 (4.4\%
+$\rightarrow$
+40.9\%), \code{log\_et\_cc} $-$0.84, \code{early\_post\_rt}
+$-$0.72, \code{log\_snfh\_cc} $-$0.56. Mean
+contribution shift: \code{idh\_unknown} $-$0.68 logits; net linear-predictor shift $-$0.64. Refit
+without the
+molecular unknown indicators: LUMIERE O/E 1.33 $\rightarrow$ 0.89, slope 0.38 $\rightarrow$ 0.73, AUC 0.608
+$\rightarrow$ 0.614 (all gliomas O/E 1.30 $\rightarrow$ 0.96). MU-calibrated conformal coverage on LUMIERE
+($\alpha$ = 0.2): 0.715 (events 0.340, non-events 0.947).
+
+\begin{table}[H]
+\centering
+\small
+\renewcommand{\thetable}{S24}\renewcommand{\theHtable}{S24}
+\caption{\textbf{Explanation stability} (\code{stability\_summary.csv}).}
+\label{tab:S24}
+\begin{tabularx}{\linewidth}{@{}L R{2.3cm} R{2.3cm} R{2.3cm} R{2.3cm}@{}}
+\toprule
+ & Grade 4: 25 CV fits & Grade 4: 200 bootstraps & All: CV & All: bootstrap \\
+\midrule
+Kendall $\tau$-b, |coef| vs locked, median (IQR) & 0.63 (0.56--0.67) & 0.42 (0.36--0.49) & 0.54 (0.48--0.60) & 0.39 (0.32--0.46) \\
+Top-5 overlap, mean (all 5 identical) & 0.67 (4\%) & 0.52 (1.5\%) & 0.65 (4\%) & 0.52 (2\%) \\
+Minimum sign agreement over the top 5 & 1.00 & 0.92 & 1.00 & 0.97 \\
+Features with sign agreement $\geq$ 0.9 & 61\% & 55\% & 68\% & 61\% \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Locked top 5 (grade 4): \code{rt\_start\_day},
+\code{previous\_brain\_tumor}, \code{idh\_unknown},
+\code{rt\_started}, \code{biopsy\_before\_resection}. Group shares of mean
+|contribution|: treatment 51\%,
+timing 25\%, clinical 24\%. On a LUMIERE refit of the shared-feature model, 9 of 11 coefficients keep the MU
+sign; \code{early\_post\_rt} and the necrosis + cavity volume flip.
+
+\FloatBarrier
+\section{Reproducibility}\label{sec:S16}
+
+Every stage is a command of one Python package (\code{python -m prism <stage>}), wrapped by numbered scripts
+in \code{scripts/} (\code{run\_all.sh} with a \code{--to STEP} option). Shared fold
+assignments are in
+\code{outputs/data/folds.csv}; every analysis writes its outputs, a
+\code{run\_info.json} and a log under
+\code{outputs/}. Seeds are fixed (bootstrap, permutations, conformal splits). The audit layer writes a
+\code{MANIFEST.json} with SHA-256 hashes of inputs, code and outputs, the git state and package versions (one
+recorded drift: scipy 1.17.1 installed against 1.18.1 in the lock file). Pretrained weights are downloaded
+locally and not redistributed. Unit tests cover label rules, as-of-scan treatment features, feature fixes and
+the repeated-CV estimator. Commands for each analysis are listed at the end of the corresponding result
+document in \code{docs/results/}. \flag{[PENDING: public code release and tag.]}
+
+\FloatBarrier
+\section[Reporting checklists (TRIPOD+AI, CLEAR) cross-referenced to the manuscript]{Reporting checklists
+cross-referenced to the manuscript}\label{sec:S17}
+
+Item wording: TRIPOD+AI \citep{collins2024},
+\code{docs/manuscript/CHECKLIST\_TRIPOD\_AI.md}; CLEAR
+(\citealp{kocak2023} \flag{[CHECK]}),
+\code{docs/manuscript/CHECKLIST\_CLEAR.md}. ``M'' = main text section;
+``S'' = Supplement section.
+
+\clearpage
+\textbf{TRIPOD+AI.}
+
+\begin{table}[H]
+\centering
+\footnotesize
+\begin{tabularx}{\linewidth}{@{}R{1.1cm} R{5.4cm} L@{}}
+\toprule
+Item & Topic & Where reported \\
+\midrule
+1 & Title & Title (development + external evaluation, population, outcome) \\
+2 & Abstract & Structured abstract \\
+3a--c & Background, intended use, inequalities & M1; intended use in Key points and S15 model card; inequalities: race not auditable (M4 Limitations, S15) \\
+4 & Objectives & M1 final paragraph \\
+5a--b & Data sources, dates & M2.3; accrual dates: \flag{[PENDING --- relative days only in both datasets; take from dataset papers]} \\
+6a--c & Setting, eligibility, treatments & M2.3--2.4, S2; as-of treatment handling M2.5--2.6, S4 \\
+7 & Data preparation & M2.5, S4, S5, S14 \\
+8a--c & Outcome, assessors, blinding & M2.4, S3; MU assessor not documented, LUMIERE expert RANO; no blinding (M4 Limitations) \\
+9a--c & Predictors & M2.5, S4--S6; MU masks from the dataset, LUMIERE automatic \\
+10 & Sample size & Fixed by public datasets; Riley calculation S12.7, M3.8 \\
+11 & Missing data & In-fold imputation with indicators (M2.5, S4) \\
+12a--g & Analysis methods & M2.1 (architecture), M2.6--2.13, S8--S9, S13 (recalibration, locked predictions) \\
+13 & Class imbalance & None used; S12.3 \\
+14 & Fairness & Subgroup audit S15; limits M4 \\
+15 & Model output & Probabilities, audit record and grounded report (M2.12--2.13, S15, S19); decision curves S12.7; no threshold chosen \\
+16 & Development vs evaluation differences & M2.11, S13 \\
+17 & Ethics & Declarations \flag{[PENDING]} \\
+18a--f & Funding, conflicts, protocol, registration, data, code & Declarations \flag{[PENDING]}; plans S1; code S16 \\
+19 & Patient and public involvement & Declarations (none) \\
+20a--c & Flow, characteristics, comparison with development data & Table 1, S2 (Figure S1, Table S2) \\
+21 & Participants and events per analysis & Tables 1, S4, S15; each result table \\
+22 & Full model specification & Locked model files and model card (S15) \flag{[PENDING: release coefficients]} \\
+23a--b & Performance with CIs, subgroups, heterogeneity & M3, Tables 2--3, S11--S15; heterogeneity only MU vs LUMIERE \\
+24 & Model updating & S13 (recalibration, fine-tuning) \\
+25--26 & Interpretation, limitations & M4 \\
+27a--c & Usability, input quality, next steps & S15 (OOD flags, as-of checks), M4 \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\Needspace{22\baselineskip}
+\textbf{CLEAR (selected items; full table in \code{CHECKLIST\_CLEAR.md}).}
+
+\begin{table}[H]
+\centering
+\footnotesize
+\begin{tabularx}{\linewidth}{@{}R{1.1cm} R{5.4cm} L@{}}
+\toprule
+Items & Topic & Where reported \\
+\midrule
+1--6 & Title, abstract, keywords, background, rationale, objectives & Title, Abstract, Keywords, M1 \\
+7--11 & Guidelines, ethics, sample size, study nature, eligibility & M2.2, Declarations, S12.7, M2.4, S2 \\
+13--18 & Data source, overlap, split, imaging protocol, non-radiomic predictors, reference standard & M2.3, S6 (BraTS pretraining overlap risk), M2.7--2.8, S4, S3; MU protocol not distributed \\
+19--24 & Segmentation, pre-processing, resampling, discretisation, image types & M2.3, S5, S14 \\
+25--28 & Extraction method, classes, number, defaults & S5 \\
+29--33 & Missing data, imbalance, reliability, scaling, dimension reduction & S4, S12.3, S5 (ICC filter), S5 \\
+34--37 & Algorithm, tuning, confounders, model selection & M2.8, S5, S12.4 (schedule), M2.9 (phase of care) \\
+38--43 & Testing, metrics, uncertainty, comparisons, explainability & M2.8, M2.11, S9, S12.6 \\
+44--48 & Characteristics, flow, feature statistics, performance, comparison & Table 1, S2, S5, M3, Table 3 \\
+49--52 & Discussion items & M4 \\
+53--58 & Open science & Declarations, S16 \flag{[PENDING: release]} \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\FloatBarrier
+\section{CFB-GBM diffusion analysis}\label{sec:S18}
+
+Source: \code{docs/results/CFB\_ADC.md};
+\code{outputs/results/analyses/cfb\_adc/\{results.csv,
+rule.json\}};
+dataset facts \code{docs/literature/DATASETS.md}.
+
+\textbf{Data.} TCIA CFB-GBM clinical v03, treatment and MRI availability v02, RANO v04, PyRadiomics features
+v03 on the GTV; no images used. t0 is the RT-planning MRI; t1 lies a median 14 weeks after t0, about 6--8
+weeks after the end of RT, inside the 12-week pseudoprogression window. t1$\rightarrow$t2 labels: 30
+progressions among 107 labelled patients. No IDH, MGMT or progression dates. The RANO label is computed from
+the GTV volume (RANO sizes equal the PyRadiomics GTV mesh volume, Spearman 1.00).
+
+\textbf{Design.} One row per patient; outcome t1$\rightarrow$t2 progressive disease. Feature sets (a) clinical
+(age, sex, WHO performance status, WHO edition, RT dose, fractions, delay to RT, weeks t0$\rightarrow$t1); (b)
++ log GTV volume at t1 and change t0$\rightarrow$t1; (c) + T1-Gd and FLAIR first-order and texture at t1 plus
+GTV shape; (d) + ADC first-order and texture at t1. Each radiomics block: in-fold 1\% clipping, median
+imputation, variance filter, scaling, top-k univariate F (k $\in$ \{5, 10\}); ridge with C $\in$ \{0.01
+\ldots{} 3\}; k and C by inner stratified 3-fold CV. 20 repeats of stratified 5-fold CV, identical splits for
+all sets; patient bootstrap CIs (1,000); 1,000 permutations of the ADC block for the primary contrast.
+
+\begin{table}[H]
+\centering
+\small
+\renewcommand{\thetable}{S25}\renewcommand{\theHtable}{S25}
+\caption{\textbf{Results} (AUC = mean over 20 repeats of pooled-OOF ROC AUC).}
+\label{tab:S25}
+\begin{tabularx}{\linewidth}{@{}L R{3.60cm} R{3.42cm}@{}}
+\toprule
+Set & Conventional cohort (107 patients, 30 events) & ADC cohort (77 patients, 19 events) \\
+\midrule
+(a) clinical & 0.501 (0.403--0.596) & 0.565 (0.437--0.689) \\
+(b) + GTV volume and change & 0.685 (0.569--0.781) & 0.713 (0.589--0.814) \\
+(c) + conventional radiomics & 0.676 (0.575--0.769) & 0.691 (0.576--0.788) \\
+(d) + ADC radiomics & 0.696 (0.593--0.785)\textsuperscript{a} & 0.698 (0.577--0.800) \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\begin{table}[H]
+\centering
+\small
+\begin{tabularx}{\linewidth}{@{}R{1.85cm} R{4.12cm} L@{}}
+\toprule
+Contrast & Conventional cohort & ADC cohort \\
+\midrule
+(b) vs (a) & +0.185 (+0.064, +0.293) & +0.148 (+0.031, +0.266) \\
+(c) vs (b) & $-$0.009 ($-$0.067, +0.051) & $-$0.022 ($-$0.074, +0.025) \\
+(d) vs (c) & +0.019 ($-$0.006, +0.045) & \textbf{+0.007 ($-$0.019, +0.035)} (primary; permutation p = 0.151; minimal detectable $\Delta$ 0.038) \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\textsuperscript{a} ADC block imputed for 30 patients without ADC at t1; secondary only. \textbf{Rule not
+met.} Clinical features are at chance (no molecular markers and no phase variation: every t1 scan is at the
+same post-RT stage). Volume is the only informative block and is partly circular with the volumetric label.
+Conventional texture adds nothing beyond volume; ADC adds nothing measurable beyond conventional radiomics.
+Gains larger than about 0.04 are unlikely; smaller gains cannot be excluded. Perfusion was not available.
+
+\FloatBarrier
+\section{PRISM report generator: design and faithfulness evaluation}\label{sec:S19}
+
+Source: \code{docs/results/REPORT\_AGENT.md};
+\code{outputs/results/analyses/report\_agent/}
+(\code{summary\_eval.csv}, \code{checks\_eval.csv}, \code{by\_phase.csv}, \code{stress.csv},
+\code{summary\_stress.csv}, \code{reports/eval/}). Code: \code{prism/report/},
+\code{prism/analyses/report\_agent.py} (\code{python -m prism report}).
+
+\textbf{Plan.} Written after prompt and checker development on a separate development set and before any
+evaluation or stress report was generated; frozen 2026-10-15 with a timestamp and the sha256 of the plan and of
+every report-generator code file (\code{PLAN\_snapshot.\{md,timestamp,code\_sha256\}}). After the run only the
+example-page flag labels and a duplicated ``Limitations:'' prefix were changed (figures re-run; no check, prompt
+or number changed).
+
+\textbf{Report record.} The audit record (S15) plus two blocks: a risk tier (tertile cut points of the fold
+model's predicted risk on its own training scans; descriptive, not a threshold) and past-only indicative volumes
+(ET and SNFH volume, change since the prior scan and the nadir, and the volumetric rule of Supplementary S12,
+development AUC 0.551, labelled ``indicative, not RANO''; percent changes only from a baseline $\geq$ 1 cc). The
+120-day outcome is not in the record. A flat \emph{facts} view (field key $\rightarrow$ pre-rounded value) is the only
+input of the language model and the only reference of the checker. The refitted fold models reproduce the audit
+stage's stored risk (maximum $|\Delta|$ \num{9.7e-17}).
+
+\textbf{Sections.} Deterministic: scan context; inputs (value, unit, source column, as-of day); risk with 95\%
+interval, tier and 80\% conformal set; contributions (intercept + clinical / timing / treatment = logit, top terms;
+imaging ``not part of this model''); referral flags with reasons; volumetric change (indicative); a standing
+limitations line. Language model: the summary. \emph{Kept from PRISM v1:} the change-from-prior and nadir table (now
+measured volumes, past-only), the explanation section (exact additive contributions instead of SHAP on the fusion
+MLP), tiered confidence language, the decision-support disclaimer. \emph{Dropped:} the fixed 0.48 alert threshold
+and 0.75 ``high confidence'' cut (hand-set on the initial split; the core model's net benefit exceeds treat-all
+only above about a 20\% threshold); the ``RANO 2.0 rule engine'' and RANO--AI concordance (computed from the model's
+own probability, not measurements; the volumetric rule has AUC 0.55 for 120-day progression and cannot arbitrate
+the model); the weighted pseudoprogression confounder score (literature weights never fitted; steroid change not in
+the data; its main component is already a model input and a flag); the hard-coded molecular table and the
+printed outcome label.
+
+\textbf{Language model and arms.} Arm A (grounded): \code{Qwen/Qwen3.8-27B}, revision
+\texttt{\small 1d4bf0f2\allowbreak ff6012fd\allowbreak 82039f2f\allowbreak a52739d0\allowbreak dd7c60c0} (Apache-2.0), bf16, vLLM 0.31.0 in a separate environment, tensor
+parallel over 4 H100, offline (no external API; data stay on the node), non-thinking mode, greedy decoding, seed 0,
+structured output \code{\{"sentences": [\{"text", "fields"\}]\}}, at most 1,024 new tokens. Frozen 10-rule system
+prompt: facts only; every number copied from a field; cite field keys per sentence; state risk, interval and tier;
+state every active flag and the clinician-review action, never describe an inactive flag as raised; no diagnosis
+or RANO category; no management; hedged language; volumes indicative; 4--7 sentences. Arm B (original style): the
+v1 \code{generate\_llm\_summary} prompt verbatim, its context blocks filled from the same record (risk in place of
+the fusion probability with the original 0.48 / 0.75 phrases; the volumetric rule in the ``RANO 2.0'' block; the
+original confounder score; top 3 contributions as ``SHAP drivers''; a referral-flag block added so that both arms
+see the same facts); no citation constraint; same model and decoding; at most 500 new tokens. Arm C: arm A's
+prompt with \code{Qwen/Qwen3.5-9B}, revision \texttt{\small c2022362\allowbreak 35762e1c\allowbreak 871ad0cc\allowbreak b60c8ee5\allowbreak ba337b9a}, 1 GPU.
+
+\textbf{Checker} (deterministic, patterns frozen with the plan). Per claim: every cited key must exist; every number
+must equal a number in a cited field up to the written rounding (magnitudes of signed values and $\times$100 for
+percentages allowed); a number without a citation is unsupported. Arm B has no citations; its numbers are checked
+against its own prompt (``vs own input'') and against the record. Per report: each active flag mentioned (keyword
+patterns per flag); inactive flags not described as raised; tier words consistent with the record; no forbidden
+content (diagnosis, RANO category as outcome, management, unhedged certainty; full patterns in the source
+document). An unparsed report fails every check. The checker cannot see a correct number attached to the wrong
+concept; meaning was checked by an AI assistant's reading (below).
+
+\textbf{Sets.} Development: the 59 non-grade-4 scans (two rounds; final pass A 58/59, B 51/59, C 54/59).
+Evaluation: all 249 grade 4 scans (126 patients), records from the out-of-fold fits of CV repeat 0, one report per
+scan per arm. Primary (pre-specified): arm A, share of reports with zero unsupported claims and every active flag
+mentioned, Wilson 95\% CI, target $\geq$ 0.95. Secondary: paired differences on the same scans, 2,000-draw
+patient-cluster bootstrap (seed 0). Stress: 30 perturbed evaluation records (10 risk moved to another tier's
+mid-point, 10 flag switched on, 10 flag switched off); a report passes if it passes the checks against the
+perturbed record and follows the change.
+
+\begin{table}[H]
+\centering
+\footnotesize
+\renewcommand{\thetable}{S26}\renewcommand{\theHtable}{S26}
+\caption{\textbf{Report faithfulness on 249 grade 4 scans} (\code{summary\_eval.csv}). CI: Wilson 95\%.}
+\label{tab:S26}
+\begin{tabularx}{\linewidth}{@{}L R{3.4cm} R{3.6cm} R{3.4cm}@{}}
+\toprule
+ & A grounded, 27B & B original prompt, 27B & C grounded, 9B \\
+\midrule
+Pass (zero unsupported + all flags) & 236/249 (0.948) [0.913, 0.969] & 171/249 (0.687) [0.627, 0.741] (vs own input) & 243/249 (0.976) [0.948, 0.989] \\
+Pass vs the record & 236 & 0 & 243 \\
+Reports with an unsupported claim & 13 & 38 (own input); 249 (record) & 6 \\
+Unsupported claims per report & 0.05 & 0.15 (own input); 2.33 (record) & 0.02 \\
+Active flags omitted & 0/269 & 48/269 (17.8\%), 47 reports & 0/269 \\
+Spurious flag & 0 & 1 & 0 \\
+Forbidden content, any & 0\% & 100\% & 2.8\% (7) \\
+\quad diagnosis / RANO category / management / certainty & 0 / 0 / 0 / 0\% & 51\% / 41\% / 99\% / 40\% & 0.8\% / 0 / 2.0\% / 0.8\% \\
+Tier stated / inconsistent & 100\% / 0\% & 57\% / 44\% (other scheme) & 100\% / 0.4\% \\
+Batched time per report & 0.06 s (4 H100) & 0.06 s & 0.08 s (1 H100) \\
+Single-request latency, median of 10 & 3.6 s & -- & 3.1 s \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\textbf{Arm A.} All 13 failures: the risk sentence says ``within 120 days'' without citing \code{risk.horizon\_days};
+the number is correct and in the record (0 numbers absent from the record). All 13 are early post-RT scans (pass by
+phase: pre-RT 76/76, during RT 6/6, early post-RT 85/98, later post-RT 69/69); the development set showed the same
+mode once. 249/249 parsed; 0 invalid citations; 0 truncated; 5.9 sentences and 480 output tokens per report.
+\emph{EXPLORATORY:} accepting a number that appears verbatim in a field cited elsewhere in the report would give
+249/249; this relaxation is post hoc.
+
+\textbf{A vs B} (paired, 249 scans): pass +0.261 [+0.197, +0.328]; pass vs record +0.948 [+0.919, +0.973];
+unsupported claims per report $-$0.10 [$-$0.15, $-$0.05]; flag omissions per report (keyword-based for both)
+$-$0.19 [$-$0.25, $-$0.13]; forbidden content $-$1.00 [$-$1.00, $-$1.00]. Arm B states a RANO verdict in 241 reports,
+mentions pseudoprogression in 249, recommends management in 242 (MDT / tumour board 166, short-interval MRI 172),
+mentions steroids (not in the record) in 84 and calls the 120-day horizon ``12-month'' in 41. \textbf{A vs C:} pass
+$-$0.028 [$-$0.062, +0.008]; forbidden $-$0.028 [$-$0.053, $-$0.008] (C worse). Of C's 7 forbidden hits, 1 is a real
+violation (``suggesting changes that may reflect treatment effects'') and 6 are pattern false positives (for example
+``this does not confirm progression''); one C report also gives a wrong reason for a referral, a meaning error the
+checker cannot see. C's 6 unsupported claims are 4 invalid keys and 2 citation omissions.
+
+\begin{table}[H]
+\centering
+\small
+\renewcommand{\thetable}{S27}\renewcommand{\theHtable}{S27}
+\caption{\textbf{Stress test: 30 perturbed records} (\code{stress.csv}; pass = checks against the perturbed record and
+the report follows the change; checks alone: A 28, B 17, C 29).}
+\label{tab:S27}
+\begin{tabularx}{\linewidth}{@{}L R{2.6cm} R{2.4cm} R{2.4cm} R{1.4cm}@{}}
+\toprule
+Arm & Risk moved to another tier & Flag switched on & Flag switched off & Total \\
+\midrule
+A & 8/10 & 10/10 & 9/10 & 27/30 \\
+B & 2/10 & 6/10 & 5/10 & 17/30 \\
+C & 9/10 & 9/10 & 10/10 & 28/30 \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+The three arm-A failures, read: the horizon-citation omission (the new risk and tier were stated correctly); a new
+interval bound that coincided with the old risk (the new risk, interval and tier were stated correctly; C fails
+the same record); and an invented key (\code{risk.tier\_cut\_upper\_percent}) for a value that is in the record.
+\emph{EXPLORATORY:} in all 30 perturbed records the grounded text followed the changed field.
+
+\textbf{Reading by an AI assistant (not a clinician).} The three pre-specified examples (first scan per phase) and 12
+random arm-A reports (seed 1) were read against their facts by an AI assistant (Claude); no human or clinician has
+read them yet: no factual error; every active flag stated with its reason. Wording issues the
+checker cannot see: ``95\% confidence interval'' for a bootstrap interval (twice); a double negative for a volume
+below the nadir; a pre-diagnosis scan whose ``all inputs known by the scan day'' is ``no'' (the molecular look-ahead,
+S15) is not mentioned in the summary, only in the deterministic section; a risk just below a tier cut point that
+rounds to the same value as the cut. Arm B on the same examples states ``stable disease'' or ``Progressive Disease
+(PD)'', recommends MDT review and short-interval MRI, and mentions steroid dosing that is not in the record.
+
+\textbf{Open issues.} The primary target was missed by one report; the obvious fix (require citing the horizon
+field, or treat constants as citable) would be tuned on the evaluation set and needs fresh records (for example
+another CV repeat). The checker is lexical and has false positives on negations. Tier cut points should be shown
+with more decimals. Re-run identity of greedy decoding under vLLM batching was not tested. Records come from one CV
+repeat of one cohort, and the core model has no external validation with treatment fields. No clinician evaluated
+usefulness, readability or trust.
+
+\FloatBarrier
+\section{Phase of care and censoring}\label{sec:S20}
+
+Source: \code{docs/results/PHASE\_CENSORING.md};
+\code{outputs/results/analyses/phase\_censoring/} (file named in each table). Code:
+\code{prism/analyses/phase\_censoring.py} (\code{python -m prism phasecens}).
+
+\textbf{Why.} The phase-of-care result (main \S2.5; S11) is a gain of +0.080 [+0.005, +0.152] for R2 (clinical +
+phase, 0.664) over R0 (clinical, 0.585) in grade 4 (\code{phase\_ladder/rungs.csv}). A review asked whether this gain
+partly comes from censoring. Of the 39 censored grade 4 scans, 38 were taken before RT. The headline IPCW AUC uses one
+marginal Kaplan-Meier (KM) censoring curve (\code{prism/models/metrics.py}), which assumes that censoring does not
+depend on phase. A look at the data, with no model, showed that all 38 censored pre-RT scans come from the 37 grade 4
+patients whose RT is never documented. For these patients the RT field and the chemotherapy field are both blank, not
+``No''. The median follow-up of the censored scans is 0 days, and 14 of these patients died without documented
+progression (Supplementary Tables~\ref{tab:S28} and~\ref{tab:S29}).
+
+\begin{table}[H]
+\centering
+\footnotesize
+\renewcommand{\thetable}{S28}\renewcommand{\theHtable}{S28}
+\caption{\textbf{Phase of care by 120-day status, grade 4}
+(\code{descriptives\_phase\_outcome.csv}). Five-level phase. Censored scans: follow-up shorter than 120 days with no
+documented progression.}
+\label{tab:S28}
+\begin{tabularx}{\linewidth}{@{}L R{0.9cm} R{1.3cm} R{1.0cm} R{1.3cm} R{1.3cm} R{1.7cm} R{1.9cm} R{1.3cm}@{}}
+\toprule
+Phase & Scans & Patients & Events & Non-events & Censored & Censored, follow-up $\leq$ 1 d & Censored deaths without progression & Verified event rate \\
+\midrule
+Pre-RT, RT pending & 13 & 13 & 2 & 11 & 0 & 0 & 0 & 0.15 \\
+Pre-RT, RT never documented & 63 & 37 & 3 & 22 & 38 & 20 & 14 & 0.12 \\
+During RT & 6 & 6 & 5 & 1 & 0 & 0 & 0 & 0.83 \\
+Early post-RT & 98 & 76 & 47 & 51 & 0 & 0 & 0 & 0.48 \\
+Later post-RT & 69 & 40 & 36 & 32 & 1 & 1 & 0 & 0.53 \\
+All & 249 & 126 & 93 & 117 & 39 & 21 & 14 & 0.44 \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+In all gliomas, 47 of the 52 censored scans fall in the stratum with RT never documented (92 scans: 4 events, 41
+non-events, 47 censored). The other strata have 0, 0, 1 and 4 censored scans (RT pending, during RT, early post-RT,
+later post-RT).
+
+\begin{table}[H]
+\centering
+\small
+\renewcommand{\thetable}{S29}\renewcommand{\theHtable}{S29}
+\caption{\textbf{Grade 4 patients with RT never documented and with RT documented}
+(\code{descriptives\_rt\_documentation.csv}). IQR in square brackets.}
+\label{tab:S29}
+\begin{tabularx}{\linewidth}{@{}L R{3.6cm} R{3.6cm}@{}}
+\toprule
+ & RT never documented & RT documented \\
+\midrule
+Patients / scans & 37 / 63 & 89 / 186 \\
+Scans per patient, median & 1 [1--2] & 2 [1--3] \\
+Age, median & 65 [58--78] & 61 [53--69] \\
+Male & 57\% & 51\% \\
+IDH wildtype / mutant / unknown (patients) & 32 / 2 / 3 & 80 / 6 / 3 \\
+MGMT methylated / unmethylated / unknown & 12 / 17 / 8 & 33 / 45 / 11 \\
+Chemotherapy field ``Yes'' / blank & 0 / 37 & 88 / 1 \\
+Hospice field ``Yes'' & 10 & 15 \\
+Scan day from diagnosis, median (range) & 20 ($-$58 to 579) & 103 ($-$29 to 1332) \\
+Follow-up after the scan, median (days) & 36 [0--298] & 317 [178--490] \\
+Scans with follow-up $\leq$ 1 d & 21 & 1 \\
+Patients who died without progression & 14 & 0 \\
+Patients with documented progression & 3 & 88 \\
+Scans: event / non-event / censored & 3 / 22 / 38 & 90 / 95 / 1 \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+The group with RT never documented is older, was scanned early (around surgery) and has no treatment record. Almost
+every patient in it is lost right after the scan or dies without documented progression. It looks like a group
+treated or followed elsewhere, or not treated, rather than a group under surveillance before RT. Its censoring is very
+unlikely to be independent of outcome, since deaths dominate.
+
+\textbf{The ``unknown'' row of main Table 1.} \code{early\_post\_rt} is missing when the RT end date is missing
+(\code{prism/data/mu.py}). The 65 grade 4 scans with this field unknown are 63 pre-RT scans of patients with no RT
+documented and 2 scans during RT whose RT end date is missing (all gliomas: 94 = 92 + 2). Every one of these scans has
+a phase, so the phase analysis has no unknowns. Separately, 8 grade 4 scans of 7 patients (11 scans of 10 patients in
+all gliomas) were taken before the diagnosis date, from 58 days to 1 day before it. At these scans IDH and MGMT were
+not yet known (the molecular lookahead, S15).
+
+\textbf{A third lookahead in the core model.} The core model's preprocessing (\code{c3.BASE\_PRE}) adds a missingness
+indicator for \code{early\_post\_rt} and for its interaction with MGMT. At a pre-RT scan this indicator is 1 when RT is
+never documented and 0 when RT is documented later. It therefore separates ``RT pending'' from ``RT never documented''
+with information from after the scan. This is a third lookahead, next to the shortcut through the unknown markers and the
+molecular lookahead (S15). The audit's as-of check did not flag it, because that check reads raw values, not the
+missingness indicators that the imputer adds.
+
+\textbf{Plan (prespecified).} The plan was written and committed (\code{c98febe}) before any model of this analysis
+was fitted or scored on the real labels. The first real run saved it to \code{PLAN\_snapshot.md}, and it was not
+changed afterwards. Anything added after the results were seen is labelled EXPLORATORY. Grade 4 is the primary
+population and all gliomas the secondary one. Folds, pipeline (\code{c3.BASE\_PRE} + ridge, inner choice of C) and
+metrics are the shared ones. The refitted core model reproduces the stored C3 predictions, and the refitted R0, R1
+and R2 reproduce the stored ladder predictions, all to \num{1.7e-16} (\code{checks.csv}). The main elements:
+\begin{itemize}
+\item \emph{Five-level phase:} RT pending (RT documented and started after the scan), RT never documented, during
+RT, early post-RT, later post-RT. ``Never documented'' is only known afterwards, so the five-level phase is used to
+stratify the analysis and to model censoring, never as a model input.
+\item \emph{Censoring schemes.} \code{marginal\_km}: one KM curve, the headline estimator. \code{phase5\_km}
+(primary alternative): one KM curve per five-level phase, so that censoring may depend on phase.
+\code{phase4\_km}: one KM curve per four-level phase. \code{logistic\_ipw}: verified scans weighted by
+1/P(verified) from a logistic model on phase, age, sex and days from diagnosis, with P floored at 0.1.
+\code{verified}: unweighted verified scans. \code{deaths\_as\_controls}: death without progression before 120 days
+counts as a non-event. Two bounds: every censored scan set to an event, or to a non-event. Every scheme reestimates
+its weights in each of 1,000 paired patient-cluster bootstrap draws.
+\item \emph{Cohorts}, with models refitted inside each: \code{full}; \code{rt\_pathway}, which excludes the patients
+whose RT is never documented (this needs a treatment plan field at deployment, so it is a statement of intended use,
+not an as-of rule); \code{rt\_started}, scans with RT started by the scan day (a deployable as-of rule).
+\item \emph{Corrected core models}, all with the core pipeline. \code{core\_no\_unknown}: the IDH and MGMT unknown
+indicators dropped. C1: \code{core\_no\_unknown} with IDH and MGMT masked at the scans taken before diagnosis. C1\_mean:
+as C1, with unknown or masked markers set to the training fold mean. C2: C1 with an as-of \code{early\_post\_rt} (1 if
+RT was completed by the scan and at most 84 days have passed since its end, else 0), which is never missing and so
+has no missingness indicator. C2 removes all three lookaheads known now.
+\item \emph{P1, censoring (primary).} Two estimates of the gain R2 $-$ R0: its value under \code{phase5\_km}, and its
+value refitted in \code{rt\_pathway}. The marginal gain is +0.080, and half of it is +0.040. The rule: the finding is
+\emph{robust} if both estimates are $\geq$ +0.040, \emph{partly dependent on censoring} if exactly one is, and
+\emph{not supported once censoring is handled} if neither is. The two bounds are reported alongside.
+\item \emph{P2, corrected headline.} The C2 IPCW AUC under \code{marginal\_km} with CI, $\Delta$AUC C2 $-$ core,
+calibration slope and O/E. Everything else is secondary or descriptive, with no multiplicity correction.
+\end{itemize}
+
+\begin{table}[H]
+\centering
+\footnotesize
+\renewcommand{\thetable}{S30}\renewcommand{\theHtable}{S30}
+\caption{\textbf{P1: the phase-of-care gain R2 $-$ R0 under each censoring scheme and cohort}
+(\code{ladder\_schemes.csv}). ``Change vs marginal'' is a difference of differences with a paired CI. Rows
+in bold are the two primary estimates.}
+\label{tab:S30}
+\begin{tabularx}{\linewidth}{@{}L R{3.5cm} R{3.5cm} R{3.5cm}@{}}
+\toprule
+Scheme / cohort & Gain, grade 4 & Change vs marginal, grade 4 & Gain, all gliomas \\
+\midrule
+\code{marginal\_km}, full (headline) & +0.080 [+0.019, +0.160] & -- & +0.082 [+0.023, +0.152] \\
+\textbf{\code{phase5\_km}, full} & \textbf{+0.124 [+0.039, +0.232]} & +0.045 [+0.005, +0.104] & +0.121 [+0.051, +0.198] \\
+\code{phase4\_km}, full & +0.125 [+0.044, +0.224] & +0.046 [+0.019, +0.090] & +0.109 [+0.043, +0.183] \\
+\code{logistic\_ipw}, full & +0.118 [+0.022, +0.221] & +0.038 [$-$0.018, +0.092] & +0.120 [+0.039, +0.196] \\
+\code{deaths\_as\_controls}, full & +0.111 [+0.044, +0.193] & +0.032 [+0.006, +0.066] & +0.108 [+0.050, +0.172] \\
+Bound: censored = events & $-$0.044 [$-$0.107, +0.034] & $-$0.123 [$-$0.176, $-$0.082] & $-$0.015 [$-$0.074, +0.045] \\
+Bound: censored = non-events & +0.167 [+0.098, +0.248] & +0.088 [+0.049, +0.130] & +0.141 [+0.081, +0.203] \\
+\textbf{\code{rt\_pathway} refit} (1 censored scan left) & \textbf{+0.057 [+0.009, +0.117]} & -- & +0.018 [$-$0.010, +0.052] \\
+\code{rt\_started} refit & +0.013 [$-$0.027, +0.058] & -- & +0.017 [$-$0.013, +0.047] \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\textbf{Verdict under the prespecified rule: robust} in grade 4. Both primary estimates clear +0.040: +0.124 under
+censoring stratified by phase, and +0.057 after excluding the patients with RT never documented. The CIs here come
+from this analysis's own bootstrap draws, so the marginal CI (+0.019 to +0.160) differs slightly from the one in
+\code{phase\_ladder/rungs.csv}. Three qualifications. (1) The marginal curve was conservative, not inflating. It spreads
+the censoring on the scan day of the group with RT never documented over every phase, which underweights the verified pre-RT
+scans, mostly controls at low risk. Letting censoring depend on phase raises the phase gain and every AUC
+(Supplementary Table~\ref{tab:S31}). (2) About 30\% of the gain comes from the group with RT never documented:
+excluding it leaves +0.057 of the +0.080. (3) The gain does not survive the extreme bound. If all 38 censored scans
+of that group had progressed within 120 days, the gain would be $-$0.044. The descriptives make this unlikely (14 of
+these patients died without documented progression, and only 3 of the 25 verified scans in the group are events), but
+the data cannot rule it out. In all gliomas, the secondary population, the \code{rt\_pathway} gain (+0.018) is below
+the threshold, so that result would read ``partly dependent on censoring''.
+
+\begin{table}[H]
+\centering
+\footnotesize
+\renewcommand{\thetable}{S31}\renewcommand{\theHtable}{S31}
+\caption{\textbf{Ladder and corrected core model under the alternative censoring weights, grade 4, full cohort}
+(\code{schemes.csv}). The last column counts only pairs of a case and a control in the same four-level phase
+(\code{marginal\_km} weights).}
+\label{tab:S31}
+\begin{tabularx}{\linewidth}{@{}L R{1.7cm} R{2.6cm} R{1.7cm} R{1.7cm} R{1.9cm} R{1.9cm}@{}}
+\toprule
+Arm & \code{marginal\_km} & \code{phase5\_km} ($\Delta$ vs marginal) & \code{logistic\_ipw} & \code{deaths\_as\_controls} & Bounds (events / non-events) & Stratified by phase \\
+\midrule
+R0 clinical & 0.585 & 0.599 (+0.014) & 0.586 & 0.585 & 0.578 / 0.568 & 0.595 \\
+R2 + phase & 0.664 & 0.723 (+0.059) & 0.704 & 0.697 & 0.534 / 0.736 & 0.577 \\
+R3 core & 0.698 & 0.749 (+0.050) & 0.728 & 0.726 & 0.561 / 0.759 & 0.637 \\
+C2 & 0.678 & 0.734 (+0.056) & 0.713 & 0.708 & 0.545 / 0.744 & 0.609 \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+For the core model the change under \code{phase5\_km} is +0.050 [+0.021, +0.081]. Stratified by phase, R2 (0.577) is
+no better than R0 (0.595): phase information discriminates between phases, not within them. The core model keeps some
+signal within phase (0.637 [0.558, 0.720]; C2 0.609 [0.529, 0.689]), mostly from treatment detail inside the early
+post-RT window.
+
+\begin{table}[H]
+\centering
+\small
+\renewcommand{\thetable}{S32}\renewcommand{\theHtable}{S32}
+\caption{\textbf{AUC within each phase, grade 4} (\code{within\_phase.csv}; \code{marginal\_km}, predictions from the
+full cohort). A CI is shown only for strata with at least 10 verified events and 10 verified non-events; the other
+strata are descriptive only.}
+\label{tab:S32}
+\begin{tabularx}{\linewidth}{@{}L R{2.9cm} R{1.1cm} R{2.9cm} R{2.9cm}@{}}
+\toprule
+Phase (events / non-events) & R0 & R2 & R3 core & C2 \\
+\midrule
+Early post-RT (47 / 51) & 0.630 [0.519, 0.729] & 0.627 & 0.663 [0.559, 0.768] & 0.630 [0.528, 0.734] \\
+Later post-RT (36 / 32) & 0.514 [0.359, 0.662] & 0.480 & 0.597 [0.449, 0.757] & 0.582 [0.425, 0.745] \\
+Pre-RT, RT pending (2 / 11) & 0.546 & 0.583 & 0.696 & 0.625 \\
+Pre-RT, RT never documented (3 / 22) & 0.732 & 0.513 & 0.449 & 0.432 \\
+During RT (5 / 1) & -- & -- & -- & -- \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+In all gliomas the pre-RT stratum (10 events / 58 non-events) is large enough to report: core 0.493 [0.299, 0.715],
+C2 0.395 [0.189, 0.609].
+
+\begin{table}[H]
+\centering
+\footnotesize
+\renewcommand{\thetable}{S33}\renewcommand{\theHtable}{S33}
+\caption{\textbf{P2: corrected core models C1 and C2 on MU-Glioma-Post} (\code{corrected.csv}; \code{marginal\_km},
+full cohort). $\Delta$: AUC minus core AUC, paired bootstrap CI.}
+\label{tab:S33}
+\begin{tabularx}{\linewidth}{@{}L R{3.0cm} R{3.6cm} R{1.0cm} R{1.0cm}@{}}
+\toprule
+Arm & AUC & $\Delta$ vs core & O/E & Slope \\
+\midrule
+\multicolumn{5}{@{}l}{Grade 4} \\
+Core (R3) & 0.698 [0.615, 0.774] & -- & 1.04 & 0.89 \\
+\code{core\_no\_unknown} & 0.676 [0.592, 0.752] & $-$0.023 [$-$0.047, $-$0.001] & 1.05 & 0.86 \\
+C1 & 0.675 [0.591, 0.751] & $-$0.023 [$-$0.047, $-$0.002] & 1.05 & 0.85 \\
+C1\_mean & 0.681 [0.597, 0.759] & $-$0.017 [$-$0.040, +0.003] & 1.05 & 0.87 \\
+\textbf{C2} & \textbf{0.678 [0.596, 0.755]} & \textbf{$-$0.020 [$-$0.044, +0.000]} & 1.04 & 0.85 \\
+\midrule
+\multicolumn{5}{@{}l}{All gliomas} \\
+Core (R3) & 0.720 [0.638, 0.792] & -- & 1.05 & 0.88 \\
+\code{core\_no\_unknown} & 0.709 [0.630, 0.782] & $-$0.011 [$-$0.031, +0.008] & 1.05 & 0.93 \\
+C1 & 0.709 [0.630, 0.781] & $-$0.011 [$-$0.031, +0.008] & 1.05 & 0.92 \\
+C1\_mean & 0.712 [0.636, 0.784] & $-$0.008 [$-$0.027, +0.013] & 1.06 & 0.90 \\
+C2 & 0.706 [0.628, 0.777] & $-$0.014 [$-$0.036, +0.005] & 1.03 & 0.94 \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Grade 4 Brier score: core 0.219, C2 0.223; calibration in the large $-$0.09 and $-$0.08. Almost all of the cost of
+the corrections comes from dropping the unknown marker indicators ($-$0.023). Masking IDH and MGMT at the 8 scans
+taken before diagnosis changes nothing visible. Removing the lookahead to RT documentation changes the AUC by +0.003
+and moves O/E closer to 1.
+
+\begin{table}[H]
+\centering
+\footnotesize
+\renewcommand{\thetable}{S34}\renewcommand{\theHtable}{S34}
+\caption{\textbf{LUMIERE transport of the shared feature model, with and without the corrections}
+(\code{lumiere.csv}; 1,000-draw patient bootstrap). LUMIERE has no RT dates, so the core model cannot be applied
+there; the shared feature model (clinical, log days since surgery, \code{early\_post\_rt}, volumes) is refitted on MU.
+\code{shared\_C2} masks MU markers taken before diagnosis and sets a missing MU \code{early\_post\_rt} to 0.}
+\label{tab:S34}
+\begin{tabularx}{\linewidth}{@{}L R{2.9cm} R{2.5cm} R{1.0cm} R{2.9cm} R{1.0cm} R{1.0cm}@{}}
+\toprule
+ & \multicolumn{3}{l}{Grade 4} & \multicolumn{3}{l}{All gliomas} \\
+\cmidrule(lr){2-4}\cmidrule(l){5-7}
+Model & AUC & O/E & Slope & AUC & O/E & Slope \\
+\midrule
+\code{locked\_shared} & 0.608 [0.469, 0.739] & 1.33 [1.01, 1.77] & 0.38 & 0.599 [0.462, 0.728] & 1.30 & 0.38 \\
+\code{shared\_no\_unknown} & 0.614 [0.462, 0.733] & 0.89 [0.67, 1.15] & 0.73 & 0.601 [0.462, 0.717] & 0.96 & 0.89 \\
+\code{shared\_C1} & 0.618 [0.467, 0.736] & 0.90 [0.68, 1.17] & 0.76 & 0.600 [0.459, 0.716] & 0.96 & 0.90 \\
+\code{shared\_C2} & 0.635 [0.501, 0.745] & 0.99 [0.75, 1.29] & 0.97 & 0.611 [0.480, 0.725] & 1.05 & 1.00 \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+In grade 4, $\Delta$AUC \code{shared\_C2} $-$ \code{locked\_shared} is +0.027 [$-$0.112, +0.172]. The corrections do
+not measurably change discrimination on LUMIERE, but they remove the miscalibration that the indicator shortcut
+caused.
+
+\begin{table}[H]
+\centering
+\footnotesize
+\renewcommand{\thetable}{S35}\renewcommand{\theHtable}{S35}
+\caption{\textbf{Mitigations, grade 4} (\code{mitigations.csv}, \code{cohorts.csv}, \code{referral.csv}). (a) Models
+refitted inside each scope, \code{marginal\_km}. (b) Flags applied to the predictions from the full cohort; core / C2.}
+\label{tab:S35}
+\begin{tabularx}{\linewidth}{@{}L R{1.7cm} R{1.3cm} R{2.6cm} R{2.6cm} R{1.9cm}@{}}
+\toprule
+\multicolumn{6}{@{}l}{(a) Restriction to an intended use} \\
+Scope & Scans / patients & Censored left & Core AUC & C2 AUC & R2 $-$ R0 \\
+\midrule
+Full & 249 / 126 & 39 & 0.698 & 0.678 & +0.080 \\
+\code{rt\_pathway} (RT documented) & 186 / 89 & 1 & 0.654 [0.575, 0.739] & 0.625 [0.548, 0.706] & +0.057 \\
+\code{rt\_started} (as-of rule) & 173 / 86 & 1 & 0.617 [0.539, 0.703] & 0.595 [0.517, 0.682] & +0.013 \\
+\midrule
+\multicolumn{6}{@{}l}{(b) Referral flags for scans out of scope} \\
+Flag & Rate & & AUC on retained scans & Gain vs random removal & Gain vs matched removal \\
+\midrule
+Pre-RT as of scan (deployable) & 31\% & & 0.629 / 0.601 & $-$0.069 / $-$0.077 & 0 by design \\
+RT never documented & 25\% & & 0.658 / 0.634 & $-$0.039 / $-$0.044 & +0.013 / +0.014 \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Either restriction removes 38 of the 39 censored scans, so the AUC no longer depends on any censoring model. The
+price is 0.04 to 0.08 of AUC, because the easy pre-RT controls leave the evaluation set. In the restricted scopes C2 is
+below the core model: $\Delta$ $-$0.029 [$-$0.057, $-$0.004] in \code{rt\_pathway} and $-$0.022 [$-$0.044,
+$-$0.003] in \code{rt\_started}.
+Neither flag improves the AUC on the scans the model keeps, since both remove scans the model ranks easily. Their
+value is scope honesty: the displayed AUC matches the deployment population, and the model is not judged or used on
+patients whose outcome is mostly unobserved. ``Matched removal'' removes random scans with the same phase mix as the
+flagged ones. Only early and later post-RT have enough events for AUCs within a phase that can be interpreted
+(Supplementary Table~\ref{tab:S32}).
+
+\textbf{Minimal detectable effects} (\code{mde.csv}; Hanley-McNeil, 80\% power, two-sided $\alpha$ = 0.05, scans
+treated as independent, so optimistic). Grade 4 AUC against 0.5: full cohort 0.113 (93 events / 117 non-events);
+early post-RT 0.164; later post-RT 0.198; pre-RT 0.393, RT pending 0.645 and RT never documented 0.507 (all three
+descriptive only). Paired contrasts in the full cohort, from the existing bootstrap CIs: R2 $-$ R0 0.104; arm without
+unknown markers $-$ core 0.033; treatment only $-$ core 0.070. Changes of a few hundredths, the scale a reweighting can
+produce, can therefore be estimated but not told apart from zero, except for contrasts as tightly paired as the
+shortcut arm. No AUC within a pre-RT stratum can be interpreted.
+
+\textbf{What this means for the phase-of-care claim.} The claim survives and is not an artefact of the marginal
+censoring weights: under censoring that depends on phase the gain is larger (+0.124), and without the patients with RT
+never documented it is still +0.057. It needs three qualifications. About 30\% of the gain comes from a group whose
+outcome is mostly unobserved (38 of 63 scans censored, at a median of 0 days). Arbitrary informative censoring could
+erase it ($-$0.044 under the bound where every censored scan progressed). And phase information separates phases only:
+once RT has started the gain is +0.013.
+
+\FloatBarrier
+\section{Report generator version 2: usefulness and public reference reports}\label{sec:S21}
+
+Source: \code{docs/results/REPORT\_USEFULNESS.md}; \code{outputs/results/analyses/report\_usefulness/}
+(\code{summary\_eval.csv}, \code{checks\_eval.csv}, \code{decision\_eval.json}, \code{by\_phase.csv},
+\code{stress.csv}, \code{judge\_\{absolute,pairwise,summary\}\_eval.csv}, \code{reports/}). Code:
+\code{prism/analyses/report\_usefulness.py} (\code{python -m prism reportuse}); new modules
+\code{prism/report/\{facts\_v2,prompts\_v2,usefulness,style,judge,vllm\_run\}.py}; the version 1 (v1) code is
+unchanged.
+
+\textbf{No clinician has read any v1 or v2 report.} The reading of v1 reports in S19 and every reading of outputs in
+this section were done by an AI assistant. The LLM judge below is also an AI model. ``Useful'' in this section means
+meeting our own prespecified, lexical checklist, not a judgement by a clinician.
+
+\textbf{Background.} The v1 summary (S19) passed 236/249 faithfulness checks. All 13 failures were the same omission:
+a risk sentence that says ``120 days'' without citing \code{risk.horizon\_days}.
+
+\textbf{Public reference reports (form only).} We used two public corpora to set the form of the report, not its
+content or accuracy (\code{data/public\_reports/}; \code{docs/literature/DATASETS.md}).
+\emph{RadGenome-Brain MRI} (\code{JiayuLei/RadGenome-Brain\_MRI}, commit \code{0348ba42}, MIT): manually written
+brain MRI reports (findings, findings per sequence, impression) for public BraTS 2023 cases; we used the 230 reports
+of the BraTS-GLI subset. \emph{MultiCaRe} (\code{mauro-nievoff/MultiCaRe\_Dataset}, commit \code{20bb8619}; CC BY 4.0,
+each article with its own CC licence): open-access case reports, from which we took only the MRI sentences of 181
+glioblastoma or high-grade glioma cases with post-treatment content. From both we derived, with fixed lexicons
+(\code{style.py}): section structure; words, sentences and words per sentence; Flesch-Kincaid grade level (FKGL);
+reading time at 200 words per minute; the share of sentences with each hedging expression and each post-treatment
+term; and the top bigrams of change vocabulary. RadGenome-Brain reports are preoperative, and MultiCaRe sentences
+come from published case narratives; neither is a set of post-treatment surveillance reports. Not used:
+\emph{MR-RATE} (about 98,000 real clinical brain and spine MRI reports, CC BY-NC-SA 4.0) is the most relevant corpus,
+but access is gated by a form with the user's name and institution, which we did not submit on the user's behalf; it
+is the first choice for a follow-up comparison. \emph{TextBraTS} reports were drafted by GPT-4o and then edited by
+radiologists, so they are not a human style reference, and they are preoperative only. \emph{MIMIC-CXR} and
+\emph{MIMIC-IV-Note} need credentialed PhysioNet access and hold chest or general reports; not attempted.
+
+\begin{table}[H]
+\centering
+\footnotesize
+\renewcommand{\thetable}{S36}\renewcommand{\theHtable}{S36}
+\caption{\textbf{Form of the public reference reports and of v1} (\code{reference\_summary.csv},
+\code{reference\_profile.json}). Computed before any evaluation report existed; v1 on the 59 development scans.
+Medians.}
+\label{tab:S36}
+\begin{tabularx}{\linewidth}{@{}L R{2.2cm} R{2.2cm} R{2.6cm} R{2.6cm}@{}}
+\toprule
+ & RadGenome GLI report & RadGenome impression & MultiCaRe post-treatment MRI text & v1 (development) \\
+\midrule
+Words [IQR] & 125 [110, 135] & 42 [33, 49] & 81 [47, 134] & 105 [94, 122] \\
+Sentences & 4 & 1 & 4 & 6 \\
+Words per sentence & 27.2 & 33.5 & 23.8 & 17.8 \\
+FKGL & 16.4 & 21.3 & 15.2 & 10.6 \\
+Sentences with ``possible'' / ``suggest'' / ``considered'' / ``probable, likely'' & 17 / 11 / 11 / 7\% & 59 / 40 / 37 / 24\% & $\leq$ 3\% each & 0 / 0 / 3 / 0\% \\
+Sentences with ``approximately'', ``about'' or ``estimated'' & 20\% & 1\% & 3\% & 13\% \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+The reference reports have FINDINGS followed by a short IMPRESSION that restates the key finding with a hedge. Their
+hedges attach to a diagnosis (``considered'', ``possible'', ``suggests''), and post-treatment change is described
+against a comparison (``compared with prior'', ``interval'', ``increased'', ``decreased'', ``stable''). v1 had no
+impression, very few hedges and short sentences.
+
+\textbf{Design changes in v2} (developed on the 59 development scans only; frozen as v2.3). The v1 facts are kept and
+v2 only adds fields, all computed from the record and the fitted fold model: a risk statement that carries the
+120-day horizon, so the risk sentence copies and cites one field (the horizon fix); the tier with its cut points and
+whether the risk is above, below or close to (within 5 points of) the training-scan average, the mean predicted risk
+of the fold model on its own training scans; a marker for a risk within 0.5 points of a tier cut; the out-of-fold
+risk of the same patient's previous scan and the change in percentage points; one fixed sentence per phase on why
+the phase matters; the inputs the model used and did not use (images, volumes, steroid dose, symptoms, performance
+status, extent of resection, perfusion and diffusion); and a note when an input was not known by the scan day. The
+v2 prompt keeps v1's content rules (facts only, copy numbers, cite keys, no diagnosis or RANO category, no management,
+volumes indicative). New rules: no verbal probability words (likely, unlikely, low, high, reassuring), so position is
+given only by tier and average; inputs named exactly as in the facts; complete sentences of 12 to 25 words and under
+180 words in total; a fixed order in a FINDINGS section, and an IMPRESSION of at most two sentences and 45 words.
+From the reference, v2 copies the FINDINGS and IMPRESSION structure and the comparison wording for change; it keeps
+the hedge on the estimate (``the model estimates'', ``about''); it does not copy the diagnostic hedges, which PRISM
+must not use, or the high reading level. Writer, decoding and checker are as in v1 (\code{Qwen/Qwen3.8-27B}, greedy,
+seed 0, structured output), but v1 and v2 both ran on one H100 instead of four. On the development set v2.3 passed
+59/59 and was complete on 59/59 (four rounds); v1 rerun there passed 59/59 and was complete on 0/59.
+
+\begin{table}[H]
+\centering
+\footnotesize
+\renewcommand{\thetable}{S37}\renewcommand{\theHtable}{S37}
+\caption{\textbf{Usefulness criteria and safety checks} (\code{prism/report/usefulness.py}). Scored automatically on
+the summary text and its citations, against the v2 facts of the record, for both versions.}
+\label{tab:S37}
+\begin{tabularx}{\linewidth}{@{}R{3.4cm} R{3.6cm} L@{}}
+\toprule
+Item & Applies when & Met when \\
+\midrule
+U1 risk complete & always & the risk, both 95\% bounds and ``120 days'' are written \\
+U2 reference frame & always & the tier is stated and agrees with the record, or the training-scan average is given \\
+U3 phase & always & the phase of care is named; for early post-RT, also that treatment-related change can look like progression \\
+U4 drivers & always & at least one of the two largest contributions is named \\
+U5 not seen & always & says that the model did not use the images, the volumes or other unseen inputs \\
+U6 flags with reasons & a flag is active & every active flag is mentioned and the reason field of each is cited \\
+U7 prior change & a prior scan exists & the change since the prior scan is described \\
+U8 lookahead & an input was not known by the scan day & this is stated \\
+\midrule
+S1 false reassurance & always & fails if reassuring wording (``reassuring'', ``low risk'', ``unlikely'', ``no evidence of'', \ldots) appears while the risk is not in the lower third or a flag is active \\
+S2 wording mismatch & always & fails if a verbal probability term's range excludes the point estimate (very unlikely $<$ 10\%, unlikely $<$ 33\%, about as likely as not 33--66\%, likely $>$ 66\%, very likely $>$ 90\%), or tier wording disagrees with the record \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Usefulness score = items met / items applicable; complete = all applicable items met. \emph{These criteria were
+written with v2 in mind.} v2 was given the facts and instructions that the criteria ask for, so the criteria favour v2
+by design. The U7 pattern and the part of U6 that asks for cited reasons were set by reading v2 development text. U1
+to U8 are lexical: they check that an item is present, not that it is well explained.
+
+\textbf{Evaluation set and plan.} The evaluation records are the 249 grade 4 scans with predictions from the
+out-of-fold fits of CV repeat 1 (v1 in S19 used repeat 0). The refitted fold models reproduce the stored repeat 1
+predictions to \num{8.3e-17}; 123 of the 249 scans have a prior scan. These are the same scans as in v1's evaluation,
+with different fold fits, so risks, intervals, tiers, conformal sets and flags differ: fresh records, not fresh
+patients. No v2 text was produced or read on any grade 4 record before the run. Stress set: 30 perturbed evaluation
+records (seed 0; 10 risks moved to another tier, 10 flags switched on, 10 switched off), with the S19 pass rule.
+LUMIERE could not be used, because the core model needs treatment and RT date fields that LUMIERE lacks. The plan was
+written on 2026-10-15 before any evaluation or stress report was generated, committed and pushed as \code{de9c487}, and
+saved with a timestamp (2026-10-16T02:59:19Z) and the sha256 of every code file. After the plan only a figure step was
+added; no prompt, fact, checker, criterion or rule changed.
+
+\begin{table}[H]
+\centering
+\small
+\renewcommand{\thetable}{S38}\renewcommand{\theHtable}{S38}
+\caption{\textbf{Prespecified decision rule, 249 grade 4 scans, CV repeat 1} (\code{decision\_eval.json}). v2 replaces
+v1 as the default summary only if every rule holds. CIs: Wilson 95\% for rates; 2,000-draw patient-cluster bootstrap
+(seed 0) for the paired difference.}
+\label{tab:S38}
+\begin{tabularx}{\linewidth}{@{}L R{5.4cm} R{0.9cm}@{}}
+\toprule
+Rule & v2 result & Met \\
+\midrule
+P1 faithfulness: pass rate $\geq$ 0.95 & 249/249 = 1.000 [0.985, 1.000] & yes \\
+P2a complete rate $\geq$ 0.90 & 247/249 = 0.992 [0.971, 0.998] & yes \\
+P2b usefulness v2 $-$ v1, lower bound $>$ 0 & +0.325 [+0.312, +0.337] & yes \\
+G1 forbidden content $\leq$ 2\% & 0/249 & yes \\
+G2 S1 or S2 $\leq$ 1\% & 0/249 & yes \\
+G3 no active flag omitted & 0 of 262 omitted & yes \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\textbf{Verdict under the prespecified rule: v2 replaces v1 as the default summary.} The horizon fix worked: no v2
+report has an unsupported ``120'' (0 unsupported claims overall). On the same records v1 again fails only on this, in
+11 reports, all early post-RT. v1 passes 238/249 = 0.956 [0.923, 0.975] on repeat 1 against 236/249 on repeat 0, so
+its prespecified target is met on one repeat and missed on the other, both times by about one report.
+
+\begin{table}[H]
+\centering
+\footnotesize
+\renewcommand{\thetable}{S39}\renewcommand{\theHtable}{S39}
+\caption{\textbf{v1 and v2 on the same 249 grade 4 records} (\code{summary\_eval.csv}). Paired differences with
+2,000-draw patient-cluster bootstrap CIs.}
+\label{tab:S39}
+\begin{tabularx}{\linewidth}{@{}L R{2.3cm} R{2.3cm} R{3.0cm}@{}}
+\toprule
+ & v1 & v2 & v2 $-$ v1 \\
+\midrule
+Pass (faithfulness) & 238/249 (0.956) & 249/249 (1.000) & +0.044 [+0.020, +0.072] \\
+Complete (all applicable U items) & 0/249 & 247/249 & +0.992 [+0.979, 1.000] \\
+Usefulness score, mean & 0.674 & 0.999 & +0.325 [+0.312, +0.337] \\
+U1 risk, interval, horizon & 249/249 & 249/249 & \\
+U2 reference frame & 248/249 & 249/249 & \\
+U3 phase (and why, early post-RT) & 241/249 & 249/249 & \\
+U4 drivers named & 32/249 & 249/249 & \\
+U5 what the model did not see & 0/249 & 249/249 & \\
+U6 flags with reasons (180 applicable) & 180/180 & 178/180 & \\
+U7 change since prior (123 applicable) & 105/123 & 123/123 & \\
+U8 lookahead stated (8 applicable) & 0/8 & 8/8 & \\
+Forbidden content, any & 0 & 0 & 0 \\
+S1 false reassurance / S2 wording mismatch & 0 / 1 & 0 / 0 & \\
+Flags active / omitted / spurious & 262 / 0 / 0 & 262 / 0 / 0 & \\
+Impression present & -- & 246/249 & \\
+Words, median [IQR] & 125 [107, 135] & 190 [158, 214] & +68 [+63, +72] \\
+Sentences / words per sentence, median & 6 / 21.3 & 11 / 17.4 & \\
+FKGL, median & 11.2 & 9.7 & $-$1.46 [$-$1.71, $-$1.22] \\
+Reading time at 200 words per minute, median & 38 s & 57 s & \\
+Output tokens, mean & 478 & 784 & \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+v1's single S2 hit is tier wording that disagrees with the record. The two incomplete v2 reports name all three
+active flags in one sentence without their reasons, so U6 is not met; the checker still passes them, because the
+flags are mentioned and cited. Three v2 reports have no IMPRESSION sentence. By phase (\code{by\_phase.csv}), v2
+passes in every phase and is complete in 98\% of early post-RT scans and 100\% of the others; all 11 v1 failures are
+early post-RT. Against the reference corpora, v2 is longer than a RadGenome report (190 against 125 words, about 1
+minute to read), with a lower reading level (FKGL 9.7 against 16.4) and shorter sentences (17 against 27 words), and
+it has the reference's FINDINGS and IMPRESSION structure. v2 is about 50\% longer than v1 and uses 64\% more output
+tokens.
+
+\begin{table}[H]
+\centering
+\small
+\renewcommand{\thetable}{S40}\renewcommand{\theHtable}{S40}
+\caption{\textbf{Stress test, 30 perturbed records} (\code{stress.csv}). Pass = passes the checks against the
+perturbed record and the report follows the change.}
+\label{tab:S40}
+\begin{tabularx}{\linewidth}{@{}L R{2.6cm} R{2.4cm} R{2.4cm} R{1.4cm}@{}}
+\toprule
+Version & Risk moved to another tier & Flag switched on & Flag switched off & Total \\
+\midrule
+v1 & 9/10 & 8/10 & 10/10 & 27/30 \\
+v2 & 7/10 & 10/10 & 10/10 & 27/30 \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+v1's three failures are all the horizon omission. v2 passes the checks in 30/30; its three failures are all on the
+prespecified rule that the original risk must be absent from the text. In each case v2 states the new risk, interval
+and tier correctly, and the patient's risk at the prior scan, which v2 must report, rounds to the same percent as the
+original risk (43 and 43, 39 and 39, 11 and 11; checked against \code{cv\_predictions\_grade4.csv.gz}). In 23 of the
+123 evaluation scans with a prior scan, the prior risk rounds to the same percent as the current one.
+\emph{EXPLORATORY:} v2 followed the changed field in all 30; the rule cannot tell a reported prior risk from a leaked
+original value.
+
+\textbf{EXPLORATORY: LLM judge.} \code{google/gemma-4-31B-it} (revision \code{842da379}, Apache-2.0, a different model
+family from the writer) rated each report 1 to 5 on six criteria, with one sentence of reason each, and compared v1
+and v2 for the same scan in both orders. It saw the facts and the summary text, not the version label, citations or
+section keys; v2's FINDINGS and IMPRESSION headings stayed visible, so form was not blinded. No decision depends on
+the judge. It is an AI model rating text written by an AI model, which is not clinical evidence.
+
+\begin{table}[H]
+\centering
+\small
+\renewcommand{\thetable}{S41}\renewcommand{\theHtable}{S41}
+\caption{\textbf{EXPLORATORY: mean LLM judge ratings, 249 reports per version} (\code{judge\_summary\_eval.csv};
+scale 1 to 5).}
+\label{tab:S41}
+\begin{tabularx}{\linewidth}{@{}L R{1.5cm} R{2.1cm} R{1.3cm} R{2.0cm} R{1.1cm} R{1.8cm}@{}}
+\toprule
+Version & Accuracy & Completeness & Clarity & Calibrated language & Scope & Overall usefulness \\
+\midrule
+v1 & 4.97 & 2.94 & 5.00 & 5.00 & 5.00 & 3.71 \\
+v2 & 5.00 & 5.00 & 5.00 & 5.00 & 5.00 & 5.00 \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Overall usefulness v2 $-$ v1: +1.29 [+1.21, +1.38] (computed after the run, not part of the decision). Pairwise, v2
+was preferred in both orders for 152/249 scans and v1 for 5/249; for 92/249 the preference flipped with order (the
+judge preferred whichever text came first). \textbf{The judge is not reliable.} It gave 5 on clarity, calibrated
+language and scope to every report of both versions. It gave v2 5 on completeness in 248/249, including the two
+reports that omit the flag reasons, with the wrong reason ``all required elements \ldots\ are present''. Its 6
+accuracy deductions for v1 are its own errors: it called ``upper third, values above 0.5'' wrong when the cut point is
+50\%, which is correct. It mostly restates the completeness checklist that the v2 prompt was built to satisfy, and
+adds little beyond the automatic criteria.
+
+\textbf{EXPLORATORY: further observations} (an AI assistant reading the outputs, not a clinician).
+\begin{itemize}
+\item Numbers written as words escape the numeric checker: 16/249 v2 reports, for example ``scan number one'', ``four
+days before diagnosis'', ``at least one input''. The five day counts and the ``scan number one'' cases that were
+checked match their records. v1 had none. The checker should map number words to numbers before it is relied on
+further.
+\item ``a 11\%'' and ``a 8\%'' in 15 v2 reports, from the prompt's template ``The model estimates a'' followed by the
+risk statement.
+\item Raw input names copied with their value, for example ``MGMT status unknown: yes'' or ``within 84 days after RT
+end: no'' (170 v2 reports contain ``: yes'' or ``: no'').
+\item The impression sometimes drops the tier cut points or the average value, a consequence of the 45-word limit.
+\end{itemize}
+These are style items for a later prompt version, which would need a fresh evaluation; nothing was changed here. The
+checker is lexical and does not see meaning errors, number words or grammar. Greedy vLLM batching is not bit
+identical across runs.
+
+\subsection{Protocol for a future clinician reader study}\label{sec:S21.1}
+
+\textbf{Aim.} To find out whether the PRISM summary helps clinicians interpret the risk number for a post-treatment
+glioblastoma MRI, comparing the probability alone, the probability with the v1 summary and the probability with the
+v2 summary.
+
+\textbf{Design and arms.} Within reader, randomised and blinded. Each reader sees each case once under one of three
+conditions: (A) the deterministic sections only (risk, interval, tier, flags, inputs); (B) A with the v1 summary; (C)
+A with the v2 summary. Cases are assigned to conditions in a balanced Latin square, so each case appears under every
+condition across readers. A washout of at least 2 weeks applies if a reader sees the same patient twice.
+
+\textbf{Readers.} At least 9 (target 12) neuro-oncologists, neuroradiologists and radiation oncologists, at least 2
+of each, from at least 2 institutions, none involved in developing PRISM.
+
+\textbf{Cases.} 60 grade 4 records stratified by phase of care (20 early post-RT, 20 later post-RT, 20 pre-RT or
+during RT) and by tier, with at least 15 with an active flag and at least 15 with a prior scan. They are drawn with a
+fixed seed from records not used for prompt development. No outcome is shown to readers.
+
+\textbf{Reader tasks per case} (timed electronic form). (1) Comprehension, 5 items scored against the record: risk and
+interval; horizon; whether the risk is above or below the training average; which flag is raised and why; one input
+the model did not use. (2) Perceived usefulness on 1 to 7 Likert scales: ``This report helps me interpret the risk
+estimate'', ``I would want this report alongside the number'', ``The report is clear''. (3) Trust: confidence in the
+estimate (1 to 7) and ``Is anything in the report wrong or misleading?'' (free text, then adjudicated). (4) Errors:
+any factual error, overstatement, diagnosis or management advice. (5) Time to complete the case.
+
+\textbf{Endpoints and analysis.} Primary: comprehension accuracy (items correct out of 5), C against A, in a mixed
+effects logistic model with random intercepts for reader and case. Secondary: B against A and C against B; usefulness
+scores (cumulative link mixed model); reading time; errors flagged by readers per report, with adjudicated severity;
+agreement of the readers with the automatic checker and with U1 to U8; and agreement of the readers with the LLM judge,
+to see whether the judge can be used at all. Two senior clinicians, blinded to condition, adjudicate flagged errors
+against the record and resolve disagreements by consensus.
+
+\textbf{Sample size.} Each reader sees 20 cases per condition, so 12 readers and 60 cases give 240 reader and case
+pairs per condition. Detecting a 15-point difference in comprehension accuracy (0.70 to 0.85) at two-sided
+$\alpha$ = 0.05 with 80\% power needs about 120 independent pairs per condition; with an assumed design effect of 2
+for clustering by reader and case this becomes about 240, that is 12 readers. The comparison within readers will
+likely need fewer. This rough calculation is to be redone after a pilot with 2 readers and 10 cases.
+
+\textbf{Ethics, data and reporting.} Deidentified records only; images are not needed, because the report does not
+read them. Institutional approval and reader consent; data stay on the institutional cluster. Reporting follows the
+applicable CLAIM and TRIPOD+AI items, and the protocol is preregistered before the first reader session.
+
+\FloatBarrier
+\section{Fine-tuned SwinUNETR encoder}\label{sec:S22}
+
+\textbf{Plan.} Written into \code{docs/results/FINETUNE\_DEEP.md} and committed (9aaa8d3) before any network saw a
+real label; a dated copy (\code{PLAN\_snapshot.md}) was saved at 22:06 on 2026-10-15, and the first real-label job
+finished at 22:08. Code: \code{prism/analyses/finetune\_deep.py} (stage \code{finetune}).
+
+\textbf{Splits.} Outer: the shared 5 $\times$ 5 folds. Inside each outer training set, the scans with a known
+120-day outcome were split into 4 patient-grouped inner folds. For each inner fold one network was fine-tuned on the
+other three, with early stopping on 20\% of their patients, and predicted the inner fold (out-of-fold score) and the
+outer test fold. The test score is the mean logit of the 4 networks; the out-of-fold scores, z-scored, were stacked
+onto the core model's predictors and the core ridge was refitted. Patients never overlap between fitting, stopping,
+inner and outer test sets (unit test). Censored scans were excluded from the training loss and scored as usual.
+
+\textbf{Network.} MONAI SwinUNETR encoder (feature size 48; FLAIR, T1c, T1, T2) from BraTS 2021 or BrainSegFounder
+weights. Input: a brain z-scored cube centred on the lesion and cavity, side $\max(128, \text{extent} + 16)$ mm,
+resampled to 128$^3$ when larger (37 of 308 scans). Mask-weighted means of stages 2 to 4 within the lesion plus the
+global mean of stage 4 (2,112 features), LayerNorm, dropout 0.3 and one linear output. Patch embedding and stages 1--2
+frozen; stages 3--4 and the head trained with AdamW (encoder 2e-5, head 1e-3, weight decay 0.01), one warm-up epoch
+and cosine decay over 25 epochs, batch 4, bf16, binary cross-entropy; early stopping with patience 5 and at least 3
+epochs. Augmentation: flips, translation of $\pm$8 voxels, intensity scale 0.9--1.1 and shift $\pm$0.1. Prediction:
+mean over 8 flips. Seeds fixed per job and deterministic kernels; repeated runs are bit identical. No hyperparameter
+was tuned.
+
+\textbf{Arms.} (1) BraTS 2021, grade 4 (primary); (2) the same with outcomes permuted within each outer training set
+(control; the stacking ridge uses the real outcomes); (3) BraTS 2021, all gliomas; (4) BrainSegFounder, grade 4; (5)
+optional, a siamese network that also sees the previous scan, cropped at the same atlas box. Each arm has 100
+fine-tunes.
+
+\textbf{Rule.} Fine-tuning helps if, in grade 4, the core model plus the arm 1 score gains at least 0.03 with a paired
+95\% CI excluding 0. Validity: the permuted arm's image-only AUC near 0.5 with a CI covering 0.5, and its stack gain
+$\leq$ 0. Other arms are secondary, without multiplicity correction.
+
+\begin{table}[H]
+\centering
+\small
+\renewcommand{\thetable}{S42}\renewcommand{\theHtable}{S42}
+\caption{\textbf{Fine-tuned encoder: discrimination and calibration} (\code{finetune/<population>/results.csv}). IPCW
+AUC at 120 days with 95\% bootstrap CI over patients; $\Delta$AUC paired against the core model; MDE: minimal
+detectable $\Delta$AUC at 80\% power.}
+\label{tab:S42}
+\begin{tabularx}{\linewidth}{@{}L R{2.6cm} R{2.9cm} R{1.0cm} R{1.0cm} R{0.8cm}@{}}
+\toprule
+Model & AUC [95\% CI] & $\Delta$AUC [95\% CI] & MDE & Slope & O/E \\
+\midrule
+\multicolumn{6}{@{}l}{\textbf{Grade 4 (249 scans, 126 patients)}} \\
+Core model (reference) & 0.698 [0.615, 0.774] & -- & -- & 0.89 & 1.04 \\
+Fine-tuned image only, BraTS21 & 0.644 [0.559, 0.727] & $-$0.054 [$-$0.164, +0.051] & 0.154 & 0.88 & 0.96 \\
+Core + fine-tuned BraTS21 (primary) & 0.708 [0.623, 0.786] & +0.009 [$-$0.022, +0.040] & 0.045 & 0.86 & 1.04 \\
+Image only, permuted outcomes & 0.476 [0.438, 0.514] & $-$0.223 [$-$0.316, $-$0.125] & -- & 0.08 & 0.96 \\
+Core + permuted score (control) & 0.703 [0.622, 0.778] & +0.005 [$-$0.006, +0.015] & 0.015 & 0.88 & 1.05 \\
+Fine-tuned image only, BrainSegFounder & 0.594 [0.503, 0.679] & $-$0.105 [$-$0.219, +0.003] & -- & 0.48 & 0.95 \\
+Core + fine-tuned BrainSegFounder & 0.693 [0.612, 0.769] & $-$0.005 [$-$0.030, +0.019] & 0.035 & 0.85 & 1.04 \\
+Fine-tuned image only, with previous scan & 0.647 [0.567, 0.724] & $-$0.051 [$-$0.146, +0.048] & -- & 0.68 & 0.98 \\
+Core + fine-tuned, with previous scan & 0.712 [0.632, 0.789] & +0.014 [$-$0.010, +0.040] & 0.036 & 0.90 & 1.04 \\
+Core + frozen encoder, nested (reference) & 0.694 [0.610, 0.773] & $-$0.004 [$-$0.069, +0.063] & 0.094 & 0.55 & 1.00 \\
+\addlinespace
+\multicolumn{6}{@{}l}{\textbf{All gliomas (308 scans, 155 patients)}} \\
+Core model (reference) & 0.720 [0.638, 0.792] & -- & -- & 0.88 & 1.05 \\
+Fine-tuned image only, BraTS21 & 0.682 [0.610, 0.756] & $-$0.038 [$-$0.130, +0.054] & -- & 0.91 & 0.99 \\
+Core + fine-tuned BraTS21 & 0.736 [0.655, 0.807] & +0.017 [$-$0.009, +0.044] & 0.038 & 0.97 & 1.05 \\
+Core + frozen encoder, nested (reference) & 0.731 [0.660, 0.798] & +0.011 [$-$0.032, +0.056] & 0.063 & 0.79 & 1.03 \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\textbf{Verdict.} The primary gain, +0.009, is below 0.03 and its CI includes 0: fine-tuning does not help. The
+permuted control behaved as intended alone (0.476, CI covering 0.5), but its stack gained +0.005 [$-$0.006, +0.015],
+which misses the validity limit of $\leq$ 0 as written. We report this as a flag rather than relaxing the limit
+afterwards. It means that adding an uninformative score to the core ridge buys about +0.005 by chance, so the primary
++0.009 is barely distinguishable from noise; it does not affect the verdict. Three jobs of arm 3 ran out of GPU memory
+with three processes per GPU and were rerun alone; because jobs are deterministic, this changes no number.
+
+\begin{table}[H]
+\centering
+\small
+\renewcommand{\thetable}{S43}\renewcommand{\theHtable}{S43}
+\caption{\textbf{Fine-tuned encoder: what the score tracks and how training went} (\code{diagnostics.csv},
+\code{jobs.csv}). r: Pearson correlation of the image logit (mean over repeats) with log lesion volume and with the
+core model's logit. Epochs: best epoch restored by early stopping and epochs run, mean (range), of at most 25.}
+\label{tab:S43}
+\begin{tabularx}{\linewidth}{@{}L R{1.4cm} R{1.4cm} R{1.9cm} R{1.9cm} R{1.2cm} R{1.1cm}@{}}
+\toprule
+Arm & r volume & r core & Best epoch & Epochs run & Min/job & Peak GB \\
+\midrule
+BraTS21, grade 4 & 0.57 & 0.13 & 3.9 (0--19) & 9.9 (6--25) & 3.0 & 19 \\
+BraTS21, permuted, grade 4 & $-$0.03 & $-$0.08 & 3.3 (0--12) & 9.3 (6--18) & 2.9 & 19 \\
+BrainSegFounder, grade 4 & 0.37 & 0.14 & 3.2 (0--13) & 9.2 (6--19) & 1.9 & 24 \\
+BraTS21 with previous scan, grade 4 & 0.50 & 0.18 & 3.7 (0--18) & 9.7 (6--24) & 4.0 & 27 \\
+BraTS21, all gliomas & 0.59 & 0.30 & 3.5 (0--12) & 9.5 (6--18) & 2.4 & 25 \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+As with the frozen features (r = 0.58 with lesion volume), the fine-tuned score mostly tracks tumour size. Early
+stopping fired after a few epochs: with about 100 training scans per network and a noisy label, validation loss
+rose soon after the warm-up, so the networks moved little from their starting weights. Arm 5, which also saw the previous scan, gained +0.014
+($-$0.010 to +0.040): below 0.03, with a CI including 0 and within about 0.01 of the permuted control, so change
+from the previous scan did not alter the verdict.
+
+\FloatBarrier
+\section{Intended use and censoring sensitivity}\label{sec:S23}
+
+\textbf{Plan.} Written into \code{docs/results/INTENDED\_USE.md} and committed (74eaaf5) before any of these results
+was computed. Code: \code{prism/analyses/intended\_use.py} (stage \code{intendeduse}); outputs in
+\code{outputs/results/analyses/intended\_use/}. No model was retrained: stored held-out predictions were rescored,
+and every published AUC reproduced within 0.0006 (\code{checks.csv}).
+
+\textbf{Intended use.} Grade 4 scans taken on or after the documented RT start date, a condition known on the scan
+day. This replaces the earlier restriction to ``patients on a documented RT pathway'', which depended on whether RT
+was documented later. Primary: the corrected core model (C2) trained on all scans and scored on intended-use scans,
+since deployment trains on everything; secondary: C2 refitted within the population.
+
+\textbf{Sensitivities.} (1) Censoring weights estimated separately within five phases of care; (2) death without
+documented progression within 120 days counted as a non-event. Rule: the conclusions hold if no imaging contrast
+gains at least 0.03 with a CI excluding 0 under either sensitivity; the intended-use AUC is reported whatever its
+value.
+
+\begin{table}[H]
+\centering
+\small
+\renewcommand{\thetable}{S44}\renewcommand{\theHtable}{S44}
+\caption{\textbf{The corrected core model in the intended use} (\code{headline.csv}, \code{within\_phase.csv}). IPCW
+AUC at 120 days with 95\% patient bootstrap CI; 173 grade 4 scans from 86 patients (88 events, 84 non-events, 1
+censored).}
+\label{tab:S44}
+\begin{tabularx}{\linewidth}{@{}L R{3.0cm} R{1.2cm} R{1.2cm}@{}}
+\toprule
+Model or stratum & AUC [95\% CI] & O/E & Slope \\
+\midrule
+C2 trained on all scans (primary) & 0.601 [0.515, 0.686] & 1.01 & 0.53 \\
+C2 refitted within the population & 0.595 [0.517, 0.682] & 0.98 & 0.71 \\
+All gliomas, C2 trained on all scans & 0.637 [0.550, 0.721] & -- & -- \\
+\addlinespace
+\multicolumn{4}{@{}l}{\emph{Within phase (C2 trained on all scans)}} \\
+During RT (5 events / 1 non-event) & 0.40, descriptive & -- & -- \\
+Within 12 weeks after RT (47 / 51) & 0.631 [0.518, 0.734] & -- & -- \\
+Later (36 / 32) & 0.583 [0.431, 0.742] & -- & -- \\
+Pairs within the same phase (88 / 84) & 0.616 [0.524, 0.698] & -- & -- \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\begin{table}[H]
+\centering
+\small
+\renewcommand{\thetable}{S45}\renewcommand{\theHtable}{S45}
+\caption{\textbf{Censoring sensitivities, grade 4, full cohort} (\code{schemes.csv}, \code{contrasts.csv}). Headline:
+one censoring curve. Phase weights: censoring weights within five phases of care. Deaths: death without progression
+within 120 days counted as a non-event.}
+\label{tab:S45}
+\begin{tabularx}{\linewidth}{@{}L R{1.5cm} R{3.1cm} R{3.1cm}@{}}
+\toprule
+Quantity & Headline & Phase weights & Deaths \\
+\midrule
+C2, AUC & 0.678 & 0.734 [0.648, 0.814] & 0.706 [0.628, 0.787] \\
+Core + nested radiomics $-$ core & $-$0.032 & $-$0.021 [$-$0.061, +0.019] & $-$0.035 [$-$0.075, +0.010] \\
+Core + fine-tuned score $-$ core & +0.009 & +0.011 [$-$0.012, +0.035] & +0.009 [$-$0.018, +0.038] \\
+R2 + I2 $-$ R2, scans after RT & +0.061 & +0.061 [$-$0.032, +0.155] & +0.061 [$-$0.033, +0.155] \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\textbf{Verdict.} The conclusions hold: no imaging contrast gains 0.03 with a CI excluding 0 under either
+sensitivity. Inside the intended use the sensitivities change nothing, because the scan-day rule removes 38 of the
+39 censored scans and all 14 deaths without progression. The margin above chance is thin (lower bound 0.515), and
+the slope of 0.53 shows that a model trained on all scans spreads its predictions too widely after RT, because part
+of their range encodes the difference between scans before and after RT. Deviation from the plan: a 50-draw test
+run on the real labels preceded the full run; the plan was not changed afterwards.
+
+\FloatBarrier
+\section*{Supplementary figures}
+\addcontentsline{toc}{section}{Supplementary figures}
+
+\begin{itemize}
+\item \textbf{Figure S1.} Cohort flow (\code{docs/manuscript/cohort\_flow.png}).
+\item \textbf{Figure S2.} Split-variance histograms per model, original analysis figure
+(\code{outputs/results/analyses/split\_variance/split\_variance.png};
+pre-clip radiomics arm --- superseded by
+main Figure 4).
+\item \textbf{Figure S3.} Phase-ladder overview
+(\code{outputs/results/analyses/phase\_ladder/ladder.png}).
+\item \textbf{Figure S4.} Sensitivity forest plot
+(\code{outputs/results/analyses/sensitivity/forest.png}).
+\item \textbf{Figure S5.} Calibration curves and decision curves
+(\code{outputs/results/analyses/utility/calibration\_dca.png}).
+\item \textbf{Figure S6.} Imaging diagnostics: label--date alignment and horizon curve
+(\code{outputs/results/analyses/diagnostics\_imaging/\{alignment,horizon\_curve\}.png});
+visual QA panels
+(\code{qa/*.png}).
+\item \textbf{Figure S7.} SHAP summaries for the baseline and full models
+(\code{outputs/results/analyses/shap/grade4/*\_\{bar,beeswarm\}.png}).
+\item \flag{[PENDING: export to the journal format.]}
+\end{itemize}
+
+\FloatBarrier
+\bibliography{refs}
+
+\end{document}
