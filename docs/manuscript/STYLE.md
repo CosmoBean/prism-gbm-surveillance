@@ -231,3 +231,4 @@ Add each reaction as a dated, one-line rule.
 - 2026-10-26: the author sees PRISM as modular: clinical/timeline features, simple engineered image features, deep
   segmentation feeding measurements and the report, and a confidence (card tier + conformal set). Deep networks are
   described as the segmenters, not as failed classifiers.
+- 2026-10-26: no RANO anywhere, including figure labels and report wording ("indicative volumes", not "not RANO").
