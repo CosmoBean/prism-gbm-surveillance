@@ -135,3 +135,10 @@ Censoring, calibration, SHAP, the full flag set, the card's cells, UCSF label se
     pre-specified threshold" on point estimates. Faithfulness always disclosed as after one revision. Deep networks:
     measurements come from the cohorts' masks; one sentence on UCSF Q4. Short cohort names (MU, UCSF) after first use.
     Record: `docs/manuscript/council/round1_decisions.md`.
+16. (2026-10-26) Council round 2 (coordinator rulings, pending author): abstract keeps the UCSF numbers 0.80 and 0.73 and
+    says "a model trained there did better" (0.86 in 3.2); 3.2 keeps "about the same when trained there" in words (0.83 in
+    Figure 2); the card's claim is the distribution by cohort (MU 35 of 249 tested, LUMIERE mostly tested, UCSF none);
+    Table 1 MU age 62.5 (same population as TABLE1_COHORT.md); pointers to unwritten supplement sections are
+    `\todo{Supplementary section: <topic>}`; deep networks described as having found the evidence the measurements hold;
+    repeated phrases ("rest on", "fitted once ... unchanged", the long scan phrase) defined once, short forms after. Main
+    text 3,898 words. Record: `docs/manuscript/council/round2_decisions.md`.
