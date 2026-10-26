@@ -41,7 +41,7 @@ evidence and the two external tests go in the abstract's first lines.
 | C2 | Progression is documented differently at each centre, so a score can rest on different evidence | Pathways kept apart, plus an audit of what each score rests on | MU: where the patient is in treatment; UCSF: enhancing volume (R3) |
 | C3 | Cohorts are small, and a single split can move a score more than a model choice | Repeated patient-grouped CV; locked external tests with plans written in advance | Supporting paragraph + Supp. figure (split variance; single-scan radiomics setting) |
 | C4 | The hardest situations (early after RT, growing enhancement) have few cases | Confidence: conformal set, pathway-disagreement warning, reliability card stating the evidence | Coverage at three centres; disagreement picks out errors on MU; 35 of 249 scans in a tested situation (R4) |
-| C5 | Volumes are noisy, the clinician must see what was measured, and patient data cannot leave the hospital | Deep segmentation feeding measurements and a figure; a local language model with a deterministic checker | Faithful reports in all three cohorts (R5; v3.1 numbers pending) |
+| C5 | Volumes are noisy, the clinician must see what was measured, and patient data cannot leave the hospital | Deep segmentation feeding measurements and a figure; a local language model with a deterministic checker | Faithful reports in all three cohorts after one revision (R5) |
 
 ## Abstract (LOCKED 2026-10-24, text in [LOCKED.md](LOCKED.md))
 **Flag for the author:** the locked abstract opens on the 0.80 split, has no external tests and no confidence, and
@@ -83,10 +83,10 @@ abstract will be proposed beside the locked one, and the locked text stays until
 
 **3. Results** (each heading states the finding)
 1. *Each pathway carries evidence on MU*: timeline 0.82, images 0.71, combined 0.82; clinical alone at chance.
-2. *The pathways hold at two external centres* → Fig 2. LUMIERE 0.77; UCSF single-scan images 0.80, about as
-   high as models trained on UCSF.
+2. *The models transfer to two external centres* → Fig 2. LUMIERE 0.77; UCSF single-scan images 0.80 and the image
+   pathway with change 0.73 (Q1 met); trained at UCSF 0.83 and 0.86 (council round 1).
 3. *What each score rests on depends on the cohort* → Fig 3. MU: where the patient is in treatment; UCSF: how much
-   the tumour enhances. Deep networks enter as the segmenters, and their direct scores track enhancing volume.
+   the tumour enhances. Measurements come from the cohorts' masks; deep networks scoring UCSF scans directly track enhancing volume (Q4).
 4. *The confidence keeps its coverage* → Fig 4. 0.82 / 0.87 / 0.78 against a target of 0.78; the disagreement
    warning picks out errors on MU; most scans sit where the evidence is thin, and the card says so.
 5. *The reports are faithful to the record* → Fig 5. Numbers from v3.1 and the model-size ladder.
@@ -107,7 +107,8 @@ Censoring, calibration, SHAP, the full flag set, the card's cells, UCSF label se
 120-day risk detail, deep-network arms, report development and checker rules, the model-size ladder detail.
 
 ## Open for the author
-- Split variance as supporting evidence (one paragraph + supplementary figure), or a short Results section?
+- Split variance as supporting evidence (one paragraph + supplementary figure), or a short Results section? Council
+  round 1 recommends the paragraph (Methods 2.3, Supplementary S8 and Figure S2); pending author (decision 14).
 - The proposed abstract (in `paper/main.tex`, flagged) to replace the locked one: approve or edit.
 
 ## Decisions log
@@ -126,3 +127,11 @@ Censoring, calibration, SHAP, the full flag set, the card's cells, UCSF label se
 12. (2026-10-26) Hosted models never receive patient records; reports are written by local models only.
 13. (2026-10-26) Title: "PRISM: a modular system for glioma progression surveillance on MRI"; the name may still
     change (author open to alternatives), PRISM until decided.
+14. (2026-10-26) Split variance: one paragraph in Methods 2.3 with a pointer to Supplementary S8 / Figure S2; the UCSF
+    own-split result goes to RESERVE.md. Council round 1 recommendation, pending author.
+15. (2026-10-26) Council round 1 (coordinator rulings, pending author): UCSF gives both planned image models (single scan
+    0.80; with change 0.73, the system's pathway; UCSF-trained 0.86 / 0.83); claim transfer, not best performance. UCSF
+    calls rest largely on enhancement (enhancing volume alone 0.88 as the simple baseline). Coverage "met the
+    pre-specified threshold" on point estimates. Faithfulness always disclosed as after one revision. Deep networks:
+    measurements come from the cohorts' masks; one sentence on UCSF Q4. Short cohort names (MU, UCSF) after first use.
+    Record: `docs/manuscript/council/round1_decisions.md`.
