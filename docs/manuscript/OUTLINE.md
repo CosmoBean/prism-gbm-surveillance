@@ -19,9 +19,8 @@ then prose in `paper/main.tex`.
   as a statement of evidence.
 
 ## Title
-**PRISM: a modular system that keeps image and treatment-timeline evidence apart for glioma surveillance MRI, tested
-at two external centres** (new). Kept as an alternative: *What has a glioma surveillance model learned to see?
-Separating image and treatment-timeline evidence with PRISM*.
+**PRISM: a modular system for glioma progression surveillance on MRI** (author, 2026-10-26). The separated
+evidence and the two external tests go in the abstract's first lines.
 
 ## The question, the claim, the investigation
 - **Question:** can a surveillance system give the clinician, at each post-treatment scan, the image evidence and
@@ -108,7 +107,6 @@ Censoring, calibration, SHAP, the full flag set, the card's cells, UCSF label se
 120-day risk detail, deep-network arms, report development and checker rules, the model-size ladder detail.
 
 ## Open for the author
-- Title: new or kept?
 - Split variance as supporting evidence (one paragraph + supplementary figure), or a short Results section?
 - The new abstract, once this outline is accepted.
 
@@ -126,3 +124,5 @@ Censoring, calibration, SHAP, the full flag set, the card's cells, UCSF label se
 10. (2026-10-26) Two locked external tests are a main strength; claim transport, not better performance.
 11. (2026-10-26) Capabilities first; challenges paired with modules; no accusation of the field; PRISM is modular.
 12. (2026-10-26) Hosted models never receive patient records; reports are written by local models only.
+13. (2026-10-26) Title: "PRISM: a modular system for glioma progression surveillance on MRI"; the name may still
+    change (author open to alternatives), PRISM until decided.
