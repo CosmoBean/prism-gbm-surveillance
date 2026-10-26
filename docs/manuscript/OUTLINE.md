@@ -52,8 +52,8 @@ abstract will be proposed beside the locked one, and the locked text stays until
 
 | # | Claim | Content |
 |---|---|---|
-| **Fig 1** | PRISM is built of modules, each answering a known challenge. | Scan + record → segmentation → measurements; clinical + timeline pathway; image pathway; combined score → confidence (conformal set, disagreement, card) → local report. One worked example scan. No RANO. |
-| **Fig 2** | The pathways hold at two external centres without refitting. | AUC by pathway (clinical alone, timeline, images, combined) × cohort (MU internal, LUMIERE locked, UCSF locked, UCSF-trained as reference). |
+| **Fig 1** | PRISM is built of modules, each answering a known challenge. | Scan + record → segmentation → measurements; clinical + timeline pathway; image pathway; combined score → confidence (conformal set, disagreement, card) → local report. One worked example scan. No RANO. **Round 3:** the Discussion's worked example (eight weeks after RT, growing enhancement, pathways disagree, set holds both outcomes, card has few cases) should become a panel here or in Fig 5; the text stays in the Discussion until the figure exists. |
+| **Fig 2** | The pathways hold at two external centres without refitting. | AUC by pathway (clinical alone, timeline, images, combined) × cohort (MU internal, LUMIERE locked, UCSF locked, UCSF-trained as reference). Round 3: enhancing tumour volume alone as a reference bar in each cohort (NUMBERS.md 12C). |
 | **Fig 3** | What each score rests on depends on the cohort, and the audit shows it. | (A) MU: the timeline's gain lies between phases of care. (B) UCSF: enhancing volume alone matches the image model. (C) The image-model ladder (single scan → + change → + schedule context), exploratory. |
 | **Fig 4** | The confidence keeps its coverage and points to the doubtful scans. | (A) Conformal coverage at α 0.2 by cohort and pathway. (B) AUC with and without the disagreement warning. (C) The card: situations by cohort with their evidence tier. |
 | **Fig 5** | The report states the evidence, faithful to the record. | One rendered report (segmentation figure, pathways, combined score, confidence) + faithfulness by cohort. |
@@ -142,3 +142,13 @@ Censoring, calibration, SHAP, the full flag set, the card's cells, UCSF label se
     `\todo{Supplementary section: <topic>}`; deep networks described as having found the evidence the measurements hold;
     repeated phrases ("rest on", "fitted once ... unchanged", the long scan phrase) defined once, short forms after. Main
     text 3,898 words. Record: `docs/manuscript/council/round2_decisions.md`.
+17. (2026-10-26) Council round 3 (coordinator rulings, pending author): abstract from the voice reviewer's proposal, opening
+    on the clinical reason, with 0.86 for the UCSF-trained image pathway and coverage "on point estimates" (150 words). The
+    within-phase result follows the MU 0.82 in 3.1. Coverage, the agreement rule (cohort medians; MU-fixed re-run in
+    round 4), the card (post hoc) and the reports ("a lexical check of numbers, flags and wording"; what it cannot catch;
+    second-evaluation records exclude the revision's development patients) narrowed. Exploratory analyses listed once
+    in Methods 2.3 and marked "(exploratory)" at most once per Results paragraph. Deep-network detail, per-cohort S2 / S3
+    numbers and the image-model ladder's first step to RESERVE / supplement; the ladder is two sentences; the report-model
+    comparison one sentence. No volumetric response-rule baseline (author: no RANO); enhancing volume alone is the simple
+    reference. The worked example stays in the Discussion and should become a panel in Fig 1 or Fig 5. Main text 3,992
+    words (round 2: 3,898). Record: `docs/manuscript/council/round3_decisions.md`.
