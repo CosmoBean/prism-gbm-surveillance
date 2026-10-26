@@ -3,8 +3,11 @@
 Christodoulou RC et al. *Eur J Radiol AI* 2026;5:100074 ("Explainable radiomics with probability calibration for
 postoperative glioblastoma surveillance"). Only the abstract was accessible. It reports: conventional radiomics from T1,
 T1c, T2 and FLAIR of each post-operative scan (single scan, no change features), about 256 features, LightGBM tuned
-with Optuna, Platt calibration, patient-aware 5-fold CV for tuning, one held-out patient test set; label = progression
-status of each post-operative scan; test AUC 0.80, Brier 0.093 → 0.088 after calibration.
+with Optuna, Platt calibration, patient-aware 5-fold CV for tuning, one held-out patient test set; test AUC 0.80, Brier
+0.093 → 0.088 after calibration. **Correction (2026-10-26):** we first read the label as the progression status of each
+post-operative scan. Their code shows a *patient-level* label copied to every timepoint (see "Source check" below). The
+plan and results that follow keep our scan-level detection label and are therefore a scan-level variant, not their
+estimand.
 
 **Why the earlier "0.64–0.70" is not this study.** `docs/literature/comparison.md` cites "0.64–0.70 (C1)" as our
 replication of this setting. C1 (`C1_endpoint.md`, `C1_full_tables.md`) is a ridge on the legacy T1c/FLAIR radiomics
@@ -12,6 +15,47 @@ replication of this setting. C1 (`C1_endpoint.md`, `C1_full_tables.md`) is a rid
 LightGBM, not the status/detection label and predates the label fixes (`FIX_LABELS.md`) and the radiomics clipping fix
 (`FIX_RADIOMICS_CLIP.md`). The only LightGBM "paper-style" attempt is in `legacy/radiomics/README.md` (LightGBM-64,
 radiomics only, PRISM-report split of 30 patients: 0.599), also pre-fix. This document replaces both as the comparison.
+
+## Source check (2026-10-26)
+
+Verified facts (web, accessed 2026-10-25; repository cloned at commit `643c888`, 2026-01-09; public code only, no
+patient data read from it beyond the aggregate counts below).
+
+- Citation: Christodoulou RC et al., *Eur J Radiol AI* 2026;5:100074, DOI 10.1016/j.ejrai.2026.100074.
+- Code: https://github.com/georgeDV2002/Explainable-modality-adaptive-radiomics-for-MGMT-methylation-prediction-in-high-grade-glioma.
+  The repository names are swapped with those of the authors' MGMT paper: this repository's README is titled
+  "Radiomics-based Progression Classification on MU-Glioma-Post" and uses MU-Glioma-Post only; no private data are
+  mentioned. The wording "MRI datasets are **not included**, as they are controlled-access ... Acquire UCSF and/or
+  UPENN datasets" is in the *other* repository
+  (https://github.com/georgeDV2002/Explainable-Radiomics-with-Probability-Calibration-for-Postoperative-Glioblastoma-Surveillance),
+  whose README is titled "Explainable, Modality-Adaptive Radiomics for MGMT Methylation Prediction in High-Grade
+  Glioma" and belongs to the MGMT paper.
+- **Label (patient-level).** README §4: "`y = 1` (progression) if `Time to First Progression (Days)` is non-missing for
+  that patient" / "`y = 0` (no progression) if `Time to First Progression (Days)` is missing (NaN)". README §6 step 4:
+  "Carry forward patient-level progression time to all timepoints." Code, `bin_class/lightGBM__5b.py` lines 105 and
+  217: `y = df[PROG_COL].notna().astype(int).values`, with `PROG_COL = "Time to First Progression (Days)"`. Every
+  timepoint of a patient who ever progresses is positive, including scans long before progression; every timepoint of
+  a patient who never progresses is negative. (In the MU workbook "Time to First Progression" is non-missing exactly
+  when "Progression" = 1.)
+- **Population.** `collect_dataset__2.py` line 9: `clinical = clinical[clinical["Primary Diagnosis"] == "GBM"].copy()`;
+  all timepoints are kept. But the merge (lines 33-38, "left join keeps all radiomics rows", `how="left"`) is on the
+  radiomics table, so patients of other diagnoses stay in the data with a missing progression time, i.e. labelled 0
+  whether or not they progressed. Their committed `dataset__2.xlsx` (aggregate counts): 593 scans of 203 patients
+  (all MU patients), 380 positive scans of 122 patients; 146 scans of 46 non-GBM patients are all labelled 0; 213 of
+  the 593 scans are at or after progression. The effective label is "GBM and ever progresses" over all diagnoses.
+- **Split.** `bin_class/rank_and_split__4.py` line 46: `N_TEST_PATIENTS = 30` (seed 42; all timepoints of the 30
+  patients form the test set; their committed test set: 96 scans, 53 positive). Feature ranking (L1 logistic
+  regression consensus, top K) runs on the remaining patients with a non-grouped `StratifiedKFold`.
+- **Features and learner.** One ROI ("core" = `tumorMask` > 0), four sequences, PyRadiomics original + LoG (σ 0.5-3
+  mm) + wavelet (`radiomics_params.yaml`), z-score within the mask; LightGBM with `class_weight="balanced"`, median
+  imputation, variance and Spearman correlation filters, Optuna (`N_TRIALS = 400`) on a 5-fold `StratifiedGroupKFold`
+  by patient, Platt on the out-of-fold predictions.
+- Their committed log `bin_class/256_features/lgbm.log`: "[test] ROC AUC: 0.7995"; test Brier raw 0.173 → Platt 0.175.
+  The abstract's 0.093 → 0.088 does not appear in the committed logs (test Brier 0.17-0.20 across K = 64-512).
+
+**Consequence for this document.** The plan below assumed a per-scan "progression status" label. That was wrong. The
+pre-specified analysis (sections 1-4, including the UCSF result) evaluates our scan-level detection variant, a different
+estimand. The EXPLORATORY section at the end re-runs our pipeline with their patient-level label.
 
 ## Plan (pre-specified, 2026-10-25, written before any run that reads labels with scores)
 
@@ -147,11 +191,99 @@ This is the UCSF pattern again ([UCSF_AUDIT.md](UCSF_AUDIT.md)). The CH score tr
 - **DEVIATION (features):** original-image PyRadiomics only (no LoG or wavelet filters, which the paper used and the
   v2 table does not contain). The 256 are selected by univariate AUC on the training rows, not by their stability
   ranking (the method is not given in the abstract).
-- **DEVIATION (label):** first progression scan versus verified-stable scans (detection label), not the paper's
-  "progression status" of every post-operative scan. This is by design (plan).
+- **DEVIATION (label):** first progression scan versus verified-stable scans (detection label). The plan assumed the
+  paper used a per-scan "progression status"; that assumption was wrong (source check below): their label is
+  patient-level. Our label is by design (plan), so every number in sections (1)-(4), including the UCSF result, is for
+  our scan-level variant only.
 - **Specification (100 splits):** unstratified draws of 18 of the 92 grade-4 patients with a labelled scan; the full
   pipeline (selection, Optuna, Platt) is redone on each training set; B1 is refitted with `c3.fit_predict`.
 - **Added (not prespecified, diagnostic only):** the sanity check above (logistic regression / default LightGBM on
   the same 256, LightGBM on shape only: 0.59–0.64, one repeat, intended use), the reference Brier column, and on UCSF
   the ET-volume correlation and the ET-increased stratum. None changes a number above.
 - Optuna 4.8.0 was available, so no grid-search fallback was needed. Nothing was installed.
+
+## EXPLORATORY (2026-10-26, not pre-specified): their patient-level label
+
+Code: `prism/analyses/christodoulou_patient_label.py` (`PYTHONPATH=. OMP_NUM_THREADS=1 .venv/bin/python -m
+prism.analyses.christodoulou_patient_label --workers 8`, 57 min on 8 CPUs). Outputs (git-ignored):
+`outputs/results/analyses/christodoulou/patient_label/` (cohort.csv, auc.csv, contrasts.csv, brier.csv, splits.csv,
+splits_summary.csv, oof_<pop>.csv.gz, run_info.json). Written after the source check and run once; read as exploratory.
+
+**Set-up.** Rows: every MU scan with all four sequences, a mask and v2 radiomics, all timepoints. Label: y = 1 for every
+scan of a patient with a non-missing "Time to First Progression (Days)" (their rule). Two populations:
+*GBM* (Primary Diagnosis = GBM, the stated intent: 447 scans, 157 patients, 385 positive scans of 123 patients, 62
+negative scans of 34 patients) and *as coded* (all patients, y = GBM and progressor, which is what their left join
+produces: 594 scans, 203 patients, 385 positive / 209 negative scans; their committed table has 593 / 203 / 380).
+Of the 385 positive scans, 172 precede progression (41 by more than 180 days) and 213 are at or after it.
+Arms on the same rows and folds: **CH** = the module's pipeline unchanged (v2 radiomics, 2316 columns, original image
+only → 256 by univariate AUC → LightGBM + Optuna 40 trials + Platt; `christodoulou_replication.fit_ch`); **C0** =
+clinical only (age, sex, IDH mutant / unknown, MGMT methylated / unknown; L2 logistic regression); **FU** = follow-up
+only (log number of the patient's scans, log days from diagnosis to the patient's last MRI); **C0+FU** (leakage check:
+FU uses the patient's whole future; progressors have 3.1 scans each, GBM non-progressors 1.8).
+Evaluation: (a) 5 × 5 patient-grouped stratified CV (new folds on this label, seeds 0-4), pooled out-of-fold AUC, mean
+over repeats, 95% CI from the patient-cluster bootstrap (1,000 draws); (b) 100 random single splits with 30 test
+patients (seeds 0-99, all their timepoints), full pipeline refitted on the rest; (c) AUC with the positives restricted
+by timing relative to progression (all negatives kept).
+
+### (a) Repeated 5 × 5 patient-grouped CV
+
+| population / positives | pos/neg scans | **CH** | C0 (clinical) | FU (follow-up) | C0+FU |
+|---|---|---|---|---|---|
+| **GBM, all scans** | 385/62 | **0.439 (0.376–0.502)** | 0.567 (0.398–0.727) | 0.611 (0.454–0.799) | 0.754 (0.605–0.900) |
+| GBM, positives before progression | 172/62 | 0.410 (0.342–0.474) | 0.561 (0.392–0.724) | 0.600 (0.440–0.792) | 0.742 (0.590–0.886) |
+| GBM, positives > 180 d before progression | 41/62 | 0.353 (0.278–0.430) | 0.563 (0.391–0.729) | 0.685 (0.512–0.853) | 0.777 (0.620–0.920) |
+| GBM, positives at/after progression | 213/62 | 0.463 (0.395–0.532) | 0.571 (0.400–0.728) | 0.620 (0.462–0.805) | 0.763 (0.618–0.910) |
+| **as coded, all scans** | 385/209 | **0.727 (0.660–0.783)** | 0.811 (0.739–0.874) | 0.480 (0.407–0.561) | 0.885 (0.818–0.936) |
+| as coded, positives before progression | 172/209 | 0.698 (0.624–0.762) | 0.805 (0.729–0.873) | 0.470 (0.390–0.557) | 0.873 (0.800–0.934) |
+| as coded, positives > 180 d before progression | 41/209 | 0.658 (0.566–0.748) | 0.759 (0.644–0.859) | 0.616 (0.512–0.724) | 0.852 (0.736–0.943) |
+| as coded, positives at/after progression | 213/209 | 0.750 (0.677–0.814) | 0.816 (0.740–0.876) | 0.487 (0.405–0.572) | 0.895 (0.832–0.944) |
+
+Paired contrasts (all scans): GBM: CH − C0 −0.128 (−0.319 to +0.071), CH − C0+FU −0.315 (−0.471 to −0.139), C0+FU − C0
++0.187 (+0.085 to +0.329). As coded: CH − C0 −0.084 (−0.158 to −0.008), CH − C0+FU −0.158 (−0.228 to −0.086), C0+FU − C0
++0.074 (+0.029 to +0.127). Patient-level (mean score over a patient's scans, point estimates): GBM CH 0.43, C0 0.49,
+C0+FU 0.82; as coded CH 0.75, C0 0.72, C0+FU 0.87. Repeat-to-repeat SD of CH: 0.04 (GBM), 0.02 (as coded). Brier
+(mean over repeats) raw → Platt: GBM 0.143 → 0.124 (prevalence 0.86, reference p(1 − p) 0.120); as coded 0.206 →
+0.191 (prevalence 0.65, reference 0.228). Mean inner (tuning) AUC: 0.63 (GBM), 0.76 (as coded).
+
+### (b) 100 single splits, 30 test patients
+
+| population | metric | mean | SD | 2.5–97.5% | range | share ≥ 0.80 |
+|---|---|---|---|---|---|---|
+| GBM (99 splits*) | **CH** | **0.573** | 0.106 | 0.315–0.732 | 0.287–0.822 | **2%** |
+| | C0 | 0.612 | 0.147 | 0.343–0.838 | 0.267–0.942 | 9% |
+| | FU | 0.698 | 0.178 | 0.381–0.994 | 0.284–1.000 | 28% |
+| | C0+FU | 0.792 | 0.148 | 0.525–0.992 | 0.469–1.000 | 54% |
+| as coded (100 splits) | **CH** | **0.746** | 0.074 | 0.609–0.900 | 0.533–0.919 | **23%** |
+| | C0 | 0.826 | 0.084 | 0.642–0.950 | 0.539–0.961 | 67% |
+| | FU | 0.524 | 0.122 | 0.315–0.795 | 0.300–0.851 | 3% |
+| | C0+FU | 0.905 | 0.070 | 0.747–0.996 | 0.635–1.000 | 94% |
+
+\* One GBM split (seed 23) left an inner tuning fold with one class (all Optuna trials undefined) and was dropped.
+Test sets: 86 (GBM) and 88 (as coded) scans on average, 74 and 56 positive.
+
+### (c) What the patient-level label measures, and reading
+
+- The label asks whether the patient *ever* progresses, so a model is rewarded for ranking patients, not scans: a scan
+  taken more than 180 days before progression is a positive (41 such scans), and a non-GBM patient who progresses is a
+  negative (as coded). Nothing in the label ties the image to the progression event.
+- **In GBM only (their stated population), the radiomics pipeline does not separate the classes**: 0.44 (0.38–0.50)
+  under repeated CV, below 0.5 and below the clinical-only model (0.57). With 34 negative patients (62 scans) against
+  123 positive patients, the label is mostly a patient-level prevalence problem; the booster's below-chance OOF AUC is
+  consistent with grouped CV on a patient-constant label with few negative patients (removing a fold's negatives shifts
+  the training balance against them), and the tuning AUC (0.63) did not carry over. Across 99 single splits CH reaches
+  ≥ 0.80 twice.
+- **The follow-up leakage check is positive.** Number of scans and follow-up length alone reach 0.61 in GBM, and added to
+  clinical data 0.75 (+0.19, CI excludes 0); across single splits C0+FU is ≥ 0.80 in 54%. Under this label, how long a
+  patient is followed carries the class.
+- **As coded (all diagnoses, non-GBM labelled 0), the setting reaches 0.73 (0.66–0.78)** under repeated CV and 0.75 on
+  average over 100 30-patient splits (23% ≥ 0.80), so their single-split 0.80 sits inside this distribution. Here the
+  task is largely "GBM versus other gliomas": age, sex, IDH and MGMT alone reach 0.81 (0.74–0.87), above the
+  radiomics (−0.08, CI excludes 0), and 0.83 on average over the same splits (67% ≥ 0.80).
+- Positives before progression score about as high as positives after it (as coded 0.70 versus 0.75; GBM 0.41 versus
+  0.46), as expected when the label is a patient trait rather than an imaging event.
+- This does not change sections (1)-(4): they evaluate our scan-level detection label, which is not their estimand.
+  The locked UCSF result in (4) applies only to that scan-level variant.
+- Specification details: our v2 features (original image only, six ROIs) and the module's selection / 40-trial search
+  were kept unchanged; their LoG/wavelet features on one "core" ROI, L1-consensus ranking, `class_weight="balanced"`
+  and 400 trials were not reproduced. Clinical and follow-up arms are untuned L2 logistic regressions (C = 1,
+  standardised; no age is missing). Nothing was installed.
