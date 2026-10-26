@@ -92,8 +92,7 @@ Integrity changes, the ones that change what a reader concludes:
    The existing supplement still frames results as v1 / v2 (S7, S21). That conflicts with "final system only".
 10. **Tikhonov 2025** (arXiv:2509.06511). It is not in `refs.bib` and not verified; the Discussion has a `\todo`.
     Verify it or cut the clause. The 2025 and 2026 references were not checked against their sources either.
-11. **Title.** "PRISM: a modular system for glioma progression surveillance on MRI" (OUTLINE decision 13). Open if
-    you want a name change.
+11. **Title and name: settled** (author, 2026-10-26): "PRISM: a modular system for glioma progression surveillance on MRI"; PRISM kept.
 
 ## How to revert
 
