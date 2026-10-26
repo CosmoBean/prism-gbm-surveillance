@@ -66,16 +66,14 @@ rounding. The WRONG items below are claims, labels and cross-references, not val
     abstract says "against 0.86 when trained there" and a reader looking at Fig 2 finds 0.86 twice at UCSF.
   - 0.80 is the UCSF single-scan AUC (abstract) and the nominal 80% level; 0.79-0.95 CI of ET volume vs 0.80 AUC.
   Not errors, but L283-284 could give coverage as percentages (77%, 65%) to separate it from AUCs.
-- **L259 "(-0.00 to +0.11)"** should read "0.00 to +0.11" or "-0.003 to +0.106" is rounded; the minus on zero is the only
-  such case. Also the first step has no stated value in text (0.66, single scan), only in Fig 3C; fine, but "0.05 higher"
-  is then a difference from a number the reader has not seen.
+- **L259 "(-0.00 to +0.11)"**: the source is -0.003 to +0.106; write "0.00 to +0.11". Also the first rung (single
+  scan, 0.66) is not stated in the text, only in Fig 3C, so "0.05 higher" is a difference from a number the reader has not seen.
 - **L253 lower CI "0.04" for +0.114 (0.035 to 0.196)**: 0.035 rounds either way; the CSV carries more digits than
   NUMBERS.md. Not checked to the third decimal. Use 0.03 or 0.04 after reading `phase_ladder/results.csv`.
 - **L232-233 "difference 0.14, 0.03-0.26"** is the planned descriptive Q3 (Ipure) and is correctly the planned arm; the
   next clause (single-scan "about the same", +0.031, -0.052 to +0.116) is exploratory and labelled. OK.
 - **Abstract "met their planned coverage on average at every centre"** is true on point estimates (UCSF 0.783, CI
-  0.681-0.870); L281-282 says so. The abstract carries no "on point estimates"; L4 of the round-4 header says it was cut
-  for length. Acceptable at 150 words (the limit), but the abstract's audit sentence ("An audit found ...") is
+  0.681-0.870); L281-282 says so. The abstract carries no "on point estimates" (cut for length in round 4). Acceptable at 150 words (the limit), but the abstract's audit sentence ("An audit found ...") is
   exploratory and unlabelled; no room to add.
 - **Table 2 S2 "Met" cell: "Both at MU-Glioma-Post"** does not say which two. Write "Disagreement and conformal {0,1}".
 - **Table 2 caption "Each rule was committed to the repository before the analysis it governs"** and the "Met" column for
@@ -166,7 +164,7 @@ Abstract: 0.82, 0.77, 0.80, 0.73, 0.86, coverage statement, 114 / 162 / 130. Sec
 0.86, 0.14 (0.03-0.26), 0.56, O/E 0.72 (0.55-0.91), 90% called positive. 3.3: -0.02 (-0.13 to +0.11), 0.68 (0.58-0.77)
 vs 0.64 (0.51-0.78), +0.10 (0.05-0.15), -0.01 (-0.06 to +0.04), 0.88 (0.79-0.95), 27 of 29, 7 days, 37 scans, 0.65
 (0.44-0.84). 3.4: 0.78-0.87, 62-75%, 0.68-0.87, 0.77 (0.67-0.87), 0.65 (0.51-0.79), 0.94 and 0.97, 40%, 0.90 / 0.59,
-11 of 11 percentage and CI values for 12A, four tested situations (1 + 3), 0.222 vs 0.147. 3.5: 0 of 178, 28 of 30.
+the 12A values, four tested situations (1 + 3), 0.222 vs 0.147. 3.5: 0 of 178, 28 of 30.
 Discussion: 1 of 9 scans. Table 1: every row against NUMBERS.md 2.2 (age 62.5 per round 2). Table 2: all values, plan
 commits 2b4c927, 0e7c9fe, e7cba80, 4f7e7b9 (all in `git log`), +0.041 (+0.006 to +0.081) and +0.036 (-0.014 to +0.085).
 "Pre-specified" claims for S1, S5-S7, Q1-Q4, LUM-1, MU-1, MU-2 match the plan docs. Not pre-specified and labelled so:
