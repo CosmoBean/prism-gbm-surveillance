@@ -146,3 +146,14 @@ Grade 4, scan 2 (29 progression / 40 stable); all gliomas 48 / 78 give the same 
   marks 91–100% of scans (unusable as one warning). The card tier measures evidence, not accuracy.
 - Perturbations: reports followed the changed field in 29/30.
 - Literature (SYSTEM_LANDSCAPE.md): components exist separately; the combination appears new (moderate claim).
+
+## Report v3.1 and the model ladder (2026-10-26; REPORT_V3_1_PLAN.md 4f7e7b9; REPORT_V3_1.md)
+- Second evaluation after the seen v3 LUMIERE failure (v3 stays 0/178). Qwen3.8-27B, frozen prompt v3.4, checker
+  unchanged: faithful MU 114/114, LUMIERE 162/162, UCSF 130/130; tier stated 220/220; perturbations followed 28/30.
+- Ladder (same prompt and checker): only Qwen3.8-27B and gemma-4-31B pass in every cohort; 9B 368/406, 4B 306/406,
+  2B 21/406. Smaller models mostly leave required content out rather than invent it.
+- Christodoulou (EXPLORATORY, CHRISTODOULOU_REPLICATION.md 9810dc4): their label is patient-level (any progression,
+  on every scan) with non-GBM patients kept as negatives; under it clinical alone 0.81, radiomics pipeline 0.73 (0.44
+  in GBM only). One neutral Discussion sentence; detail in the reserve.
+- Reduced confidence (EXPLORATORY, SYSTEM_RESULTS.md 3d20c41): "pathways disagree AND conformal set both outcomes"
+  flags 12–27%; flagged scans wrong about half the time vs about a quarter otherwise, in all three cohorts.
