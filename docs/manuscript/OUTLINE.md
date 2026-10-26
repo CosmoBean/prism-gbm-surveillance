@@ -1,6 +1,6 @@
 # Outline: the argument of the PRISM paper (layer 1)
 
-**Status: draft 3 (2026-10-26), accepted by the author 2026-10-26; skeleton in `paper/main.tex`.** Rebuilt on the author's framing of 2026-10-26
+**Status: draft 3 (2026-10-26), accepted by the author 2026-10-26; skeleton in `paper/main.tex`.** **Council rounds 1 to 5 done (2026-10-26); read [council/COUNCIL_SUMMARY.md](council/COUNCIL_SUMMARY.md) for what changed and the decisions waiting for you.** Rebuilt on the author's framing of 2026-10-26
 (STYLE.md section 10): lead with what the system does, present the difficulties of surveillance data as known
 challenges each paired with the module that handles it, PRISM as a modular system, no accusation of the field, no
 RANO anywhere (text, figures, reports). Draft 2.1 and draft 1 are in git history. Rules: [STYLE.md](STYLE.md).
@@ -161,3 +161,9 @@ Censoring, calibration, SHAP, the full flag set, the card's cells, UCSF label se
     Enhancing volume alone is the reference bar in Figure 2 (MU 0.62, LUMIERE 0.66; UCSF 0.88 in 3.3). The ladder's
     middle step is given with its interval, which includes zero. One-sentence Conclusion. Trim to 3,898 words (round 3:
     3,992). Record: `docs/manuscript/council/round4_decisions.md`.
+19. (2026-10-26) Council round 5 (final editor, pending author): audit's nine wrong claims fixed (plan timing wording;
+    external schedule inputs; planned agreement result first, MU-fixed rule second; report-model comparison planned;
+    card built from the cohort's own held-out results, 54 of 146 MU scans tested; combined 0.82 named apart from the
+    planned model); UCSF combined 0.86 in 3.2 with its caveat; one dagger marker for analyses not fixed in advance;
+    missing-input handling in 2.1; 0.60 in the Limits; abstract proposal revised (149 words). Main text 3,946 words.
+    Record: `docs/manuscript/council/round5_decisions.md`; overview: `docs/manuscript/council/COUNCIL_SUMMARY.md`.
