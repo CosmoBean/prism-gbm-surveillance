@@ -1,5 +1,16 @@
 # Draft notes (2026-10-15; PRISM-paper framing pass appended)
 
+## System-first rewrite decision (2026-10-26)
+
+The main manuscript is being rebuilt around PRISM as a transparent longitudinal evidence-reporting system. The initial
+MU radiomics work is the motivation; separate image/timeline model evaluations and locked external results support the
+system's components; the report is the clinical-facing product. The primary report evidence is v3.1 (406/406 lexical
+checker passes, 220/220 required tiers stated, 28/30 perturbation-rule passes). These are automatic
+grounding/completeness results, not clinician-usefulness outcomes. The no-model report ablation is deliberately left
+as future work because no current analysis isolates the value of model fields against the same longitudinal facts.
+
+---
+
 LaTeX (paper/) is the source of truth from 2026-10-15; this markdown is a frozen snapshot.
 
 Files: [DRAFT.md](DRAFT.md) (main text), [SUPPLEMENT.md](SUPPLEMENT.md), Table 2 history rows appended to

@@ -1,5 +1,20 @@
 # Manuscript figures and tables (results sections 1–3 + phase of care)
 
+## System-first display inventory (approved 2026-10-26)
+
+| Display | One reader question | Source and scope |
+|---|---|---|
+| Figure 1, `fig1_system.pdf` | What does PRISM turn into a report? | System flow: serial MRI and record -> measurements and separate evidence streams -> structured record -> local checked report. Do not present it as a diagnostic decision engine. |
+| Table 1 | What evidence can each cohort contribute? | Existing cohort table, reframed around images, treatment dates, masks, label/documentation and reportable longitudinal context. |
+| Figure 2, `fig2_transport.pdf` | How do components behave across cohorts? | Verified internal and locked external image/timeline/combined results. Keep task definition beside the figure. |
+| Figure 3, `fig3_evidence.pdf` | Why retain separate evidence streams? | Existing audit: timing/phase at MU and enhancement at UCSF. No new model claim. |
+| Figure 4, `fig4_confidence.pdf` | What are the report's evidence limits? | Conformal coverage, disagreement and thin-evidence card; describe them as displayed evidence boundaries. |
+| Figure 5, `fig5_report.pdf` | What does the reader receive, and what was verified? | v3.1 report anatomy plus automatic grounding/completeness: 406/406 lexical passes, 220/220 tier statements, 28/30 perturbation-rule passes. State that there is no clinician reader outcome. |
+
+The existing figure plan below is retained while source assets are reconciled. It is not the final ordering or claim set.
+
+---
+
 Code: `prism/analyses/paper_figures.py` (`python -m prism figures [all|compute-single|compute-splitvar|plot]`).
 Figures: `docs/manuscript/figures/fig{1..4}_*.{png,pdf}` (300 dpi PNG + vector PDF). Plot data and tables:
 `outputs/results/analyses/paper_figures/*.csv` (copied to `docs/manuscript/figures/`).

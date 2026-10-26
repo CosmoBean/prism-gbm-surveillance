@@ -1,5 +1,25 @@
 # The story and the results behind it
 
+## System-first narrative map (approved 2026-10-26)
+
+The paper is no longer organised as a search for the best progression AUC. It begins with the surveillance problem:
+glioblastoma and other aggressive gliomas are followed over time, and a clinician needs the scan, prior change and
+treatment course together. The initial MU radiomics model motivates PRISM, but the system's purpose is to turn those
+separate sources into a transparent report rather than to issue a stand-alone verdict.
+
+| Narrative need | Evidence to retain in the main article | Boundary on the claim |
+|---|---|---|
+| Why build a system instead of showing a score? | Initial radiomics/prediction work plus the fact that a score does not expose longitudinal inputs, uncertainty or omissions | Do not state that the score is clinically useless. |
+| Do PRISM components behave beyond the development data? | Separate pathways and locked MU-to-LUMIERE/UCSF evaluations | Ranking evidence supports component evaluation, not clinician benefit. |
+| Why show separate streams in the report? | MU timing/phase and UCSF enhancement audits | State what the audits show; do not turn them into an accusation or diagnosis claim. |
+| Does the report faithfully convey its record? | v3.1: 406/406 lexical passes; 220/220 tiers stated; 28/30 perturbed records met the frozen follows rule | This is automatic grounding/completeness evaluation; no clinician has read v3.1 reports. |
+| Do model fields improve a report over facts alone? | No current result | Name as a future no-model report ablation and reader study. |
+
+Use v3.1 as the primary report evidence. v1, v2 and v3 are development history; their different endpoints and
+evaluations must not be pooled with v3.1 in a main-text number or figure.
+
+---
+
 What we have, what each result does for the story, and where it goes. Agree on this before writing prose.
 [OUTLINE.md](OUTLINE.md) holds the abstract and figure plan; [STYLE.md](STYLE.md) the rules; [RESERVE.md](RESERVE.md)
 the answers held back for reviewers.

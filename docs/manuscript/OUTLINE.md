@@ -1,5 +1,59 @@
 # Outline: the argument of the PRISM paper (layer 1)
 
+## System-first revision (approved 2026-10-26)
+
+This revision supersedes the earlier model-audit-first framing below. The paper begins with the clinical problem:
+glioblastoma and other aggressive gliomas need repeated MRI surveillance, but a scan is interpreted against prior
+images and the course of treatment rather than in isolation. An initial radiomics model on MU-Glioma-Post motivates
+the work; its prediction is evidence, not the clinical product. A bare score does not show the clinician its inputs,
+the longitudinal picture, what it omitted or how competing evidence aligns.
+
+**Question.** Can a system turn longitudinal imaging, treatment context and model evidence into a transparent report
+for a surveillance scan, while showing how its components behave across cohorts?
+
+**Claim.** PRISM assembles image-derived measurements, treatment context, separate image and timeline pathways,
+uncertainty, provenance and a locally generated checked report. Its component models are evaluated internally and at
+locked external cohorts; the report exposes their evidence and limits rather than substituting for clinical judgement.
+
+**What the paper does not claim.** No clinician has evaluated a PRISM report, so the study does not establish improved
+diagnosis, decision-making, workload or outcomes. The present results compare report versions and test automatic
+grounding/completeness; they do not isolate the value of model fields against an otherwise identical no-model report.
+That comparison is a stated next study, not an implied result.
+
+### Main-text sequence
+
+1. **Clinical need and motivation.** Progressive gliomas require longitudinal surveillance; the initial radiomics
+   exercise motivates a move from prediction to a reportable evidence record.
+2. **PRISM as the product.** A structured record joins measurements, treatment history, separate scores, confidence,
+   provenance and a locally written report.
+3. **Why separate components are retained.** Internal and locked external results establish how image and timeline
+   pathways behave; the audit shows that the evidence carrying a score can differ by cohort.
+4. **What a clinician receives.** One report shows the longitudinal facts, model evidence, what was not used and the
+   situations in which evidence is thin. The report evaluation tests lexical grounding and required content, not
+   clinical usefulness.
+5. **What remains to test.** A report-without-model ablation and a clinician reader study.
+
+### Primary report evidence
+
+Report v3.1 is the primary report result because it is the newest, frozen cross-cohort evaluation: 406/406 reports
+passed the lexical checker, all 220 reports requiring a thin-evidence tier stated it, and 28/30 perturbed records met
+the prespecified follows rule. The checker verifies numbers, flags, confidence fields and forbidden wording against a
+structured record. It is not a clinician assessment. Earlier v1/v2/v3 results are development history only.
+
+### Displays
+
+- **Figure 1:** PRISM as a system from serial data to a checked report.
+- **Table 1:** cohorts and the evidence available to the report.
+- **Figure 2:** component performance across MU, LUMIERE and UCSF.
+- **Figure 3:** why one fused score hides the evidence each cohort supplies.
+- **Figure 4:** report anatomy: longitudinal facts, separate evidence, uncertainty, provenance and omissions.
+- **Table 2:** v3.1 automatic grounding/completeness evaluation, with its scope stated in the title and note.
+
+The existing detailed outline is retained below as an analysis record until the main text and supplement have been
+fully reconciled.
+
+---
+
 **Status: draft 3 (2026-10-26), accepted by the author 2026-10-26; skeleton in `paper/main.tex`.** **Council rounds 1 to 5 done (2026-10-26); read [council/COUNCIL_SUMMARY.md](council/COUNCIL_SUMMARY.md) for what changed and the decisions waiting for you.** Rebuilt on the author's framing of 2026-10-26
 (STYLE.md section 10): lead with what the system does, present the difficulties of surveillance data as known
 challenges each paired with the module that handles it, PRISM as a modular system, no accusation of the field, no
