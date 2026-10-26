@@ -26,9 +26,10 @@ evidence and the two external tests go in the abstract's first lines.
 - **Question:** can a surveillance system give the clinician, at each post-treatment scan, the image evidence and
   the treatment-timeline evidence separately, carry to other centres without refitting, and say how much each can be
   trusted there?
-- **Claim:** PRISM does this. Its pathways hold at two external centres with models fitted once on MU-Glioma-Post;
-  its audit shows what each score rests on in each cohort; its confidence keeps its stated coverage at all three
-  centres; and its reports, written by a local language model and checked against the record, state the evidence
+- **Claim:** PRISM does this. Its pathways rank scans at two external centres with models fitted once on
+  MU-Glioma-Post (the risk scale and threshold need local recalibration; round 4); its audit shows what each score
+  rests on in each cohort; its confidence keeps its stated coverage on average at all three centres (short for one
+  outcome at each external centre); and its reports, written by a local language model and checked against the record, state the evidence
   without advice.
 - **Investigation:** the modules → what each delivers on MU → locked tests on LUMIERE and UCSF → what each score
   rests on → the confidence → the report.
@@ -40,7 +41,7 @@ evidence and the two external tests go in the abstract's first lines.
 | C1 | Most datasets have images but no treatment dates | Separate pathways; the image pathway stands alone | Images alone transport to LUMIERE and UCSF (R2) |
 | C2 | Progression is documented differently at each centre, so a score can rest on different evidence | Pathways kept apart, plus an audit of what each score rests on | MU: where the patient is in treatment; UCSF: enhancing volume (R3) |
 | C3 | Cohorts are small, and a single split can move a score more than a model choice | Repeated patient-grouped CV; locked external tests with plans written in advance | Supporting paragraph + Supp. figure (split variance; single-scan radiomics setting) |
-| C4 | The hardest situations (early after RT, growing enhancement) have few cases | Confidence: conformal set, pathway-disagreement warning, reliability card stating the evidence | Coverage at three centres; disagreement picks out errors on MU; 35 of 249 scans in a tested situation (R4) |
+| C4 | The hardest situations (early after RT, growing enhancement) have few cases | Confidence: conformal set, pathway-disagreement warning, reliability card stating the evidence | Coverage on average at three centres; disagreement (medians fixed on MU) picks out errors on MU and LUMIERE; 35 of 249 scans in a tested situation (R4) |
 | C5 | Volumes are noisy, the clinician must see what was measured, and patient data cannot leave the hospital | Deep segmentation feeding measurements and a figure; a local language model with a deterministic checker | Faithful reports in all three cohorts after one revision (R5) |
 
 ## Abstract (LOCKED 2026-10-24, text in [LOCKED.md](LOCKED.md))
@@ -53,9 +54,9 @@ abstract will be proposed beside the locked one, and the locked text stays until
 | # | Claim | Content |
 |---|---|---|
 | **Fig 1** | PRISM is built of modules, each answering a known challenge. | Scan + record → segmentation → measurements; clinical + timeline pathway; image pathway; combined score → confidence (conformal set, disagreement, card) → local report. One worked example scan. No RANO. **Round 3:** the Discussion's worked example (eight weeks after RT, growing enhancement, pathways disagree, set holds both outcomes, card has few cases) should become a panel here or in Fig 5; the text stays in the Discussion until the figure exists. |
-| **Fig 2** | The pathways hold at two external centres without refitting. | AUC by pathway (clinical alone, timeline, images, combined) × cohort (MU internal, LUMIERE locked, UCSF locked, UCSF-trained as reference). Round 3: enhancing tumour volume alone as a reference bar in each cohort (NUMBERS.md 12C). |
+| **Fig 2** | The models rank scans at two external centres without refitting. | AUC by pathway (clinical alone, timeline, images, combined) × cohort (MU internal, LUMIERE locked, UCSF locked, UCSF-trained as reference). Round 3: enhancing tumour volume alone as a reference bar in each cohort (NUMBERS.md 12C). |
 | **Fig 3** | What each score rests on depends on the cohort, and the audit shows it. | (A) MU: the timeline's gain lies between phases of care. (B) UCSF: enhancing volume alone matches the image model. (C) The image-model ladder (single scan → + change → + schedule context), exploratory. |
-| **Fig 4** | The confidence keeps its coverage and points to the doubtful scans. | (A) Conformal coverage at α 0.2 by cohort and pathway. (B) AUC with and without the disagreement warning. (C) The card: situations by cohort with their evidence tier. |
+| **Fig 4** | The confidence keeps its coverage on average and points to the doubtful scans. | (A) Conformal coverage at α 0.2 by cohort and pathway. (B) AUC with and without the disagreement warning. (C) The card: situations by cohort with their evidence tier. |
 | **Fig 5** | The report states the evidence, faithful to the record. | One rendered report (segmentation figure, pathways, combined score, confidence) + faithfulness by cohort. |
 | Supp. | How PRISM is tested, and why. | Split variance (MU first split vs 500 splits; UCSF's own split vs 100); single-scan radiomics setting under repeated CV. |
 
@@ -83,11 +84,12 @@ abstract will be proposed beside the locked one, and the locked text stays until
 
 **3. Results** (each heading states the finding)
 1. *Each pathway carries evidence on MU*: timeline 0.82, images 0.71, combined 0.82; clinical alone at chance.
-2. *The models transfer to two external centres* → Fig 2. LUMIERE 0.77; UCSF single-scan images 0.80 and the image
+2. *The models rank scans at two external centres* → Fig 2 (enhancing volume alone as a reference bar; calibration
+   and the MU threshold do not carry over, so a new centre recalibrates). LUMIERE 0.77; UCSF single-scan images 0.80 and the image
    pathway with change 0.73 (Q1 met); trained at UCSF 0.83 and 0.86 (council round 1).
 3. *What each score rests on depends on the cohort* → Fig 3. MU: where the patient is in treatment; UCSF: how much
    the tumour enhances. Measurements come from the cohorts' masks; deep networks scoring UCSF scans directly track enhancing volume (Q4).
-4. *The confidence keeps its coverage* → Fig 4. 0.82 / 0.87 / 0.78 against a target of 0.78; the disagreement
+4. *The confidence keeps its coverage on average* → Fig 4 (coverage by outcome in the text). 0.82 / 0.87 / 0.78 against a target of 0.78; the disagreement
    warning picks out errors on MU; most scans sit where the evidence is thin, and the card says so.
 5. *The reports are faithful to the record* → Fig 5. Numbers from v3.1 and the model-size ladder.
 
@@ -152,3 +154,10 @@ Censoring, calibration, SHAP, the full flag set, the card's cells, UCSF label se
     comparison one sentence. No volumetric response-rule baseline (author: no RANO); enhancing volume alone is the simple
     reference. The worked example stays in the Discussion and should become a panel in Fig 1 or Fig 5. Main text 3,992
     words (round 2: 3,898). Record: `docs/manuscript/council/round3_decisions.md`.
+18. (2026-10-26) Council round 4 (coordinator rulings, pending author): "transfer" means ranking; calibration and the MU
+    threshold do not carry over to UCSF, stated in 3.2, one Discussion sentence for builders and the Limits. Coverage
+    "on average", short for one outcome at LUMIERE and UCSF (abstract, Introduction, 3.4 heading and text, Figure 4).
+    The agreement rule uses medians fixed on MU (computable at a scan); the cohort-median result is one clause.
+    Enhancing volume alone is the reference bar in Figure 2 (MU 0.62, LUMIERE 0.66; UCSF 0.88 in 3.3). The ladder's
+    middle step is given with its interval, which includes zero. One-sentence Conclusion. Trim to 3,898 words (round 3:
+    3,992). Record: `docs/manuscript/council/round4_decisions.md`.
