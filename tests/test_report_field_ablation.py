@@ -253,13 +253,107 @@ class TestProvenanceAndPairing(unittest.TestCase):
             (out / "llm/requests_facts_only.jsonl").write_text('{"id":"eval|a"}\n')
             with patch("prism.analyses.report_field_ablation._guard_requests"), patch(
                     "prism.analyses.report_field_ablation.subprocess.run", side_effect=OSError("runner unavailable")):
-                with self.assertRaisesRegex(RuntimeError, "failed twice"):
-                    generate_step(root, out)
+                generate_step(root, out)
             for attempt in (1, 2):
                 meta = out / f"llm/outputs_facts_only_attempt{attempt}.jsonl.meta.json"
                 self.assertTrue(meta.exists())
                 self.assertFalse(json.loads(meta.read_text())["complete"])
-            self.assertFalse((out / "llm/outputs_facts_only.jsonl").exists())
+            self.assertEqual((out / "llm/outputs_facts_only.jsonl").read_text(), "")
+            final = json.loads((out / "llm/outputs_facts_only.jsonl.meta.json").read_text())
+            self.assertFalse(final["complete"])
+            self.assertEqual(final["n_attempts"], 2)
+
+    def test_double_batch_failure_still_yields_failed_summaries(self):
+        rec = record()
+        rec["patient_id"] = "synthetic-patient"
+        rid = rec["record_id"]
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            baseline = root / "outputs/results/analyses/report_v3_1"
+            (baseline / "llm").mkdir(parents=True)
+            full_line = json.dumps({"id": f"eval|{rid}", "text": "{}", "finish_reason": "stop",
+                                    "n_prompt_tokens": 10, "n_output_tokens": 2}) + "\n"
+            (baseline / "llm/outputs_eval.jsonl").write_text(full_line)
+            (baseline / "llm/outputs_eval.jsonl.meta.json").write_text('{"n":1,"batch_wall_s":5}\n')
+            (baseline / "checks_eval.csv").write_text(
+                "scan_id,cohort,pass,parsed,finish_reason,n_output_tokens,words,card_tier_stated,fail_required_missing\n"
+                f"{rid},mu,True,True,stop,2,2,True,False\n")
+            out = root / "ablation"
+            (out / "llm").mkdir(parents=True)
+            (out / "llm/requests_facts_only.jsonl").write_text(json.dumps({"id": f"eval|{rid}"}) + "\n")
+            calls = []
+
+            def failing_batch(cmd, **kwargs):
+                calls.append(cmd)
+                target = Path(cmd[cmd.index("--out") + 1])
+                target.write_text('{"id":"eval|' + rid + '","text":"partial')  # crashed mid-write
+                return SimpleNamespace(returncode=1)
+
+            with patch("prism.analyses.report_field_ablation._guard_requests"), patch(
+                    "prism.analyses.report_field_ablation._records", return_value={rid: rec}), patch(
+                    "prism.analyses.report_field_ablation.subprocess.run", side_effect=failing_batch):
+                generate_step(root, out)
+                evaluate_step(root, out)
+            self.assertEqual(len(calls), 2)
+            for attempt in (1, 2):
+                self.assertIn("partial", (out / f"llm/outputs_facts_only_attempt{attempt}.jsonl").read_text())
+            checks = pd.read_csv(out / "checks_facts_only.csv")
+            self.assertEqual(len(checks), 1)
+            self.assertTrue(bool(checks.loc[0, "missing_output"]))
+            self.assertFalse(bool(checks.loc[0, "pass"]))
+            summary = pd.read_csv(out / "summary_facts_only.csv").set_index("cohort")
+            self.assertEqual(int(summary.loc["all", "n"]), 1)
+            self.assertEqual(int(summary.loc["all", "failed"]), 1)
+            self.assertEqual(int(summary.loc["all", "missing_output"]), 1)
+            self.assertFalse(bool(summary.loc["all", "batch_complete"]))
+            self.assertEqual(int(summary.loc["all", "n_attempts"]), 2)
+            paired = pd.read_csv(out / "paired_rows.csv")
+            self.assertEqual(paired.scan_id.tolist(), [rid])
+            self.assertTrue(bool(paired.loc[0, "facts_only_missing_output"]))
+            self.assertTrue((out / "paired_summary.csv").exists())
+
+    def test_retry_runtime_and_cost_include_the_failed_attempt(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            baseline = root / "outputs/results/analyses/report_v3_1/llm/outputs_eval.jsonl"
+            baseline.parent.mkdir(parents=True)
+            baseline.write_text('{"id":"eval|a","text":"full"}\n')
+            Path(str(baseline) + ".meta.json").write_text('{"n":1}\n')
+            out = root / "ablation"
+            (out / "llm").mkdir(parents=True)
+            (out / "llm/requests_facts_only.jsonl").write_text('{"id":"eval|a"}\n')
+            calls = []
+
+            def flaky_batch(cmd, **kwargs):
+                calls.append(cmd)
+                if len(calls) == 2:
+                    target = Path(cmd[cmd.index("--out") + 1])
+                    target.write_text('{"id":"eval|a","text":"ok"}\n')
+                    Path(str(target) + ".meta.json").write_text(
+                        '{"n":1,"batch_wall_s":80,"batch_s_per_request":80,"gpu_name":"synthetic"}\n')
+                return SimpleNamespace(returncode=1 if len(calls) == 1 else 0)
+
+            with patch("prism.analyses.report_field_ablation._guard_requests"), patch(
+                    "prism.analyses.report_field_ablation.subprocess.run", side_effect=flaky_batch), patch(
+                    "prism.analyses.report_field_ablation.time.monotonic", side_effect=[0.0, 30.0, 30.0, 130.0]):
+                generate_step(root, out)
+            meta = json.loads((out / "llm/outputs_facts_only.jsonl.meta.json").read_text())
+            self.assertTrue(meta["complete"])
+            self.assertEqual([a["process_wall_s"] for a in meta["attempts"]], [30.0, 100.0])
+            self.assertEqual([a["returncode"] for a in meta["attempts"]], [1, 0])
+            self.assertEqual(meta["attempts"][1]["batch_wall_s"], 80)
+            self.assertEqual(meta["total_process_wall_s"], 130.0)
+            self.assertEqual(meta["total_batch_wall_s"], 80)
+            attempt1 = json.loads((out / "llm/outputs_facts_only_attempt1.jsonl.meta.json").read_text())
+            self.assertEqual(attempt1["process_wall_s"], 30.0)
+            rows = [{"scan_id": "a", "cohort": "mu", "pass": True, "parsed": True, "missing_output": False,
+                     "finish_reason": "stop", "required_content_pass": True, "model_leak": False,
+                     "words": 3, "n_prompt_tokens": 1, "n_output_tokens": 1}]
+            row = summarise_arm(rows, meta, gpu_hour_price_usd=3.6).set_index("cohort").loc["all"]
+            self.assertEqual(float(row["total_process_wall_s"]), 130.0)
+            self.assertEqual(int(row["n_attempts"]), 2)
+            self.assertEqual(json.loads(row["attempt_process_wall_s"]), [30.0, 100.0])
+            self.assertAlmostEqual(float(row["estimated_batch_cost_usd"]), 0.13)
 
     def test_requests_write_separate_aligned_arms_from_synthetic_record(self):
         rec = record()

@@ -12,6 +12,7 @@ import json
 import os
 import shutil
 import subprocess
+import time
 from pathlib import Path
 
 import numpy as np
@@ -215,7 +216,7 @@ def _guard_requests(root: Path, output_root: Path) -> None:
             raise RuntimeError(f"frozen request hash mismatch: {arm}")
 
 
-def generate_step(root: Path = REPO, output_root: Path = OUT) -> None:
+def generate_step(root: Path = REPO, output_root: Path = OUT) -> dict | None:
     _guard_requests(root, output_root)
     baseline = root / BASE / "llm/outputs_eval.jsonl"
     full = _output_path(output_root, A.FULL_EVIDENCE)
@@ -231,8 +232,10 @@ def generate_step(root: Path = REPO, output_root: Path = OUT) -> None:
         shutil.copyfile(source_meta, dest_meta)
     target = _output_path(output_root, A.FACTS_ONLY)
     if target.exists():
-        return
+        return None
     mid, revision, chat_kwargs, extra = R31.MODELS[R31.PRIMARY]
+    request_sha256 = _digest(_request_path(output_root, A.FACTS_ONLY))
+    attempts = []
     for attempt in (1, 2):
         _guard_requests(root, output_root)
         attempt_path = target.with_name(f"{target.stem}_attempt{attempt}{target.suffix}")
@@ -247,22 +250,40 @@ def generate_step(root: Path = REPO, output_root: Path = OUT) -> None:
                "TRANSFORMERS_OFFLINE": "1", "VLLM_NO_USAGE_STATS": "1", "DO_NOT_TRACK": "1"}
         log = attempt_path.with_suffix(".log")
         with log.open("w") as stdout:
+            started = time.monotonic()
             try:
                 returncode = subprocess.run(cmd, cwd=root, env=env, stdout=stdout,
                                             stderr=subprocess.STDOUT, check=False).returncode
             except OSError as exc:
                 stdout.write(f"Runner could not start: {exc}\n")
                 returncode = None
-        meta = Path(str(attempt_path) + ".meta.json")
-        if returncode == 0 and attempt_path.exists() and meta.exists():
+            process_wall_s = time.monotonic() - started
+        meta_path = Path(str(attempt_path) + ".meta.json")
+        complete = returncode == 0 and attempt_path.exists() and meta_path.exists()
+        # The runner's meta covers only its generation call; the process wall time includes model load.
+        try:
+            meta = json.loads(meta_path.read_text()) if meta_path.exists() else {}
+        except ValueError:
+            meta = {}
+        meta.update({"attempt": attempt, "returncode": returncode, "request_sha256": request_sha256,
+                     "complete": complete, "process_wall_s": process_wall_s})
+        meta_path.write_text(json.dumps(meta, indent=2) + "\n")
+        attempts.append({key: meta.get(key) for key in
+                         ("attempt", "returncode", "complete", "process_wall_s", "batch_wall_s")})
+        if complete:
             shutil.copyfile(attempt_path, target)
-            shutil.copyfile(meta, Path(str(target) + ".meta.json"))
-            return
-        if not meta.exists():
-            meta.write_text(json.dumps({"attempt": attempt, "returncode": returncode,
-                                        "request_sha256": _digest(_request_path(output_root, A.FACTS_ONLY)),
-                                        "complete": False}, indent=2) + "\n")
-    raise RuntimeError("facts-only whole-batch generation failed twice; attempt artifacts retained")
+            break
+    final = dict(meta) if attempts[-1]["complete"] else {"request_sha256": request_sha256, "complete": False}
+    for key in ("attempt", "returncode", "process_wall_s"):
+        final.pop(key, None)
+    final.update({"attempts": attempts, "n_attempts": len(attempts),
+                  "total_process_wall_s": sum(a["process_wall_s"] for a in attempts),
+                  "total_batch_wall_s": sum(a["batch_wall_s"] or 0 for a in attempts)})
+    if not final["complete"]:
+        # A failed whole batch has no final output: every record is counted as a failure by evaluate.
+        target.write_text("")
+    Path(str(target) + ".meta.json").write_text(json.dumps(final, indent=2) + "\n")
+    return final
 
 
 def _output_map(path: Path, expected: set[str]) -> dict[str, dict]:
@@ -322,8 +343,15 @@ def summarise_arm(rows: list[dict] | pd.DataFrame, meta: dict | None = None,
         for col in group.columns:
             if col.startswith("fail_"):
                 row[col] = int(group[col].sum())
-        wall = meta.get("batch_wall_s")
-        row["batch_wall_s"] = wall
+        attempts = meta.get("attempts") or []
+        # Runtime and cost sum every whole-batch attempt, including a failed first attempt.
+        wall = meta.get("total_process_wall_s", meta.get("batch_wall_s"))
+        row["batch_complete"] = meta.get("complete", bool(meta))
+        row["n_attempts"] = meta.get("n_attempts", 1 if meta else 0)
+        row["batch_wall_s"] = meta.get("batch_wall_s")
+        row["total_batch_wall_s"] = meta.get("total_batch_wall_s", meta.get("batch_wall_s"))
+        row["total_process_wall_s"] = meta.get("total_process_wall_s")
+        row["attempt_process_wall_s"] = json.dumps([a.get("process_wall_s") for a in attempts])
         row["batch_s_per_request"] = meta.get("batch_s_per_request")
         row["gpu_name"] = meta.get("gpu_name")
         row["gpu_hour_price_usd"] = gpu_hour_price_usd
@@ -448,7 +476,10 @@ def main(argv: list[str] | None = None) -> None:
         elif step == "requests":
             requests_step()
         elif step == "generate":
-            generate_step()
+            final = generate_step()
+            if final is not None and not final["complete"]:
+                print("generate: facts-only batch failed twice; records without output count as failures",
+                      flush=True)
         elif step == "evaluate":
             evaluate_step(gpu_hour_price_usd=args.gpu_hour_price_usd)
         else:
