@@ -1,6 +1,8 @@
 """Facts-only v2: one specification renders the prompt and the checker. Synthetic records only."""
 
+import contextlib
 import copy
+import io
 import json
 import shutil
 import tempfile
@@ -368,17 +370,47 @@ class V2Root:
         self.out = self.root / "v2"
         self.dev = synthetic_dev() if dev is None else dev
         _write_jsonl(self.root / V1.BASE / "records/dev.jsonl", self.dev)
+        self.pass_preflight()
+
+    def pass_preflight(self, complete=True, parsed=True):
+        self.out.mkdir(parents=True, exist_ok=True)
+        (self.out / "preflight.json").write_text(json.dumps({"complete": complete, "parsed": parsed,
+                                                             "request_sha256": "0" * 64}))
 
     def dev_step(self, iteration, batch=None):
-        with patch("prism.analyses.report_field_ablation._whole_batch", batch or fake_batch(self.dev)):
+        with patch("prism.analyses.report_field_ablation._whole_batch", batch or fake_batch(self.dev)), \
+                contextlib.redirect_stdout(io.StringIO()):
             return V2.dev_step(self.root, self.out, iteration, v1_output_root=self.v1)
 
     def preflight(self, batch=None):
-        with patch("prism.analyses.report_field_ablation._whole_batch", batch or fake_batch([])):
+        with patch("prism.analyses.report_field_ablation._whole_batch", batch or fake_batch([])), \
+                contextlib.redirect_stdout(io.StringIO()):
             return V2.preflight_step(self.root, self.out, v1_output_root=self.v1)
 
     def cleanup(self):
         self._dir.cleanup()
+
+
+def failed_batch(calls=None):
+    """Stands in for V1._whole_batch when both whole-batch attempts fail: attempt files, an empty final output and
+    complete false, as V1._whole_batch writes them (no exception)."""
+    def run(root, request, target, guard):
+        guard()
+        if calls is not None:
+            calls.append(request)
+        attempts = []
+        for attempt in (1, 2):
+            attempt_path = target.with_name(f"{target.stem}_attempt{attempt}{target.suffix}")
+            attempt_path.with_suffix(".log").write_text("engine failed\n")
+            Path(str(attempt_path) + ".meta.json").write_text(json.dumps({"attempt": attempt, "complete": False}))
+            attempts.append({"attempt": attempt, "returncode": 1, "complete": False, "process_wall_s": 2.0,
+                             "batch_wall_s": None})
+        meta = {"request_sha256": V1._digest(request), "complete": False, "attempts": attempts, "n_attempts": 2,
+                "total_process_wall_s": 4.0, "total_batch_wall_s": 0}
+        target.write_text("")
+        Path(str(target) + ".meta.json").write_text(json.dumps(meta) + "\n")
+        return meta
+    return run
 
 
 def _no_model(*_args, **_kwargs):
@@ -497,12 +529,63 @@ class TestDevStep(unittest.TestCase):
     def test_dev_refuses_rerun_of_existing_iteration(self):
         bad = {r["record_id"] for r in self.env.dev[:4]}
         self.env.dev_step(0, fake_batch(self.env.dev, bad=bad))
-        with self.assertRaisesRegex(RuntimeError, "iteration 0 output already exists"):
+        with self.assertRaisesRegex(RuntimeError, "iteration 0 output already exists.*logged deviation"):
             self.env.dev_step(0, _no_model)
         # A partial iteration (requests only) is refused too.
         (self.env.out / "llm/requests_dev_iter1.jsonl").write_text("")
         with self.assertRaisesRegex(RuntimeError, "iteration 1 output already exists"):
             self.env.dev_step(1, _no_model)
+
+    def test_failed_batch_does_not_use_up_the_iteration(self):
+        with self.assertRaisesRegex(RuntimeError, "iteration 0 batch failed.*moved to deviation_dev_iter0_1/.*"
+                                                  "logged deviation is required"):
+            self.env.dev_step(0, failed_batch())
+        out = self.env.out
+        for name in ("summary_dev_iter0.csv", "non_form_word_counts_dev_iter0.csv", "dev_iter0.json",
+                     "checks_dev_iter0.csv"):
+            self.assertFalse((out / name).exists(), name)
+        self.assertEqual(list((out / "llm").iterdir()), [])
+        moved = out / "deviation_dev_iter0_1"
+        self.assertEqual(sorted(p.name for p in moved.iterdir()), sorted([
+            "infra_failure.json", "requests_dev_iter0.jsonl", "outputs_dev_iter0.jsonl",
+            "outputs_dev_iter0.jsonl.meta.json", "outputs_dev_iter0_attempt1.log",
+            "outputs_dev_iter0_attempt1.jsonl.meta.json", "outputs_dev_iter0_attempt2.log",
+            "outputs_dev_iter0_attempt2.jsonl.meta.json"]))
+        failure = json.loads((moved / "infra_failure.json").read_text())
+        self.assertEqual((failure["iteration"], failure["complete"], failure["n_attempts"]), (0, False, 2))
+        self.assertNotIn("synthetic", (moved / "infra_failure.json").read_text())
+        # A second failure goes to the next free directory; then the iteration runs normally.
+        with self.assertRaisesRegex(RuntimeError, "deviation_dev_iter0_2/"):
+            self.env.dev_step(0, failed_batch())
+        info = self.env.dev_step(0)
+        self.assertTrue(info["qualifies"])
+        self.assertTrue((out / "summary_dev_iter0.csv").exists())
+        self.assertTrue((out / "dev_iter0.json").exists())
+
+    def test_dev_refuses_without_a_passing_preflight(self):
+        (self.env.out / "preflight.json").unlink()
+        with self.assertRaisesRegex(RuntimeError, "passing preflight"):
+            self.env.dev_step(0, _no_model)
+        for complete, parsed in ((True, False), (False, True)):
+            self.env.pass_preflight(complete=complete, parsed=parsed)
+            with self.subTest(complete=complete, parsed=parsed):
+                with self.assertRaisesRegex(RuntimeError, "passing preflight"):
+                    self.env.dev_step(0, _no_model)
+        self.assertFalse((self.env.out / "llm/requests_dev_iter0.jsonl").exists())
+
+    def test_spec_change_during_generation_is_refused(self):
+        spec = self.env.root / SPEC
+        good = fake_batch(self.env.dev)
+
+        def change_spec_then_run(root, request, target, guard):
+            spec.write_bytes(spec.read_bytes() + b"\n# changed during generation\n")
+            return good(root, request, target, guard)
+        before = V1._git_blob(spec)
+        with self.assertRaisesRegex(RuntimeError, "specification changed during development iteration 0"):
+            self.env.dev_step(0, change_spec_then_run)
+        self.assertFalse((self.env.out / "dev_iter0.json").exists())
+        spec.write_bytes((REPO_ROOT / SPEC).read_bytes())
+        self.assertEqual(V1._git_blob(spec), before)
 
     def test_dev_refuses_when_consistency_check_fails(self):
         original = facts_only_v2.sentence_forms
@@ -533,7 +616,7 @@ class TestGuardV2(unittest.TestCase):
         _write_jsonl(env.root / V1.BASE / "records/dev.jsonl", env.dev)
         with self.assertRaisesRegex(RuntimeError, "development/evaluation patient overlap: 1 patient") as caught:
             env.dev_step(0, _no_model)
-        self.assertNotIn(first["patient_id"], str(caught.exception))
+        self.assertTrue(first["patient_id"] not in str(caught.exception), "evaluation patient ID leaked")
         with self.assertRaisesRegex(RuntimeError, "patient overlap"):
             env.preflight(_no_model)
         self.assertFalse((env.out / "dev_lock.json").exists())
@@ -602,7 +685,7 @@ class TestPreflight(unittest.TestCase):
         for name in ("eval.jsonl", "dev.jsonl"):
             for rec in V1._jsonl(self.env.root / V1.BASE / "records" / name):
                 ids |= {rec["record_id"], rec["scan_id"], rec["patient_id"]}
-        self.assertEqual({i for i in ids if i in text}, set())
+        self.assertFalse(any(i in text for i in ids), "record ID in preflight request")
         self.assertEqual(V1._jsonl(request)[0]["messages"], facts_only_v2.messages(_facts(V2.synthetic_record())))
         state = json.loads((self.env.out / "preflight.json").read_text())
         self.assertEqual({k: state[k] for k in ("complete", "parsed", "request_sha256")},
@@ -629,14 +712,16 @@ class TestPreflight(unittest.TestCase):
 
 class TestV2Cli(unittest.TestCase):
     def test_main_dispatches_dev_and_preflight(self):
-        with patch.object(V2, "dev_step") as dev, patch.object(V2, "preflight_step") as preflight:
+        with patch.object(V2, "dev_step") as dev, patch.object(V2, "preflight_step") as preflight, \
+                contextlib.redirect_stdout(io.StringIO()):
             V2.main(["--steps", "dev", "preflight", "--iteration", "1"])
         dev.assert_called_once()
         self.assertEqual(dev.call_args.kwargs["iteration"], 1)
         preflight.assert_called_once()
 
     def test_main_requires_iteration_for_dev(self):
-        with patch.object(V2, "dev_step") as dev, self.assertRaises(SystemExit):
+        with patch.object(V2, "dev_step") as dev, self.assertRaises(SystemExit), \
+                contextlib.redirect_stderr(io.StringIO()):
             V2.main(["--steps", "dev"])
         dev.assert_not_called()
 

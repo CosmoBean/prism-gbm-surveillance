@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import shutil
 from collections import Counter
 from pathlib import Path
 
@@ -94,15 +95,23 @@ def _dev_paths(output_root: Path, k: int) -> dict[str, Path]:
             "info": output_root / f"dev_iter{k}.json"}
 
 
+def _iteration_artifacts(output_root: Path, k: int) -> list[Path]:
+    """Every existing artifact of iteration k: the named files plus the batch output's attempts, logs and metas."""
+    paths = _dev_paths(output_root, k)
+    stem = paths["outputs"].stem
+    batch = [p for p in paths["outputs"].parent.glob(f"{stem}*")
+             if p.name.startswith((f"{stem}.", f"{stem}_attempt"))] if paths["outputs"].parent.exists() else []
+    return sorted({*[p for p in paths.values() if p.exists()], *batch})
+
+
 def _refuse_iteration(output_root: Path, iteration: int) -> None:
     if not isinstance(iteration, int) or iteration < 0:
         raise RuntimeError(f"invalid development iteration: {iteration}")
     if iteration >= MAX_ITERATIONS:
         raise RuntimeError(f"at most {MAX_ITERATIONS} development iterations (0 to {MAX_ITERATIONS - 1})")
-    paths = _dev_paths(output_root, iteration)
-    stem = paths["outputs"].stem
-    if any(p.exists() for p in paths.values()) or any(paths["outputs"].parent.glob(f"{stem}*")):
-        raise RuntimeError(f"development iteration {iteration} output already exists")
+    if _iteration_artifacts(output_root, iteration):
+        raise RuntimeError(f"development iteration {iteration} output already exists; it is not re-run without a "
+                           "logged deviation")
     for earlier in range(iteration):
         info = _dev_paths(output_root, earlier)["info"]
         if info.exists() and json.loads(info.read_text()).get("qualifies") is True:
@@ -111,6 +120,32 @@ def _refuse_iteration(output_root: Path, iteration: int) -> None:
         previous = _dev_paths(output_root, iteration - 1)
         if not previous["summary"].exists() or not previous["info"].exists():
             raise RuntimeError(f"development iteration {iteration - 1} has no summary")
+
+
+def _require_preflight(output_root: Path) -> None:
+    path = output_root / PREFLIGHT
+    try:
+        state = json.loads(path.read_text()) if path.exists() else {}
+    except ValueError:
+        state = {}
+    if state.get("complete") is not True or state.get("parsed") is not True:
+        raise RuntimeError("run a passing preflight (complete and parsed) before a development iteration")
+
+
+def _quarantine(output_root: Path, iteration: int, meta: dict) -> Path:
+    """Move every artifact of a failed (incomplete) batch to deviation_dev_iter<k>_<n>/ with its batch metadata, so
+    the failure does not use up the iteration."""
+    n = 1
+    while (output_root / f"deviation_dev_iter{iteration}_{n}").exists():
+        n += 1
+    directory = output_root / f"deviation_dev_iter{iteration}_{n}"
+    directory.mkdir(parents=True)
+    for path in _iteration_artifacts(output_root, iteration):
+        shutil.move(str(path), str(directory / path.name))
+    fields = ("request_sha256", "complete", "attempts", "n_attempts", "total_process_wall_s", "total_batch_wall_s")
+    (directory / "infra_failure.json").write_text(
+        json.dumps({"iteration": iteration, **{key: meta.get(key) for key in fields}}, indent=2) + "\n")
+    return directory
 
 
 def _consistency(dev: list[dict]) -> None:
@@ -178,6 +213,7 @@ def dev_step(root: Path = REPO, output_root: Path = OUT2, iteration: int = 0, v1
     root, output_root = Path(root), Path(output_root)
     _refuse_iteration(output_root, iteration)
     guard_v2(root, output_root, v1_output_root)
+    _require_preflight(output_root)
     dev = _dev_records(root)
     _consistency(dev)
     paths = _dev_paths(output_root, iteration)
@@ -186,12 +222,21 @@ def dev_step(root: Path = REPO, output_root: Path = OUT2, iteration: int = 0, v1
              "max_tokens": MAX_TOKENS, "schema": S.FACTS_SCHEMA} for rec in dev]
     paths["requests"].write_bytes("".join(json.dumps(row) + "\n" for row in rows).encode())
     request_sha256 = V1._digest(paths["requests"])
+    spec_blob = V1._git_blob(root / SPEC)
 
     def guard() -> None:
         guard_v2(root, output_root, v1_output_root)
         if V1._digest(paths["requests"]) != request_sha256:
             raise RuntimeError(f"development iteration {iteration} request hash mismatch")
+        if V1._git_blob(root / SPEC) != spec_blob:
+            raise RuntimeError(f"specification changed during development iteration {iteration}")
     meta = V1._whole_batch(root, paths["requests"], paths["outputs"], guard)
+    if not meta.get("complete"):
+        directory = _quarantine(output_root, iteration, meta)
+        raise RuntimeError(f"development iteration {iteration} batch failed (incomplete); its artifacts were moved "
+                           f"to {directory.name}/. A logged deviation is required before re-running iteration "
+                           f"{iteration}.")
+    guard()
     outputs = V1._output_map(paths["outputs"], {row["id"] for row in rows})
     checked = [_check_row(rec, outputs.get(f"dev|{rec['record_id']}")) for rec in dev]
     frame = pd.DataFrame([row for row, _ in checked])
@@ -199,7 +244,7 @@ def dev_step(root: Path = REPO, output_root: Path = OUT2, iteration: int = 0, v1
     summary = summarise_dev(frame, meta, gpu_hour_price_usd)
     summary.to_csv(paths["summary"], index=False)
     _word_counts(frame, [words for _, words in checked]).to_csv(paths["words"], index=False)
-    info = {"iteration": iteration, "spec_version": S.SPEC_VERSION, "spec_blob": V1._git_blob(root / SPEC),
+    info = {"iteration": iteration, "spec_version": S.SPEC_VERSION, "spec_blob": spec_blob,
             "qualifies": qualifies(summary), "request_sha256": request_sha256,
             "dev_sha256": V1._digest(root / V1.BASE / DEV)}
     paths["info"].write_text(json.dumps(info, indent=2) + "\n")
