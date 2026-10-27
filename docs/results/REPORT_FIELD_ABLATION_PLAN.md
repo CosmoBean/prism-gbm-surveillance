@@ -1670,3 +1670,11 @@ The JSON manifest below is the frozen input contract. `records` follows the sour
   }
 }
 ```
+
+## Execution contract
+
+`python -m prism.analyses.report_field_ablation --steps freeze requests generate evaluate render` runs the local paired pipeline in that order. `freeze` checks the canonical manifest, each exact record-line hash, the original frozen hash text, the pinned Qwen3.8-27B writer revision, and the immutable v3.1 requests, outputs, metadata, checks, summaries, and stress artifacts against SHA-256 values embedded in the pipeline. It also requires 406/406 parsed and passing full reports, 220/220 required tiers stated, and 28/30 formal perturbation follows. The resulting `provenance.json` locks those artifact hashes. Every later step repeats this gate before doing work.
+
+Artifacts are written only under `outputs/results/analyses/report_field_ablation/`; the v3.1 directory remains read only. The full arm imports the exact v3.1 request/output JSONL and metadata. Facts-only requests contain the strictly filtered facts and are generated as one local offline vLLM batch with the same pinned writer. If infrastructure fails, one identical whole-batch attempt is allowed. The `_attempt1` and `_attempt2` output, log, and metadata paths retain the evidence of both attempts; no individual report is retried.
+
+`checks_full_evidence.csv` and `checks_facts_only.csv` retain one row per locked record, including missing and unparsed outputs as failures. `summary_<arm>.csv` reports cohort and all-record denominators, Wilson intervals, required-content coverage, leakage, failure categories, words, token counts, and batch runtime. `--gpu-hour-price-usd` can add an explicit local cost estimate; without a supplied price, no dollar cost is asserted. `paired_rows.csv` aligns both arms by record ID and `paired_summary.csv` gives full-minus-facts-only differences in automatic outcomes with patient-cluster bootstrap intervals. The pipeline does not produce a usefulness score. Markdown reports for both arms are under `reports/<arm>/`.

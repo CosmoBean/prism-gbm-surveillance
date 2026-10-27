@@ -2,8 +2,14 @@
 
 import hashlib
 import json
+import shutil
+import tempfile
 import unittest
 from pathlib import Path
+from types import SimpleNamespace
+from unittest.mock import patch
+
+import pandas as pd
 
 from prism.report.field_ablation import (
     FACTS_ONLY, FULL_EVIDENCE, facts_for_arm, freeze_manifest,
@@ -11,6 +17,8 @@ from prism.report.field_ablation import (
 from prism.report import field_ablation
 from tests.test_report_v3 import record
 from tests.test_report_v3_1 import lumiere
+from prism.analyses.report_field_ablation import (_facts_row, evaluate_step, generate_step, paired_rows,
+                                                  paired_summary, requests_step, verify_v31_baseline, summarise_arm)
 
 EXCLUDED = ("pathway.", "pathways.", "conformal.", "card.", "flags.")
 
@@ -72,6 +80,213 @@ class TestManifest(unittest.TestCase):
         for line, entry in zip(lines, manifest["records"]):
             self.assertEqual(entry["record_id"], json.loads(line)["record_id"])
             self.assertEqual(entry["sha256"], hashlib.sha256(line).hexdigest())
+
+
+class TestProvenanceAndPairing(unittest.TestCase):
+    def test_canonical_baseline_passes_provenance_gate(self):
+        root = Path(__file__).resolve().parents[1]
+        manifest = verify_v31_baseline(root)
+        self.assertEqual(manifest["record_count"], 406)
+
+    def test_freeze_rejects_a_changed_v31_record_hash(self):
+        root = Path(__file__).resolve().parents[1]
+        with tempfile.TemporaryDirectory() as directory:
+            copy = Path(directory)
+            paths = (
+                "outputs/results/analyses/report_v3_1/records/eval.jsonl",
+                "outputs/results/analyses/report_v3_1/FROZEN_hashes.txt",
+                "outputs/results/analyses/report_v3_1/llm/outputs_eval.jsonl",
+                "outputs/results/analyses/report_v3_1/checks_eval.csv",
+                "outputs/results/analyses/report_v3_1/summary_eval.csv",
+                "outputs/results/analyses/report_v3_1/stress.csv",
+                "outputs/results/analyses/report_v3_1/summary_stress.csv",
+            )
+            for relative in paths:
+                target = copy / relative
+                target.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copyfile(root / relative, target)
+            target = copy / paths[0]
+            target.write_bytes(target.read_bytes().replace(b'"schema":', b'"schema" :', 1))
+            with self.assertRaisesRegex(RuntimeError, "record hash"):
+                verify_v31_baseline(copy)
+
+    def test_gate_rejects_changed_full_output_even_when_counts_remain_unchanged(self):
+        root = Path(__file__).resolve().parents[1]
+        with tempfile.TemporaryDirectory() as directory:
+            copy = Path(directory)
+            paths = (
+                "outputs/results/analyses/report_v3_1/records/eval.jsonl",
+                "outputs/results/analyses/report_v3_1/FROZEN_hashes.txt",
+                "outputs/results/analyses/report_v3_1/llm/requests_eval.jsonl",
+                "outputs/results/analyses/report_v3_1/llm/outputs_eval.jsonl",
+                "outputs/results/analyses/report_v3_1/llm/outputs_eval.jsonl.meta.json",
+                "outputs/results/analyses/report_v3_1/checks_eval.csv",
+                "outputs/results/analyses/report_v3_1/summary_eval.csv",
+                "outputs/results/analyses/report_v3_1/stress.csv",
+                "outputs/results/analyses/report_v3_1/summary_stress.csv",
+            )
+            for relative in paths:
+                target = copy / relative
+                target.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copyfile(root / relative, target)
+            target = copy / "outputs/results/analyses/report_v3_1/llm/outputs_eval.jsonl"
+            target.write_bytes(target.read_bytes().replace(b"The scan", b"This scan", 1))
+            with self.assertRaisesRegex(RuntimeError, "baseline artifact hash"):
+                verify_v31_baseline(copy)
+
+    def test_pairing_retains_missing_output_as_a_failure(self):
+        rec = {"record_id": "a", "cohort": "mu", "patient_id": "p"}
+        full_ok = {"scan_id": "a", "pass": True, "parsed": True, "missing_output": False}
+        paired = paired_rows(records={"a": rec}, full={"a": full_ok}, facts_only={})
+        self.assertTrue(bool(paired.loc[0, "facts_only_missing_output"]))
+        self.assertFalse(bool(paired.loc[0, "facts_only_pass"]))
+
+    def test_summary_uses_all_records_including_missing_outputs(self):
+        rows = [
+            {"scan_id": "a", "cohort": "mu", "pass": True, "parsed": True,
+             "missing_output": False, "finish_reason": "stop", "required_content_pass": True,
+             "model_leak": False, "words": 12, "n_prompt_tokens": 10, "n_output_tokens": 6},
+            {"scan_id": "b", "cohort": "mu", "pass": False, "parsed": False,
+             "missing_output": True, "finish_reason": None, "required_content_pass": False,
+             "model_leak": False, "words": 0, "n_prompt_tokens": None, "n_output_tokens": None},
+        ]
+        summary = summarise_arm(rows)
+        all_row = summary.loc[summary.cohort == "all"].iloc[0]
+        self.assertEqual(int(all_row["n"]), 2)
+        self.assertEqual(int(all_row["pass"]), 1)
+        self.assertEqual(int(all_row["failed"]), 1)
+        self.assertEqual(int(all_row["unparsed"]), 1)
+        self.assertEqual(int(all_row["missing_output"]), 1)
+        self.assertEqual(float(all_row["pass_rate"]), 0.5)
+
+    def test_unparsed_model_claim_still_counts_as_leakage(self):
+        rec = record()
+        rec["patient_id"] = "synthetic-patient"
+        row = _facts_row(rec["record_id"], rec, {"text": "The model score is high.",
+                                                   "finish_reason": "stop", "n_prompt_tokens": 10,
+                                                   "n_output_tokens": 8})
+        self.assertFalse(row["parsed"])
+        self.assertTrue(row["model_leak"])
+        self.assertEqual(row["words"], 5)
+
+    def test_generation_retries_only_the_identical_whole_batch(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            baseline = root / "outputs/results/analyses/report_v3_1/llm/outputs_eval.jsonl"
+            baseline.parent.mkdir(parents=True)
+            baseline.write_text('{"id":"eval|a","text":"full"}\n')
+            Path(str(baseline) + ".meta.json").write_text('{"n":1}\n')
+            out = root / "ablation"
+            (out / "llm").mkdir(parents=True)
+            request = out / "llm/requests_facts_only.jsonl"
+            request.write_text('{"id":"eval|a"}\n')
+            commands = []
+
+            def local_batch(cmd, **kwargs):
+                commands.append(cmd)
+                target = Path(cmd[cmd.index("--out") + 1])
+                target.write_text(f'{{"id":"eval|a","text":"attempt{len(commands)}"}}\n')
+                if len(commands) == 2:
+                    Path(str(target) + ".meta.json").write_text('{"n":1}\n')
+                return SimpleNamespace(returncode=1 if len(commands) == 1 else 0)
+
+            with patch("prism.analyses.report_field_ablation._guard_requests"), patch(
+                    "prism.analyses.report_field_ablation.subprocess.run", side_effect=local_batch):
+                generate_step(root, out)
+            self.assertEqual(len(commands), 2)
+            self.assertEqual(commands[0][commands[0].index("--requests") + 1], str(request))
+            self.assertEqual(commands[1][commands[1].index("--requests") + 1], str(request))
+            self.assertEqual(request.read_text(), '{"id":"eval|a"}\n')
+            self.assertIn("attempt2", (out / "llm/outputs_facts_only.jsonl").read_text())
+            self.assertTrue((out / "llm/outputs_facts_only_attempt1.jsonl").exists())
+            self.assertTrue((out / "llm/outputs_facts_only_attempt1.jsonl.meta.json").exists())
+
+    def test_paired_difference_uses_record_denominator_and_patient_clusters(self):
+        records = {"a1": {"cohort": "mu", "patient_id": "a"},
+                   "a2": {"cohort": "mu", "patient_id": "a"},
+                   "b1": {"cohort": "mu", "patient_id": "b"}}
+        full = {rid: {"pass": True, "parsed": True, "required_content_pass": True}
+                for rid in records}
+        facts = {"a1": {"pass": False, "parsed": True, "required_content_pass": False},
+                 "a2": {"pass": False, "parsed": True, "required_content_pass": False},
+                 "b1": {"pass": True, "parsed": True, "required_content_pass": True}}
+        summary = paired_summary(paired_rows(records, full, facts))
+        row = summary.loc[summary.cohort == "all"].iloc[0]
+        self.assertEqual(int(row["n"]), 3)
+        self.assertEqual(int(row["n_patients"]), 2)
+        self.assertAlmostEqual(row["pass_difference_full_minus_facts_only"], 2 / 3)
+        self.assertGreaterEqual(row["pass_difference_ci_high"], row["pass_difference_ci_low"])
+
+    def test_generation_retains_metadata_when_local_runner_cannot_start(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            baseline = root / "outputs/results/analyses/report_v3_1/llm/outputs_eval.jsonl"
+            baseline.parent.mkdir(parents=True)
+            baseline.write_text('{"id":"eval|a","text":"full"}\n')
+            Path(str(baseline) + ".meta.json").write_text('{"n":1}\n')
+            out = root / "ablation"
+            (out / "llm").mkdir(parents=True)
+            (out / "llm/requests_facts_only.jsonl").write_text('{"id":"eval|a"}\n')
+            with patch("prism.analyses.report_field_ablation._guard_requests"), patch(
+                    "prism.analyses.report_field_ablation.subprocess.run", side_effect=OSError("runner unavailable")):
+                with self.assertRaisesRegex(RuntimeError, "failed twice"):
+                    generate_step(root, out)
+            for attempt in (1, 2):
+                meta = out / f"llm/outputs_facts_only_attempt{attempt}.jsonl.meta.json"
+                self.assertTrue(meta.exists())
+                self.assertFalse(json.loads(meta.read_text())["complete"])
+            self.assertFalse((out / "llm/outputs_facts_only.jsonl").exists())
+
+    def test_requests_write_separate_aligned_arms_from_synthetic_record(self):
+        rec = record()
+        rid = rec["record_id"]
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            baseline = root / "outputs/results/analyses/report_v3_1/llm/requests_eval.jsonl"
+            baseline.parent.mkdir(parents=True)
+            baseline.write_text(json.dumps({"id": f"eval|{rid}", "messages": [{"role": "user",
+                                                                               "content": "full arm"}]}) + "\n")
+            out = root / "ablation"
+            manifest = {"records": [{"record_id": rid}]}
+            with patch("prism.analyses.report_field_ablation._guard", return_value=manifest), patch(
+                    "prism.analyses.report_field_ablation._records", return_value={rid: rec}):
+                requests_step(root, out)
+            full = json.loads((out / "llm/requests_full_evidence.jsonl").read_text())
+            facts = json.loads((out / "llm/requests_facts_only.jsonl").read_text())
+            self.assertEqual(full["id"], facts["id"])
+            self.assertIn("full arm", full["messages"][0]["content"])
+            self.assertNotIn("pathway.", json.dumps(facts["messages"]))
+            self.assertNotIn("conformal.", json.dumps(facts["messages"]))
+
+    def test_evaluation_counts_absent_facts_output_in_every_denominator(self):
+        rec = record()
+        rec["patient_id"] = "synthetic-patient"
+        rid = rec["record_id"]
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            baseline = root / "outputs/results/analyses/report_v3_1"
+            (baseline / "llm").mkdir(parents=True)
+            full_line = json.dumps({"id": f"eval|{rid}", "text": "{}", "finish_reason": "stop",
+                                    "n_prompt_tokens": 10, "n_output_tokens": 2}) + "\n"
+            (baseline / "llm/outputs_eval.jsonl").write_text(full_line)
+            (baseline / "checks_eval.csv").write_text(
+                "scan_id,cohort,pass,parsed,finish_reason,n_output_tokens,words,card_tier_stated,fail_required_missing\n"
+                f"{rid},mu,True,True,stop,2,2,True,False\n")
+            out = root / "ablation"
+            (out / "llm").mkdir(parents=True)
+            (out / "llm/outputs_full_evidence.jsonl").write_text(full_line)
+            with patch("prism.analyses.report_field_ablation._guard_requests"), patch(
+                    "prism.analyses.report_field_ablation._records", return_value={rid: rec}):
+                evaluate_step(root, out)
+            facts_checks = pd.read_csv(out / "checks_facts_only.csv")
+            facts_summary = pd.read_csv(out / "summary_facts_only.csv")
+            paired = pd.read_csv(out / "paired_summary.csv")
+            self.assertTrue(bool(facts_checks.loc[0, "missing_output"]))
+            self.assertFalse(bool(facts_checks.loc[0, "pass"]))
+            self.assertEqual(int(facts_summary.loc[facts_summary.cohort == "all", "n"].iloc[0]), 1)
+            self.assertEqual(int(facts_summary.loc[facts_summary.cohort == "all", "failed"].iloc[0]), 1)
+            self.assertEqual(float(paired.loc[paired.cohort == "all",
+                                              "pass_difference_full_minus_facts_only"].iloc[0]), 1.0)
 
 
 class TestFactsOnlyContract(unittest.TestCase):
