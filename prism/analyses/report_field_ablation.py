@@ -204,28 +204,45 @@ def _shared_updates(old: dict, new: dict) -> dict:
     return {key: [old.get(key), new.get(key)] for key in sorted(set(old) | set(new)) if old.get(key) != new.get(key)}
 
 
-def shared_stress_records(records: list[dict], seed: int = STRESS_SEED, n: int = STRESS_N) -> list[dict]:
-    """The fixed facts-only shared-fact perturbation set, sampled in source order with ``seed``.
+def _stress_candidate(rec: dict, seed: int = STRESS_SEED) -> dict | None:
+    """The v3 ``et_change`` edit of one record (the previous scan's enhancing volume moves so the change becomes
+    -5 cc, or +5 cc when it was negative), or None when the record has no previous scan or enhancing volume, or the
+    edit leaves the shared enhancing change statement unchanged. The expected shared-fact updates are recorded."""
+    if not (rec.get("measurements") or {}).get("previous") or not R3._eligible(V31_SHARED_KIND, rec):
+        return None
+    perturbed, log = R3.perturb_one(V31_SHARED_KIND, rec)
+    old, new = A.facts_for_arm(rec, A.FACTS_ONLY), A.facts_for_arm(perturbed, A.FACTS_ONLY)
+    updates = _shared_updates(old, new)
+    if STATEMENT_KEY not in updates:
+        return None
+    if any(not key.startswith(CHANGED_PREFIX) for key in updates):
+        raise RuntimeError(f"perturbation changed an unexpected shared field: {rec['record_id']}")
+    perturbed["record_id"] = f"{rec['record_id']}|perturbed:{STRESS_KIND}"
+    return {"record_id": rec["record_id"], "perturbed_id": perturbed["record_id"], "kind": STRESS_KIND,
+            "cohort": rec["cohort"], "patient_id": rec.get("patient_id"), "old": log["old"],
+            "new": log["new"], "old_statement": old[STATEMENT_KEY], "new_statement": new[STATEMENT_KEY],
+            "expected_updates": updates, "seed": seed, "record": perturbed}
 
-    Each perturbation is the v3 ``et_change`` edit (the previous scan's enhancing volume moves so the change becomes
-    -5 cc, or +5 cc when it was negative). A record is eligible when it has a previous scan and an enhancing volume
-    and the edit changes the shared enhancing change statement; the expected shared-fact updates are recorded."""
-    pool = []
-    for rec in records:
-        if not (rec.get("measurements") or {}).get("previous") or not R3._eligible(V31_SHARED_KIND, rec):
-            continue
-        perturbed, log = R3.perturb_one(V31_SHARED_KIND, rec)
-        old, new = A.facts_for_arm(rec, A.FACTS_ONLY), A.facts_for_arm(perturbed, A.FACTS_ONLY)
-        updates = _shared_updates(old, new)
-        if STATEMENT_KEY not in updates:
-            continue
-        if any(not key.startswith(CHANGED_PREFIX) for key in updates):
-            raise RuntimeError(f"perturbation changed an unexpected shared field: {rec['record_id']}")
-        perturbed["record_id"] = f"{rec['record_id']}|perturbed:{STRESS_KIND}"
-        pool.append({"record_id": rec["record_id"], "perturbed_id": perturbed["record_id"], "kind": STRESS_KIND,
-                     "cohort": rec["cohort"], "patient_id": rec.get("patient_id"), "old": log["old"],
-                     "new": log["new"], "old_statement": old[STATEMENT_KEY], "new_statement": new[STATEMENT_KEY],
-                     "expected_updates": updates, "seed": seed, "record": perturbed})
+
+def _old_forms(entry: dict) -> list[str]:
+    """Written forms of the old changed numeric values: cc to one decimal, percent as an integer."""
+    return [f"{abs(float(before)):.1f}" if key.endswith("_cc") else str(abs(int(before)))
+            for key, (before, _after) in entry["expected_updates"].items()
+            if isinstance(before, (int, float)) and not isinstance(before, bool)]
+
+
+def ambiguous_by_construction(entry: dict) -> bool:
+    """True when an old changed value has no unique representation in the perturbed facts-only facts, so a correct
+    report would be unscorable (e.g. old change 0.0 cc with a 0.0 cc volume, or 0.1 inside "change below 0.1 cc")."""
+    new_values = _numeric_values(A.facts_for_arm(entry["record"], A.FACTS_ONLY))
+    return any(A.checker.matches(form, new_values, False) for form in _old_forms(entry))
+
+
+def shared_stress_records(records: list[dict], seed: int = STRESS_SEED, n: int = STRESS_N) -> list[dict]:
+    """The fixed facts-only shared-fact perturbation set, sampled in source order with ``seed`` from the frame of
+    eligible candidates that are not ambiguous by construction."""
+    pool = [entry for rec in records if (entry := _stress_candidate(rec, seed)) is not None
+            and not ambiguous_by_construction(entry)]
     rng = np.random.default_rng(seed)
     return [pool[i] for i in sorted(rng.choice(len(pool), min(n, len(pool)), replace=False))]
 
@@ -526,6 +543,26 @@ def _facts_row(rid: str, rec: dict, out: dict | None) -> dict:
             "fail_model_leak": model_leak}
 
 
+def _batch_fields(meta: dict, gpu_hour_price_usd: float | None = None) -> dict:
+    """Whole-batch completion, attempts, runtime and optional cost from a generation .meta.json."""
+    row = {}
+    attempts = meta.get("attempts") or []
+    # Runtime and cost sum every whole-batch attempt, including a failed first attempt.
+    wall = meta.get("total_process_wall_s", meta.get("batch_wall_s"))
+    row["batch_complete"] = meta.get("complete", bool(meta))
+    row["n_attempts"] = meta.get("n_attempts", 1 if meta else 0)
+    row["batch_wall_s"] = meta.get("batch_wall_s")
+    row["total_batch_wall_s"] = meta.get("total_batch_wall_s", meta.get("batch_wall_s"))
+    row["total_process_wall_s"] = meta.get("total_process_wall_s")
+    row["attempt_process_wall_s"] = json.dumps([a.get("process_wall_s") for a in attempts])
+    row["batch_s_per_request"] = meta.get("batch_s_per_request")
+    row["gpu_name"] = meta.get("gpu_name")
+    row["gpu_hour_price_usd"] = gpu_hour_price_usd
+    row["estimated_batch_cost_usd"] = (wall / 3600 * gpu_hour_price_usd
+                                        if wall is not None and gpu_hour_price_usd is not None else None)
+    return row
+
+
 def summarise_arm(rows: list[dict] | pd.DataFrame, meta: dict | None = None,
                   gpu_hour_price_usd: float | None = None) -> pd.DataFrame:
     frame = pd.DataFrame(rows)
@@ -550,20 +587,7 @@ def summarise_arm(rows: list[dict] | pd.DataFrame, meta: dict | None = None,
         for col in group.columns:
             if col.startswith("fail_"):
                 row[col] = int(group[col].sum())
-        attempts = meta.get("attempts") or []
-        # Runtime and cost sum every whole-batch attempt, including a failed first attempt.
-        wall = meta.get("total_process_wall_s", meta.get("batch_wall_s"))
-        row["batch_complete"] = meta.get("complete", bool(meta))
-        row["n_attempts"] = meta.get("n_attempts", 1 if meta else 0)
-        row["batch_wall_s"] = meta.get("batch_wall_s")
-        row["total_batch_wall_s"] = meta.get("total_batch_wall_s", meta.get("batch_wall_s"))
-        row["total_process_wall_s"] = meta.get("total_process_wall_s")
-        row["attempt_process_wall_s"] = json.dumps([a.get("process_wall_s") for a in attempts])
-        row["batch_s_per_request"] = meta.get("batch_s_per_request")
-        row["gpu_name"] = meta.get("gpu_name")
-        row["gpu_hour_price_usd"] = gpu_hour_price_usd
-        row["estimated_batch_cost_usd"] = (wall / 3600 * gpu_hour_price_usd
-                                            if wall is not None and gpu_hour_price_usd is not None else None)
+        row.update(_batch_fields(meta, gpu_hour_price_usd))
         result.append(row)
     return pd.DataFrame(result)
 
@@ -644,17 +668,23 @@ def evaluate_step(root: Path = REPO, output_root: Path = OUT,
     paired_summary(paired).to_csv(output_root / "paired_summary.csv", index=False)
 
 
-def evaluate_stress_step(root: Path = REPO, output_root: Path = OUT) -> None:
+def evaluate_stress_step(root: Path = REPO, output_root: Path = OUT,
+                         gpu_hour_price_usd: float | None = None) -> None:
     """Score the facts-only stress set; report the immutable v3.1 full-arm result separately (read only)."""
     _guard_stress_requests(root, output_root)
+    output_path = _output_path(output_root, A.FACTS_ONLY, "stress")
+    meta_path = Path(str(output_path) + ".meta.json")
+    if not meta_path.exists():
+        raise RuntimeError("run generate --sets stress before evaluate-stress (no stress batch metadata)")
+    # A failed whole batch has an empty final output and complete=false: every row is then a visible failure.
+    meta = json.loads(meta_path.read_text())
     full = pd.read_csv(root / BASE / "stress.csv")
     full["status"] = np.where(full.follows.astype(bool), "follows", "not_follows")
     full["rule"] = V31_RULE
     full.to_csv(output_root / f"stress_{A.FULL_EVIDENCE}.csv", index=False)
     summarise_stress(full, V31_RULE).to_csv(output_root / f"summary_stress_{A.FULL_EVIDENCE}.csv", index=False)
     entries = _stress_entries(root, output_root)
-    outputs = _output_map(_output_path(output_root, A.FACTS_ONLY, "stress"),
-                          {f"stress|{e['perturbed_id']}" for e in entries})
+    outputs = _output_map(output_path, {f"stress|{e['perturbed_id']}" for e in entries})
     rows = []
     for entry in entries:
         out = outputs.get(f"stress|{entry['perturbed_id']}")
@@ -675,7 +705,10 @@ def evaluate_stress_step(root: Path = REPO, output_root: Path = OUT) -> None:
                      "follows_and_pass": result["follows"] is True and check_pass, "rule": FACTS_RULE})
     frame = pd.DataFrame(rows)
     frame.to_csv(output_root / f"stress_{A.FACTS_ONLY}.csv", index=False)
-    summarise_stress(frame, FACTS_RULE).to_csv(output_root / f"summary_stress_{A.FACTS_ONLY}.csv", index=False)
+    summary = summarise_stress(frame, FACTS_RULE)
+    for key, value in _batch_fields(meta, gpu_hour_price_usd).items():
+        summary[key] = value
+    summary.to_csv(output_root / f"summary_stress_{A.FACTS_ONLY}.csv", index=False)
 
 
 def render_report(arm: str, rec: dict, output: dict | None, passed: bool) -> str:
@@ -734,7 +767,7 @@ def main(argv: list[str] | None = None) -> None:
         elif step == "evaluate":
             evaluate_step(gpu_hour_price_usd=args.gpu_hour_price_usd)
         elif step == "evaluate-stress":
-            evaluate_stress_step()
+            evaluate_stress_step(gpu_hour_price_usd=args.gpu_hour_price_usd)
         else:
             render_step()
         print(f"{step}: complete", flush=True)

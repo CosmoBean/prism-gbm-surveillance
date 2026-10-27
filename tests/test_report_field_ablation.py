@@ -596,7 +596,95 @@ def zero_change_record(record_id="mu|grade4|Z"):
     return rec
 
 
+def other_record(record_id="mu|grade4|S2"):
+    rec = record()
+    rec["record_id"] = record_id
+    return rec
+
+
 class TestStressContract(unittest.TestCase):
+    def test_sampling_frame_excludes_records_ambiguous_by_construction(self):
+        near_zero = record()
+        near_zero["record_id"] = "mu|grade4|near"
+        near_zero["measurements"]["volumes_cc"]["et"] = 0.0
+        near_zero["measurements"]["change_from_previous_cc"]["et"] = -0.1  # new: "change below 0.1 cc"
+        candidates = [zero_change_record(), near_zero]
+        for rec in candidates:
+            entry = pipeline._stress_candidate(rec)
+            self.assertIsNotNone(entry, rec["record_id"])
+            self.assertTrue(pipeline.ambiguous_by_construction(entry), rec["record_id"])
+        pool = [other_record(f"mu|grade4|S{i}") for i in range(8)]
+        self.assertFalse(any(pipeline.ambiguous_by_construction(pipeline._stress_candidate(r)) for r in pool))
+        mixed = candidates + pool
+        first = pipeline.shared_stress_records(mixed)
+        second = pipeline.shared_stress_records(list(mixed))
+        self.assertEqual(len(first), 6)
+        self.assertEqual([e["perturbed_id"] for e in first], [e["perturbed_id"] for e in second])
+        self.assertFalse({"mu|grade4|Z", "mu|grade4|near"} & {e["record_id"] for e in first})
+        for entry in first:
+            new = facts_for_arm(entry["record"], FACTS_ONLY)
+            self.assertFalse(pipeline.ambiguous_by_construction(entry))
+            old = facts_for_arm(other_record(entry["record_id"]), FACTS_ONLY)
+            self.assertEqual(pipeline.facts_only_follows(entry, old, new, facts_only_claims(new))["status"],
+                             "follows")
+
+    @unittest.skipUnless((Path(__file__).resolve().parents[1] /
+                          "outputs/results/analyses/report_v3_1/records/eval.jsonl").exists(), "v3.1 records absent")
+    def test_real_sampling_frame_is_unambiguous_and_deterministic(self):
+        root = Path(__file__).resolve().parents[1]
+        records = list(pipeline._records(root).values())  # read only; nothing is written
+        frame = pipeline.shared_stress_records(records, n=10 ** 6)
+        self.assertEqual(len(frame), 217)
+        self.assertFalse(any(pipeline.ambiguous_by_construction(e) for e in frame))
+        first = pipeline.shared_stress_records(records)
+        self.assertEqual(len(first), 6)
+        self.assertEqual([e["perturbed_id"] for e in first],
+                         [e["perturbed_id"] for e in pipeline.shared_stress_records(records)])
+
+    def test_evaluate_stress_requires_generation_metadata(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root, out, (guard, recs) = self.stress_root(directory, [record()])
+            with guard, recs:
+                pipeline.stress_step(root, out)
+                pipeline.requests_step(root, out, set_name="stress")
+                with self.assertRaisesRegex(RuntimeError, "generate"):
+                    pipeline.evaluate_stress_step(root, out)
+
+    def test_double_stress_batch_failure_is_visible_in_stress_summary(self):
+        source = Path(__file__).resolve().parents[1] / "outputs/results/analyses/report_v3_1"
+        with tempfile.TemporaryDirectory() as directory:
+            root, out, (guard, recs) = self.stress_root(directory, [record(), other_record()])
+            base = root / "outputs/results/analyses/report_v3_1"
+            base.mkdir(parents=True)
+            for name in ("stress.csv", "summary_stress.csv"):
+                shutil.copyfile(source / name, base / name)
+            calls = []
+
+            def failing_batch(cmd, **kwargs):
+                calls.append(cmd)
+                Path(cmd[cmd.index("--out") + 1]).write_text('{"id":"stress|x","text":"partial')
+                return SimpleNamespace(returncode=1)
+
+            with guard, recs, patch("prism.analyses.report_field_ablation.subprocess.run",
+                                    side_effect=failing_batch), patch(
+                    "prism.analyses.report_field_ablation.time.monotonic", side_effect=[0.0, 30.0, 100.0, 140.0]):
+                pipeline.stress_step(root, out)
+                pipeline.requests_step(root, out, set_name="stress")
+                generate_step(root, out, set_name="stress")
+                pipeline.evaluate_stress_step(root, out)
+            self.assertEqual(len(calls), 2)
+            rows = pd.read_csv(out / "stress_facts_only.csv")
+            self.assertEqual(len(rows), 2)
+            self.assertEqual(set(rows.status), {"failed"})
+            summary = pd.read_csv(out / "summary_stress_facts_only.csv").set_index("kind")
+            for kind in ("enhancing_volume_change", "total"):
+                row = summary.loc[kind]
+                self.assertEqual((int(row["n"]), int(row["failed_output"])), (2, 2))
+                self.assertFalse(bool(row["batch_complete"]))
+                self.assertEqual(int(row["n_attempts"]), 2)
+                self.assertAlmostEqual(float(row["total_process_wall_s"]), 70.0)
+                self.assertEqual(json.loads(row["attempt_process_wall_s"]), [30.0, 40.0])
+
     def test_shared_volume_change_is_tested_in_both_arms(self):
         records = pipeline.shared_stress_records([record()])
         self.assertEqual(records[0]["kind"], "enhancing_volume_change")
@@ -693,7 +781,8 @@ class TestStressContract(unittest.TestCase):
 
     def test_zero_value_ambiguity_is_unscorable_not_a_failure(self):
         source = zero_change_record()
-        entry = pipeline.shared_stress_records([source])[0]
+        self.assertEqual(pipeline.shared_stress_records([source]), [])  # excluded from the sampling frame
+        entry = pipeline._stress_candidate(source)  # the unscorable branch remains as a guard
         self.assertEqual((entry["old"], entry["new"]), (0.0, -5.0))
         old = facts_for_arm(source, FACTS_ONLY)
         new = facts_for_arm(entry["record"], FACTS_ONLY)
@@ -733,7 +822,7 @@ class TestStressContract(unittest.TestCase):
         return root, out, patches
 
     def test_stress_set_is_written_once_and_never_overwritten(self):
-        records = [record(), zero_change_record()]
+        records = [record(), other_record()]
         with tempfile.TemporaryDirectory() as directory:
             root, out, (guard, recs) = self.stress_root(directory, records)
             with guard, recs:
@@ -782,7 +871,7 @@ class TestStressContract(unittest.TestCase):
                 self.assertEqual(len(commands), 2)
 
     def test_evaluate_stress_scores_facts_only_and_reports_full_v31_separately(self):
-        records = [record(), zero_change_record()]
+        records = [record(), other_record()]
         source = Path(__file__).resolve().parents[1] / "outputs/results/analyses/report_v3_1"
         with tempfile.TemporaryDirectory() as directory:
             root, out, (guard, recs) = self.stress_root(directory, records)
@@ -800,14 +889,19 @@ class TestStressContract(unittest.TestCase):
                 (out / "llm/outputs_stress_facts_only.jsonl").write_text(json.dumps(
                     {"id": f"stress|{pid}", "text": json.dumps({"sentences": facts_only_claims(facts)}),
                      "finish_reason": "stop"}) + "\n")
+                (out / "llm/outputs_stress_facts_only.jsonl.meta.json").write_text(json.dumps(
+                    {"complete": True, "n_attempts": 1, "total_process_wall_s": 12.0,
+                     "attempts": [{"attempt": 1, "process_wall_s": 12.0}]}))
                 pipeline.evaluate_stress_step(root, out)
             facts = pd.read_csv(out / "stress_facts_only.csv").set_index("perturbed_id")
             self.assertEqual(facts.loc[pid, "status"], "follows")
             self.assertTrue(bool(facts.loc[pid, "check_pass"]))
-            self.assertEqual(facts.loc["mu|grade4|Z|perturbed:enhancing_volume_change", "status"], "failed")
+            self.assertEqual(facts.loc["mu|grade4|S2|perturbed:enhancing_volume_change", "status"], "failed")
             summary = pd.read_csv(out / "summary_stress_facts_only.csv").set_index("kind")
             self.assertEqual(int(summary.loc["total", "n"]), 2)
             self.assertEqual(int(summary.loc["total", "failed_output"]), 1)
+            self.assertTrue(bool(summary.loc["total", "batch_complete"]))
+            self.assertEqual(int(summary.loc["total", "n_attempts"]), 1)
             full = pd.read_csv(out / "summary_stress_full_evidence.csv").set_index("kind")
             self.assertEqual((int(full.loc["total", "n"]), int(full.loc["total", "follows"])), (30, 28))
             self.assertEqual(set(full.rule), {pipeline.V31_RULE})
