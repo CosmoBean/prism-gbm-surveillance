@@ -16,7 +16,7 @@ import pandas as pd
 from prism.report import facts_only_v2
 from prism.report.facts_v3 import PHASE_TEXT
 from prism.report.field_ablation import FACTS_ONLY, FULL_EVIDENCE, _BANNED, facts_for_arm
-from tests.test_report_v3 import record
+from tests.test_report_v3 import good_claims, record
 from tests.test_report_v3_1 import lumiere
 from tests.test_report_field_ablation import SUBJECT_ID, _copy_gated_root
 from prism.analyses import report_field_ablation as V1
@@ -306,6 +306,7 @@ class TestNegatives(unittest.TestCase):
 # ---------------------------------------------------------------- v2 runner (Task 2), synthetic records only
 REPO_ROOT = Path(__file__).resolve().parents[1]
 SPEC = "prism/report/facts_only_v2.py"
+RUNNER = "prism/analyses/report_field_ablation_v2.py"
 
 
 def synthetic_dev() -> list[dict]:
@@ -363,10 +364,12 @@ class V2Root:
         self._dir = tempfile.TemporaryDirectory()
         self.root = Path(self._dir.name)
         _copy_gated_root(REPO_ROOT, self.root)
-        (self.root / SPEC).parent.mkdir(parents=True, exist_ok=True)
-        shutil.copyfile(REPO_ROOT / SPEC, self.root / SPEC)
+        for relative in (SPEC, RUNNER):
+            (self.root / relative).parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(REPO_ROOT / relative, self.root / relative)
         self.v1 = self.root / "v1"
         V1.freeze_step(self.root, self.v1)
+        _write_jsonl(self.v1 / V1.STRESS_RECORDS, [{"record_id": "synthetic|stress|0"}])
         self.out = self.root / "v2"
         self.dev = synthetic_dev() if dev is None else dev
         _write_jsonl(self.root / V1.BASE / "records/dev.jsonl", self.dev)
@@ -386,6 +389,15 @@ class V2Root:
         with patch("prism.analyses.report_field_ablation._whole_batch", batch or fake_batch([])), \
                 contextlib.redirect_stdout(io.StringIO()):
             return V2.preflight_step(self.root, self.out, v1_output_root=self.v1)
+
+    def freeze(self):
+        with contextlib.redirect_stdout(io.StringIO()):
+            return V2.freeze_step(self.root, self.out, v1_output_root=self.v1)
+
+    def eval_requests(self):
+        with patch("prism.analyses.report_field_ablation._whole_batch", _no_model), \
+                contextlib.redirect_stdout(io.StringIO()):
+            return V2.requests_step(self.root, self.out, "eval", v1_output_root=self.v1)
 
     def cleanup(self):
         self._dir.cleanup()
@@ -710,6 +722,368 @@ class TestPreflight(unittest.TestCase):
         self.assertEqual(facts_only_v2.consistency_errors(_facts(rec)), [])
 
 
+# ---------------------------------------------------------------- freeze, evaluation, analyses (Task 3)
+def _qualify(env):
+    info = env.dev_step(0)
+    assert info["qualifies"]
+    return info
+
+
+class TestFreeze(unittest.TestCase):
+    def setUp(self):
+        self.env = V2Root()
+        self.addCleanup(self.env.cleanup)
+
+    def test_freeze_refuses_nonqualifying_iteration(self):
+        with self.assertRaisesRegex(RuntimeError, "no qualifying development iteration"):
+            self.env.freeze()
+        bad = {r["record_id"] for r in self.env.dev[:4]}
+        self.assertFalse(self.env.dev_step(0, fake_batch(self.env.dev, bad=bad))["qualifies"])
+        with self.assertRaisesRegex(RuntimeError, "no qualifying development iteration"):
+            self.env.freeze()
+        self.assertFalse((self.env.out / "FROZEN_v2.json").exists())
+
+    def test_freeze_records_the_protocol_values(self):
+        _qualify(self.env)
+        frozen = self.env.freeze()
+        root, base = self.env.root, self.env.root / V1.BASE
+        self.assertEqual(json.loads((self.env.out / "FROZEN_v2.json").read_text()), frozen)
+        self.assertEqual(frozen["spec_blob"], V1._git_blob(root / SPEC))
+        self.assertEqual(frozen["spec_sha256"], V1._digest(root / SPEC))
+        self.assertEqual(frozen["runner_blob"], V1._git_blob(root / RUNNER))
+        self.assertEqual(frozen["runner_sha256"], V1._digest(root / RUNNER))
+        self.assertEqual(frozen["writer"], V1.EXPECTED_WRITER)
+        self.assertEqual(frozen["prefixes"], ["pathway.", "pathways.", "conformal.", "card.", "flags."])
+        self.assertEqual(frozen["v1_manifest_sha256"], V1._digest(root / V1.MANIFEST))
+        self.assertEqual(frozen["eval_sha256"], V1._digest(base / "records/eval.jsonl"))
+        self.assertEqual(frozen["dev_sha256"], V1._digest(base / "records/dev.jsonl"))
+        self.assertEqual(len(frozen["eval_line_sha256"]), 406)
+        self.assertEqual(len(frozen["dev_line_sha256"]), 58)
+        self.assertEqual(frozen["stress_sha256"], V1._digest(self.env.v1 / V1.STRESS_RECORDS))
+        self.assertEqual(frozen["qualifying_iteration"], 0)
+        self.assertEqual(frozen["spec_version"], facts_only_v2.SPEC_VERSION)
+        text = (self.env.out / "FROZEN_v2.json").read_text()
+        self.assertTrue("synthetic" not in text and SUBJECT_ID.search(text) is None, "record ID in FROZEN_v2.json")
+        self.assertEqual(self.env.freeze(), frozen)  # identical re-run is a no-op
+
+    def test_freeze_refuses_to_overwrite_a_different_freeze(self):
+        _qualify(self.env)
+        self.env.freeze()
+        path = self.env.out / "FROZEN_v2.json"
+        frozen = json.loads(path.read_text())
+        frozen["qualifying_iteration"] = 1
+        path.write_text(json.dumps(frozen))
+        with self.assertRaisesRegex(RuntimeError, "FROZEN_v2.json exists and differs"):
+            self.env.freeze()
+        self.assertEqual(json.loads(path.read_text())["qualifying_iteration"], 1)
+
+    def test_freeze_refuses_when_spec_changed_since_the_qualifying_iteration(self):
+        _qualify(self.env)
+        spec = self.env.root / SPEC
+        spec.write_bytes(spec.read_bytes() + b"\n# changed after the iteration\n")
+        with self.assertRaisesRegex(RuntimeError, "specification changed since development iteration 0"):
+            self.env.freeze()
+        self.assertFalse((self.env.out / "FROZEN_v2.json").exists())
+
+
+class TestEvalRequestGuards(unittest.TestCase):
+    def setUp(self):
+        self.env = V2Root()
+        self.addCleanup(self.env.cleanup)
+        _qualify(self.env)
+
+    def _no_eval_requests(self):
+        self.assertFalse((self.env.out / "llm/requests_facts_only_v2.jsonl").exists())
+        self.assertFalse((self.env.out / "request_hashes.json").exists())
+
+    def test_eval_requests_refuse_without_freeze(self):
+        with self.assertRaisesRegex(RuntimeError, "run freeze"):
+            self.env.eval_requests()
+        self._no_eval_requests()
+
+    def test_eval_requests_refuse_when_spec_changed_after_freeze(self):
+        self.env.freeze()
+        real = V1._git_blob
+
+        def changed(path):
+            return "0" * 40 if Path(path).name == "facts_only_v2.py" else real(path)
+        with patch.object(V1, "_git_blob", changed):
+            with self.assertRaisesRegex(RuntimeError, "frozen spec_blob mismatch"):
+                self.env.eval_requests()
+        self._no_eval_requests()
+        runner = self.env.root / RUNNER
+        runner.write_bytes(runner.read_bytes() + b"\n# changed after freeze\n")
+        with self.assertRaisesRegex(RuntimeError, "frozen runner_blob mismatch"):
+            self.env.eval_requests()
+        self._no_eval_requests()
+
+    def test_eval_requests_refuse_when_stress_set_changed_after_freeze(self):
+        self.env.freeze()
+        _write_jsonl(self.env.v1 / V1.STRESS_RECORDS, [{"record_id": "synthetic|stress|1"}])
+        with self.assertRaisesRegex(RuntimeError, "frozen stress_sha256 mismatch"):
+            self.env.eval_requests()
+        self._no_eval_requests()
+
+    def test_eval_requests_refuse_without_successful_preflight(self):
+        self.env.freeze()
+        for complete, parsed in ((True, False), (False, True)):
+            self.env.pass_preflight(complete=complete, parsed=parsed)
+            with self.subTest(complete=complete, parsed=parsed):
+                with self.assertRaisesRegex(RuntimeError, "passing preflight"):
+                    self.env.eval_requests()
+        (self.env.out / "preflight.json").unlink()
+        with self.assertRaisesRegex(RuntimeError, "passing preflight"):
+            self.env.eval_requests()
+        self._no_eval_requests()
+
+
+def synthetic_eval() -> list[dict]:
+    """Four synthetic evaluation records (MU 2 from one patient, LUMIERE 1, UCSF 1)."""
+    rows = []
+    for i, (cohort, rec) in enumerate((("mu", record()), ("mu", record()), ("lumiere", lumiere(rater=True)),
+                                       ("ucsf", record()))):
+        rec["cohort"] = cohort
+        rec.update(record_id=f"{cohort}|synthetic|e{i}", scan_id=f"synthetic-e{i}",
+                   patient_id=f"synthetic-{cohort}-p{i // 2}")
+        rows.append(rec)
+    return rows
+
+
+def full_text(rec: dict) -> str:
+    return json.dumps({"sentences": good_claims(facts_for_arm(rec, FULL_EVIDENCE))})
+
+
+class EvalEnv:
+    """A temporary root with a synthetic v3.1 baseline (requests, outputs, metadata, checks) and a frozen v2 guard
+    stood in by the synthetic manifest. No patient record is read."""
+
+    def __init__(self, records=None, full_texts=None):
+        self._dir = tempfile.TemporaryDirectory()
+        self.root = Path(self._dir.name)
+        self.records = synthetic_eval() if records is None else records
+        self.manifest = {"records": [{"record_id": r["record_id"], "cohort": r["cohort"], "sha256": "0" * 64}
+                                     for r in self.records]}
+        base = self.root / V1.BASE
+        texts = full_texts or {}
+        _write_jsonl(base / "llm/requests_eval.jsonl",
+                     [{"id": f"eval|{r['record_id']}", "messages": [{"role": "user", "content": "full arm"}]}
+                      for r in self.records])
+        _write_jsonl(base / "llm/outputs_eval.jsonl",
+                     [{"id": f"eval|{r['record_id']}", "text": texts.get(r["record_id"], full_text(r)),
+                       "finish_reason": "stop", "n_prompt_tokens": 20, "n_output_tokens": 9} for r in self.records])
+        (base / "llm/outputs_eval.jsonl.meta.json").write_text(json.dumps({"model": "synthetic", "n": 4}) + "\n")
+        pd.DataFrame([{"scan_id": r["record_id"], "cohort": r["cohort"], "pass": True, "parsed": True,
+                       "fail_required_missing": False} for r in self.records]).to_csv(base / "checks_eval.csv",
+                                                                                      index=False)
+        self.out = self.root / "v2"
+        self.out.mkdir()
+        (self.out / "preflight.json").write_text(json.dumps({"complete": True, "parsed": True}))
+
+    def _patched(self, batch=None):
+        stack = contextlib.ExitStack()
+        stack.enter_context(patch.object(V2, "guard_frozen", return_value=self.manifest))
+        stack.enter_context(patch.object(V1, "_records",
+                                         return_value={r["record_id"]: r for r in self.records}))
+        stack.enter_context(patch.object(V1, "_whole_batch", batch or _no_model))
+        stack.enter_context(contextlib.redirect_stdout(io.StringIO()))
+        return stack
+
+    def run(self, missing=(), bad=(), steps=("requests", "generate", "evaluate")):
+        with self._patched(fake_batch(self.records, bad=bad, missing=missing)):
+            if "requests" in steps:
+                V2.requests_step(self.root, self.out, "eval")
+            if "generate" in steps:
+                V2.generate_step(self.root, self.out, "eval")
+            if "evaluate" in steps:
+                V2.evaluate_step(self.root, self.out)
+
+    def cleanup(self):
+        self._dir.cleanup()
+
+
+class TestEvalSteps(unittest.TestCase):
+    def setUp(self):
+        self.env = EvalEnv()
+        self.addCleanup(self.env.cleanup)
+
+    def test_requests_pair_the_frozen_full_arm_with_spec_prompts_in_manifest_order(self):
+        self.env.run(steps=("requests",))
+        llm = self.env.out / "llm"
+        self.assertEqual((llm / "requests_full_evidence.jsonl").read_bytes(),
+                         (self.env.root / V1.BASE / "llm/requests_eval.jsonl").read_bytes())
+        facts = V1._jsonl(llm / "requests_facts_only_v2.jsonl")
+        self.assertEqual([r["id"] for r in facts], [f"eval|{r['record_id']}" for r in self.env.records])
+        self.assertEqual(facts[2]["messages"], facts_only_v2.messages(_facts(self.env.records[2])))
+        self.assertEqual(facts[0]["schema"], facts_only_v2.FACTS_SCHEMA)
+        self.assertEqual(facts[0]["max_tokens"], V2.MAX_TOKENS)
+        hashes = json.loads((self.env.out / "request_hashes.json").read_text())
+        self.assertEqual(hashes, {"full_evidence": V1._digest(llm / "requests_full_evidence.jsonl"),
+                                  "facts_only_v2": V1._digest(llm / "requests_facts_only_v2.jsonl")})
+        self.env.run(steps=("requests",))  # identical re-run is allowed
+        (llm / "requests_facts_only_v2.jsonl").write_text("")
+        with self.assertRaisesRegex(RuntimeError, "frozen facts-only v2 request mismatch"):
+            self.env.run(steps=("requests",))
+
+    def test_generation_imports_the_full_arm_byte_for_byte(self):
+        calls = []
+        with self.env._patched(fake_batch(self.env.records, calls=calls)):
+            V2.requests_step(self.env.root, self.env.out, "eval")
+            V2.generate_step(self.env.root, self.env.out, "eval")
+        llm, base = self.env.out / "llm", self.env.root / V1.BASE / "llm"
+        self.assertEqual((llm / "outputs_full_evidence.jsonl").read_bytes(), (base / "outputs_eval.jsonl").read_bytes())
+        self.assertEqual((llm / "outputs_full_evidence.jsonl.meta.json").read_bytes(),
+                         (base / "outputs_eval.jsonl.meta.json").read_bytes())
+        self.assertEqual(calls, [llm / "requests_facts_only_v2.jsonl"])
+        self.assertTrue((llm / "outputs_facts_only_v2.jsonl").exists())
+        with self.env._patched(_no_model):  # an existing facts-only output is never regenerated
+            self.assertIsNone(V2.generate_step(self.env.root, self.env.out, "eval"))
+
+    def test_generation_refuses_changed_requests(self):
+        self.env.run(steps=("requests",))
+        path = self.env.out / "llm/requests_facts_only_v2.jsonl"
+        path.write_bytes(path.read_bytes() + b"\n")
+        with self.env._patched(_no_model), self.assertRaisesRegex(RuntimeError, "frozen request hash mismatch"):
+            V2.generate_step(self.env.root, self.env.out, "eval")
+
+    def test_missing_facts_only_output_is_a_failure_in_every_summary(self):
+        gone = self.env.records[1]["record_id"]
+        self.env.run(missing={gone})
+        out = self.env.out
+        checks = pd.read_csv(out / "checks_facts_only_v2.csv")
+        self.assertEqual(len(checks), 4)
+        self.assertEqual([c for c in checks.columns if c.startswith("fail_")], list(facts_only_v2.CRITERIA))
+        row = checks.set_index("record_id").loc[gone]
+        self.assertTrue(bool(row["fail_unparsed"]) and not bool(row["pass"]) and bool(row["missing_output"]))
+        summary = pd.read_csv(out / "summary_facts_only_v2.csv").set_index("cohort")
+        self.assertEqual((int(summary.loc["all", "n"]), int(summary.loc["all", "pass"]),
+                          int(summary.loc["all", "fail_unparsed"])), (4, 3, 1))
+        self.assertEqual((int(summary.loc["mu", "n"]), int(summary.loc["mu", "pass"])), (2, 1))
+        for column in ("pass_ci_low", "pass_ci_high", "batch_complete", "n_attempts", "words_median"):
+            self.assertIn(column, summary.columns)
+        gate = json.loads((out / "gate.json").read_text())
+        self.assertEqual(set(gate), {"overall_pass", "by_cohort", "met"})
+        self.assertEqual(gate["overall_pass"], 3)
+        self.assertEqual(gate["by_cohort"]["mu"]["pass"], 1)
+        self.assertFalse(gate["met"])
+        paired = pd.read_csv(out / "paired_summary.csv").set_index("cohort")
+        self.assertEqual((int(paired.loc["all", "pass_full"]), int(paired.loc["all", "pass_facts_only"])), (4, 3))
+        self.assertAlmostEqual(float(paired.loc["all", "pass_difference_full_minus_facts_only"]), 0.25)
+        for column in ("pass_difference_ci_low", "pass_difference_ci_high"):
+            self.assertIn(column, paired.columns)
+        info = pd.read_csv(out / "information_added.csv").set_index("cohort")
+        self.assertEqual(int(info.loc["all", "n_both_pass"]), 3)
+        self.assertEqual(int(info.loc["mu", "n_both_pass"]), 1)
+        common = pd.read_csv(out / "common_criteria.csv").set_index("cohort")
+        self.assertEqual(int(common.loc["all", "facts_only_unparsed"]), 1)
+        self.assertEqual(int(common.loc["all", "full_evidence_unparsed"]), 0)
+        for criterion in ("unsupported_number", "invalid_citation", "forbidden", "clinical_inference"):
+            self.assertEqual(int(common.loc["all", f"facts_only_fail_{criterion}"]), 1, criterion)
+        reference = pd.read_csv(out / "reference_check.csv").set_index("cohort")
+        self.assertEqual((int(reference.loc["all", "n"]), int(reference.loc["all", "pass"])), (4, 4))
+        for name in ("summary_facts_only_v2.csv", "paired_summary.csv", "gate.json", "information_added.csv",
+                     "common_criteria.csv", "reference_check.csv"):
+            text = (out / name).read_text()
+            self.assertTrue("synthetic" not in text, f"record ID in {name}")
+
+    def test_failed_whole_batch_counts_every_record_as_a_failure(self):
+        with self.env._patched(failed_batch()):
+            V2.requests_step(self.env.root, self.env.out, "eval")
+            V2.generate_step(self.env.root, self.env.out, "eval")
+            V2.evaluate_step(self.env.root, self.env.out)
+        summary = pd.read_csv(self.env.out / "summary_facts_only_v2.csv").set_index("cohort")
+        self.assertEqual((int(summary.loc["all", "pass"]), int(summary.loc["all", "fail_unparsed"])), (0, 4))
+        self.assertFalse(bool(summary.loc["all", "batch_complete"]))
+        self.assertEqual(json.loads((self.env.out / "gate.json").read_text())["overall_pass"], 0)
+
+    def test_full_arm_recheck_must_reproduce_the_v31_pass(self):
+        rec = self.env.records[0]
+        claims = good_claims(facts_for_arm(rec, FULL_EVIDENCE))
+        claims[1]["text"] = claims[1]["text"].replace("37.2", "39.9")
+        env = EvalEnv(full_texts={rec["record_id"]: json.dumps({"sentences": claims})})
+        self.addCleanup(env.cleanup)
+        with self.assertRaisesRegex(RuntimeError, "full-arm recheck does not reproduce the v3.1 pass on 1 record"):
+            env.run()
+        self.assertFalse((env.out / "summary_facts_only_v2.csv").exists())
+
+
+def gate_summary(mu, lumiere_, ucsf):
+    rows = [("all", 406, mu + lumiere_ + ucsf), ("lumiere", 162, lumiere_), ("mu", 114, mu), ("ucsf", 130, ucsf)]
+    return pd.DataFrame([{"cohort": c, "n": n, "pass": p} for c, n, p in rows])
+
+
+class TestAnalyses(unittest.TestCase):
+    def test_gate_threshold(self):
+        self.assertTrue(V2.gate(gate_summary(108, 156, 122))["met"])   # 386/406, each cohort >= 0.90
+        self.assertEqual(V2.gate(gate_summary(108, 156, 122))["overall_pass"], 386)
+        self.assertFalse(V2.gate(gate_summary(107, 156, 122))["met"])  # 385/406
+        self.assertFalse(V2.gate(gate_summary(114, 160, 116))["met"])  # 390/406 but UCSF 116/130
+        self.assertTrue(V2.gate(gate_summary(114, 160, 117))["met"])   # UCSF 117/130 = 0.90 exactly
+        wrong_n = gate_summary(114, 160, 122)
+        wrong_n.loc[wrong_n.cohort == "ucsf", "n"] = 129
+        self.assertFalse(V2.gate(wrong_n)["met"])
+
+    def _paired(self):
+        return pd.DataFrame([
+            {"scan_id": "a", "cohort": "mu", "patient_id": "p1", "full_evidence_pass": True, "facts_only_pass": True},
+            {"scan_id": "b", "cohort": "mu", "patient_id": "p2", "full_evidence_pass": True, "facts_only_pass": True},
+            {"scan_id": "c", "cohort": "ucsf", "patient_id": "p3", "full_evidence_pass": True,
+             "facts_only_pass": False}])
+
+    def test_information_added_counts_only_supported_model_keys_on_both_pass_records(self):
+        def claim(fields, supported=True, invalid=()):
+            return {"fields": list(fields), "supported": supported, "invalid_fields": list(invalid)}
+        details = {
+            "a": [claim(["scan.phase"]), claim(["card.tier", "card.tier_statement"]),
+                  claim(["pathway.combined.statement"])],
+            "b": [claim(["scan.phase"]), claim(["card.tier"], supported=False),
+                  claim(["flags.out_of_range.reason"], supported=False, invalid=["flags.out_of_range.reason"])],
+            "c": [claim(["card.tier"]), claim(["conformal.combined.80.statement"])]}
+        facts_claims = {"a": [{"fields": ["scan.phase"]}, {"fields": ["meas.enhancing_cc"]}],
+                        "b": [{"fields": ["scan.phase"]}], "c": None}
+        info = V2.information_added(self._paired(), details, facts_claims).set_index("cohort")
+        row = info.loc["all"]
+        self.assertEqual(int(row["n_both_pass"]), 2)
+        self.assertEqual(int(row["n_full_citing_model_key"]), 1)
+        self.assertAlmostEqual(float(row["share_full_citing_model_key"]), 0.5)
+        self.assertAlmostEqual(float(row["model_keys_median"]), 1.5)  # a: 3 keys, b: 0
+        self.assertEqual(int(row["n_reports_card"]), 1)
+        self.assertEqual(int(row["n_keys_card"]), 2)
+        self.assertEqual(int(row["n_reports_pathway"]), 1)
+        self.assertEqual(int(row["n_reports_flags"]), 0)
+        self.assertEqual(int(row["n_reports_conformal"]), 0)  # only on c, where facts-only failed
+        # Shared keys: a full {scan.phase} vs facts-only {scan.phase, meas.enhancing_cc}; b {scan.phase} both.
+        self.assertAlmostEqual(float(row["shared_keys_difference_full_minus_facts_only"]), -0.5)
+        self.assertEqual(int(row["n_full_shared_not_facts_only"]), 0)
+        self.assertEqual(int(row["n_facts_only_shared_not_full"]), 1)
+        for column in ("shared_keys_difference_ci_low", "shared_keys_difference_ci_high", "model_keys_q1",
+                       "model_keys_q3"):
+            self.assertIn(column, info.columns)
+        self.assertEqual(int(info.loc["ucsf", "n_both_pass"]), 0)
+        self.assertTrue(pd.isna(info.loc["ucsf", "share_full_citing_model_key"]))
+
+    def test_common_criteria_applies_the_same_tests_to_both_arms(self):
+        rec = synthetic_eval()[0]
+        full = facts_for_arm(rec, FULL_EVIDENCE)
+        good = good_claims(full)
+        bad = good + [{"text": "The scan should be repeated at 99 cc.", "fields": ["pathway.combined.statement",
+                                                                                   "nothing.here"]},
+                      {"text": "The tumour has grown.", "fields": ["scan.phase"]}]
+        frame = V2.common_criteria({"a": good, "b": bad}, {"a": facts_only_v2.reference_report(_facts(rec)),
+                                                            "b": None}, {"a": full, "b": full})
+        rows = frame.set_index(["record_id", "arm"])
+        self.assertEqual(len(frame), 4)
+        clean = rows.loc[("a", "full_evidence")]
+        self.assertFalse(any(bool(clean[f"fail_{c}"]) for c in V2.COMMON_CRITERIA))
+        self.assertFalse(any(bool(rows.loc[("a", "facts_only")][f"fail_{c}"]) for c in V2.COMMON_CRITERIA))
+        dirty = rows.loc[("b", "full_evidence")]
+        for criterion in V2.COMMON_CRITERIA:
+            self.assertTrue(bool(dirty[f"fail_{criterion}"]), criterion)
+        self.assertEqual(int(dirty["n_invalid_citations"]), 1)
+        unparsed = rows.loc[("b", "facts_only")]
+        self.assertTrue(bool(unparsed["unparsed"]))
+        self.assertTrue(all(bool(unparsed[f"fail_{c}"]) for c in V2.COMMON_CRITERIA))
+
+
 class TestV2Cli(unittest.TestCase):
     def test_main_dispatches_dev_and_preflight(self):
         with patch.object(V2, "dev_step") as dev, patch.object(V2, "preflight_step") as preflight, \
@@ -718,6 +1092,16 @@ class TestV2Cli(unittest.TestCase):
         dev.assert_called_once()
         self.assertEqual(dev.call_args.kwargs["iteration"], 1)
         preflight.assert_called_once()
+
+    def test_main_dispatches_freeze_and_evaluation_steps(self):
+        with patch.object(V2, "freeze_step") as freeze, patch.object(V2, "requests_step") as requests, \
+                patch.object(V2, "generate_step", return_value=None) as generate, \
+                patch.object(V2, "evaluate_step") as evaluate, contextlib.redirect_stdout(io.StringIO()):
+            V2.main(["--steps", "freeze", "requests", "generate", "evaluate", "--gpu-hour-price-usd", "2.5"])
+        freeze.assert_called_once()
+        self.assertEqual(requests.call_args.kwargs["set_name"], "eval")
+        self.assertEqual(generate.call_args.kwargs["set_name"], "eval")
+        self.assertEqual(evaluate.call_args.kwargs["gpu_hour_price_usd"], 2.5)
 
     def test_main_requires_iteration_for_dev(self):
         with patch.object(V2, "dev_step") as dev, self.assertRaises(SystemExit), \
