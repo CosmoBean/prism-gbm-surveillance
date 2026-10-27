@@ -143,6 +143,35 @@ class TestFactsOnlyContract(unittest.TestCase):
                                          "fields": ["scan.phase"]}]
         self.assertFalse(field_ablation.check_facts_only(claims, self.facts)["pass"])
 
+    def test_longitudinal_statement_cannot_carry_extra_clinical_conclusion(self):
+        claims = self.valid_claims()
+        claims[6]["text"] += " The tumour has grown."
+        self.assertFalse(field_ablation.check_facts_only(claims, self.facts)["pass"])
+
+    def test_volume_sentence_cannot_infer_tumour_growth(self):
+        claims = self.valid_claims()
+        claims[2]["text"] += " The tumour has grown."
+        self.assertFalse(field_ablation.check_facts_only(claims, self.facts)["pass"])
+
+    def test_swapped_measurement_values_fail_even_with_both_citations(self):
+        claims = self.valid_claims()
+        claims[2]["text"] = ("Enhancing tumour volume is 45.8 cc and FLAIR hyperintensity volume is "
+                             "37.2 cc from automatic segmentation; indicative.")
+        claims[2]["fields"] = ["meas.available", "meas.enhancing_cc", "meas.flair_hyperintensity_cc", "meas.label"]
+        claims.pop(3)
+        self.assertFalse(field_ablation.check_facts_only(claims, self.facts)["pass"])
+
+    def test_availability_claim_must_match_yes_or_no(self):
+        claims = self.valid_claims() + [
+            {"section": "provenance", "text": "No usable segmentation volumes are available.",
+             "fields": ["meas.available"]},
+        ]
+        self.assertFalse(field_ablation.check_facts_only(claims, self.facts)["pass"])
+        no_facts = facts_for_arm(lumiere(measured=False), FACTS_ONLY)
+        self.assertFalse(field_ablation.check_facts_only(
+            [{"section": "measurements", "text": "Segmentation volumes are available.",
+              "fields": ["meas.available"]}], no_facts)["pass"])
+
     def test_direct_and_indirect_model_wording_fail(self):
         for text in ("The combined score is 0.80.", "The pathways agree.",
                      "The prediction set contains both outcomes.", "This has the tested tier.",

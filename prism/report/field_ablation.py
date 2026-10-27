@@ -25,6 +25,14 @@ FACTS_SCHEMA = {"type": "object", "additionalProperties": False, "required": ["s
                                    "fields": {"type": "array", "items": {"type": "string"}}}}}}}
 _MEASURED_KEYS = ("meas.enhancing_cc", "meas.flair_hyperintensity_cc", "meas.necrosis_cc",
                   "meas.cavity_cc", "meas.necrosis_and_cavity_cc")
+_VOLUME_LABEL = re.compile(
+    r"\b(necrosis (?:and|with) (?:resection )?cavity|resection cavity|FLAIR hyperintensity|"
+    r"enhancing tumour|necrosis|cavity|FLAIR|enhancing)\b", re.I)
+_VOLUME_KIND = {"enhancing": "meas.enhancing_cc", "enhancing tumour": "meas.enhancing_cc",
+                "flair": "meas.flair_hyperintensity_cc", "flair hyperintensity": "meas.flair_hyperintensity_cc",
+                "necrosis": "meas.necrosis_cc", "cavity": "meas.cavity_cc",
+                "resection cavity": "meas.cavity_cc", "necrosis and cavity": "meas.necrosis_and_cavity_cc",
+                "necrosis with cavity": "meas.necrosis_and_cavity_cc"}
 _CHANGE_KEYS = ("meas.enhancing_change_since_previous_statement",
                 "meas.flair_hyperintensity_change_since_previous_statement",
                 "meas.enhancing_change_since_earlier_minimum_statement")
@@ -34,6 +42,14 @@ _BANNED = re.compile(
     r"outcomes?|progress(?:ion|ive|ed)?|recurren(?:ce|t)|pseudo-?progression|"
     r"radiation necrosis|treatment effect|both outcomes|agree(?:ment)?|disagree(?:ment)?|"
     r"above|below|higher|lower|tested|performance|accuracy|reliab(?:le|ility))\b", re.I)
+_CLINICAL_INFERENCE = re.compile(
+    r"\b(?:tumou?r|lesion|disease)\b.{0,40}\b(?:grown?|growing|growth|increas\w*|"
+    r"worsen\w*|spread|expand\w*|shrink\w*|improv\w*|respond\w*)\b|"
+    r"\b(?:scan|imaging)\b.{0,30}\b(?:shows?|indicates?|suggests?)\b.{0,30}\b"
+    r"(?:growth|worsening|response|change)\b", re.I)
+_UNAVAILABLE_VOLUME = re.compile(
+    r"\b(?:no|not|without|unavailable|absent|missing)\b.{0,35}\b(?:segmentation|volumes?)\b|"
+    r"\b(?:segmentation|volumes?)\b.{0,35}\b(?:unavailable|absent|missing|not available)\b", re.I)
 _LIMITATIONS = ("Measurements come from automatic segmentation and are indicative. "
                 "Only the supplied scan facts are described; no diagnosis or management advice is given.")
 
@@ -84,13 +100,26 @@ def facts_only_messages(facts: dict) -> list[dict]:
 def _contains_field_value(claim: dict, key: str, facts: dict) -> bool:
     text = claim["text"].lower()
     value = facts[key]
+    if key in _MEASURED_KEYS:
+        labels = list(_VOLUME_LABEL.finditer(text))
+        for i, label in enumerate(labels):
+            if _VOLUME_KIND[label.group(0).lower()] != key:
+                continue
+            end = labels[i + 1].start() if i + 1 < len(labels) else len(text)
+            segment = text[label.end():end]
+            written = checker.numbers(segment)
+            if written and checker.matches(written[0], [float(value)], False):
+                return True
+        return False
     if isinstance(value, (int, float)):
         return any(checker.matches(n, [float(value)], pc) for n, pc in checker.numbers(text, with_percent=True))
     if key == "scan.previous_available":
         return "previous" in text and (("no " in text or "without" in text) if value == "no" else
                                         not ("no previous" in text or "without" in text))
     if key == "meas.available":
-        return "segmentation" in text or "volume" in text
+        mentions_volume = "segmentation" in text or "volume" in text
+        unavailable = bool(_UNAVAILABLE_VOLUME.search(text))
+        return mentions_volume and (unavailable if value == "no" else not unavailable)
     if key == "meas.label":
         return "segmentation" in text and "indicative" in text
     if key == "scan.phase":
@@ -99,7 +128,7 @@ def _contains_field_value(claim: dict, key: str, facts: dict) -> bool:
         cohort = re.search(r"MU-Glioma-Post|LUMIERE|UCSF-ALPTDG", str(value), re.I)
         return bool(cohort and cohort.group(0).lower() in text)
     if key.endswith("statement"):
-        return str(value).lower().rstrip(".") in text
+        return text.strip().rstrip(".") == str(value).lower().strip().rstrip(".")
     return str(value).lower() in text
 
 
@@ -138,6 +167,7 @@ def check_facts_only(claims: list[dict] | None, facts: dict) -> dict:
     text = " ".join(c["text"] for c in claims)
     forbidden = checker.forbidden_v3(text)
     banned = sorted({m.group(0).lower() for m in _BANNED.finditer(text)})
+    clinical_inference = sorted({m.group(0) for m in _CLINICAL_INFERENCE.finditer(text)})
     semantic_mismatch = [c for c in claims if not c["fields"] or
                          any(key in facts and not _contains_field_value(c, key, facts) for key in c["fields"])]
     unsupported = [r for r in checked if not r["supported"]]
@@ -145,8 +175,10 @@ def check_facts_only(claims: list[dict] | None, facts: dict) -> dict:
            "n_invalid_citations": sum(len(r["invalid_fields"]) for r in checked),
            "unsupported": unsupported, "semantic_mismatch": semantic_mismatch,
            "required": {"missing": missing, "required_pass": not missing},
-           "ordered": ordered, "forbidden": forbidden, "banned_terms": banned}
-    out["pass"] = not (unsupported or semantic_mismatch or missing or any(forbidden.values()) or banned) and ordered
+           "ordered": ordered, "forbidden": forbidden, "banned_terms": banned,
+           "clinical_inference": clinical_inference}
+    out["pass"] = not (unsupported or semantic_mismatch or missing or any(forbidden.values()) or banned or
+                       clinical_inference) and ordered
     return out
 
 
