@@ -5,6 +5,7 @@ import copy
 import io
 import json
 import shutil
+import subprocess
 import tempfile
 import unittest
 from collections import Counter
@@ -307,6 +308,8 @@ class TestNegatives(unittest.TestCase):
 REPO_ROOT = Path(__file__).resolve().parents[1]
 SPEC = "prism/report/facts_only_v2.py"
 RUNNER = "prism/analyses/report_field_ablation_v2.py"
+IMPORTS = ("prism/report/field_ablation.py", "prism/analyses/report_field_ablation.py", "prism/report/vllm_run.py",
+           "prism/analyses/report_v3.py", "prism/analyses/report_v3_1.py")
 
 
 def synthetic_dev() -> list[dict]:
@@ -364,7 +367,7 @@ class V2Root:
         self._dir = tempfile.TemporaryDirectory()
         self.root = Path(self._dir.name)
         _copy_gated_root(REPO_ROOT, self.root)
-        for relative in (SPEC, RUNNER):
+        for relative in (SPEC, RUNNER, *IMPORTS):
             (self.root / relative).parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(REPO_ROOT / relative, self.root / relative)
         self.v1 = self.root / "v1"
@@ -381,9 +384,9 @@ class V2Root:
         (self.out / "preflight.json").write_text(json.dumps({"complete": complete, "parsed": parsed,
                                                              "request_sha256": "0" * 64}))
 
-    def dev_step(self, iteration, batch=None):
+    def dev_step(self, iteration, batch=None, stderr=None):
         with patch("prism.analyses.report_field_ablation._whole_batch", batch or fake_batch(self.dev)), \
-                contextlib.redirect_stdout(io.StringIO()):
+                contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(stderr or io.StringIO()):
             return V2.dev_step(self.root, self.out, iteration, v1_output_root=self.v1)
 
     def preflight(self, batch=None):
@@ -391,9 +394,22 @@ class V2Root:
                 contextlib.redirect_stdout(io.StringIO()):
             return V2.preflight_step(self.root, self.out, v1_output_root=self.v1)
 
-    def freeze(self):
-        with contextlib.redirect_stdout(io.StringIO()):
+    def freeze(self, stderr=None):
+        with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(stderr or io.StringIO()):
             return V2.freeze_step(self.root, self.out, v1_output_root=self.v1)
+
+    def git_commit(self, *paths, message="synthetic"):
+        """Make the root a Git work tree (once) and commit `paths` (default: the frozen code)."""
+        def git(*args):
+            subprocess.run(["git", "-C", str(self.root), "-c", "user.name=synthetic", "-c",
+                            "user.email=synthetic@example.invalid", "-c", "commit.gpgsign=false", *args],
+                           check=True, capture_output=True)
+        if not (self.root / ".git").exists():
+            git("init", "-q")
+        git("add", "--", *(paths or (SPEC, RUNNER, *IMPORTS)))
+        git("commit", "-q", "-m", message)
+        return subprocess.run(["git", "-C", str(self.root), "rev-parse", "HEAD"], check=True, capture_output=True,
+                              text=True).stdout.strip()
 
     def eval_requests(self):
         with patch("prism.analyses.report_field_ablation._whole_batch", _no_model), \
@@ -427,9 +443,10 @@ def failed_batch(calls=None):
 
 
 def bind_preflight(out: Path, root: Path = REPO_ROOT, frozen: bool = True, **override) -> None:
-    """A passing preflight.json recording the spec and runner blobs of `root`, and (frozen=True) a FROZEN_v2.json
-    holding the same blobs, for roots whose frozen guard is stood in."""
-    blobs = {"spec_blob": V1._git_blob(root / SPEC), "runner_blob": V1._git_blob(root / RUNNER)}
+    """A passing preflight.json recording the spec, runner and frozen-import blobs of `root` and the serving, and
+    (frozen=True) a FROZEN_v2.json holding the same values, for roots whose frozen guard is stood in."""
+    blobs = {"spec_blob": V1._git_blob(root / SPEC), "runner_blob": V1._git_blob(root / RUNNER),
+             "import_blobs": {path: V1._git_blob(root / path) for path in IMPORTS}, "serving": V2.serving()}
     out.mkdir(parents=True, exist_ok=True)
     (out / "preflight.json").write_text(json.dumps({"complete": True, "parsed": True, **blobs, **override}))
     if frozen:
@@ -487,6 +504,10 @@ class TestDevStep(unittest.TestCase):
         info = json.loads((out / "dev_iter0.json").read_text())
         self.assertEqual(info["spec_version"], facts_only_v2.SPEC_VERSION)
         self.assertEqual(info["spec_blob"], V1._git_blob(self.env.root / SPEC))
+        self.assertEqual(info["runner_blob"], V1._git_blob(self.env.root / RUNNER))
+        self.assertEqual(info["import_blobs"], {path: V1._git_blob(self.env.root / path) for path in IMPORTS})
+        self.assertEqual(info["serving"], V2.serving())
+        self.assertIsNone(info["commit"])
         self.assertTrue(info["qualifies"])
         self.assertEqual(result["qualifies"], True)
         summary = pd.read_csv(out / "summary_dev_iter0.csv").set_index("cohort")
@@ -630,6 +651,57 @@ class TestDevStep(unittest.TestCase):
         self.assertFalse((self.env.out / "llm/requests_dev_iter0.jsonl").exists())
 
 
+class TestCommittedCode(unittest.TestCase):
+    def setUp(self):
+        self.env = V2Root()
+        self.addCleanup(self.env.cleanup)
+
+    def test_without_git_the_commit_is_null_with_a_warning(self):
+        stderr = io.StringIO()
+        self.assertIsNone(self.env.dev_step(0, stderr=stderr)["commit"])
+        self.assertEqual(stderr.getvalue().count("\n"), 1)
+        self.assertIn("no Git work tree", stderr.getvalue())
+
+    def test_dev_and_freeze_refuse_uncommitted_frozen_code_and_record_the_commit(self):
+        head = self.env.git_commit()
+        for relative in (SPEC, RUNNER, *IMPORTS):
+            path = self.env.root / relative
+            original = path.read_bytes()
+            path.write_bytes(original + b"\n# uncommitted\n")
+            with self.subTest(path=relative):
+                with self.assertRaisesRegex(RuntimeError, f"uncommitted changes to the frozen code.*: {relative}$"):
+                    self.env.dev_step(0, _no_model)
+            path.write_bytes(original)
+        untracked = self.env.root / IMPORTS[0]
+        subprocess.run(["git", "-C", str(self.env.root), "rm", "-q", "--cached", "--", IMPORTS[0]], check=True)
+        with self.assertRaisesRegex(RuntimeError, f"uncommitted changes to the frozen code.*{IMPORTS[0]}"):
+            self.env.dev_step(0, _no_model)
+        self.assertTrue(untracked.exists())
+        self.assertFalse((self.env.out / "llm/requests_dev_iter0.jsonl").exists())
+        subprocess.run(["git", "-C", str(self.env.root), "add", "--", IMPORTS[0]], check=True)
+        info = self.env.dev_step(0)
+        self.assertEqual(info["commit"], head)
+        self.assertEqual(json.loads((self.env.out / "dev_iter0.json").read_text())["commit"], head)
+        runner = self.env.root / RUNNER
+        original = runner.read_bytes()
+        runner.write_bytes(original + b"\n# uncommitted\n")
+        with self.assertRaisesRegex(RuntimeError, f"uncommitted changes to the frozen code.*: {RUNNER}$"):
+            self.env.freeze()
+        self.assertFalse((self.env.out / "FROZEN_v2.json").exists())
+        runner.write_bytes(original)
+        self.assertEqual(self.env.freeze()["commit"], head)
+        # A later commit (e.g. the result document) changes HEAD but not the frozen code: the guard and a re-run of
+        # the freeze still accept it.
+        (self.env.root / "docs").mkdir(exist_ok=True)
+        (self.env.root / "docs/later.md").write_text("synthetic\n")
+        later = self.env.git_commit("docs/later.md", message="later")
+        self.assertNotEqual(later, head)
+        bind_preflight(self.env.out, self.env.root, frozen=False)
+        with contextlib.redirect_stderr(io.StringIO()):
+            V2.guard_frozen(self.env.root, self.env.out, self.env.v1)
+        self.assertEqual(self.env.freeze()["commit"], head)
+
+
 class TestGuardV2(unittest.TestCase):
     def test_dev_refuses_patient_overlap_with_eval(self):
         env = V2Root()
@@ -728,6 +800,8 @@ class TestPreflight(unittest.TestCase):
         state = json.loads((self.env.out / "preflight.json").read_text())
         self.assertEqual(state["spec_blob"], V1._git_blob(self.env.root / SPEC))
         self.assertEqual(state["runner_blob"], V1._git_blob(self.env.root / RUNNER))
+        self.assertEqual(state["import_blobs"], {path: V1._git_blob(self.env.root / path) for path in IMPORTS})
+        self.assertEqual(state["serving"], V2.serving())
         log = V1._jsonl(self.env.out / "preflight" / "preflight_log.jsonl")
         self.assertEqual(log[-1]["runner_blob"], state["runner_blob"])
 
@@ -776,6 +850,13 @@ class TestFreeze(unittest.TestCase):
         self.assertEqual(frozen["spec_sha256"], V1._digest(root / SPEC))
         self.assertEqual(frozen["runner_blob"], V1._git_blob(root / RUNNER))
         self.assertEqual(frozen["runner_sha256"], V1._digest(root / RUNNER))
+        self.assertEqual(frozen["import_blobs"], {path: V1._git_blob(root / path) for path in IMPORTS})
+        self.assertEqual(tuple(str(p) for p in V2.FROZEN_IMPORTS), IMPORTS)
+        model_id, revision, chat_kwargs, extra = V2.R31.MODELS[V2.R31.PRIMARY]
+        self.assertEqual(frozen["serving"], {"key": "qwen3.8-27b", "id": model_id, "revision": revision,
+                                             "chat_kwargs": chat_kwargs, "extra_args": list(extra),
+                                             "llm_env": str(V2.R3.LLM_ENV)})
+        self.assertIsNone(frozen["commit"])  # the temporary root is no Git work tree
         self.assertEqual(frozen["writer"], V1.EXPECTED_WRITER)
         self.assertEqual(frozen["prefixes"], ["pathway.", "pathways.", "conformal.", "card.", "flags."])
         self.assertEqual(frozen["v1_manifest_sha256"], V1._digest(root / V1.MANIFEST))
@@ -800,6 +881,18 @@ class TestFreeze(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, "FROZEN_v2.json exists and differs"):
             self.env.freeze()
         self.assertEqual(json.loads(path.read_text())["qualifying_iteration"], 1)
+
+    def test_freeze_refuses_when_imports_or_serving_changed_since_the_qualifying_iteration(self):
+        _qualify(self.env)
+        path = self.env.root / IMPORTS[2]
+        path.write_bytes(path.read_bytes() + b"\n# changed after the iteration\n")
+        with self.assertRaisesRegex(RuntimeError, "frozen imports or serving changed since development iteration 0"):
+            self.env.freeze()
+        path.write_bytes((REPO_ROOT / IMPORTS[2]).read_bytes())
+        with patch.object(V2.R3, "LLM_ENV", "/synthetic/other-env"), \
+                self.assertRaisesRegex(RuntimeError, "frozen imports or serving changed"):
+            self.env.freeze()
+        self.assertFalse((self.env.out / "FROZEN_v2.json").exists())
 
     def test_freeze_refuses_when_spec_changed_since_the_qualifying_iteration(self):
         _qualify(self.env)
@@ -848,6 +941,42 @@ class TestEvalRequestGuards(unittest.TestCase):
             self.env.eval_requests()
         self._no_eval_requests()
 
+    def test_eval_requests_refuse_when_a_frozen_import_changed_after_freeze(self):
+        self.env.freeze()
+        bind_preflight(self.env.out, self.env.root, frozen=False)
+        real = V1._git_blob
+        for relative in IMPORTS:
+            def changed(path, relative=relative):
+                return "0" * 40 if Path(path) == self.env.root / relative else real(path)
+            with self.subTest(path=relative), patch.object(V1, "_git_blob", changed):
+                with self.assertRaisesRegex(RuntimeError, f"frozen import_blobs mismatch: {relative}$"):
+                    self.env.eval_requests()
+        self._no_eval_requests()
+        path = self.env.root / IMPORTS[0]
+        path.write_bytes(path.read_bytes() + b"\n# changed after freeze\n")
+        with self.assertRaisesRegex(RuntimeError, f"frozen import_blobs mismatch: {IMPORTS[0]}$"):
+            self.env.eval_requests()
+        path.write_bytes((REPO_ROOT / IMPORTS[0]).read_bytes())
+        path.unlink()
+        with self.assertRaisesRegex(RuntimeError, f"frozen import {IMPORTS[0]} missing"):
+            self.env.eval_requests()
+        self._no_eval_requests()
+
+    def test_eval_requests_refuse_when_serving_changed_after_freeze(self):
+        self.env.freeze()
+        bind_preflight(self.env.out, self.env.root, frozen=False)
+        model_id, revision, chat_kwargs, extra = V2.R31.MODELS[V2.R31.PRIMARY]
+        for changed in ((model_id, revision, {"enable_thinking": True}, extra),
+                        (model_id, revision, chat_kwargs, ("--max-num-seqs", "64"))):
+            with self.subTest(changed=changed[2:]), \
+                    patch.dict(V2.R31.MODELS, {V2.R31.PRIMARY: changed}):
+                with self.assertRaisesRegex(RuntimeError, "frozen serving mismatch"):
+                    self.env.eval_requests()
+        with patch.object(V2.R3, "LLM_ENV", "/synthetic/other-env"), \
+                self.assertRaisesRegex(RuntimeError, "frozen serving mismatch"):
+            self.env.eval_requests()
+        self._no_eval_requests()
+
     def test_eval_requests_refuse_without_successful_preflight(self):
         self.env.freeze()
         for complete, parsed in ((True, False), (False, True)):
@@ -863,11 +992,15 @@ class TestEvalRequestGuards(unittest.TestCase):
     def test_eval_and_stress_require_a_preflight_of_the_frozen_code(self):
         self.env.freeze()
         stale = "0" * 40
-        for key in (None, "spec_blob", "runner_blob"):
+        stale_values = {"spec_blob": stale, "runner_blob": stale,
+                        "import_blobs": {**{path: V1._git_blob(self.env.root / path) for path in IMPORTS},
+                                         IMPORTS[2]: stale},
+                        "serving": {**V2.serving(), "extra_args": ["--max-num-seqs", "1"]}}
+        for key in (None, *stale_values):
             if key is None:
                 self.env.pass_preflight()  # complete and parsed, but bound to no code
             else:
-                bind_preflight(self.env.out, self.env.root, frozen=False, **{key: stale})
+                bind_preflight(self.env.out, self.env.root, frozen=False, **{key: stale_values[key]})
             with self.subTest(stale=key):
                 with self.assertRaisesRegex(RuntimeError, "passing preflight of the frozen specification and runner"):
                     self.env.eval_requests()

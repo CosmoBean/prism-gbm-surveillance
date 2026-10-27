@@ -1,9 +1,12 @@
 """Facts-only v2 report-field ablation (docs/results/REPORT_FIELD_ABLATION_V2_PLAN.md).
 
-Run ``python -m prism.analyses.report_field_ablation_v2 --steps dev --iteration <k>`` for a development iteration on
-the 58-record development partition, and ``--steps preflight`` for the one-record synthetic engine check. Then
-``--steps freeze``, ``requests``, ``generate`` and ``evaluate`` for the one evaluation on the locked 406 records, and
-the same three steps with ``--sets stress`` for the paired shared-fact stress test on v1's frozen 6-record set. The v1
+Run ``python -m prism.analyses.report_field_ablation_v2 --steps consistency`` for the model-free consistency check
+on the 58 development records' facts, ``--steps dev --iteration <k>`` for a development iteration on the 58-record
+development partition, and ``--steps preflight`` for the one-record synthetic engine check. Then ``--steps freeze``,
+``requests``, ``generate`` and ``evaluate`` for the one evaluation on the locked 406 records, and ``--steps requests
+generate evaluate --sets stress`` for the paired shared-fact stress test on v1's frozen 6-record set. The dev and
+freeze steps refuse uncommitted changes to the frozen code (specification, runner and FROZEN_IMPORTS) and record the
+commit. The v1
 gate (v3.1 artifacts, checker, frozen prism/report sources, writer, the v1 lock) runs before every v2 step; v1 and v3.1
 outputs are read only. Summaries hold aggregate counts only: no report text and no record IDs. Per-record files
 (checks_*.csv, paired_rows.csv, stress_paired.csv) hold record IDs with statuses, booleans and counts only, and stay
@@ -15,6 +18,8 @@ from __future__ import annotations
 import argparse
 import json
 import shutil
+import subprocess
+import sys
 from collections import Counter
 from pathlib import Path
 
@@ -22,6 +27,8 @@ import numpy as np
 import pandas as pd
 
 from prism.analyses import report_field_ablation as V1
+from prism.analyses import report_v3 as R3
+from prism.analyses import report_v3_1 as R31
 from prism.config import REPO, RESULTS
 from prism.report import checker
 from prism.report import facts_only_v2 as S
@@ -31,6 +38,12 @@ from prism.report import prompts_v3_1
 OUT2 = RESULTS / "analyses" / "report_field_ablation_v2"
 SPEC = Path("prism/report/facts_only_v2.py")
 RUNNER = Path("prism/analyses/report_field_ablation_v2.py")
+# Imported modules that define the result: the field contract, parser and text checks (field_ablation), the
+# whole-batch runner, bootstrap, follows rule and stress entries (v1 runner), serving (vllm_run), and the LLM
+# environment, writer and engine flags (report_v3, report_v3_1). Their Git blobs are frozen with the specification.
+FROZEN_IMPORTS = (Path("prism/report/field_ablation.py"), Path("prism/analyses/report_field_ablation.py"),
+                  Path("prism/report/vllm_run.py"), Path("prism/analyses/report_v3.py"),
+                  Path("prism/analyses/report_v3_1.py"))
 FROZEN = Path("FROZEN_v2.json")
 REQUEST_HASHES = Path("request_hashes.json")
 FACTS_V2 = "facts_only_v2"
@@ -106,6 +119,53 @@ def qualifies(summary: pd.DataFrame) -> bool:
                for c, minimum in DEV_CRITERION.items())
 
 
+# ---------------------------------------------------------------- frozen code
+def import_blobs(root: Path) -> dict[str, str | None]:
+    """Git blob of each FROZEN_IMPORTS module under root (None when missing)."""
+    return {str(path): V1._git_blob(Path(root) / path) for path in FROZEN_IMPORTS}
+
+
+def serving() -> dict:
+    """The writer, chat-template kwargs, engine flags and LLM environment every whole batch uses (V1._whole_batch)."""
+    model_id, revision, chat_kwargs, extra = R31.MODELS[R31.PRIMARY]
+    return {"key": R31.PRIMARY, "id": model_id, "revision": revision, "chat_kwargs": dict(chat_kwargs),
+            "extra_args": list(extra), "llm_env": str(R3.LLM_ENV)}
+
+
+def _code_record(root: Path) -> dict:
+    """The code that defines a run: specification and runner blobs, FROZEN_IMPORTS blobs and serving."""
+    return {"spec_blob": V1._git_blob(Path(root) / SPEC), "runner_blob": V1._git_blob(Path(root) / RUNNER),
+            "import_blobs": import_blobs(root), "serving": serving()}
+
+
+def _git(root: Path, *args: str) -> str | None:
+    try:
+        result = subprocess.run(["git", "-C", str(root), *args], capture_output=True, text=True, check=False)
+    except OSError:
+        return None
+    return result.stdout if result.returncode == 0 else None
+
+
+def committed_code(root: Path) -> str | None:
+    """HEAD of the Git work tree at root, after refusing uncommitted changes to the specification, the runner or any
+    FROZEN_IMPORTS module. Without a work tree whose top level is root (e.g. a temporary test root), a one-line
+    warning goes to stderr and None is returned."""
+    top = _git(root, "rev-parse", "--show-toplevel")
+    if top is None or Path(top.strip()).resolve() != Path(root).resolve():
+        print("warning: no Git work tree at the root; the code commit is neither checked nor recorded",
+              file=sys.stderr, flush=True)
+        return None
+    paths = [str(path) for path in (SPEC, RUNNER, *FROZEN_IMPORTS)]
+    status = _git(root, "status", "--porcelain", "--", *paths)
+    head = _git(root, "rev-parse", "HEAD")
+    if status is None or head is None:
+        raise RuntimeError("git status or rev-parse failed on the frozen code")
+    dirty = sorted({line[3:] for line in status.splitlines() if line.strip()})
+    if dirty:
+        raise RuntimeError("uncommitted changes to the frozen code; commit them first: " + ", ".join(dirty))
+    return head.strip()
+
+
 # ---------------------------------------------------------------- development iterations
 def _dev_paths(output_root: Path, k: int) -> dict[str, Path]:
     return {"requests": output_root / "llm" / f"requests_dev_iter{k}.jsonl",
@@ -145,8 +205,8 @@ def _refuse_iteration(output_root: Path, iteration: int) -> None:
 
 def _require_preflight(output_root: Path, frozen: bool = False) -> None:
     """A passing preflight (complete and parsed). With frozen=True (evaluation and stress steps, after the frozen
-    guard), the preflight must also have run the frozen specification and runner: its recorded git blobs must equal
-    FROZEN_v2.json's."""
+    guard), the preflight must also have run the frozen code: its recorded specification, runner and FROZEN_IMPORTS
+    blobs and its serving must equal FROZEN_v2.json's."""
     path = output_root / PREFLIGHT
     try:
         state = json.loads(path.read_text()) if path.exists() else {}
@@ -160,9 +220,10 @@ def _require_preflight(output_root: Path, frozen: bool = False) -> None:
             code = json.loads((output_root / FROZEN).read_text())
         except (OSError, ValueError):
             code = {}
-        if any(not state.get(key) or state.get(key) != code.get(key) for key in ("spec_blob", "runner_blob")):
-            raise RuntimeError("run a passing preflight of the frozen specification and runner before the "
-                               "evaluation or stress steps")
+        if any(not state.get(key) or state.get(key) != code.get(key)
+               for key in ("spec_blob", "runner_blob", "import_blobs", "serving")):
+            raise RuntimeError("run a passing preflight of the frozen specification and runner (and frozen imports "
+                               "and serving) before the evaluation or stress steps")
 
 
 def _quarantine(output_root: Path, iteration: int, meta: dict) -> Path:
@@ -181,14 +242,21 @@ def _quarantine(output_root: Path, iteration: int, meta: dict) -> Path:
     return directory
 
 
-def _consistency(dev: list[dict]) -> None:
-    """Task 1 consistency check on every development record's facts; errors are reported as keys and counts only."""
+def _consistency_counts(dev: list[dict]) -> tuple[int, Counter]:
+    """The number of development records with consistency errors, and per error string (keys and criteria only)
+    the number of records showing it."""
     errors = Counter()
     failing = 0
     for rec in dev:
         found = S.consistency_errors(A.facts_for_arm(rec, A.FACTS_ONLY))
         failing += bool(found)
         errors.update(set(found))
+    return failing, errors
+
+
+def _consistency(dev: list[dict]) -> None:
+    """Task 1 consistency check on every development record's facts; errors are reported as keys and counts only."""
+    failing, errors = _consistency_counts(dev)
     if failing:
         detail = "; ".join(f"{error} ({n})" for error, n in sorted(errors.items()))
         raise RuntimeError(f"consistency check failed on {failing} of {len(dev)} development records: {detail}")
@@ -246,6 +314,20 @@ def _word_counts(frame: pd.DataFrame, words: list[list[str]]) -> pd.DataFrame:
     return table.sort_values(["n_reports", "word"], ascending=[False, True], ignore_index=True)
 
 
+def consistency_step(root: Path = REPO, output_root: Path = OUT2, v1_output_root: Path = V1.OUT) -> dict:
+    """Model-free: the consistency check on every development record's facts, after guard_v2. Prints aggregate
+    counts only (records with errors; each error string, which names keys and criteria only, with its record count)
+    and writes no result file. main exits non-zero when any record has an error."""
+    root = Path(root)
+    guard_v2(root, output_root, v1_output_root)
+    dev = _dev_records(root)
+    failing, errors = _consistency_counts(dev)
+    print(f"consistency: {failing} of {len(dev)} development records with errors", flush=True)
+    for error, n in sorted(errors.items()):
+        print(f"  {error}: {n} record(s)", flush=True)
+    return {"n_records": len(dev), "n_failing": failing, "errors": dict(errors)}
+
+
 def dev_step(root: Path = REPO, output_root: Path = OUT2, iteration: int = 0, v1_output_root: Path = V1.OUT,
              gpu_hour_price_usd: float | None = None) -> dict:
     """One whole-batch facts-only development iteration on the 58 development records, scored by the v2 checker."""
@@ -253,6 +335,8 @@ def dev_step(root: Path = REPO, output_root: Path = OUT2, iteration: int = 0, v1
     _refuse_iteration(output_root, iteration)
     guard_v2(root, output_root, v1_output_root)
     _require_preflight(output_root)
+    commit = committed_code(root)
+    code = _code_record(root)
     dev = _dev_records(root)
     _consistency(dev)
     paths = _dev_paths(output_root, iteration)
@@ -261,7 +345,7 @@ def dev_step(root: Path = REPO, output_root: Path = OUT2, iteration: int = 0, v1
              "max_tokens": MAX_TOKENS, "schema": S.FACTS_SCHEMA} for rec in dev]
     paths["requests"].write_bytes("".join(json.dumps(row) + "\n" for row in rows).encode())
     request_sha256 = V1._digest(paths["requests"])
-    spec_blob = V1._git_blob(root / SPEC)
+    spec_blob = code["spec_blob"]
 
     def guard() -> None:
         guard_v2(root, output_root, v1_output_root)
@@ -269,6 +353,9 @@ def dev_step(root: Path = REPO, output_root: Path = OUT2, iteration: int = 0, v1
             raise RuntimeError(f"development iteration {iteration} request hash mismatch")
         if V1._git_blob(root / SPEC) != spec_blob:
             raise RuntimeError(f"specification changed during development iteration {iteration}")
+        if _code_record(root) != code:
+            raise RuntimeError(f"runner, frozen imports or serving changed during development iteration "
+                               f"{iteration}")
     meta = V1._whole_batch(root, paths["requests"], paths["outputs"], guard)
     if not meta.get("complete"):
         directory = _quarantine(output_root, iteration, meta)
@@ -283,7 +370,7 @@ def dev_step(root: Path = REPO, output_root: Path = OUT2, iteration: int = 0, v1
     summary = summarise_dev(frame, meta, gpu_hour_price_usd)
     summary.to_csv(paths["summary"], index=False)
     _word_counts(frame, [words for _, words in checked]).to_csv(paths["words"], index=False)
-    info = {"iteration": iteration, "spec_version": S.SPEC_VERSION, "spec_blob": spec_blob,
+    info = {"iteration": iteration, "spec_version": S.SPEC_VERSION, **code, "commit": commit,
             "qualifies": qualifies(summary), "request_sha256": request_sha256,
             "dev_sha256": V1._digest(root / V1.BASE / DEV)}
     paths["info"].write_text(json.dumps(info, indent=2) + "\n")
@@ -344,8 +431,7 @@ def preflight_step(root: Path = REPO, output_root: Path = OUT2, v1_output_root: 
     claims = A.parse_facts_only(out["text"]) if out else None
     result = {"complete": bool(meta.get("complete")), "parsed": claims is not None,
               "request_sha256": V1._digest(request), "run": run, "spec_version": S.SPEC_VERSION,
-              "spec_blob": V1._git_blob(root / SPEC), "runner_blob": V1._git_blob(root / RUNNER),
-              "n_attempts": meta.get("n_attempts")}
+              **_code_record(root), "n_attempts": meta.get("n_attempts")}
     with (base / "preflight_log.jsonl").open("a") as log:
         log.write(json.dumps(result) + "\n")
     (output_root / PREFLIGHT).write_text(json.dumps(result, indent=2) + "\n")
@@ -359,8 +445,10 @@ def _line_hashes(path: Path) -> list[str]:
 
 
 def _frozen_values(root: Path, v1_output_root: Path) -> dict:
-    """Every value FROZEN_v2.json records except the qualifying iteration, recomputed from the current files."""
+    """Every value FROZEN_v2.json records except the qualifying iteration and the commit, recomputed from the
+    current files."""
     for path, name in ((root / SPEC, "specification"), (root / RUNNER, "v2 runner"),
+                       *((root / path, f"frozen import {path}") for path in FROZEN_IMPORTS),
                        (v1_output_root / V1.STRESS_RECORDS, "v1 stress set"),
                        (v1_output_root / V1.STRESS_LOG, "v1 stress log")):
         if not path.is_file():
@@ -369,6 +457,7 @@ def _frozen_values(root: Path, v1_output_root: Path) -> dict:
     return {"spec_version": S.SPEC_VERSION,
             "spec_blob": V1._git_blob(root / SPEC), "spec_sha256": V1._digest(root / SPEC),
             "runner_blob": V1._git_blob(root / RUNNER), "runner_sha256": V1._digest(root / RUNNER),
+            "import_blobs": import_blobs(root), "serving": serving(),
             "writer": V1.EXPECTED_WRITER, "prefixes": list(A.FULL_ONLY_PREFIXES),
             "v1_manifest_sha256": V1._digest(root / V1.MANIFEST),
             "eval_sha256": V1._digest(base / EVAL), "eval_line_sha256": _line_hashes(base / EVAL),
@@ -393,23 +482,29 @@ def _qualifying_iteration(output_root: Path) -> tuple[int, dict]:
 
 def freeze_step(root: Path = REPO, output_root: Path = OUT2, v1_output_root: Path = V1.OUT) -> dict:
     """Record FROZEN_v2.json from the first qualifying development iteration, whose specification must be the current
-    one. The consistency check runs again on the development facts. An existing, different freeze is never
-    overwritten."""
+    one, as must its FROZEN_IMPORTS blobs and serving. Uncommitted changes to the frozen code are refused, and HEAD
+    is recorded as `commit`. The consistency check runs again on the development facts. An existing, different
+    freeze is never overwritten."""
     root, output_root, v1_output_root = Path(root), Path(output_root), Path(v1_output_root)
     guard_v2(root, output_root, v1_output_root)
     k, info = _qualifying_iteration(output_root)
     if info.get("spec_blob") != V1._git_blob(root / SPEC):
         raise RuntimeError(f"specification changed since development iteration {k}; it cannot be frozen")
+    if info.get("import_blobs") != import_blobs(root) or info.get("serving") != serving():
+        raise RuntimeError(f"frozen imports or serving changed since development iteration {k}; it cannot be "
+                           "frozen")
+    commit = committed_code(root)
     _consistency(_dev_records(root))
     frozen = {**_frozen_values(root, v1_output_root), "qualifying_iteration": k,
-              "dev_iter_sha256": V1._digest(_dev_paths(output_root, k)["info"])}
+              "dev_iter_sha256": V1._digest(_dev_paths(output_root, k)["info"]), "commit": commit}
     path = output_root / FROZEN
     if path.exists():
         try:
             existing = json.loads(path.read_text())
         except ValueError:
             existing = None
-        if existing != frozen:
+        # A re-run after later commits (e.g. the protocol's freeze section) is a no-op; the commit is not compared.
+        if not isinstance(existing, dict) or {**existing, "commit": None} != {**frozen, "commit": None}:
             raise RuntimeError("FROZEN_v2.json exists and differs; the freeze is not redone")
         return existing
     path.write_text(json.dumps(frozen, indent=2) + "\n")
@@ -429,6 +524,11 @@ def guard_frozen(root: Path = REPO, output_root: Path = OUT2, v1_output_root: Pa
     except ValueError as exc:
         raise RuntimeError("frozen v2 metadata mismatch") from exc
     current = _frozen_values(root, v1_output_root)
+    # `commit` is not compared: later commits (e.g. the result document) are allowed; the code is pinned by blobs.
+    recorded = frozen.get("import_blobs") if isinstance(frozen.get("import_blobs"), dict) else {}
+    changed = [path for path, blob in current["import_blobs"].items() if recorded.get(path) != blob]
+    if changed or set(recorded) != set(current["import_blobs"]):
+        raise RuntimeError("frozen import_blobs mismatch: " + ", ".join(changed or sorted(recorded)))
     for key, value in current.items():
         if frozen.get(key) != value:
             raise RuntimeError(f"frozen {key} mismatch")
