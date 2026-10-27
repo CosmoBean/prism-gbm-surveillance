@@ -1714,3 +1714,20 @@ class TestV2Cli(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestCommittedV2Docs(unittest.TestCase):
+    def test_committed_v2_docs_hold_no_record_ids(self):
+        root = Path(__file__).resolve().parents[1]
+        identifiers = set()
+        for path in (root / V1.BASE / "records/eval.jsonl", root / V1.BASE / "records/dev.jsonl"):
+            for line in path.read_text().splitlines():
+                if line.strip():
+                    rec = json.loads(line)
+                    identifiers |= {str(rec["record_id"]), str(rec["scan_id"]), str(rec["patient_id"])}
+        for relative in ("docs/results/REPORT_FIELD_ABLATION_V2_PLAN.md", "docs/results/REPORT_FIELD_ABLATION_V2.md"):
+            text = (root / relative).read_text()
+            with self.subTest(doc=relative):
+                self.assertTrue('"record_id"' not in text, "record_id field in a committed document")
+                self.assertTrue(SUBJECT_ID.search(text) is None, "subject-ID shape in a committed document")
+                self.assertFalse(any(i in text for i in identifiers), "record identifier in a committed document")
