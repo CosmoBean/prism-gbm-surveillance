@@ -2,6 +2,7 @@
 
 import hashlib
 import json
+import re
 import shutil
 import tempfile
 import unittest
@@ -21,6 +22,15 @@ from prism.analyses.report_field_ablation import (_facts_row, evaluate_step, gen
                                                   paired_summary, requests_step, freeze_step,
                                                   verify_v31_baseline, summarise_arm)
 from prism.analyses import report_field_ablation as pipeline
+
+# Shapes of the cohorts' subject IDs (MU PatientID_####, LUMIERE Patient-###, UCSF ######_timeN, and
+# "<cohort>|grade" record-ID prefixes). Tests use synthetic IDs only.
+SUBJECT_ID = re.compile(r"PatientID_\d+|Patient-\d+|\b\d{5,6}_time\d+|\b(?:mu|lumiere|ucsf)\|grade\d")
+
+
+def _jsonl_records(path: Path) -> list[dict]:
+    return [json.loads(line) for line in path.read_bytes().splitlines() if line.strip()]
+
 
 EXCLUDED = ("pathway.", "pathways.", "conformal.", "card.", "flags.")
 # Every prism/report/* source listed in the v3.1 FROZEN_hashes.txt; the provenance gate checks each one.
@@ -86,6 +96,33 @@ class TestManifest(unittest.TestCase):
         for line, entry in zip(lines, manifest["records"]):
             self.assertEqual(entry["record_id"], json.loads(line)["record_id"])
             self.assertEqual(entry["sha256"], hashlib.sha256(line).hexdigest())
+        committed = {**manifest, "records": [{"cohort": e["record_id"].split("|", 1)[0], "sha256": e["sha256"]}
+                                             for e in manifest["records"]]}
+        self.assertEqual(pipeline._manifest(root), committed)
+
+    def test_committed_docs_hold_no_record_ids(self):
+        root = Path(__file__).resolve().parents[1]
+        manifest = pipeline._manifest(root)
+        self.assertEqual(len(manifest["records"]), 406)
+        for entry in manifest["records"]:
+            self.assertEqual(set(entry), {"cohort", "sha256"})
+        source = root / pipeline.BASE / "records/eval.jsonl"
+        identifiers = set()
+        for rec in _jsonl_records(source):
+            identifiers |= {rec["record_id"], rec["scan_id"], rec["patient_id"]}
+        for relative in ("docs/results/REPORT_FIELD_ABLATION_PLAN.md", "docs/results/REPORT_FIELD_ABLATION.md"):
+            text = (root / relative).read_text()
+            with self.subTest(doc=relative):
+                self.assertNotIn('"record_id"', text)
+                self.assertIsNone(SUBJECT_ID.search(text))
+                self.assertEqual({i for i in identifiers if i in text}, set())
+
+    def test_subject_id_pattern_matches_each_cohort_id_shape(self):
+        # Synthetic IDs in each cohort's shape.
+        for synthetic in ("mu|grade4|PatientID_0001_Timepoint_1", "PatientID_0001", "lumiere|grade4|Patient-001_week-001",
+                          "Patient-001", "ucsf|grade4|100001_time2", "100001_time2"):
+            with self.subTest(synthetic=synthetic):
+                self.assertIsNotNone(SUBJECT_ID.search(synthetic))
 
 
 def _copy_gated_root(source_root: Path, root: Path) -> None:
@@ -166,6 +203,32 @@ class TestProvenanceAndPairing(unittest.TestCase):
             target = copy / paths[0]
             target.write_bytes(target.read_bytes().replace(b'"schema":', b'"schema" :', 1))
             with self.assertRaisesRegex(RuntimeError, "record hash"):
+                verify_v31_baseline(copy)
+
+    def test_gate_derives_record_ids_from_verified_source_lines_in_order(self):
+        root = Path(__file__).resolve().parents[1]
+        manifest = verify_v31_baseline(root)
+        source = _jsonl_records(root / pipeline.BASE / "records/eval.jsonl")
+        self.assertEqual([e["record_id"] for e in manifest["records"]], [r["record_id"] for r in source])
+        self.assertEqual([e["cohort"] for e in manifest["records"]], [r["cohort"] for r in source])
+        self.assertNotIn("record_id", pipeline._manifest(root)["records"][0])
+
+    def test_gate_rejects_reordered_source_lines_and_changed_cohort(self):
+        root = Path(__file__).resolve().parents[1]
+        with tempfile.TemporaryDirectory() as directory:
+            copy = Path(directory)
+            _copy_gated_root(root, copy)
+            target = copy / pipeline.BASE / "records/eval.jsonl"
+            lines = target.read_bytes().splitlines(keepends=True)
+            target.write_bytes(b"".join([lines[1], lines[0], *lines[2:]]))
+            with self.assertRaisesRegex(RuntimeError, "record hash"):
+                verify_v31_baseline(copy)
+            target.write_bytes(b"".join(lines))
+            plan = copy / pipeline.MANIFEST
+            text = plan.read_text()
+            first = text.index('"cohort": "mu"', text.index('"records"'))
+            plan.write_text(text[:first] + '"cohort": "ucsf"' + text[first + len('"cohort": "mu"'):])
+            with self.assertRaisesRegex(RuntimeError, "record hash mismatch"):
                 verify_v31_baseline(copy)
 
     def test_gate_rejects_changed_full_output_even_when_counts_remain_unchanged(self):

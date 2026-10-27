@@ -147,6 +147,19 @@ Other deviations from the brief's command lines, with no effect on behaviour:
 - Step 1's full-arm check is the freeze gate.
 - The parent interpreter was `.venv`, because the LLM env has no pandas. The pipeline launches the LLM env itself.
 
+**Deviation 2: record IDs were removed from the committed manifest after the run.** The reason is data governance:
+committed documents hold aggregate numbers only, and the manifest in `REPORT_FIELD_ABLATION_PLAN.md` listed all 406
+record IDs. Hashing them would not have been enough, because unsalted hashes of enumerable pseudonyms can be reversed.
+- Each manifest record now holds only its cohort and its per-line SHA-256, in source order. The per-line hashes and
+  every other manifest field are unchanged.
+- The provenance gate checks each source line against its hash and cohort and derives the record ID from the verified
+  line. The derived order equals the order of the frozen requests, checks and paired rows.
+- Nothing was regenerated. The request hashes validate, and `evaluate` and `evaluate-stress` re-run on the frozen
+  outputs give byte-identical checks and summaries. The results are unchanged.
+- The plan's manifest SHA-256 changed from `dbb0e3d0926676bbf736cc3e8b00450365cd8d45d9471eae50fd1a24346e6500` to
+  `bca995bbfd21d0cccfef0363aa84991fa8537a0b85609eb303bae6dcea1a2ff3`. The lock records the change as a `deviations`
+  entry, and the previous lock is kept as `provenance_pre_id_removal.json`.
+
 ## Limits
 
 - **No clinician, decision, workload or outcome endpoint was measured.** Nobody read a report from either arm. The

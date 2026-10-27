@@ -8,7 +8,9 @@ Both arms start with `facts_v3_1(rec)` called once per record. `full_evidence` r
 
 ## Canonical input and provenance
 
-The JSON manifest below is the frozen input contract. `records` follows the source JSONL order. Each per-record SHA-256 covers the exact source line bytes, including its line ending. `source_sha256` covers the complete JSONL file. The frozen v3.1 hash file is included verbatim in `frozen_hashes_txt`; the primary writer values come from `report_v3_1.MODELS[PRIMARY]`. The manifest can be recomputed read only with `freeze_manifest()`.
+The JSON manifest below is the frozen input contract. `records` follows the source JSONL order and gives each record's cohort and SHA-256. Each per-record SHA-256 covers the exact source line bytes, including its line ending. `source_sha256` covers the complete JSONL file. The frozen v3.1 hash file is included verbatim in `frozen_hashes_txt`; the primary writer values come from `report_v3_1.MODELS[PRIMARY]`. The manifest can be recomputed read only with `freeze_manifest()`, with each record ID replaced by its cohort.
+
+*Amended after the run (Deviation 2 in `REPORT_FIELD_ABLATION.md`):* record IDs were removed from `records` for data-governance reasons. The per-line hashes, their order and the results are unchanged; the provenance gate derives each record ID from its verified source line.
 
 ```json
 {

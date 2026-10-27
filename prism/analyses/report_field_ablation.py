@@ -91,10 +91,19 @@ def verify_v31_baseline(root: Path = REPO, output_root: Path | None = None) -> d
     lines = source.read_bytes().splitlines(keepends=True)
     if len(lines) != 406 or len(manifest["records"]) != 406:
         raise RuntimeError("record hash manifest length mismatch")
-    for line, frozen in zip(lines, manifest["records"]):
+    # The committed manifest holds no record IDs (data governance): each entry is the cohort and the SHA-256
+    # of the exact source line. Each ID is derived from its verified line, so pairing and order are unchanged.
+    derived = []
+    for number, (line, frozen) in enumerate(zip(lines, manifest["records"]), start=1):
+        if set(frozen) != {"cohort", "sha256"} or _digest_bytes(line) != frozen["sha256"]:
+            raise RuntimeError(f"record hash mismatch: source line {number}")
         rec = json.loads(line)
-        if rec["record_id"] != frozen["record_id"] or _digest_bytes(line) != frozen["sha256"]:
-            raise RuntimeError(f"record hash mismatch: {frozen['record_id']}")
+        if rec["cohort"] != frozen["cohort"] or rec["record_id"].split("|", 1)[0] != frozen["cohort"]:
+            raise RuntimeError(f"record hash mismatch: cohort at source line {number}")
+        derived.append({"record_id": rec["record_id"], "cohort": rec["cohort"], "sha256": frozen["sha256"]})
+    if len({entry["record_id"] for entry in derived}) != 406:
+        raise RuntimeError("record hash manifest has duplicate record IDs")
+    manifest = {**manifest, "records": derived}
     if _digest_bytes(source.read_bytes()) != manifest["source_sha256"]:
         raise RuntimeError("record hash source mismatch")
     if (base / "FROZEN_hashes.txt").read_text() != manifest["frozen_hashes_txt"]:
