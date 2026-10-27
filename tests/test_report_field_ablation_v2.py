@@ -1468,6 +1468,24 @@ class TestSharedFollows(unittest.TestCase):
         self.assertEqual(V2.shared_follows(entry, old, new, facts_only_claims(old))["status"], "not_follows")
 
 
+class TestStressAmbiguity(unittest.TestCase):
+    def _entry(self, rec):
+        entry, old, new = _entry(rec)
+        return {**entry, "old_facts": old, "new_facts": new}
+
+    def test_ambiguity_is_computed_on_each_arms_own_facts(self):
+        for rec, facts_arm, full_arm in ((synthetic_stress_sources()[0], False, True),
+                                         (zero_change_record("synthetic|stress|z"), True, True)):
+            entry = self._entry(rec)
+            with self.subTest(facts_only=facts_arm):
+                self.assertEqual(V2.ambiguous_by_construction(entry, entry["new_facts"]),
+                                 V1.ambiguous_by_construction(entry))
+                rows = {arm: V2._stress_row(entry, arm, None) for arm in V2.ARMS}
+                self.assertEqual(rows["facts_only_v2"]["ambiguous_by_construction"], facts_arm)
+                self.assertEqual(rows["full_evidence"]["ambiguous_by_construction"], full_arm)
+                self.assertEqual(V2.ambiguous_by_construction(entry, {}), False)
+
+
 class TestStress(unittest.TestCase):
     def setUp(self):
         self.env = StressEnv()
@@ -1569,7 +1587,8 @@ class TestStress(unittest.TestCase):
                              sorted(e["perturbed_id"] for e in self.env.entries))
         self.assertEqual(set(rows.columns), {
             "perturbed_id", "record_id", "cohort", "patient_id", "kind", "arm", "status", "follows",
-            "new_supported", "old_present", "n_old_unique_hits", "n_old_ambiguous_hits", "missing_output",
+            "new_supported", "old_present", "n_old_unique_hits", "n_old_ambiguous_hits",
+            "ambiguous_by_construction", "missing_output",
             "parsed", "truncated", "check_pass", "follows_and_pass", "status_v1_strict", "follows_v1_strict"})
         by = rows.set_index(["perturbed_id", "arm"])
         good = self.env.entries[0]["perturbed_id"]
@@ -1598,8 +1617,16 @@ class TestStress(unittest.TestCase):
         self.assertEqual((int(facts["n"]), int(facts["follows"]), int(facts["failed_output"])), (n, n - 1, 1))
         strict = total.loc[("facts_only_v2", V2.STRICT_RULE)]
         self.assertEqual((int(strict["n"]), int(strict["follows"])), (n, n - 1))
-        for column in ("follows_rate_all", "follows_rate_scorable", "batch_complete", "n_attempts"):
+        for column in ("follows_rate_all", "follows_rate_scorable", "batch_complete", "n_attempts",
+                       "n_ambiguous_by_construction"):
             self.assertIn(column, summary.columns)
+        # Each arm's own perturbed facts: v1 sampled records unambiguous on the facts-only facts, but the full facts
+        # hold the card's tier rule ("at least 10 progression ..."), which matches the old 10% change.
+        self.assertTrue(rows[rows.arm == "full_evidence"].ambiguous_by_construction.astype(bool).all())
+        self.assertFalse(rows[rows.arm == "facts_only_v2"].ambiguous_by_construction.astype(bool).any())
+        counts = total.n_ambiguous_by_construction.astype(int).to_dict()
+        self.assertEqual(counts, {("full_evidence", V2.SHARED_RULE): n, ("facts_only_v2", V2.SHARED_RULE): 0,
+                                  ("facts_only_v2", V2.STRICT_RULE): 0})
         text = (self.env.out / "summary_stress_paired.csv").read_text()
         self.assertTrue("synthetic" not in text, "record ID in summary_stress_paired.csv")
         self.assertFalse((self.env.v1 / "llm").exists())  # nothing is written under the v1 output root

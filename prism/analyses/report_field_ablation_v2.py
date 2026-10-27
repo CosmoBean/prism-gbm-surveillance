@@ -914,6 +914,14 @@ def shared_follows(entry: dict, old: dict, new: dict, claims: list[dict] | None)
             "old_unique_hits": unique, "old_ambiguous_hits": ambiguous}
 
 
+def ambiguous_by_construction(entry: dict, facts: dict) -> bool:
+    """V1.ambiguous_by_construction on one arm's own perturbed facts: True when the written form of an old changed
+    value matches a number in `facts`, so a correct report in that arm could be unscorable. On the facts-only facts
+    it equals V1.ambiguous_by_construction(entry)."""
+    values = V1._numeric_values(facts)
+    return any(A.checker.matches(form, values, False) for form in V1._old_forms(entry))
+
+
 def _guard_stress(root: Path, output_root: Path, v1_output_root: Path) -> list[dict]:
     """The frozen guard (which hash-checks v1's stress records and log against FROZEN_v2.json) and the preflight;
     returns v1's stress entries, whose expected field updates are re-derived. v1's set is read only."""
@@ -993,7 +1001,8 @@ def _stress_row(entry: dict, arm: str, out: dict | None) -> dict:
             "patient_id": entry["patient_id"], "kind": entry["kind"], "arm": arm, "status": result["status"],
             "follows": result["follows"], "new_supported": result["new_supported"],
             "old_present": result["old_present"], "n_old_unique_hits": len(result["old_unique_hits"]),
-            "n_old_ambiguous_hits": len(result["old_ambiguous_hits"]), "missing_output": out is None,
+            "n_old_ambiguous_hits": len(result["old_ambiguous_hits"]),
+            "ambiguous_by_construction": ambiguous_by_construction(entry, facts), "missing_output": out is None,
             "parsed": claims is not None, "truncated": truncated, "check_pass": check_pass,
             "follows_and_pass": result["follows"] is True and check_pass,
             "status_v1_strict": strict["status"] if strict else None,
@@ -1002,8 +1011,9 @@ def _stress_row(entry: dict, arm: str, out: dict | None) -> dict:
 
 def evaluate_stress_step(root: Path = REPO, output_root: Path = OUT2, v1_output_root: Path = V1.OUT,
                          gpu_hour_price_usd: float | None = None) -> pd.DataFrame:
-    """Score both arms on the perturbed records: stress_paired.csv (one row per record per arm) and
-    summary_stress_paired.csv (per arm and rule, every denominator kept). A missing output is a failed row."""
+    """Score both arms on the perturbed records: stress_paired.csv (one row per record per arm, with whether the
+    record is ambiguous by construction on that arm's facts) and summary_stress_paired.csv (per arm and rule, every
+    denominator kept, with the number ambiguous by construction). A missing output is a failed row."""
     root, output_root = Path(root), Path(output_root)
     entries = _guard_stress_requests(root, output_root, v1_output_root)
     expected = {f"stress|{e['perturbed_id']}" for e in entries}
@@ -1027,6 +1037,10 @@ def evaluate_stress_step(root: Path = REPO, output_root: Path = OUT2, v1_output_
         for rule, scored in rules:
             summary = V1.summarise_stress(scored, rule)
             summary.insert(0, "arm", arm)
+            ambiguous = scored.ambiguous_by_construction.astype(bool)
+            summary["n_ambiguous_by_construction"] = [
+                int(ambiguous.sum()) if kind == "total" else int(ambiguous[scored.kind == kind].sum())
+                for kind in summary.kind]
             for key, value in batch.items():
                 summary[key] = value
             summaries.append(summary)
