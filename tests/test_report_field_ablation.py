@@ -23,6 +23,10 @@ from prism.analyses.report_field_ablation import (_facts_row, evaluate_step, gen
 from prism.analyses import report_field_ablation as pipeline
 
 EXCLUDED = ("pathway.", "pathways.", "conformal.", "card.", "flags.")
+# Every prism/report/* source listed in the v3.1 FROZEN_hashes.txt; the provenance gate checks each one.
+GATED_SOURCES = tuple(
+    line.split()[0] for line in (Path(__file__).resolve().parents[1] / pipeline.BASE / "FROZEN_hashes.txt")
+    .read_text().splitlines() if line.startswith("prism/report/"))
 
 
 class TestFieldContract(unittest.TestCase):
@@ -84,6 +88,23 @@ class TestManifest(unittest.TestCase):
             self.assertEqual(entry["sha256"], hashlib.sha256(line).hexdigest())
 
 
+def _copy_gated_root(source_root: Path, root: Path) -> None:
+    for relative in ("docs/results/REPORT_FIELD_ABLATION_PLAN.md", *GATED_SOURCES, *
+                     (f"outputs/results/analyses/report_v3_1/{name}" for name in pipeline.BASE_FILES)):
+        target = root / relative
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(source_root / relative, target)
+
+
+def _gated_steps() -> dict:
+    return {"freeze_step": freeze_step, "requests_step": requests_step,
+            "generate_step": generate_step, "evaluate_step": evaluate_step,
+            "render_step": pipeline.render_step, "stress_step": pipeline.stress_step,
+            "requests_step[stress]": lambda r, o: requests_step(r, o, set_name="stress"),
+            "generate_step[stress]": lambda r, o: generate_step(r, o, set_name="stress"),
+            "evaluate_stress_step": pipeline.evaluate_stress_step}
+
+
 class TestProvenanceAndPairing(unittest.TestCase):
     def test_canonical_baseline_passes_provenance_gate(self):
         root = Path(__file__).resolve().parents[1]
@@ -94,26 +115,34 @@ class TestProvenanceAndPairing(unittest.TestCase):
         source_root = Path(__file__).resolve().parents[1]
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
-            for relative in ("docs/results/REPORT_FIELD_ABLATION_PLAN.md", "prism/report/checker.py", *
-                             (f"outputs/results/analyses/report_v3_1/{name}" for name in pipeline.BASE_FILES)):
-                target = root / relative
-                target.parent.mkdir(parents=True, exist_ok=True)
-                shutil.copyfile(source_root / relative, target)
+            _copy_gated_root(source_root, root)
             out = root / "ablation"
             freeze_step(root, out)
             checker = root / "prism/report/checker.py"
             checker.write_bytes(checker.read_bytes() + b"\n# changed after freeze\n")
             with patch("prism.analyses.report_field_ablation.subprocess.run",
                        side_effect=AssertionError("model runner must not start")):
-                steps = {"freeze_step": freeze_step, "requests_step": requests_step,
-                         "generate_step": generate_step, "evaluate_step": evaluate_step,
-                         "render_step": pipeline.render_step, "stress_step": pipeline.stress_step,
-                         "requests_step[stress]": lambda r, o: requests_step(r, o, set_name="stress"),
-                         "generate_step[stress]": lambda r, o: generate_step(r, o, set_name="stress"),
-                         "evaluate_stress_step": pipeline.evaluate_stress_step}
-                for name, step in steps.items():
+                for name, step in _gated_steps().items():
                     with self.subTest(step=name):
                         with self.assertRaisesRegex(RuntimeError, "checker.*hash"):
+                            step(root, out)
+
+    def test_changed_non_checker_frozen_source_blocks_every_gated_step(self):
+        source_root = Path(__file__).resolve().parents[1]
+        self.assertIn("prism/report/facts_v3_1.py", GATED_SOURCES)
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            _copy_gated_root(source_root, root)
+            out = root / "ablation"
+            freeze_step(root, out)
+            facts = root / "prism/report/facts_v3_1.py"
+            facts.write_bytes(facts.read_bytes() + b"\n# changed after freeze\n")
+            with patch("prism.analyses.report_field_ablation.subprocess.run",
+                       side_effect=AssertionError("model runner must not start")):
+                for name, step in _gated_steps().items():
+                    with self.subTest(step=name):
+                        with self.assertRaisesRegex(
+                                RuntimeError, r"frozen source hash mismatch: prism/report/facts_v3_1\.py"):
                             step(root, out)
 
     def test_freeze_rejects_a_changed_v31_record_hash(self):
@@ -122,7 +151,7 @@ class TestProvenanceAndPairing(unittest.TestCase):
             copy = Path(directory)
             paths = (
                 "outputs/results/analyses/report_v3_1/records/eval.jsonl",
-                "prism/report/checker.py",
+                *GATED_SOURCES,
                 "outputs/results/analyses/report_v3_1/FROZEN_hashes.txt",
                 "outputs/results/analyses/report_v3_1/llm/outputs_eval.jsonl",
                 "outputs/results/analyses/report_v3_1/checks_eval.csv",
@@ -144,7 +173,7 @@ class TestProvenanceAndPairing(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             copy = Path(directory)
             paths = (
-                "prism/report/checker.py",
+                *GATED_SOURCES,
                 "outputs/results/analyses/report_v3_1/records/eval.jsonl",
                 "outputs/results/analyses/report_v3_1/FROZEN_hashes.txt",
                 "outputs/results/analyses/report_v3_1/llm/requests_eval.jsonl",

@@ -99,13 +99,18 @@ def verify_v31_baseline(root: Path = REPO, output_root: Path | None = None) -> d
         raise RuntimeError("record hash source mismatch")
     if (base / "FROZEN_hashes.txt").read_text() != manifest["frozen_hashes_txt"]:
         raise RuntimeError("original frozen hashes mismatch")
-    # FROZEN_hashes.txt records Git blob SHA-1 IDs; also pin the checker's raw SHA-256.
-    checker = (root / "prism/report/checker.py").read_bytes()
-    frozen_checker = [line.split()[1] for line in manifest["frozen_hashes_txt"].splitlines()
-                      if line.startswith("prism/report/checker.py ")]
-    blob = hashlib.sha1(f"blob {len(checker)}\0".encode() + checker).hexdigest()
-    if len(frozen_checker) != 1 or blob != frozen_checker[0] or _digest_bytes(checker) != CHECKER_SHA256:
+    # FROZEN_hashes.txt records Git blob SHA-1 IDs. Every prism/report/* entry is gated; the checker's raw
+    # SHA-256 is pinned as well. Entries outside prism/report/ (the v3/v3.1 analysis runners) are not gated:
+    # prism/analyses/report_v3_1.py has known serving-only drift after the v3.1 freeze.
+    frozen = [line.split() for line in manifest["frozen_hashes_txt"].splitlines()
+              if line.startswith("prism/")]
+    checker_path = "prism/report/checker.py"
+    if [blob for path, blob in frozen if path == checker_path] != [_git_blob(root / checker_path)] or (
+            _digest_bytes((root / checker_path).read_bytes()) != CHECKER_SHA256):
         raise RuntimeError("checker frozen hash mismatch")
+    for path, blob in frozen:
+        if path.startswith("prism/report/") and _git_blob(root / path) != blob:
+            raise RuntimeError(f"frozen source hash mismatch: {path}")
     for relative, expected_hash in BASE_SHA256.items():
         if _digest(base / relative) != expected_hash:
             raise RuntimeError(f"baseline artifact hash mismatch: {relative}")
@@ -149,6 +154,14 @@ def verify_v31_baseline(root: Path = REPO, output_root: Path | None = None) -> d
 
 def _digest_bytes(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
+
+
+def _git_blob(path: Path) -> str | None:
+    """Git blob SHA-1 of a file, or None when it is missing."""
+    if not path.is_file():
+        return None
+    data = path.read_bytes()
+    return hashlib.sha1(f"blob {len(data)}\0".encode() + data).hexdigest()
 
 
 def freeze_step(root: Path = REPO, output_root: Path = OUT) -> dict:

@@ -32,7 +32,9 @@ decision, workload or outcome endpoint was measured.
 - **Provenance gate** (`freeze`, repeated before every step). It checks:
   - the manifest, the per-record hashes, and the v3.1 `FROZEN_hashes.txt` (`d9dc2ca6…`);
   - the v3.1 requests (`f3eb64b1…`), outputs (`669ae9ff…`), metadata, checks, summaries and stress files;
-  - the checker blob `26d6637a…`;
+  - the checker blob `26d6637a…` and its raw SHA-256, and the Git blob of every other `prism/report/*` source listed
+    in `FROZEN_hashes.txt` (six files in all). The listed `prism/analyses/` runners are not gated:
+    `report_v3_1.py` has known serving-only drift after the v3.1 freeze;
   - 406/406 full reports passing, 220/220 required tiers stated, and 28/30 S7.
 
   The gate passed; the ablation manifest SHA-256 is `dbb0e3d0…`. Request hashes: full_evidence `f3eb64b1…` (identical
