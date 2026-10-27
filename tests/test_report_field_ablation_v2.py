@@ -18,7 +18,7 @@ from prism.report.facts_v3 import PHASE_TEXT
 from prism.report.field_ablation import FACTS_ONLY, FULL_EVIDENCE, _BANNED, facts_for_arm
 from tests.test_report_v3 import good_claims, record
 from tests.test_report_v3_1 import lumiere
-from tests.test_report_field_ablation import SUBJECT_ID, _copy_gated_root
+from tests.test_report_field_ablation import SUBJECT_ID, _copy_gated_root, facts_only_claims, zero_change_record
 from prism.analyses import report_field_ablation as V1
 from prism.analyses import report_field_ablation_v2 as V2
 
@@ -370,6 +370,7 @@ class V2Root:
         self.v1 = self.root / "v1"
         V1.freeze_step(self.root, self.v1)
         _write_jsonl(self.v1 / V1.STRESS_RECORDS, [{"record_id": "synthetic|stress|0"}])
+        (self.v1 / V1.STRESS_LOG).write_text("record_id,perturbed_id\nsynthetic|stress,synthetic|stress|0\n")
         self.out = self.root / "v2"
         self.dev = synthetic_dev() if dev is None else dev
         _write_jsonl(self.root / V1.BASE / "records/dev.jsonl", self.dev)
@@ -1084,6 +1085,276 @@ class TestAnalyses(unittest.TestCase):
         self.assertTrue(all(bool(unparsed[f"fail_{c}"]) for c in V2.COMMON_CRITERIA))
 
 
+# ---------------------------------------------------------------- paired shared-fact stress test (Task 4)
+STATEMENT = V1.STATEMENT_KEY
+
+
+def synthetic_stress_sources() -> list[dict]:
+    """Four synthetic source records eligible for the v1 enhancing-volume-change perturbation."""
+    rows = []
+    for i, cohort in enumerate(("mu", "mu", "lumiere", "ucsf")):
+        rec = record()
+        rec["cohort"] = cohort
+        rec.update(record_id=f"synthetic|stress|s{i}", scan_id=f"synthetic-stress-s{i}",
+                   patient_id=f"synthetic-{cohort}-sp{i // 2}")
+        rows.append(rec)
+    return rows
+
+
+def _entry(rec=None):
+    """A v1 stress entry for one synthetic record, with its old and new facts-only facts."""
+    rec = rec or synthetic_stress_sources()[0]
+    entry = V1._stress_candidate(rec)
+    return entry, facts_for_arm(rec, FACTS_ONLY), facts_for_arm(entry["record"], FACTS_ONLY)
+
+
+def stress_batch(entries: list[dict], calls=None, bad_full=(), missing=()):
+    """Stands in for V1._whole_batch on the stress requests: the reference report for the facts-only arm and the
+    synthetic passing full report for the full arm, on the perturbed records (no model)."""
+    by_id = {e["perturbed_id"]: e["record"] for e in entries}
+
+    def run(root, request, target, guard):
+        guard()
+        if calls is not None:
+            calls.append(request)
+        full = "full_evidence" in request.name
+        rows = []
+        for req in V1._jsonl(request):
+            rid = req["id"].split("|", 1)[1]
+            if rid in missing:
+                continue
+            rec = by_id[rid]
+            text = ('{"sentences":[{"text":"No report.","fields":[]}]}' if full and rid in bad_full
+                    else full_text(rec) if full else reference_text(rec))
+            rows.append({"id": req["id"], "text": text, "finish_reason": "stop", "n_prompt_tokens": 10,
+                         "n_output_tokens": 5})
+        _write_jsonl(target, rows)
+        meta = {"request_sha256": V1._digest(request), "complete": True, "n_attempts": 1,
+                "attempts": [{"attempt": 1, "complete": True, "process_wall_s": 1.0, "batch_wall_s": 0.5}],
+                "total_process_wall_s": 1.0, "total_batch_wall_s": 0.5, "batch_wall_s": 0.5}
+        Path(str(target) + ".meta.json").write_text(json.dumps(meta) + "\n")
+        return meta
+    return run
+
+
+class StressEnv:
+    """A temporary root holding a v1-format stress set built from synthetic sources by the v1 stress step, and a
+    v2 output root whose frozen guard is stood in. No patient record is read."""
+
+    def __init__(self):
+        self._dir = tempfile.TemporaryDirectory()
+        self.root = Path(self._dir.name)
+        self.sources = synthetic_stress_sources()
+        self.v1 = self.root / "v1"
+        self.v1.mkdir()
+        with patch.object(V1, "_guard"), patch.object(V1, "_records", return_value=self.lookup()), \
+                contextlib.redirect_stdout(io.StringIO()):
+            V1.stress_step(self.root, self.v1)
+        with patch.object(V1, "_records", return_value=self.lookup()):
+            self.entries = V1._stress_entries(self.root, self.v1)
+        self.out = self.root / "v2"
+        self.out.mkdir()
+        (self.out / "preflight.json").write_text(json.dumps({"complete": True, "parsed": True}))
+
+    def lookup(self):
+        return {r["record_id"]: r for r in self.sources}
+
+    def patched(self, batch=None):
+        stack = contextlib.ExitStack()
+        stack.enter_context(patch.object(V2, "guard_frozen", return_value={"records": []}))
+        stack.enter_context(patch.object(V1, "_records", return_value=self.lookup()))
+        stack.enter_context(patch.object(V1, "_whole_batch", batch or _no_model))
+        stack.enter_context(contextlib.redirect_stdout(io.StringIO()))
+        return stack
+
+    def step(self, name, batch=None, **kwargs):
+        with self.patched(batch):
+            if name == "evaluate":
+                return V2.evaluate_stress_step(self.root, self.out, v1_output_root=self.v1, **kwargs)
+            return getattr(V2, f"{name}_step")(self.root, self.out, "stress", v1_output_root=self.v1, **kwargs)
+
+    def run(self, **batch):
+        self.step("requests")
+        self.step("generate", stress_batch(self.entries, **batch))
+        self.step("evaluate")
+
+    def cleanup(self):
+        self._dir.cleanup()
+
+
+class TestSharedFollows(unittest.TestCase):
+    def test_shared_follows_accepts_new_statement_inside_longer_full_sentence(self):
+        entry, old, new = _entry()
+        sentence = {"text": "Compared with the previous scan, the " + new[STATEMENT] + ", as measured.",
+                    "fields": [STATEMENT]}
+        result = V2.shared_follows(entry, old, new, [sentence])
+        self.assertEqual((result["status"], result["follows"]), ("follows", True))
+        self.assertTrue(result["new_supported"])
+        # v1's strict rule needs sentence equality, so it does not accept the same sentence.
+        self.assertEqual(V1.facts_only_follows(entry, old, new, [sentence])["status"], "not_follows")
+        # The statement must be cited and present, with only a trailing full stop ignored.
+        uncited = [{"text": sentence["text"], "fields": ["scan.phase"]}]
+        self.assertEqual(V2.shared_follows(entry, old, new, uncited)["status"], "not_follows")
+        upper = [{"text": new[STATEMENT].upper() + ".", "fields": [STATEMENT]}]
+        self.assertEqual(V2.shared_follows(entry, old, new, upper)["status"], "follows")
+        self.assertEqual(V2.shared_follows(entry, old, new, None)["status"], "failed")
+        self.assertFalse(V2.shared_follows(entry, old, new, None)["follows"])
+
+    def test_shared_follows_rejects_old_statement_present(self):
+        entry, old, new = _entry()
+        claims = [{"text": "The " + new[STATEMENT] + ".", "fields": [STATEMENT]},
+                  {"text": "Earlier, the " + old[STATEMENT] + ".", "fields": [STATEMENT]}]
+        result = V2.shared_follows(entry, old, new, claims)
+        self.assertEqual((result["status"], result["follows"]), ("not_follows", False))
+        self.assertTrue(result["old_present"])
+        stale = [{"text": "The " + old[STATEMENT] + ".", "fields": [STATEMENT]}]
+        result = V2.shared_follows(entry, old, new, stale)
+        self.assertEqual(result["status"], "not_follows")
+        self.assertFalse(result["new_supported"])
+        number = [{"text": "The " + new[STATEMENT] + "; the earlier change was 3.5 cc.", "fields": [STATEMENT]}]
+        result = V2.shared_follows(entry, old, new, number)
+        self.assertEqual(result["status"], "not_follows")
+        self.assertEqual(result["old_unique_hits"], ["3.5"])
+
+    def test_shared_follows_marks_zero_value_ambiguity_unscorable(self):
+        source = zero_change_record("synthetic|stress|z")
+        entry, old, new = _entry(source)
+        claims = facts_only_claims(new)  # "Resection cavity volume is 0.0 cc." is a correct sentence.
+        result = V2.shared_follows(entry, old, new, claims)
+        self.assertEqual((result["status"], result["follows"]), ("unscorable", None))
+        self.assertTrue(result["old_ambiguous_hits"])
+        self.assertEqual(result["old_unique_hits"], [])
+        self.assertEqual(V2.shared_follows(entry, old, new, facts_only_claims(old))["status"], "not_follows")
+
+
+class TestStress(unittest.TestCase):
+    def setUp(self):
+        self.env = StressEnv()
+        self.addCleanup(self.env.cleanup)
+
+    def test_stress_refuses_changed_v1_stress_set(self):
+        env = V2Root()
+        self.addCleanup(env.cleanup)
+        _qualify(env)
+        env.freeze()
+        for relative, key in ((V1.STRESS_RECORDS, "stress_sha256"), (V1.STRESS_LOG, "stress_log_sha256")):
+            path = env.v1 / relative
+            original = path.read_bytes()
+            path.write_bytes(original[:-2] + b"X" + original[-1:])
+            with self.subTest(file=str(relative)):
+                for step in (V2.requests_step, V2.generate_step):
+                    with patch.object(V1, "_whole_batch", _no_model), \
+                            self.assertRaisesRegex(RuntimeError, f"frozen {key} mismatch"):
+                        step(env.root, env.out, "stress", v1_output_root=env.v1)
+            path.write_bytes(original)
+        self.assertEqual(list((env.out / "llm").glob("*stress*")), [])
+        self.assertFalse((env.out / "request_hashes.json").exists())
+
+    def test_stress_requests_render_both_arms_from_the_perturbed_records(self):
+        from prism.report import prompts_v3_1
+        self.env.step("requests")
+        llm = self.env.out / "llm"
+        facts = V1._jsonl(llm / "requests_stress_facts_only_v2.jsonl")
+        full = V1._jsonl(llm / "requests_stress_full_evidence.jsonl")
+        ids = [f"stress|{e['perturbed_id']}" for e in self.env.entries]
+        self.assertEqual([r["id"] for r in facts], ids)
+        self.assertEqual([r["id"] for r in full], ids)
+        for entry, f_row, g_row in zip(self.env.entries, facts, full):
+            self.assertEqual(f_row["messages"], facts_only_v2.messages(facts_for_arm(entry["record"], FACTS_ONLY)))
+            self.assertEqual((f_row["max_tokens"], f_row["schema"]), (V2.MAX_TOKENS, facts_only_v2.FACTS_SCHEMA))
+            self.assertEqual(g_row["messages"],
+                             prompts_v3_1.grounded_v3_1(facts_for_arm(entry["record"], FULL_EVIDENCE)))
+            self.assertEqual((g_row["max_tokens"], g_row["schema"]), (2048, prompts_v3_1.SCHEMA))
+            self.assertEqual(list(g_row), ["id", "messages", "max_tokens", "schema"])
+        hashes = json.loads((self.env.out / "request_hashes.json").read_text())
+        self.assertEqual(hashes, {"stress_full_evidence": V1._digest(llm / "requests_stress_full_evidence.jsonl"),
+                                  "stress_facts_only_v2": V1._digest(llm / "requests_stress_facts_only_v2.jsonl")})
+        self.env.step("requests")  # identical re-run is allowed
+        path = llm / "requests_stress_full_evidence.jsonl"
+        path.write_bytes(path.read_bytes() + b"\n")
+        with self.assertRaisesRegex(RuntimeError, "frozen stress full-evidence request mismatch"):
+            self.env.step("requests")
+
+    def test_stress_hashes_join_the_eval_request_hashes(self):
+        hashes = self.env.out / "request_hashes.json"
+        hashes.write_text(json.dumps({"full_evidence": "a" * 64, "facts_only_v2": "b" * 64}))
+        self.env.step("requests")
+        merged = json.loads(hashes.read_text())
+        self.assertEqual((merged["full_evidence"], merged["facts_only_v2"]), ("a" * 64, "b" * 64))
+        self.assertEqual(set(merged), {"full_evidence", "facts_only_v2", "stress_full_evidence",
+                                       "stress_facts_only_v2"})
+        merged["stress_facts_only_v2"] = "c" * 64
+        hashes.write_text(json.dumps(merged))
+        with self.assertRaisesRegex(RuntimeError, "frozen request hash mismatch"):
+            self.env.step("requests")
+        with self.assertRaisesRegex(RuntimeError, "frozen request hash mismatch: stress_facts_only_v2"):
+            self.env.step("generate")
+
+    def test_stress_generation_is_one_whole_batch_per_arm(self):
+        calls = []
+        self.env.step("requests")
+        metas = self.env.step("generate", stress_batch(self.env.entries, calls=calls))
+        llm = self.env.out / "llm"
+        self.assertEqual(sorted(calls), sorted([llm / "requests_stress_full_evidence.jsonl",
+                                                llm / "requests_stress_facts_only_v2.jsonl"]))
+        self.assertEqual(set(metas), {"full_evidence", "facts_only_v2"})
+        self.assertTrue(all(m["complete"] for m in metas.values()))
+        # Existing outputs are never regenerated.
+        self.assertEqual(self.env.step("generate"), {"full_evidence": None, "facts_only_v2": None})
+
+    def test_stress_evaluate_requires_generation(self):
+        self.env.step("requests")
+        with self.assertRaisesRegex(RuntimeError, "run generate --sets stress"):
+            self.env.step("evaluate")
+
+    def test_stress_rows_pair_both_arms_by_record(self):
+        bad = self.env.entries[1]["perturbed_id"]
+        gone = self.env.entries[2]["perturbed_id"]
+        self.env.run(bad_full={bad}, missing={gone})
+        rows = pd.read_csv(self.env.out / "stress_paired.csv", dtype={"perturbed_id": str})
+        n = len(self.env.entries)
+        self.assertEqual(len(rows), 2 * n)
+        for arm in ("full_evidence", "facts_only_v2"):
+            self.assertEqual(sorted(rows[rows.arm == arm].perturbed_id),
+                             sorted(e["perturbed_id"] for e in self.env.entries))
+        self.assertEqual(set(rows.columns), {
+            "perturbed_id", "record_id", "cohort", "patient_id", "kind", "arm", "status", "follows",
+            "new_supported", "old_present", "n_old_unique_hits", "n_old_ambiguous_hits", "missing_output",
+            "parsed", "truncated", "check_pass", "follows_and_pass", "status_v1_strict", "follows_v1_strict"})
+        by = rows.set_index(["perturbed_id", "arm"])
+        good = self.env.entries[0]["perturbed_id"]
+        for arm in ("full_evidence", "facts_only_v2"):
+            row = by.loc[(good, arm)]
+            self.assertEqual(row["status"], "follows", arm)
+            self.assertTrue(bool(row["check_pass"]) and bool(row["follows_and_pass"]), arm)
+        self.assertEqual(by.loc[(good, "facts_only_v2"), "status_v1_strict"], "follows")
+        self.assertTrue(pd.isna(by.loc[(good, "full_evidence"), "follows_v1_strict"]))
+        self.assertTrue(pd.isna(by.loc[(good, "full_evidence"), "status_v1_strict"]))
+        self.assertEqual(by.loc[(bad, "full_evidence"), "status"], "not_follows")
+        self.assertFalse(bool(by.loc[(bad, "full_evidence"), "check_pass"]))
+        self.assertEqual(by.loc[(bad, "facts_only_v2"), "status"], "follows")
+        for arm in ("full_evidence", "facts_only_v2"):
+            self.assertEqual(by.loc[(gone, arm), "status"], "failed", arm)
+            self.assertTrue(bool(by.loc[(gone, arm), "missing_output"]), arm)
+        summary = pd.read_csv(self.env.out / "summary_stress_paired.csv")
+        total = summary[summary.kind == "total"].set_index(["arm", "rule"])
+        self.assertEqual(len(total), 3)
+        full = total.loc[("full_evidence", V2.SHARED_RULE)]
+        self.assertEqual((int(full["n"]), int(full["follows"]), int(full["not_follows"]),
+                          int(full["failed_output"]), int(full["unscorable"]), int(full["n_scorable"]),
+                          int(full["check_pass"]), int(full["follows_and_pass"])), (n, n - 2, 1, 1, 0, n, n - 2,
+                                                                                      n - 2))
+        facts = total.loc[("facts_only_v2", V2.SHARED_RULE)]
+        self.assertEqual((int(facts["n"]), int(facts["follows"]), int(facts["failed_output"])), (n, n - 1, 1))
+        strict = total.loc[("facts_only_v2", V2.STRICT_RULE)]
+        self.assertEqual((int(strict["n"]), int(strict["follows"])), (n, n - 1))
+        for column in ("follows_rate_all", "follows_rate_scorable", "batch_complete", "n_attempts"):
+            self.assertIn(column, summary.columns)
+        text = (self.env.out / "summary_stress_paired.csv").read_text()
+        self.assertTrue("synthetic" not in text, "record ID in summary_stress_paired.csv")
+        self.assertFalse((self.env.v1 / "llm").exists())  # nothing is written under the v1 output root
+
+
 class TestV2Cli(unittest.TestCase):
     def test_main_dispatches_dev_and_preflight(self):
         with patch.object(V2, "dev_step") as dev, patch.object(V2, "preflight_step") as preflight, \
@@ -1102,6 +1373,17 @@ class TestV2Cli(unittest.TestCase):
         self.assertEqual(requests.call_args.kwargs["set_name"], "eval")
         self.assertEqual(generate.call_args.kwargs["set_name"], "eval")
         self.assertEqual(evaluate.call_args.kwargs["gpu_hour_price_usd"], 2.5)
+
+    def test_main_dispatches_the_stress_set(self):
+        with patch.object(V2, "requests_step") as requests, \
+                patch.object(V2, "generate_step", return_value={"full_evidence": None, "facts_only_v2": None}) \
+                as generate, patch.object(V2, "evaluate_step") as evaluate, \
+                patch.object(V2, "evaluate_stress_step") as stress, contextlib.redirect_stdout(io.StringIO()):
+            V2.main(["--steps", "requests", "generate", "evaluate", "--sets", "stress"])
+        self.assertEqual(requests.call_args.kwargs["set_name"], "stress")
+        self.assertEqual(generate.call_args.kwargs["set_name"], "stress")
+        stress.assert_called_once()
+        evaluate.assert_not_called()
 
     def test_main_requires_iteration_for_dev(self):
         with patch.object(V2, "dev_step") as dev, self.assertRaises(SystemExit), \

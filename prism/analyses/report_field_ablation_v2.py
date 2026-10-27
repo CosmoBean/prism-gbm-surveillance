@@ -24,6 +24,7 @@ from prism.config import REPO, RESULTS
 from prism.report import checker
 from prism.report import facts_only_v2 as S
 from prism.report import field_ablation as A
+from prism.report import prompts_v3_1
 
 OUT2 = RESULTS / "analyses" / "report_field_ablation_v2"
 SPEC = Path("prism/report/facts_only_v2.py")
@@ -50,6 +51,10 @@ GATE_OVERALL = 386
 GATE_COHORT_NUM, GATE_COHORT_DEN = 9, 10
 EVAL_COUNTS = {"all": 406, **V1.EXPECTED_COHORTS}
 COMMON_CRITERIA = ("unsupported_number", "invalid_citation", "forbidden", "clinical_inference")
+# Protocol "Secondary outcomes" 3: the paired shared-fact stress test on v1's frozen 6-record set.
+SHARED_RULE = ("shared follows: a sentence citing the change statement contains the new statement; old statement "
+               "absent; old value written only where it is also a perturbed fact (unscorable)")
+STRICT_RULE = V1.FACTS_RULE + " (v1 strict: sentence equals the new statement)"
 
 
 def _dev_records(root: Path) -> list[dict]:
@@ -342,7 +347,8 @@ def _line_hashes(path: Path) -> list[str]:
 def _frozen_values(root: Path, v1_output_root: Path) -> dict:
     """Every value FROZEN_v2.json records except the qualifying iteration, recomputed from the current files."""
     for path, name in ((root / SPEC, "specification"), (root / RUNNER, "v2 runner"),
-                       (v1_output_root / V1.STRESS_RECORDS, "v1 stress set")):
+                       (v1_output_root / V1.STRESS_RECORDS, "v1 stress set"),
+                       (v1_output_root / V1.STRESS_LOG, "v1 stress log")):
         if not path.is_file():
             raise RuntimeError(f"{name} missing")
     base = root / V1.BASE
@@ -353,7 +359,8 @@ def _frozen_values(root: Path, v1_output_root: Path) -> dict:
             "v1_manifest_sha256": V1._digest(root / V1.MANIFEST),
             "eval_sha256": V1._digest(base / EVAL), "eval_line_sha256": _line_hashes(base / EVAL),
             "dev_sha256": V1._digest(base / DEV), "dev_line_sha256": _line_hashes(base / DEV),
-            "stress_sha256": V1._digest(v1_output_root / V1.STRESS_RECORDS)}
+            "stress_sha256": V1._digest(v1_output_root / V1.STRESS_RECORDS),
+            "stress_log_sha256": V1._digest(v1_output_root / V1.STRESS_LOG)}
 
 
 def _qualifying_iteration(output_root: Path) -> tuple[int, dict]:
@@ -437,8 +444,10 @@ def requests_step(root: Path = REPO, output_root: Path = OUT2, set_name: str = "
                   v1_output_root: Path = V1.OUT) -> None:
     """The full arm's request is the v3.1 request, byte for byte; the facts-only v2 request is rendered from the
     frozen specification, IDs eval|<record_id> in manifest order. Both hashes go to request_hashes.json."""
+    if set_name == "stress":
+        return _stress_requests(root, output_root, v1_output_root)
     if set_name != "eval":
-        raise NotImplementedError(f"{set_name} requests are not implemented in this step")
+        raise ValueError(f"unknown set: {set_name}")
     root, output_root = Path(root), Path(output_root)
     manifest = guard_frozen(root, output_root, v1_output_root)
     _require_preflight(output_root)
@@ -453,11 +462,16 @@ def requests_step(root: Path = REPO, output_root: Path = OUT2, set_name: str = "
     _write_once(_request_path(output_root, A.FULL_EVIDENCE), full, "full-evidence")
     _write_once(_request_path(output_root, FACTS_V2), "".join(json.dumps(r) + "\n" for r in rows).encode(),
                 "facts-only v2")
-    hashes = {arm: V1._digest(_request_path(output_root, arm)) for arm in ARMS}
-    frozen = output_root / REQUEST_HASHES
-    if frozen.exists() and json.loads(frozen.read_text()) != hashes:
+    _record_request_hashes(output_root, {arm: V1._digest(_request_path(output_root, arm)) for arm in ARMS})
+
+
+def _record_request_hashes(output_root: Path, hashes: dict) -> None:
+    """Add one set's request hashes to request_hashes.json; a recorded hash is never changed."""
+    path = output_root / REQUEST_HASHES
+    recorded = json.loads(path.read_text()) if path.exists() else {}
+    if any(key in recorded and recorded[key] != value for key, value in hashes.items()):
         raise RuntimeError("frozen request hash mismatch")
-    frozen.write_text(json.dumps(hashes, indent=2) + "\n")
+    path.write_text(json.dumps({**recorded, **hashes}, indent=2) + "\n")
 
 
 def _guard_requests(root: Path, output_root: Path, v1_output_root: Path) -> dict:
@@ -490,8 +504,10 @@ def generate_step(root: Path = REPO, output_root: Path = OUT2, set_name: str = "
                   v1_output_root: Path = V1.OUT) -> dict | None:
     """Import the full arm; generate the facts-only v2 arm once, as one whole batch with at most one identical retry.
     An existing facts-only output is never regenerated."""
+    if set_name == "stress":
+        return _stress_generate(root, output_root, v1_output_root)
     if set_name != "eval":
-        raise NotImplementedError(f"{set_name} generation is not implemented in this step")
+        raise ValueError(f"unknown set: {set_name}")
     root, output_root = Path(root), Path(output_root)
     _guard_requests(root, output_root, v1_output_root)
     _import_full(root, output_root)
@@ -711,13 +727,179 @@ def evaluate_step(root: Path = REPO, output_root: Path = OUT2, v1_output_root: P
     return result
 
 
+# ---------------------------------------------------------------- paired shared-fact stress test (v1's frozen set)
+def _stress_key(arm: str) -> str:
+    return f"stress_{arm}"
+
+
+def _stress_request_path(output_root: Path, arm: str) -> Path:
+    return output_root / "llm" / f"requests_{_stress_key(arm)}.jsonl"
+
+
+def _stress_output_path(output_root: Path, arm: str) -> Path:
+    return output_root / "llm" / f"outputs_{_stress_key(arm)}.jsonl"
+
+
+def shared_follows(entry: dict, old: dict, new: dict, claims: list[dict] | None) -> dict:
+    """v1's facts-only follows rule with criterion (1) relaxed: a claim citing the enhancing change statement whose
+    case-folded text contains the new statement (trailing full stop ignored). The old statement must be absent, and
+    a written number equal to an old changed value makes the record not_follows, or unscorable when it also equals a
+    value of the perturbed facts `new`. Statuses and fields as V1.facts_only_follows."""
+    if claims is None:
+        return {"status": "failed", "follows": False, "new_supported": False, "old_present": False,
+                "old_unique_hits": [], "old_ambiguous_hits": []}
+    text = " ".join(c["text"] for c in claims)
+    statement = str(new[V1.STATEMENT_KEY]).casefold().strip().rstrip(".")
+    new_supported = any(V1.STATEMENT_KEY in c.get("fields", []) and statement in c["text"].casefold()
+                        for c in claims)
+    old_present = str(old[V1.STATEMENT_KEY]).casefold().strip().rstrip(".") in text.casefold()
+    old_values = [abs(float(before)) for key, (before, _after) in entry["expected_updates"].items()
+                  if isinstance(before, (int, float)) and not isinstance(before, bool)]
+    new_values = V1._numeric_values(new)
+    hits = [n for n in A.checker.numbers(text) if A.checker.matches(n, old_values, False)]
+    ambiguous = [n for n in hits if A.checker.matches(n, new_values, False)]
+    unique = [n for n in hits if n not in ambiguous]
+    if not new_supported or old_present or unique:
+        status, follows = "not_follows", False
+    elif ambiguous:
+        status, follows = "unscorable", None
+    else:
+        status, follows = "follows", True
+    return {"status": status, "follows": follows, "new_supported": new_supported, "old_present": old_present,
+            "old_unique_hits": unique, "old_ambiguous_hits": ambiguous}
+
+
+def _guard_stress(root: Path, output_root: Path, v1_output_root: Path) -> list[dict]:
+    """The frozen guard (which hash-checks v1's stress records and log against FROZEN_v2.json) and the preflight;
+    returns v1's stress entries, whose expected field updates are re-derived. v1's set is read only."""
+    guard_frozen(root, output_root, v1_output_root)
+    _require_preflight(output_root)
+    return V1._stress_entries(root, Path(v1_output_root))
+
+
+def _stress_requests(root: Path, output_root: Path, v1_output_root: Path) -> None:
+    """Both arms on the perturbed records, IDs stress|<perturbed_id> in v1 log order: facts-only v2 from the frozen
+    specification, and the full arm with the frozen v3.1 prompt on the perturbed records' full facts."""
+    root, output_root = Path(root), Path(output_root)
+    entries = _guard_stress(root, output_root, v1_output_root)
+    (output_root / "llm").mkdir(parents=True, exist_ok=True)
+    rows = {A.FULL_EVIDENCE: [], FACTS_V2: []}
+    for e in entries:
+        rid = f"stress|{e['perturbed_id']}"
+        rows[A.FULL_EVIDENCE].append({"id": rid, "messages": prompts_v3_1.grounded_v3_1(
+            A.facts_for_arm(e["record"], A.FULL_EVIDENCE)), "max_tokens": MAX_TOKENS, "schema": prompts_v3_1.SCHEMA})
+        rows[FACTS_V2].append({"id": rid, "messages": S.messages(A.facts_for_arm(e["record"], A.FACTS_ONLY)),
+                               "max_tokens": MAX_TOKENS, "schema": S.FACTS_SCHEMA})
+    for arm, what in ((A.FULL_EVIDENCE, "stress full-evidence"), (FACTS_V2, "stress facts-only v2")):
+        _write_once(_stress_request_path(output_root, arm),
+                    "".join(json.dumps(r) + "\n" for r in rows[arm]).encode(), what)
+    _record_request_hashes(output_root, {_stress_key(arm): V1._digest(_stress_request_path(output_root, arm))
+                                         for arm in ARMS})
+
+
+def _guard_stress_requests(root: Path, output_root: Path, v1_output_root: Path) -> list[dict]:
+    entries = _guard_stress(root, output_root, v1_output_root)
+    path = output_root / REQUEST_HASHES
+    if not path.exists():
+        raise RuntimeError("run requests --sets stress before stress generation or evaluation")
+    hashes = json.loads(path.read_text())
+    for arm in ARMS:
+        request = _stress_request_path(output_root, arm)
+        if not request.exists() or hashes.get(_stress_key(arm)) != V1._digest(request):
+            raise RuntimeError(f"frozen request hash mismatch: {_stress_key(arm)}")
+    return entries
+
+
+def _stress_generate(root: Path, output_root: Path, v1_output_root: Path) -> dict:
+    """Each arm once, as one whole batch with at most one identical retry; an existing output is never regenerated.
+    Returns each arm's batch metadata, or None for an arm that already has its output."""
+    root, output_root = Path(root), Path(output_root)
+    _guard_stress_requests(root, output_root, v1_output_root)
+    metas = {}
+    for arm in ARMS:
+        target = _stress_output_path(output_root, arm)
+        if target.exists():
+            metas[arm] = None
+            continue
+        metas[arm] = V1._whole_batch(root, _stress_request_path(output_root, arm), target,
+                                     lambda: _guard_stress_requests(root, output_root, v1_output_root))
+        _guard_stress_requests(root, output_root, v1_output_root)
+    return metas
+
+
+def _stress_row(entry: dict, arm: str, out: dict | None) -> dict:
+    """One perturbed record in one arm: the shared follows rule on that arm's perturbed facts, the arm's checker
+    (facts-only: the v2 check; full: the v3.1 checker with the card rule) and, for facts-only, v1's strict rule.
+    IDs, statuses, booleans and counts only."""
+    truncated = bool(out and out.get("finish_reason") == "length")
+    if arm == FACTS_V2:
+        facts = entry["new_facts"]
+        claims = A.parse_facts_only(out["text"]) if out else None
+        check = S.check(claims, facts)
+    else:
+        facts = A.facts_for_arm(entry["record"], A.FULL_EVIDENCE)
+        claims = checker.parse_structured(out["text"]) if out else None
+        check = checker.check(claims, facts, card=True) if claims is not None else {"pass": False}
+    result = shared_follows(entry, entry["old_facts"], facts, claims)
+    check_pass = bool(check["pass"]) and not truncated
+    strict = V1.facts_only_follows(entry, entry["old_facts"], facts, claims) if arm == FACTS_V2 else None
+    return {"perturbed_id": entry["perturbed_id"], "record_id": entry["record_id"], "cohort": entry["cohort"],
+            "patient_id": entry["patient_id"], "kind": entry["kind"], "arm": arm, "status": result["status"],
+            "follows": result["follows"], "new_supported": result["new_supported"],
+            "old_present": result["old_present"], "n_old_unique_hits": len(result["old_unique_hits"]),
+            "n_old_ambiguous_hits": len(result["old_ambiguous_hits"]), "missing_output": out is None,
+            "parsed": claims is not None, "truncated": truncated, "check_pass": check_pass,
+            "follows_and_pass": result["follows"] is True and check_pass,
+            "status_v1_strict": strict["status"] if strict else None,
+            "follows_v1_strict": strict["follows"] if strict else None}
+
+
+def evaluate_stress_step(root: Path = REPO, output_root: Path = OUT2, v1_output_root: Path = V1.OUT,
+                         gpu_hour_price_usd: float | None = None) -> pd.DataFrame:
+    """Score both arms on the perturbed records: stress_paired.csv (one row per record per arm) and
+    summary_stress_paired.csv (per arm and rule, every denominator kept). A missing output is a failed row."""
+    root, output_root = Path(root), Path(output_root)
+    entries = _guard_stress_requests(root, output_root, v1_output_root)
+    expected = {f"stress|{e['perturbed_id']}" for e in entries}
+    rows, summaries = [], []
+    for arm in ARMS:
+        path = _stress_output_path(output_root, arm)
+        meta_path = Path(str(path) + ".meta.json")
+        if not meta_path.exists():
+            raise RuntimeError(f"run generate --sets stress before evaluating the stress set (no {arm} batch "
+                               "metadata)")
+        outputs = V1._output_map(path, expected)
+        arm_rows = [_stress_row(e, arm, outputs.get(f"stress|{e['perturbed_id']}")) for e in entries]
+        rows += arm_rows
+        frame = pd.DataFrame(arm_rows)
+        batch = V1._batch_fields(json.loads(meta_path.read_text()), gpu_hour_price_usd)
+        rules = [(SHARED_RULE, frame)]
+        if arm == FACTS_V2:
+            strict = frame.assign(status=frame.status_v1_strict, follows=frame.follows_v1_strict,
+                                  follows_and_pass=(frame.follows_v1_strict == True) & frame.check_pass)  # noqa: E712
+            rules.append((STRICT_RULE, strict))
+        for rule, scored in rules:
+            summary = V1.summarise_stress(scored, rule)
+            summary.insert(0, "arm", arm)
+            for key, value in batch.items():
+                summary[key] = value
+            summaries.append(summary)
+    pd.DataFrame(rows).to_csv(output_root / "stress_paired.csv", index=False)
+    summary = pd.concat(summaries, ignore_index=True)
+    summary.to_csv(output_root / "summary_stress_paired.csv", index=False)
+    total = summary[summary.kind == "total"]
+    print("evaluate stress: " + "; ".join(f"{r.arm} follows {r.follows}/{r.n}" for r in total.itertuples()
+                                          if r.rule == SHARED_RULE), flush=True)
+    return summary
+
+
 def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--steps", nargs="+", required=True,
                         choices=("dev", "preflight", "freeze", "requests", "generate", "evaluate"))
     parser.add_argument("--iteration", type=int, default=None, help="development iteration (0, 1 or 2) for dev")
     parser.add_argument("--sets", nargs="+", choices=SETS, default=["eval"],
-                        help="sets for the evaluation requests and generation steps")
+                        help="sets for the evaluation requests, generation and evaluate steps")
     parser.add_argument("--gpu-hour-price-usd", type=float, default=None,
                         help="optional local GPU hourly price for cost estimate")
     args = parser.parse_args(argv)
@@ -736,11 +918,17 @@ def main(argv: list[str] | None = None) -> None:
         elif step == "generate":
             for set_name in args.sets:
                 final = generate_step(set_name=set_name)
-                if final is not None and not final.get("complete"):
-                    print(f"generate: facts-only v2 {set_name} batch failed twice; records without output count as "
-                          "failures", flush=True)
+                metas = final if set_name == "stress" else {FACTS_V2: final}
+                for arm, meta in metas.items():
+                    if meta is not None and not meta.get("complete"):
+                        print(f"generate: {arm} {set_name} batch failed twice; records without output count as "
+                              "failures", flush=True)
         else:
-            evaluate_step(gpu_hour_price_usd=args.gpu_hour_price_usd)
+            for set_name in args.sets:
+                if set_name == "stress":
+                    evaluate_stress_step(gpu_hour_price_usd=args.gpu_hour_price_usd)
+                else:
+                    evaluate_step(gpu_hour_price_usd=args.gpu_hour_price_usd)
         print(f"{step}: complete", flush=True)
 
 
