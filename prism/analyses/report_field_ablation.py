@@ -44,6 +44,7 @@ BASE_SHA256 = dict(zip(BASE_FILES, (
 EXPECTED_COHORTS = {"mu": 114, "lumiere": 162, "ucsf": 130}
 EXPECTED_WRITER = {"key": "qwen3.8-27b", "id": "Qwen/Qwen3.8-27B",
                    "revision": "1d4bf0f2ff6012fd82039f2fa52739d0dd7c60c0"}
+CHECKER_SHA256 = "83665b34998406d2390f7d5ad12f8893df3ebf2ab69c78a2f6490181c34e657e"
 
 
 def _digest(path: Path) -> str:
@@ -81,6 +82,13 @@ def verify_v31_baseline(root: Path = REPO, output_root: Path | None = None) -> d
         raise RuntimeError("record hash source mismatch")
     if (base / "FROZEN_hashes.txt").read_text() != manifest["frozen_hashes_txt"]:
         raise RuntimeError("original frozen hashes mismatch")
+    # FROZEN_hashes.txt records Git blob SHA-1 IDs; also pin the checker's raw SHA-256.
+    checker = (root / "prism/report/checker.py").read_bytes()
+    frozen_checker = [line.split()[1] for line in manifest["frozen_hashes_txt"].splitlines()
+                      if line.startswith("prism/report/checker.py ")]
+    blob = hashlib.sha1(f"blob {len(checker)}\0".encode() + checker).hexdigest()
+    if len(frozen_checker) != 1 or blob != frozen_checker[0] or _digest_bytes(checker) != CHECKER_SHA256:
+        raise RuntimeError("checker frozen hash mismatch")
     for relative, expected_hash in BASE_SHA256.items():
         if _digest(base / relative) != expected_hash:
             raise RuntimeError(f"baseline artifact hash mismatch: {relative}")

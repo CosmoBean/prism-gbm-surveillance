@@ -18,7 +18,9 @@ from prism.report import field_ablation
 from tests.test_report_v3 import record
 from tests.test_report_v3_1 import lumiere
 from prism.analyses.report_field_ablation import (_facts_row, evaluate_step, generate_step, paired_rows,
-                                                  paired_summary, requests_step, verify_v31_baseline, summarise_arm)
+                                                  paired_summary, requests_step, freeze_step,
+                                                  verify_v31_baseline, summarise_arm)
+from prism.analyses import report_field_ablation as pipeline
 
 EXCLUDED = ("pathway.", "pathways.", "conformal.", "card.", "flags.")
 
@@ -88,12 +90,33 @@ class TestProvenanceAndPairing(unittest.TestCase):
         manifest = verify_v31_baseline(root)
         self.assertEqual(manifest["record_count"], 406)
 
+    def test_changed_frozen_checker_blocks_every_gated_step(self):
+        source_root = Path(__file__).resolve().parents[1]
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            for relative in ("docs/results/REPORT_FIELD_ABLATION_PLAN.md", "prism/report/checker.py", *
+                             (f"outputs/results/analyses/report_v3_1/{name}" for name in pipeline.BASE_FILES)):
+                target = root / relative
+                target.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copyfile(source_root / relative, target)
+            out = root / "ablation"
+            freeze_step(root, out)
+            checker = root / "prism/report/checker.py"
+            checker.write_bytes(checker.read_bytes() + b"\n# changed after freeze\n")
+            with patch("prism.analyses.report_field_ablation.subprocess.run",
+                       side_effect=AssertionError("model runner must not start")):
+                for step in (freeze_step, requests_step, generate_step, evaluate_step, pipeline.render_step):
+                    with self.subTest(step=step.__name__):
+                        with self.assertRaisesRegex(RuntimeError, "checker.*hash"):
+                            step(root, out)
+
     def test_freeze_rejects_a_changed_v31_record_hash(self):
         root = Path(__file__).resolve().parents[1]
         with tempfile.TemporaryDirectory() as directory:
             copy = Path(directory)
             paths = (
                 "outputs/results/analyses/report_v3_1/records/eval.jsonl",
+                "prism/report/checker.py",
                 "outputs/results/analyses/report_v3_1/FROZEN_hashes.txt",
                 "outputs/results/analyses/report_v3_1/llm/outputs_eval.jsonl",
                 "outputs/results/analyses/report_v3_1/checks_eval.csv",
@@ -115,6 +138,7 @@ class TestProvenanceAndPairing(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             copy = Path(directory)
             paths = (
+                "prism/report/checker.py",
                 "outputs/results/analyses/report_v3_1/records/eval.jsonl",
                 "outputs/results/analyses/report_v3_1/FROZEN_hashes.txt",
                 "outputs/results/analyses/report_v3_1/llm/requests_eval.jsonl",
