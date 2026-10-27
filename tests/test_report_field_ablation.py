@@ -153,6 +153,27 @@ class TestFactsOnlyContract(unittest.TestCase):
         claims[2]["text"] += " The tumour has grown."
         self.assertFalse(field_ablation.check_facts_only(claims, self.facts)["pass"])
 
+    def test_volume_sentence_rejects_other_clinical_inferences(self):
+        for inference in ("The tumour is enlarged.", "There is an increase in tumour burden.",
+                          "This represents aggressive disease."):
+            with self.subTest(inference=inference):
+                claims = self.valid_claims()
+                claims[2]["text"] += " " + inference
+                self.assertFalse(field_ablation.check_facts_only(claims, self.facts)["pass"])
+
+    def test_claim_cannot_append_a_second_sentence_with_allowed_words(self):
+        for second in ("The scan is available.", "the scan is available."):
+            with self.subTest(second=second):
+                claims = self.valid_claims()
+                claims[2]["text"] += " " + second
+                self.assertFalse(field_ablation.check_facts_only(claims, self.facts)["pass"])
+
+    def test_measurement_words_cannot_be_rearranged_into_clinical_claim(self):
+        claims = self.valid_claims()
+        claims[2]["text"] = ("Enhancing tumour volume is 37.2 cc from automatic segmentation; indicative; "
+                             "the tumour is available.")
+        self.assertFalse(field_ablation.check_facts_only(claims, self.facts)["pass"])
+
     def test_swapped_measurement_values_fail_even_with_both_citations(self):
         claims = self.valid_claims()
         claims[2]["text"] = ("Enhancing tumour volume is 45.8 cc and FLAIR hyperintensity volume is "

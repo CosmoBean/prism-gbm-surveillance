@@ -33,6 +33,9 @@ _VOLUME_KIND = {"enhancing": "meas.enhancing_cc", "enhancing tumour": "meas.enha
                 "necrosis": "meas.necrosis_cc", "cavity": "meas.cavity_cc",
                 "resection cavity": "meas.cavity_cc", "necrosis and cavity": "meas.necrosis_and_cavity_cc",
                 "necrosis with cavity": "meas.necrosis_and_cavity_cc"}
+_VOLUME_DISPLAY = {"meas.enhancing_cc": "Enhancing tumour", "meas.flair_hyperintensity_cc": "FLAIR hyperintensity",
+                   "meas.necrosis_cc": "Necrosis", "meas.cavity_cc": "Resection cavity",
+                   "meas.necrosis_and_cavity_cc": "Necrosis and cavity"}
 _CHANGE_KEYS = ("meas.enhancing_change_since_previous_statement",
                 "meas.flair_hyperintensity_change_since_previous_statement",
                 "meas.enhancing_change_since_earlier_minimum_statement")
@@ -50,6 +53,11 @@ _CLINICAL_INFERENCE = re.compile(
 _UNAVAILABLE_VOLUME = re.compile(
     r"\b(?:no|not|without|unavailable|absent|missing)\b.{0,35}\b(?:segmentation|volumes?)\b|"
     r"\b(?:segmentation|volumes?)\b.{0,35}\b(?:unavailable|absent|missing|not available)\b", re.I)
+_NEUTRAL_WORDS = frozenset((
+    "a an the this scan timing phase previous is are was were available unavailable no usable automatic "
+    "segmentation indicative volume volumes cc from at measured measurement measures of and with by source "
+    "cohort rater recorded within after before radiotherapy days earlier compared comparison to its end there it"
+).split())
 _LIMITATIONS = ("Measurements come from automatic segmentation and are indicative. "
                 "Only the supplied scan facts are described; no diagnosis or management advice is given.")
 
@@ -90,6 +98,8 @@ def facts_only_messages(facts: dict) -> list[dict]:
         f"{required}. Describe the cohort in plain terms if useful. Copy numeric values exactly and cite "
         "every FACTS key used by each sentence. Do not infer a clinical finding, diagnose, interpret, "
         "recommend an action, or add unsupported information. State segmentation volumes as indicative. "
+        "Use a separate sentence for each volume: '<name> volume is <value> cc.' The first volume sentence "
+        "may add 'from automatic segmentation; indicative.' Copy fixed change statements as whole sentences. "
         "Use complete sentences and British spelling. Output only JSON of the form "
         '{"sentences":[{"section":"scan","text":"...","fields":["scan.phase"]}]}.'
     )
@@ -132,6 +142,55 @@ def _contains_field_value(claim: dict, key: str, facts: dict) -> bool:
     return str(value).lower() in text
 
 
+def _unlicensed_words(claim: dict, facts: dict) -> list[str]:
+    """Fail closed on narrative words not supplied by cited facts or neutral measurement grammar."""
+    allowed = set(_NEUTRAL_WORDS)
+    for key in claim["fields"]:
+        if key not in facts:
+            continue
+        value = facts[key]
+        if key == "system.cohort":
+            cohort = re.search(r"MU-Glioma-Post|LUMIERE|UCSF-ALPTDG", str(value), re.I)
+            value = cohort.group(0) if cohort else ""
+        if isinstance(value, str):
+            allowed.update(word.lower() for word in re.findall(r"[A-Za-z]+", value))
+        if key == "meas.enhancing_cc":
+            allowed.update(("enhancing", "tumour"))
+        elif key == "meas.flair_hyperintensity_cc":
+            allowed.update(("flair", "hyperintensity"))
+        elif key == "meas.necrosis_cc":
+            allowed.add("necrosis")
+        elif key == "meas.cavity_cc":
+            allowed.update(("resection", "cavity"))
+        elif key == "meas.necrosis_and_cavity_cc":
+            allowed.update(("necrosis", "cavity", "resection"))
+    return sorted({word.lower() for word in re.findall(r"[A-Za-z]+", claim["text"])
+                   if word.lower() not in allowed})
+
+
+def _measurement_form_supported(claim: dict, facts: dict) -> bool:
+    """Accept only descriptive volume/availability forms; word order cannot change their meaning."""
+    keys = set(claim["fields"])
+    volume_keys = keys.intersection(_MEASURED_KEYS)
+    if not volume_keys and not keys.intersection(("meas.available", "meas.label")):
+        return True
+    actual = claim["text"].strip().casefold()
+    if len(volume_keys) == 1:
+        key = next(iter(volume_keys))
+        label = _VOLUME_DISPLAY[key]
+        base = f"{label} volume is {facts[key]:.1f} cc"
+        forms = {f"{prefix}{base}{suffix}.".casefold() for prefix in ("", "The ")
+                 for suffix in ("", " from automatic segmentation; indicative")}
+        return actual in forms
+    if volume_keys:
+        return False
+    if keys.intersection(("meas.available", "meas.label")):
+        forms = ("No usable segmentation volumes are available.", "No segmentation volumes are available.",
+                 "Segmentation volumes are available.", "Volumes from automatic segmentation are indicative.")
+        return actual in {form.casefold() for form in forms}
+    return True
+
+
 def parse_facts_only(raw: str) -> list[dict] | None:
     """Parse the shared structured format while retaining each sentence's section."""
     parsed = checker.parse_structured(raw)
@@ -168,6 +227,11 @@ def check_facts_only(claims: list[dict] | None, facts: dict) -> dict:
     forbidden = checker.forbidden_v3(text)
     banned = sorted({m.group(0).lower() for m in _BANNED.finditer(text)})
     clinical_inference = sorted({m.group(0) for m in _CLINICAL_INFERENCE.finditer(text)})
+    unlicensed_words = [{"text": c["text"], "words": words} for c in claims
+                        if (words := _unlicensed_words(c, facts))]
+    wrong_measurement_form = [c["text"] for c in claims if not _measurement_form_supported(c, facts)]
+    multi_sentence = [c["text"] for c in claims
+                      if re.search(r"(?<!\d)[.!?](?!\d)\s+\S", c["text"]) or not c["text"].strip()]
     semantic_mismatch = [c for c in claims if not c["fields"] or
                          any(key in facts and not _contains_field_value(c, key, facts) for key in c["fields"])]
     unsupported = [r for r in checked if not r["supported"]]
@@ -176,9 +240,10 @@ def check_facts_only(claims: list[dict] | None, facts: dict) -> dict:
            "unsupported": unsupported, "semantic_mismatch": semantic_mismatch,
            "required": {"missing": missing, "required_pass": not missing},
            "ordered": ordered, "forbidden": forbidden, "banned_terms": banned,
-           "clinical_inference": clinical_inference}
+           "clinical_inference": clinical_inference, "unlicensed_words": unlicensed_words,
+           "multi_sentence": multi_sentence, "wrong_measurement_form": wrong_measurement_form}
     out["pass"] = not (unsupported or semantic_mismatch or missing or any(forbidden.values()) or banned or
-                       clinical_inference) and ordered
+                       clinical_inference or unlicensed_words or multi_sentence or wrong_measurement_form) and ordered
     return out
 
 
