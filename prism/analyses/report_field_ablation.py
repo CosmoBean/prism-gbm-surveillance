@@ -470,7 +470,9 @@ def _whole_batch(root: Path, request: Path, target: Path, guard) -> dict:
                "--requests", str(request),
                "--out", str(attempt_path), "--tp", "1", "--chat-kwargs", json.dumps(chat_kwargs),
                "--max-model-len", "8192", "--gpu-mem", "0.90", *extra]
-        env = {**os.environ, "PYTHONPATH": str(root), "HF_HUB_OFFLINE": "1",
+        # As report_v3/report_v3_1: the LLM env's bin/ (ninja for flashinfer JIT) must be first on PATH.
+        env = {**os.environ, "PYTHONPATH": str(root), "PATH": f"{R3.LLM_ENV}/bin:{os.environ['PATH']}",
+               "HF_HUB_OFFLINE": "1",
                "TRANSFORMERS_OFFLINE": "1", "VLLM_NO_USAGE_STATS": "1", "DO_NOT_TRACK": "1"}
         log = attempt_path.with_suffix(".log")
         with log.open("w") as stdout:

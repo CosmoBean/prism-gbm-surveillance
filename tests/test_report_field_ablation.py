@@ -231,6 +231,30 @@ class TestProvenanceAndPairing(unittest.TestCase):
             self.assertTrue((out / "llm/outputs_facts_only_attempt1.jsonl").exists())
             self.assertTrue((out / "llm/outputs_facts_only_attempt1.jsonl.meta.json").exists())
 
+    def test_generation_puts_the_llm_env_bin_first_on_path(self):
+        # vLLM's flashinfer JIT needs the LLM env's tools (ninja) on PATH, as report_v3/report_v3_1 provide.
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            out = root / "ablation"
+            (out / "llm").mkdir(parents=True)
+            request = out / "llm/requests_facts_only.jsonl"
+            request.write_text('{"id":"eval|a"}\n')
+            envs = []
+
+            def local_batch(cmd, **kwargs):
+                envs.append(kwargs["env"])
+                target = Path(cmd[cmd.index("--out") + 1])
+                target.write_text('{"id":"eval|a","text":"ok"}\n')
+                Path(str(target) + ".meta.json").write_text('{"n":1}\n')
+                return SimpleNamespace(returncode=0)
+
+            from prism.analyses import report_v3 as R3
+            with patch.dict("os.environ", {"PATH": "/usr/bin:/bin"}), patch(
+                    "prism.analyses.report_field_ablation.subprocess.run", side_effect=local_batch):
+                pipeline._whole_batch(root, request, out / "llm/outputs_facts_only.jsonl", lambda: None)
+            self.assertEqual(len(envs), 1)
+            self.assertEqual(envs[0]["PATH"], f"{R3.LLM_ENV}/bin:/usr/bin:/bin")
+
     def test_paired_difference_uses_record_denominator_and_patient_clusters(self):
         records = {"a1": {"cohort": "mu", "patient_id": "a"},
                    "a2": {"cohort": "mu", "patient_id": "a"},
