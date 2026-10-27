@@ -4,10 +4,16 @@ Plan: [REPORT_FIELD_ABLATION_PLAN.md](REPORT_FIELD_ABLATION_PLAN.md). It is froz
 perturbation contract, and was written before any ablation generation. Baseline: [REPORT_V3_1.md](REPORT_V3_1.md).
 
 **Result: the facts-only arm passed its frozen checker in 0/406 reports, against 406/406 for the full-evidence arm.**
-Every facts-only report parsed. A post-hoc diagnosis (not pre-registered; see below) finds that every one fails the
-same structural rule: a sentence about whether segmentation volumes are available must take one of four exact forms,
-and the facts-only prompt never states those forms. On that post-hoc reading, the result measures a mismatch between
-the facts-only prompt and its checker. It is not a contrast in grounding between the two field sets. The shared-fact
+Every facts-only report parsed. A post-hoc diagnosis (not pre-registered; see below) identifies at least four
+co-occurring mismatches between the facts-only prompt and its checker:
+- an availability sentence not in an accepted exact form (406/406 reports);
+- narrative words outside the checker's neutral vocabulary (402; most often "measurements", "data", "because",
+  "derived");
+- a required key not covered (403; `meas.available` 403, `scan.phase` 165);
+- a cited key not reflected in its sentence (semantic mismatch, 397).
+
+A fifth, the banned word "below" inside supplied change statements, adds 59. On that post-hoc reading, the result
+measures prompt–checker mismatches. It is not a contrast in grounding between the two field sets. The shared-fact
 perturbation followed 6/6. All results here are automatic lexical checks. No clinician,
 decision, workload or outcome endpoint was measured.
 
@@ -78,7 +84,7 @@ A report can fail several criteria. No report text was read.
 
 Here the semantic mismatch (397) is shown on its own. In the pre-registered CSV, `fail_unsupported` (also 397) merges it
 with unsupported numbers, of which there are 0. No report fails on a single criterion: 5 fail 2, 3 fail 3, 342 fail 4
-and 56 fail 5. The mechanism is narrow:
+and 56 fail 5. The co-occurring mechanisms:
 - **Availability sentences (`meas.available` / `meas.label`).** None of the 784 is in one of the checker's four
   accepted forms (for example "Segmentation volumes are available."). The prompt gives the exact form only for volume
   sentences. Of the required keys, only `meas.available` (403/406) and `scan.phase` (165/406) are ever missed. The
@@ -113,7 +119,8 @@ In all 6 facts-only records:
 - the old statement is absent;
 - no old changed number appears.
 
-The checker fails all 6 for the same structural reason as the evaluation set. The stress batch ran in one attempt
+The checker fails all 6. Attributing these to the evaluation set's prompt–checker mismatches is a post-hoc reading
+(not pre-registered); the diagnosis script breaks down the evaluation set only. The stress batch ran in one attempt
 (17 s batch, 139 s process). The two arms' stress results sit side by side and are not paired.
 
 ## Deviation
@@ -143,8 +150,9 @@ Other deviations from the brief's command lines, with no effect on behaviour:
 - **No clinician, decision, workload or outcome endpoint was measured.** Nobody read a report from either arm. The
   checks are lexical: they test grounding and form, not clarity or usefulness.
 - **The facts-only prompt and checker were frozen without a development iteration.** The v3.1 prompt had two. On the
-  post-hoc diagnosis, the 0/406 reflects a facts-only checker that accepts only availability sentences the prompt never
-  specifies. It is not evidence that the model-derived fields are what make reports pass.
+  post-hoc diagnosis, the 0/406 reflects at least four co-occurring prompt–checker mismatches (availability-sentence
+  form 406, unlicensed words 402, required key missing 403, semantic mismatch 397), plus the "below" conflict (59). It is
+  not evidence that the model-derived fields are what make reports pass.
 - The stress set has 6 records. It excludes records with zero or near-zero enhancing change (the ambiguous-by-construction
   frame exclusion) and is not paired with the full arm's S7 records. The edit leaves the earlier-minimum fields
   unchanged, as in v3.
@@ -153,13 +161,24 @@ Other deviations from the brief's command lines, with no effect on behaviour:
 
 The plan allows a compact automatic-ablation result only if the paired outputs are reproducible and interpretable. The
 run is reproducible: hashed inputs, a single greedy batch, and every attempt retained. It is not interpretable as an
-arm contrast. On the post-hoc diagnosis (not pre-registered), the facts-only failures come from a prompt–checker
-mismatch and not from the removed fields.
+arm contrast. On the post-hoc diagnosis (not pre-registered), the facts-only failures come from at least four
+co-occurring prompt–checker mismatches and not from the removed fields.
 
 - **Recommended:** add nothing from this ablation to the paper. Keep the existing limitation that the contribution of
   the model-derived fields to the reports has not been isolated, and that no reader or outcome study was done.
-- **Only if a new, separately pre-registered facts-only prompt is developed** (a development set, the allowed
-  availability forms written into the prompt, and the "below" conflict resolved) and then evaluated on the locked set:
-  a one-sentence supplement result on the automatic paired pass rate. It would claim no clinical benefit.
+- **Only if a new, separately pre-registered facts-only v2 is run** (outline below) and then evaluated on the locked
+  set: a one-sentence supplement result on the automatic paired pass rate. It would claim no clinical benefit.
 - Statements that remain safe now: the facts-only reports had no unsupported numbers, invalid citations, forbidden
   wording or clinical-inference matches (0/406 each), and they followed the shared-fact edit in 6/6.
+
+### Facts-only v2 outline (recommendation; awaiting the author's decision)
+
+1. Write a new plan before any generation.
+2. Develop on v3.1's development partition (`dev_patients_v3_1.json`, disjoint from the 406). Allow at most three
+   tagged iterations and report each one's development pass rate. Freeze the prompt and checker hashes before evaluation.
+3. Keep one shared table of required sentence forms and neutral vocabulary. Both the prompt builder and the checker
+   render from it, and a prompt–checker consistency test checks that every example sentence the prompt shows passes.
+4. Remove above/below/higher/lower from the banned list, or scope them to score context only.
+5. Write one `fail_` column per checker criterion.
+6. Add a runner preflight step (environment and engine start-up) before the evaluation batch.
+7. Report v1's 0/406 as the first pre-registered attempt.
