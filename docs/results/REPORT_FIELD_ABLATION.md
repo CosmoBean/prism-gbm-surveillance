@@ -4,10 +4,11 @@ Plan: [REPORT_FIELD_ABLATION_PLAN.md](REPORT_FIELD_ABLATION_PLAN.md). It is froz
 perturbation contract, and was written before any ablation generation. Baseline: [REPORT_V3_1.md](REPORT_V3_1.md).
 
 **Result: the facts-only arm passed its frozen checker in 0/406 reports, against 406/406 for the full-evidence arm.**
-Every facts-only report parsed. Every one failed the same structural rule: a sentence about whether segmentation volumes
-are available must take one of four exact forms. The facts-only prompt never states those forms. The result therefore
-measures a mismatch between the facts-only prompt and its checker. It is not a contrast in grounding between the two
-field sets. The shared-fact perturbation followed 6/6. All results here are automatic lexical checks. No clinician,
+Every facts-only report parsed. A post-hoc diagnosis (not pre-registered; see below) finds that every one fails the
+same structural rule: a sentence about whether segmentation volumes are available must take one of four exact forms,
+and the facts-only prompt never states those forms. On that post-hoc reading, the result measures a mismatch between
+the facts-only prompt and its checker. It is not a contrast in grounding between the two field sets. The shared-fact
+perturbation followed 6/6. All results here are automatic lexical checks. No clinician,
 decision, workload or outcome endpoint was measured.
 
 ## Design (fixed before generation)
@@ -55,10 +56,16 @@ Outputs are `summary_full_evidence.csv`, `summary_facts_only.csv` and `paired_su
 | all | 406 | 406/406 (0.99–1.00) | 0/406 (0.00–0.01) | 1.00 (1.00–1.00) | 406/406 | 3/406 |
 
 The required-content difference is 0.99 (0.98–1.00) overall. The parse difference is 0.00. Neither arm truncated or
-missed an output.
+missed an output. Facts-only failure categories in the pre-registered `summary_facts_only.csv`: `fail_unsupported` 397,
+`fail_required_missing` 403, `fail_model_leak` 59, `fail_invalid_citation` 0, `fail_forbidden` 0.
+`fail_unsupported` merges unsupported numbers with semantic mismatches.
 
-**Why the facts-only reports fail.** These are counts from the checker output; a report can fail several criteria.
-No report text was read.
+### Post-hoc diagnosis (not pre-registered)
+
+The finer breakdown below was not specified in the plan. It was added after seeing the 0/406 result.
+`scripts/exploratory_field_ablation_diagnosis.py` reproduces it: it re-runs the frozen `check_facts_only` on the saved
+facts-only outputs and writes aggregate counts only, with no IDs or text, to `diagnosis_posthoc.csv` (not in git).
+A report can fail several criteria. No report text was read.
 
 | criterion | reports failing (of 406) |
 |---|---|
@@ -69,16 +76,18 @@ No report text was read.
 | banned model-derived term | 59 |
 | unsupported number, invalid citation, forbidden wording, clinical inference, multiple sentences, section order | 0 |
 
-No report fails on a single criterion: 342 fail 4 and 56 fail 5. The mechanism is narrow:
+Here the semantic mismatch (397) is shown on its own. In the pre-registered CSV, `fail_unsupported` (also 397) merges it
+with unsupported numbers, of which there are 0. No report fails on a single criterion: 5 fail 2, 3 fail 3, 342 fail 4
+and 56 fail 5. The mechanism is narrow:
 - **Availability sentences (`meas.available` / `meas.label`).** None of the 784 is in one of the checker's four
   accepted forms (for example "Segmentation volumes are available."). The prompt gives the exact form only for volume
-  sentences. The same sentences cause most of the required-key misses (`meas.available` 403/406; `scan.phase` 165/406)
-  and of the semantic mismatches. The most frequent unlicensed words are "measurements" (393 sentences), "data" (238),
+  sentences. Of the required keys, only `meas.available` (403/406) and `scan.phase` (165/406) are ever missed. The
+  most frequent unlicensed words are "measurements" (393 sentences), "data" (238),
   "because" (159) and "derived" (116).
 - **Volume sentences.** 1141 of 1417 single-volume sentences are in the accepted form.
 - **Every one of the 59 "leakage" hits is the word "below".** It comes from a supplied change statement ("change below
-  0.1 cc") that the prompt tells the model to copy. Exactly 59 records have "below" in their facts-only facts. The
-  banned-term list and the fixed statements conflict, so these hits are not model-derived content.
+  0.1 cc") that the prompt tells the model to copy. The 59 reports with the hit are exactly the 59 records whose
+  facts-only facts contain "below" (59/59). The banned-term list and the fixed statements conflict, so these hits are not model-derived content.
 - **What did hold.** 0 unsupported numbers, 0 invalid citations, 0 forbidden wording, 0 clinical-inference matches,
   and every report in section order.
 
@@ -133,9 +142,9 @@ Other deviations from the brief's command lines, with no effect on behaviour:
 
 - **No clinician, decision, workload or outcome endpoint was measured.** Nobody read a report from either arm. The
   checks are lexical: they test grounding and form, not clarity or usefulness.
-- **The facts-only prompt and checker were frozen without a development iteration.** The v3.1 prompt had two. The 0/406
-  shows that the facts-only checker accepts availability sentences the prompt never specifies. It is not evidence that
-  the model-derived fields are what make reports pass.
+- **The facts-only prompt and checker were frozen without a development iteration.** The v3.1 prompt had two. On the
+  post-hoc diagnosis, the 0/406 reflects a facts-only checker that accepts only availability sentences the prompt never
+  specifies. It is not evidence that the model-derived fields are what make reports pass.
 - The stress set has 6 records. It excludes records with zero or near-zero enhancing change (the ambiguous-by-construction
   frame exclusion) and is not paired with the full arm's S7 records. The edit leaves the earlier-minimum fields
   unchanged, as in v3.
@@ -144,7 +153,8 @@ Other deviations from the brief's command lines, with no effect on behaviour:
 
 The plan allows a compact automatic-ablation result only if the paired outputs are reproducible and interpretable. The
 run is reproducible: hashed inputs, a single greedy batch, and every attempt retained. It is not interpretable as an
-arm contrast, because the facts-only failures come from a prompt–checker mismatch and not from the removed fields.
+arm contrast. On the post-hoc diagnosis (not pre-registered), the facts-only failures come from a prompt–checker
+mismatch and not from the removed fields.
 
 - **Recommended:** add nothing from this ablation to the paper. Keep the existing limitation that the contribution of
   the model-derived fields to the reports has not been isolated, and that no reader or outcome study was done.
