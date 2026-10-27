@@ -232,3 +232,6 @@ Add each reaction as a dated, one-line rule.
   segmentation feeding measurements and the report, and a confidence (card tier + conformal set). Deep networks are
   described as the segmenters, not as failed classifiers.
 - 2026-10-26: no RANO anywhere, including figure labels and report wording ("indicative volumes", not "not RANO").
+- 2026-10-27: the proposed system-first abstract reads as fragments (a component inventory, five AUCs from different
+  pathways, a report check, a disclaimer). The abstract must tell one narrative with a punchline up front; describe
+  what the system is for, not every part it has; no factual-report tone.
