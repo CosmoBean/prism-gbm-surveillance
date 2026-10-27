@@ -1,7 +1,9 @@
 """Local paired report-field ablation on the immutable v3.1 evaluation set.
 
-Run ``python -m prism.analyses.report_field_ablation --steps freeze requests generate evaluate render``.
-The full arm imports v3.1 output; only the facts-only arm invokes the local writer.
+Run ``python -m prism.analyses.report_field_ablation --steps freeze stress requests generate evaluate
+evaluate-stress render --sets eval stress``. The full arm imports v3.1 output (and its immutable 30-record
+perturbation result); only the facts-only arm invokes the local writer, on the eval set and on its own fixed
+shared-fact stress set.
 """
 
 from __future__ import annotations
@@ -46,6 +48,20 @@ EXPECTED_COHORTS = {"mu": 114, "lumiere": 162, "ucsf": 130}
 EXPECTED_WRITER = {"key": "qwen3.8-27b", "id": "Qwen/Qwen3.8-27B",
                    "revision": "1d4bf0f2ff6012fd82039f2fa52739d0dd7c60c0"}
 CHECKER_SHA256 = "83665b34998406d2390f7d5ad12f8893df3ebf2ab69c78a2f6490181c34e657e"
+SETS = ("eval", "stress")
+# Perturbation contract (docs/results/REPORT_FIELD_ABLATION_PLAN.md, "Perturbation contract").
+STRESS_KIND = "enhancing_volume_change"
+V31_SHARED_KIND = "et_change"  # the same shared-field change, as named in the immutable v3.1 set
+STRESS_SEED = 20261026
+STRESS_N = 6
+STRESS_RECORDS = Path("records/stress_shared.jsonl")
+STRESS_LOG = Path("stress_log.csv")
+STRESS_HASHES = Path("stress_hashes.json")
+STRESS_REQUEST_HASHES = Path("stress_request_hashes.json")
+STATEMENT_KEY = "meas.enhancing_change_since_previous_statement"
+CHANGED_PREFIX = "meas.enhancing_change_since_previous_"
+V31_RULE = "v3 S7 follows rule; immutable v3.1 formal result, not regenerated"
+FACTS_RULE = "facts-only shared-field follows; ambiguous old value unscorable"
 
 
 def _digest(path: Path) -> str:
@@ -166,15 +182,190 @@ def _records(root: Path) -> dict[str, dict]:
     return {row["record_id"]: row for row in rows}
 
 
-def _request_path(output_root: Path, arm: str) -> Path:
-    return output_root / "llm" / f"requests_{arm}.jsonl"
+def _request_path(output_root: Path, arm: str, set_name: str = "eval") -> Path:
+    return output_root / "llm" / f"requests_{'' if set_name == 'eval' else set_name + '_'}{arm}.jsonl"
 
 
-def _output_path(output_root: Path, arm: str) -> Path:
-    return output_root / "llm" / f"outputs_{arm}.jsonl"
+def _output_path(output_root: Path, arm: str, set_name: str = "eval") -> Path:
+    return output_root / "llm" / f"outputs_{'' if set_name == 'eval' else set_name + '_'}{arm}.jsonl"
 
 
-def requests_step(root: Path = REPO, output_root: Path = OUT) -> None:
+# ---------------------------------------------------------------- perturbation contract
+def eligible_kinds(arm: str) -> tuple[str, ...]:
+    """Perturbation kinds reported per arm: model-only v3.1 kinds exist only for the full arm."""
+    if arm == A.FULL_EVIDENCE:
+        return tuple(R3.KINDS)
+    if arm == A.FACTS_ONLY:
+        return (STRESS_KIND,)
+    raise ValueError(f"unknown report field arm: {arm}")
+
+
+def _shared_updates(old: dict, new: dict) -> dict:
+    return {key: [old.get(key), new.get(key)] for key in sorted(set(old) | set(new)) if old.get(key) != new.get(key)}
+
+
+def shared_stress_records(records: list[dict], seed: int = STRESS_SEED, n: int = STRESS_N) -> list[dict]:
+    """The fixed facts-only shared-fact perturbation set, sampled in source order with ``seed``.
+
+    Each perturbation is the v3 ``et_change`` edit (the previous scan's enhancing volume moves so the change becomes
+    -5 cc, or +5 cc when it was negative). A record is eligible when it has a previous scan and an enhancing volume
+    and the edit changes the shared enhancing change statement; the expected shared-fact updates are recorded."""
+    pool = []
+    for rec in records:
+        if not (rec.get("measurements") or {}).get("previous") or not R3._eligible(V31_SHARED_KIND, rec):
+            continue
+        perturbed, log = R3.perturb_one(V31_SHARED_KIND, rec)
+        old, new = A.facts_for_arm(rec, A.FACTS_ONLY), A.facts_for_arm(perturbed, A.FACTS_ONLY)
+        updates = _shared_updates(old, new)
+        if STATEMENT_KEY not in updates:
+            continue
+        if any(not key.startswith(CHANGED_PREFIX) for key in updates):
+            raise RuntimeError(f"perturbation changed an unexpected shared field: {rec['record_id']}")
+        perturbed["record_id"] = f"{rec['record_id']}|perturbed:{STRESS_KIND}"
+        pool.append({"record_id": rec["record_id"], "perturbed_id": perturbed["record_id"], "kind": STRESS_KIND,
+                     "cohort": rec["cohort"], "patient_id": rec.get("patient_id"), "old": log["old"],
+                     "new": log["new"], "old_statement": old[STATEMENT_KEY], "new_statement": new[STATEMENT_KEY],
+                     "expected_updates": updates, "seed": seed, "record": perturbed})
+    rng = np.random.default_rng(seed)
+    return [pool[i] for i in sorted(rng.choice(len(pool), min(n, len(pool)), replace=False))]
+
+
+def _numeric_values(facts: dict) -> list[float]:
+    return [x for value in facts.values() for x in A.checker._field_numbers(value)]
+
+
+def facts_only_follows(entry: dict, old: dict, new: dict, claims: list[dict] | None) -> dict:
+    """Facts-only follows: the new shared statement is supported, the old statement is absent, and no written number
+    equals an old changed value unless that number is also a legitimate value of the perturbed facts (unscorable)."""
+    if claims is None:
+        return {"status": "failed", "follows": False, "new_supported": False, "old_present": False,
+                "old_unique_hits": [], "old_ambiguous_hits": []}
+    text = " ".join(c["text"] for c in claims)
+    new_supported = any(STATEMENT_KEY in c.get("fields", []) and A._contains_field_value(c, STATEMENT_KEY, new)
+                        for c in claims)
+    old_present = old[STATEMENT_KEY].casefold().strip().rstrip(".") in text.casefold()
+    old_values = [abs(float(before)) for key, (before, _after) in entry["expected_updates"].items()
+                  if isinstance(before, (int, float)) and not isinstance(before, bool)]
+    new_values = _numeric_values(new)
+    hits = [n for n in A.checker.numbers(text) if A.checker.matches(n, old_values, False)]
+    ambiguous = [n for n in hits if A.checker.matches(n, new_values, False)]
+    unique = [n for n in hits if n not in ambiguous]
+    if not new_supported or old_present or unique:
+        status, follows = "not_follows", False
+    elif ambiguous:
+        status, follows = "unscorable", None
+    else:
+        status, follows = "follows", True
+    return {"status": status, "follows": follows, "new_supported": new_supported, "old_present": old_present,
+            "old_unique_hits": unique, "old_ambiguous_hits": ambiguous}
+
+
+def summarise_stress(frame: pd.DataFrame, rule: str) -> pd.DataFrame:
+    """Per kind and total, with unscorable and failed rows kept in every denominator."""
+    rows = []
+    for kind, group in [*list(frame.groupby("kind", sort=True)), ("total", frame)]:
+        n = len(group)
+        follows = int((group.status == "follows").sum())
+        unscorable = int((group.status == "unscorable").sum())
+        rows.append({"kind": kind, "n": n, "follows": follows,
+                     "not_follows": int((group.status == "not_follows").sum()), "unscorable": unscorable,
+                     "failed_output": int((group.status == "failed").sum()), "n_scorable": n - unscorable,
+                     "follows_rate_all": follows / n if n else None,
+                     "follows_rate_scorable": follows / (n - unscorable) if n - unscorable else None,
+                     "check_pass": int(group.check_pass.astype(bool).sum()),
+                     "follows_and_pass": int(group.follows_and_pass.astype(bool).sum()), "rule": rule})
+    return pd.DataFrame(rows)
+
+
+def _stress_paths(output_root: Path) -> tuple[Path, Path, Path]:
+    return output_root / STRESS_RECORDS, output_root / STRESS_LOG, output_root / STRESS_HASHES
+
+
+def stress_step(root: Path = REPO, output_root: Path = OUT) -> list[dict] | None:
+    """Write the fixed facts-only stress set once; an existing set is never resampled or overwritten."""
+    _guard(root, output_root)
+    records_path, log_path, hashes_path = _stress_paths(output_root)
+    if records_path.exists() and log_path.exists():
+        _guard_stress(root, output_root)
+        print(f"{records_path} exists; the perturbation set is fixed, not redone", flush=True)
+        return None
+    if records_path.exists() or log_path.exists() or hashes_path.exists():
+        raise RuntimeError("partial stress set present; refusing to overwrite the fixed perturbation set")
+    entries = shared_stress_records(list(_records(root).values()))
+    records_path.parent.mkdir(parents=True, exist_ok=True)
+    records_path.write_text("".join(json.dumps(e["record"]) + "\n" for e in entries))
+    log = pd.DataFrame([{**{k: v for k, v in e.items() if k != "record"},
+                         "expected_updates": json.dumps(e["expected_updates"])} for e in entries])
+    log.to_csv(log_path, index=False)
+    hashes_path.write_text(json.dumps({str(STRESS_RECORDS): _digest(records_path),
+                                       str(STRESS_LOG): _digest(log_path)}, indent=2) + "\n")
+    print(f"stress: {len(entries)} {STRESS_KIND} perturbations (seed {STRESS_SEED})", flush=True)
+    return entries
+
+
+def _guard_stress(root: Path, output_root: Path) -> None:
+    _guard(root, output_root)
+    records_path, log_path, hashes_path = _stress_paths(output_root)
+    if not hashes_path.exists():
+        raise RuntimeError("run stress before stress requests, generation or evaluation")
+    hashes = json.loads(hashes_path.read_text())
+    for relative, path in ((STRESS_RECORDS, records_path), (STRESS_LOG, log_path)):
+        if not path.exists() or hashes.get(str(relative)) != _digest(path):
+            raise RuntimeError(f"frozen stress set hash mismatch: {relative}")
+
+
+def _stress_entries(root: Path, output_root: Path) -> list[dict]:
+    """Stress log rows with their perturbed records; expected updates are re-derived and must match exactly."""
+    records_path, log_path, _ = _stress_paths(output_root)
+    perturbed = {r["record_id"]: r for r in _jsonl(records_path)}
+    log = pd.read_csv(log_path, dtype={"record_id": str, "perturbed_id": str})
+    if sorted(log.perturbed_id) != sorted(perturbed):
+        raise RuntimeError("stress log and stress records mismatch")
+    source = _records(root)
+    entries = []
+    for row in log.to_dict("records"):
+        row["expected_updates"] = json.loads(row["expected_updates"])
+        rec = perturbed[row["perturbed_id"]]
+        old = A.facts_for_arm(source[row["record_id"]], A.FACTS_ONLY)
+        new = A.facts_for_arm(rec, A.FACTS_ONLY)
+        if _shared_updates(old, new) != row["expected_updates"]:
+            raise RuntimeError(f"stress expected field updates mismatch: {row['perturbed_id']}")
+        entries.append({**row, "record": rec, "old_facts": old, "new_facts": new})
+    return entries
+
+
+def _stress_requests(root: Path, output_root: Path) -> None:
+    _guard_stress(root, output_root)
+    (output_root / "llm").mkdir(parents=True, exist_ok=True)
+    rows = [{"id": f"stress|{e['perturbed_id']}", "messages": A.facts_only_messages(e["new_facts"]),
+             "max_tokens": 2048, "schema": A.FACTS_SCHEMA} for e in _stress_entries(root, output_root)]
+    path = _request_path(output_root, A.FACTS_ONLY, "stress")
+    data = "".join(json.dumps(row) + "\n" for row in rows).encode()
+    if path.exists() and path.read_bytes() != data:
+        raise RuntimeError("frozen facts-only stress request mismatch")
+    path.write_bytes(data)
+    frozen = output_root / STRESS_REQUEST_HASHES
+    hashes = {A.FACTS_ONLY: _digest(path)}
+    if frozen.exists() and json.loads(frozen.read_text()) != hashes:
+        raise RuntimeError("frozen stress request hash mismatch")
+    frozen.write_text(json.dumps(hashes, indent=2) + "\n")
+
+
+def _guard_stress_requests(root: Path, output_root: Path) -> None:
+    _guard_stress(root, output_root)
+    frozen = output_root / STRESS_REQUEST_HASHES
+    path = _request_path(output_root, A.FACTS_ONLY, "stress")
+    if not frozen.exists():
+        raise RuntimeError("run requests --sets stress before stress generation or evaluation")
+    if not path.exists() or json.loads(frozen.read_text()).get(A.FACTS_ONLY) != _digest(path):
+        raise RuntimeError("frozen stress request hash mismatch: facts_only")
+
+
+def requests_step(root: Path = REPO, output_root: Path = OUT, set_name: str = "eval") -> None:
+    if set_name == "stress":
+        return _stress_requests(root, output_root)
+    if set_name != "eval":
+        raise ValueError(f"unknown set: {set_name}")
     manifest = _guard(root, output_root)
     (output_root / "llm").mkdir(parents=True, exist_ok=True)
     full = (root / BASE / "llm/requests_eval.jsonl").read_bytes()
@@ -216,7 +407,17 @@ def _guard_requests(root: Path, output_root: Path) -> None:
             raise RuntimeError(f"frozen request hash mismatch: {arm}")
 
 
-def generate_step(root: Path = REPO, output_root: Path = OUT) -> dict | None:
+def generate_step(root: Path = REPO, output_root: Path = OUT, set_name: str = "eval") -> dict | None:
+    if set_name == "stress":
+        # Only the facts-only arm is generated for its stress set; the full arm keeps the v3.1 result.
+        _guard_stress_requests(root, output_root)
+        target = _output_path(output_root, A.FACTS_ONLY, "stress")
+        if target.exists():
+            return None
+        return _whole_batch(root, _request_path(output_root, A.FACTS_ONLY, "stress"), target,
+                            lambda: _guard_stress_requests(root, output_root))
+    if set_name != "eval":
+        raise ValueError(f"unknown set: {set_name}")
     _guard_requests(root, output_root)
     baseline = root / BASE / "llm/outputs_eval.jsonl"
     full = _output_path(output_root, A.FULL_EVIDENCE)
@@ -233,17 +434,23 @@ def generate_step(root: Path = REPO, output_root: Path = OUT) -> dict | None:
     target = _output_path(output_root, A.FACTS_ONLY)
     if target.exists():
         return None
+    return _whole_batch(root, _request_path(output_root, A.FACTS_ONLY), target,
+                        lambda: _guard_requests(root, output_root))
+
+
+def _whole_batch(root: Path, request: Path, target: Path, guard) -> dict:
+    """One local whole-batch run of the facts-only writer, with at most one identical whole-batch retry."""
     mid, revision, chat_kwargs, extra = R31.MODELS[R31.PRIMARY]
-    request_sha256 = _digest(_request_path(output_root, A.FACTS_ONLY))
+    request_sha256 = _digest(request)
     attempts = []
     for attempt in (1, 2):
-        _guard_requests(root, output_root)
+        guard()
         attempt_path = target.with_name(f"{target.stem}_attempt{attempt}{target.suffix}")
         if attempt_path.exists() or attempt_path.with_suffix(".log").exists():
             raise RuntimeError(f"attempt artifact already exists: {attempt_path}")
         cmd = [str(Path(R3.LLM_ENV) / "bin/python"), "-m", "prism.report.vllm_run",
                "--model", mid, "--revision", revision,
-               "--requests", str(_request_path(output_root, A.FACTS_ONLY)),
+               "--requests", str(request),
                "--out", str(attempt_path), "--tp", "1", "--chat-kwargs", json.dumps(chat_kwargs),
                "--max-model-len", "8192", "--gpu-mem", "0.90", *extra]
         env = {**os.environ, "PYTHONPATH": str(root), "HF_HUB_OFFLINE": "1",
@@ -437,10 +644,55 @@ def evaluate_step(root: Path = REPO, output_root: Path = OUT,
     paired_summary(paired).to_csv(output_root / "paired_summary.csv", index=False)
 
 
-def render_step(root: Path = REPO, output_root: Path = OUT) -> None:
-    _guard_requests(root, output_root)
+def evaluate_stress_step(root: Path = REPO, output_root: Path = OUT) -> None:
+    """Score the facts-only stress set; report the immutable v3.1 full-arm result separately (read only)."""
+    _guard_stress_requests(root, output_root)
+    full = pd.read_csv(root / BASE / "stress.csv")
+    full["status"] = np.where(full.follows.astype(bool), "follows", "not_follows")
+    full["rule"] = V31_RULE
+    full.to_csv(output_root / f"stress_{A.FULL_EVIDENCE}.csv", index=False)
+    summarise_stress(full, V31_RULE).to_csv(output_root / f"summary_stress_{A.FULL_EVIDENCE}.csv", index=False)
+    entries = _stress_entries(root, output_root)
+    outputs = _output_map(_output_path(output_root, A.FACTS_ONLY, "stress"),
+                          {f"stress|{e['perturbed_id']}" for e in entries})
+    rows = []
+    for entry in entries:
+        out = outputs.get(f"stress|{entry['perturbed_id']}")
+        claims = A.parse_facts_only(out["text"]) if out else None
+        check = A.check_facts_only(claims, entry["new_facts"])
+        truncated = bool(out and out.get("finish_reason") == "length")
+        result = facts_only_follows(entry, entry["old_facts"], entry["new_facts"], claims)
+        check_pass = bool(check["pass"]) and not truncated
+        rows.append({"perturbed_id": entry["perturbed_id"], "record_id": entry["record_id"],
+                     "cohort": entry["cohort"], "patient_id": entry["patient_id"], "kind": entry["kind"],
+                     "old": entry["old"], "new": entry["new"], "status": result["status"],
+                     "follows": result["follows"], "new_supported": result["new_supported"],
+                     "old_present": result["old_present"],
+                     "old_unique_hits": json.dumps(result["old_unique_hits"]),
+                     "old_ambiguous_hits": json.dumps(result["old_ambiguous_hits"]),
+                     "missing_output": out is None, "parsed": bool(check["parsed"]),
+                     "finish_reason": out.get("finish_reason") if out else None, "check_pass": check_pass,
+                     "follows_and_pass": result["follows"] is True and check_pass, "rule": FACTS_RULE})
+    frame = pd.DataFrame(rows)
+    frame.to_csv(output_root / f"stress_{A.FACTS_ONLY}.csv", index=False)
+    summarise_stress(frame, FACTS_RULE).to_csv(output_root / f"summary_stress_{A.FACTS_ONLY}.csv", index=False)
+
+
+def render_report(arm: str, rec: dict, output: dict | None, passed: bool) -> str:
+    """Markdown for one record: the full arm uses the v3.1 canonical renderer unchanged; facts-only prose is shown
+    only when its checker passed, and the facts-only renderer has no model-derived sections or tables."""
     from prism.report import prompts_v3_1, sections_v3
 
+    facts = A.facts_for_arm(rec, arm)
+    if arm == A.FULL_EVIDENCE:
+        prose = prompts_v3_1.sectioned(output["text"]) if output else None
+        return sections_v3.render_md(rec["scan_id"], facts, prose)
+    claims = A.parse_facts_only(output["text"]) if output and passed else None
+    return A.render_facts_only(rec["scan_id"], facts, claims)
+
+
+def render_step(root: Path = REPO, output_root: Path = OUT) -> None:
+    _guard_requests(root, output_root)
     records = _records(root)
     expected = {f"eval|{rid}" for rid in records}
     for arm in ARMS:
@@ -452,36 +704,37 @@ def render_step(root: Path = REPO, output_root: Path = OUT) -> None:
         directory = output_root / "reports" / arm
         directory.mkdir(parents=True, exist_ok=True)
         for rid, rec in records.items():
-            facts = A.facts_for_arm(rec, arm)
-            output = outputs.get(f"eval|{rid}")
-            if arm == A.FULL_EVIDENCE:
-                prose = prompts_v3_1.sectioned(output["text"]) if output else None
-                report = sections_v3.render_md(rec["scan_id"], facts, prose)
-            else:
-                claims = A.parse_facts_only(output["text"]) if output and bool(checks.loc[rid, "pass"]) else None
-                report = A.render_facts_only(rec["scan_id"], facts, claims)
+            report = render_report(arm, rec, outputs.get(f"eval|{rid}"), bool(checks.loc[rid, "pass"]))
             (directory / f"{rid.replace('|', '__')}.md").write_text(report)
 
 
 def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--steps", nargs="+", choices=("freeze", "requests", "generate", "evaluate", "render"),
-                        required=True)
+    parser.add_argument("--steps", nargs="+", required=True,
+                        choices=("freeze", "stress", "requests", "generate", "evaluate", "evaluate-stress", "render"))
+    parser.add_argument("--sets", nargs="+", choices=SETS, default=["eval"],
+                        help="sets for requests and generate (stress: facts-only shared-fact perturbations)")
     parser.add_argument("--gpu-hour-price-usd", type=float, default=None,
                         help="optional local GPU hourly price for cost estimate")
     args = parser.parse_args(argv)
     for step in args.steps:
         if step == "freeze":
             freeze_step()
+        elif step == "stress":
+            stress_step()
         elif step == "requests":
-            requests_step()
+            for set_name in args.sets:
+                requests_step(set_name=set_name)
         elif step == "generate":
-            final = generate_step()
-            if final is not None and not final["complete"]:
-                print("generate: facts-only batch failed twice; records without output count as failures",
-                      flush=True)
+            for set_name in args.sets:
+                final = generate_step(set_name=set_name)
+                if final is not None and not final["complete"]:
+                    print(f"generate: facts-only {set_name} batch failed twice; records without output count as "
+                          "failures", flush=True)
         elif step == "evaluate":
             evaluate_step(gpu_hour_price_usd=args.gpu_hour_price_usd)
+        elif step == "evaluate-stress":
+            evaluate_stress_step()
         else:
             render_step()
         print(f"{step}: complete", flush=True)

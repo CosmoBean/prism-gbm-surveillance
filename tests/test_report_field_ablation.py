@@ -105,8 +105,14 @@ class TestProvenanceAndPairing(unittest.TestCase):
             checker.write_bytes(checker.read_bytes() + b"\n# changed after freeze\n")
             with patch("prism.analyses.report_field_ablation.subprocess.run",
                        side_effect=AssertionError("model runner must not start")):
-                for step in (freeze_step, requests_step, generate_step, evaluate_step, pipeline.render_step):
-                    with self.subTest(step=step.__name__):
+                steps = {"freeze_step": freeze_step, "requests_step": requests_step,
+                         "generate_step": generate_step, "evaluate_step": evaluate_step,
+                         "render_step": pipeline.render_step, "stress_step": pipeline.stress_step,
+                         "requests_step[stress]": lambda r, o: requests_step(r, o, set_name="stress"),
+                         "generate_step[stress]": lambda r, o: generate_step(r, o, set_name="stress"),
+                         "evaluate_stress_step": pipeline.evaluate_stress_step}
+                for name, step in steps.items():
+                    with self.subTest(step=name):
                         with self.assertRaisesRegex(RuntimeError, "checker.*hash"):
                             step(root, out)
 
@@ -557,6 +563,313 @@ class TestFactsOnlyContract(unittest.TestCase):
         ]
         self.assertTrue(field_ablation.check_facts_only(claims, facts)["pass"])
         self.assertNotIn("meas.enhancing_cc", field_ablation.facts_only_messages(facts)[0]["content"])
+
+
+def facts_only_claims(facts):
+    """A passing facts-only report for record()-shaped facts (synthetic)."""
+    claims = [
+        {"section": "scan", "text": f"Scan timing: {facts['scan.phase']}.", "fields": ["scan.phase"]},
+        {"section": "scan", "text": "A previous scan is available.", "fields": ["scan.previous_available"]},
+        {"section": "measurements",
+         "text": f"Enhancing tumour volume is {facts['meas.enhancing_cc']:.1f} cc from automatic segmentation; indicative.",
+         "fields": ["meas.available", "meas.enhancing_cc", "meas.label"]},
+        {"section": "measurements", "text": f"FLAIR hyperintensity volume is {facts['meas.flair_hyperintensity_cc']:.1f} cc.",
+         "fields": ["meas.flair_hyperintensity_cc"]},
+        {"section": "measurements", "text": f"Necrosis volume is {facts['meas.necrosis_cc']:.1f} cc.",
+         "fields": ["meas.necrosis_cc"]},
+        {"section": "measurements", "text": f"Resection cavity volume is {facts['meas.cavity_cc']:.1f} cc.",
+         "fields": ["meas.cavity_cc"]},
+    ]
+    for key in ("meas.enhancing_change_since_previous_statement",
+                "meas.flair_hyperintensity_change_since_previous_statement"):
+        claims.append({"section": "longitudinal", "text": facts[key].capitalize() + ".", "fields": [key]})
+    claims.append({"section": "provenance", "text": "Source cohort: MU-Glioma-Post.", "fields": ["system.cohort"]})
+    return claims
+
+
+def zero_change_record(record_id="mu|grade4|Z"):
+    rec = record()
+    rec["record_id"], rec["scan_id"] = record_id, record_id.split("|")[-1]
+    m = rec["measurements"]
+    m["previous"]["volumes_cc"]["et"] = m["volumes_cc"]["et"]
+    m["change_from_previous_cc"]["et"] = 0.0
+    return rec
+
+
+class TestStressContract(unittest.TestCase):
+    def test_shared_volume_change_is_tested_in_both_arms(self):
+        records = pipeline.shared_stress_records([record()])
+        self.assertEqual(records[0]["kind"], "enhancing_volume_change")
+        # The full arm's immutable v3.1 set already contains the same shared change (as et_change).
+        self.assertIn(pipeline.V31_SHARED_KIND, pipeline.eligible_kinds(FULL_EVIDENCE))
+        self.assertEqual(pipeline.V31_SHARED_KIND, "et_change")
+
+    def test_model_only_v31_perturbations_are_not_run_for_facts_only(self):
+        self.assertEqual(pipeline.eligible_kinds(FACTS_ONLY), ("enhancing_volume_change",))
+        self.assertEqual(pipeline.eligible_kinds(FULL_EVIDENCE),
+                         ("card_tier", "agreement", "et_change", "out_of_range", "conformal"))
+        with self.assertRaises(ValueError):
+            pipeline.eligible_kinds("other")
+
+    def test_stress_record_keeps_pairing_and_exact_shared_field_updates(self):
+        entry = pipeline.shared_stress_records([record()])[0]
+        rec = entry["record"]
+        self.assertEqual(entry["record_id"], "mu|grade4|S")
+        self.assertEqual(entry["perturbed_id"], "mu|grade4|S|perturbed:enhancing_volume_change")
+        self.assertEqual(rec["record_id"], entry["perturbed_id"])
+        self.assertEqual(rec["scan_id"], "S")
+        old = facts_for_arm(record(), FACTS_ONLY)
+        new = facts_for_arm(rec, FACTS_ONLY)
+        self.assertFalse([key for key in new if key.startswith(EXCLUDED)])
+        changed = {key for key in set(old) | set(new) if old.get(key) != new.get(key)}
+        self.assertEqual(set(entry["expected_updates"]), changed)
+        self.assertTrue(changed)
+        self.assertTrue(all(key.startswith("meas.enhancing_change_since_previous") for key in changed), changed)
+        for key, (before, after) in entry["expected_updates"].items():
+            self.assertEqual((old.get(key), new.get(key)), (before, after))
+        self.assertEqual(entry["old_statement"], old["meas.enhancing_change_since_previous_statement"])
+        self.assertEqual(entry["new_statement"], new["meas.enhancing_change_since_previous_statement"])
+        self.assertEqual((entry["old"], entry["new"]), (3.5, -5.0))
+
+    def test_sampling_is_fixed_by_seed_and_excludes_ineligible_records(self):
+        pool = []
+        for i in range(8):
+            rec = record()
+            rec["record_id"] = f"mu|grade4|S{i}"
+            pool.append(rec)
+        no_previous = record()
+        no_previous["record_id"] = "mu|grade4|none"
+        no_previous["measurements"]["previous"] = None
+        noop = record()
+        noop["record_id"] = "mu|grade4|noop"
+        noop["measurements"]["volumes_cc"]["et"] = 0.0
+        noop["measurements"]["change_from_previous_cc"]["et"] = -0.01
+        records = pool + [no_previous, noop]
+        first = pipeline.shared_stress_records(records, seed=pipeline.STRESS_SEED, n=6)
+        second = pipeline.shared_stress_records(list(records), seed=pipeline.STRESS_SEED, n=6)
+        self.assertEqual(len(first), 6)
+        self.assertEqual([e["perturbed_id"] for e in first], [e["perturbed_id"] for e in second])
+        self.assertFalse({"mu|grade4|none", "mu|grade4|noop"} & {e["record_id"] for e in first})
+        order = [r["record_id"] for r in records]
+        self.assertEqual([e["record_id"] for e in first],
+                         sorted((e["record_id"] for e in first), key=order.index))
+        self.assertEqual(pipeline.STRESS_N, 6)
+
+    def test_facts_only_follows_new_statement_and_rejects_old(self):
+        entry = pipeline.shared_stress_records([record()])[0]
+        old = facts_for_arm(record(), FACTS_ONLY)
+        new = facts_for_arm(entry["record"], FACTS_ONLY)
+        claims = facts_only_claims(new)
+        self.assertTrue(field_ablation.check_facts_only(claims, new)["pass"])
+        result = pipeline.facts_only_follows(entry, old, new, claims)
+        self.assertEqual(result["status"], "follows")
+        self.assertTrue(result["follows"])
+
+        stale = facts_only_claims(old)
+        result = pipeline.facts_only_follows(entry, old, new, stale)
+        self.assertEqual(result["status"], "not_follows")
+        self.assertFalse(result["follows"])
+        self.assertFalse(result["new_supported"])
+
+        both = claims + [{"section": "longitudinal", "text": old["meas.enhancing_change_since_previous_statement"]
+                          .capitalize() + ".", "fields": ["meas.enhancing_change_since_previous_statement"]}]
+        result = pipeline.facts_only_follows(entry, old, new, both)
+        self.assertEqual(result["status"], "not_follows")
+        self.assertTrue(result["old_present"])
+
+        missing = pipeline.facts_only_follows(entry, old, new, None)
+        self.assertEqual(missing["status"], "failed")
+        self.assertFalse(missing["follows"])
+
+    def test_old_number_with_a_unique_representation_must_be_absent(self):
+        entry = pipeline.shared_stress_records([record()])[0]
+        old = facts_for_arm(record(), FACTS_ONLY)
+        new = facts_for_arm(entry["record"], FACTS_ONLY)
+        claims = facts_only_claims(new) + [{"section": "longitudinal", "text": "The earlier change was 3.5 cc.",
+                                            "fields": ["meas.enhancing_change_since_previous_cc"]}]
+        result = pipeline.facts_only_follows(entry, old, new, claims)
+        self.assertEqual(result["status"], "not_follows")
+        self.assertEqual(result["old_unique_hits"], ["3.5"])
+
+    def test_zero_value_ambiguity_is_unscorable_not_a_failure(self):
+        source = zero_change_record()
+        entry = pipeline.shared_stress_records([source])[0]
+        self.assertEqual((entry["old"], entry["new"]), (0.0, -5.0))
+        old = facts_for_arm(source, FACTS_ONLY)
+        new = facts_for_arm(entry["record"], FACTS_ONLY)
+        claims = facts_only_claims(new)  # "Resection cavity volume is 0.0 cc." is a correct, required sentence.
+        self.assertTrue(field_ablation.check_facts_only(claims, new)["pass"])
+        result = pipeline.facts_only_follows(entry, old, new, claims)
+        self.assertEqual(result["status"], "unscorable")
+        self.assertIsNone(result["follows"])
+        self.assertEqual(result["old_unique_hits"], [])
+        self.assertTrue(result["old_ambiguous_hits"])
+        stale = facts_only_claims(old)
+        self.assertEqual(pipeline.facts_only_follows(entry, old, new, stale)["status"], "not_follows")
+
+    def test_stress_summary_keeps_unscorable_and_failed_rows_in_denominators(self):
+        rows = [{"kind": "enhancing_volume_change", "status": status, "follows": follows,
+                 "check_pass": check, "follows_and_pass": bool(follows) and check}
+                for status, follows, check in (("follows", True, True), ("not_follows", False, True),
+                                               ("unscorable", None, True), ("failed", False, False))]
+        summary = pipeline.summarise_stress(pd.DataFrame(rows), pipeline.FACTS_RULE).set_index("kind")
+        for kind in ("enhancing_volume_change", "total"):
+            row = summary.loc[kind]
+            self.assertEqual(int(row["n"]), 4)
+            self.assertEqual(int(row["follows"]), 1)
+            self.assertEqual(int(row["not_follows"]), 1)
+            self.assertEqual(int(row["unscorable"]), 1)
+            self.assertEqual(int(row["failed_output"]), 1)
+            self.assertEqual(int(row["n_scorable"]), 3)
+            self.assertEqual(int(row["check_pass"]), 3)
+
+    def stress_root(self, directory, records):
+        root = Path(directory)
+        out = root / "ablation"
+        out.mkdir()
+        lookup = {r["record_id"]: r for r in records}
+        patches = (patch("prism.analyses.report_field_ablation._guard"),
+                   patch("prism.analyses.report_field_ablation._records", return_value=lookup))
+        return root, out, patches
+
+    def test_stress_set_is_written_once_and_never_overwritten(self):
+        records = [record(), zero_change_record()]
+        with tempfile.TemporaryDirectory() as directory:
+            root, out, (guard, recs) = self.stress_root(directory, records)
+            with guard, recs:
+                pipeline.stress_step(root, out)
+                data = (out / "records/stress_shared.jsonl").read_bytes()
+                log = pd.read_csv(out / "stress_log.csv")
+                self.assertEqual(len(log), 2)
+                self.assertEqual(set(log.kind), {"enhancing_volume_change"})
+                self.assertEqual(set(log.seed), {pipeline.STRESS_SEED})
+                with patch("prism.analyses.report_field_ablation.shared_stress_records",
+                           side_effect=AssertionError("must not resample")):
+                    pipeline.stress_step(root, out)
+                self.assertEqual((out / "records/stress_shared.jsonl").read_bytes(), data)
+                (out / "stress_log.csv").unlink()
+                with self.assertRaisesRegex(RuntimeError, "stress"):
+                    pipeline.stress_step(root, out)
+
+    def test_stress_generation_uses_the_same_whole_batch_machinery(self):
+        records = [record()]
+        with tempfile.TemporaryDirectory() as directory:
+            root, out, (guard, recs) = self.stress_root(directory, records)
+            commands = []
+
+            def failing_batch(cmd, **kwargs):
+                commands.append(cmd)
+                Path(cmd[cmd.index("--out") + 1]).write_text('{"id":"stress|x","text":"partial')
+                return SimpleNamespace(returncode=1)
+
+            with guard, recs, patch("prism.analyses.report_field_ablation.subprocess.run",
+                                    side_effect=failing_batch):
+                pipeline.stress_step(root, out)
+                pipeline.requests_step(root, out, set_name="stress")
+                request = out / "llm/requests_stress_facts_only.jsonl"
+                rows = [json.loads(line) for line in request.read_text().splitlines()]
+                self.assertEqual([r["id"] for r in rows],
+                                 ["stress|mu|grade4|S|perturbed:enhancing_volume_change"])
+                self.assertNotIn("pathway.", json.dumps(rows[0]["messages"]))
+                final = generate_step(root, out, set_name="stress")
+                self.assertEqual(len(commands), 2)
+                self.assertTrue(all(c[c.index("--requests") + 1] == str(request) for c in commands))
+                self.assertFalse(final["complete"])
+                self.assertEqual(final["n_attempts"], 2)
+                self.assertTrue((out / "llm/outputs_stress_facts_only_attempt2.jsonl").exists())
+                self.assertFalse((out / "llm/outputs_full_evidence.jsonl").exists())
+                self.assertIsNone(generate_step(root, out, set_name="stress"))
+                self.assertEqual(len(commands), 2)
+
+    def test_evaluate_stress_scores_facts_only_and_reports_full_v31_separately(self):
+        records = [record(), zero_change_record()]
+        source = Path(__file__).resolve().parents[1] / "outputs/results/analyses/report_v3_1"
+        with tempfile.TemporaryDirectory() as directory:
+            root, out, (guard, recs) = self.stress_root(directory, records)
+            base = root / "outputs/results/analyses/report_v3_1"
+            base.mkdir(parents=True)
+            for name in ("stress.csv", "summary_stress.csv"):
+                shutil.copyfile(source / name, base / name)
+            with guard, recs:
+                pipeline.stress_step(root, out)
+                pipeline.requests_step(root, out, set_name="stress")
+                entries = {json.loads(line)["record_id"]: json.loads(line)
+                           for line in (out / "records/stress_shared.jsonl").read_text().splitlines()}
+                pid = "mu|grade4|S|perturbed:enhancing_volume_change"
+                facts = facts_for_arm(entries[pid], FACTS_ONLY)
+                (out / "llm/outputs_stress_facts_only.jsonl").write_text(json.dumps(
+                    {"id": f"stress|{pid}", "text": json.dumps({"sentences": facts_only_claims(facts)}),
+                     "finish_reason": "stop"}) + "\n")
+                pipeline.evaluate_stress_step(root, out)
+            facts = pd.read_csv(out / "stress_facts_only.csv").set_index("perturbed_id")
+            self.assertEqual(facts.loc[pid, "status"], "follows")
+            self.assertTrue(bool(facts.loc[pid, "check_pass"]))
+            self.assertEqual(facts.loc["mu|grade4|Z|perturbed:enhancing_volume_change", "status"], "failed")
+            summary = pd.read_csv(out / "summary_stress_facts_only.csv").set_index("kind")
+            self.assertEqual(int(summary.loc["total", "n"]), 2)
+            self.assertEqual(int(summary.loc["total", "failed_output"]), 1)
+            full = pd.read_csv(out / "summary_stress_full_evidence.csv").set_index("kind")
+            self.assertEqual((int(full.loc["total", "n"]), int(full.loc["total", "follows"])), (30, 28))
+            self.assertEqual(set(full.rule), {pipeline.V31_RULE})
+            self.assertEqual(len(pd.read_csv(out / "stress_full_evidence.csv")), 30)
+            self.assertEqual(set(pd.read_csv(out / "stress_full_evidence.csv").kind), set(pipeline.eligible_kinds(FULL_EVIDENCE)))
+
+
+class TestRenderedReports(unittest.TestCase):
+    MODEL_ONLY_HEADINGS = ("## 2. The two pathways", "## 3. The combined score", "## 4. How much to trust this here")
+
+    def test_facts_only_markdown_has_no_model_only_headings_or_tables(self):
+        rec = record()
+        facts = facts_for_arm(rec, FACTS_ONLY)
+        output = {"text": json.dumps({"sentences": facts_only_claims(facts)})}
+        for passed in (True, False):
+            with self.subTest(passed=passed):
+                report = pipeline.render_report(FACTS_ONLY, rec, output, passed)
+                headings = [line for line in report.splitlines() if line.startswith("#")]
+                self.assertEqual(headings, ["# Scan facts: S", "## Scan", "## Measurements", "## Longitudinal",
+                                            "## Provenance", "## Limitations"])
+                for heading in self.MODEL_ONLY_HEADINGS:
+                    self.assertNotIn(heading, report)
+                for word in ("Pathway", "Score", "Conformal", "Tier", "Flag", "Agreement", "80% set", "Card"):
+                    self.assertNotIn(word.lower(), report.lower())
+                self.assertEqual(passed, "Enhancing tumour volume is 37.2 cc" in report)
+
+    def test_full_arm_markdown_is_byte_identical_to_v31_renderer_on_frozen_fixture(self):
+        from prism.analyses import report_v3_1 as R31
+        rec = record()
+        rec["record_id"] = "mu|grade4|S"
+        text = json.dumps({"sentences": [{"section": "scan", "text": "Fixture scan sentence.", "fields": []},
+                                         {"section": "trust", "text": "Fixture trust sentence.", "fields": []}]})
+        with tempfile.TemporaryDirectory() as directory:
+            out = Path(directory)
+            (out / "records").mkdir()
+            (out / "llm").mkdir()
+            (out / "records/eval.jsonl").write_text(json.dumps(rec) + "\n")
+            (out / "llm/outputs_eval.jsonl").write_text(json.dumps({"id": "eval|mu|grade4|S", "text": text}) + "\n")
+            with patch.object(R31, "OUT", out):
+                R31.render_set("eval")
+            canonical = (out / "reports/eval/mu__grade4__S.md").read_bytes()
+        self.assertEqual(pipeline.render_report(FULL_EVIDENCE, rec, {"text": text}, True).encode(), canonical)
+        self.assertEqual(pipeline.render_report(FULL_EVIDENCE, rec, {"text": text}, False).encode(), canonical)
+        self.assertIn("## 2. The two pathways", canonical.decode())
+
+    @unittest.skipUnless((Path(__file__).resolve().parents[1] /
+                          "outputs/results/analyses/report_v3_1/reports/eval").exists(), "v3.1 reports absent")
+    def test_full_arm_markdown_matches_frozen_v31_reports(self):
+        base = Path(__file__).resolve().parents[1] / "outputs/results/analyses/report_v3_1"
+        examples = set(json.loads((base / "examples.json").read_text()))  # rendered with a figure link
+        outputs = {r["id"]: r for r in map(json.loads, (base / "llm/outputs_eval.jsonl").read_text().splitlines())}
+        checked = 0
+        for line in (base / "records/eval.jsonl").read_text().splitlines():
+            rec = json.loads(line)
+            rid = rec["record_id"]
+            if rid in examples:
+                continue
+            frozen = (base / "reports/eval" / f"{rid.replace('|', '__')}.md").read_bytes()
+            self.assertEqual(pipeline.render_report(FULL_EVIDENCE, rec, outputs.get(f"eval|{rid}"), True).encode(),
+                             frozen, rid)
+            checked += 1
+        self.assertEqual(checked, 403)
 
 
 if __name__ == "__main__":
