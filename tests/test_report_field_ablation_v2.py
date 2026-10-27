@@ -702,6 +702,51 @@ class TestCommittedCode(unittest.TestCase):
         self.assertEqual(self.env.freeze()["commit"], head)
 
 
+class TestConsistencyStep(unittest.TestCase):
+    def setUp(self):
+        self.env = V2Root()
+        self.addCleanup(self.env.cleanup)
+
+    def _run(self):
+        stdout = io.StringIO()
+        with patch.object(V1, "_whole_batch", _no_model), contextlib.redirect_stdout(stdout):
+            result = V2.consistency_step(self.env.root, self.env.out, v1_output_root=self.env.v1)
+        return result, stdout.getvalue()
+
+    def _files(self):
+        return sorted(p for p in self.env.root.rglob("*") if p.is_file())
+
+    def test_consistency_step_prints_aggregates_and_writes_nothing(self):
+        V2.guard_v2(self.env.root, self.env.out, self.env.v1)  # the development lock is the guard's own record
+        before = self._files()
+        result, text = self._run()
+        self.assertEqual((result["n_records"], result["n_failing"], result["errors"]), (58, 0, {}))
+        self.assertEqual(text, "consistency: 0 of 58 development records with errors\n")
+        self.assertEqual(self._files(), before)
+
+    def test_consistency_step_reports_keys_and_counts_only(self):
+        original = facts_only_v2.sentence_forms
+
+        def drop_label(key, facts):
+            return [] if key == "meas.label" else original(key, facts)
+        V2.guard_v2(self.env.root, self.env.out, self.env.v1)
+        before = self._files()
+        with patch("prism.report.facts_only_v2.sentence_forms", drop_label):
+            result, text = self._run()
+        self.assertGreater(result["n_failing"], 0)
+        self.assertIn(f"consistency: {result['n_failing']} of 58 development records with errors", text)
+        self.assertEqual(len(text.splitlines()), 1 + len(result["errors"]))
+        self.assertIn("meas.label", text)
+        self.assertTrue("synthetic" not in text and SUBJECT_ID.search(text) is None, "record ID in output")
+        self.assertNotIn("37.2", text)
+        self.assertEqual(self._files(), before)
+
+    def test_consistency_step_runs_the_v2_guard(self):
+        _write_jsonl(self.env.root / V1.BASE / "records/dev.jsonl", self.env.dev[:-1])
+        with self.assertRaisesRegex(RuntimeError, "development set count mismatch"):
+            self._run()
+
+
 class TestGuardV2(unittest.TestCase):
     def test_dev_refuses_patient_overlap_with_eval(self):
         env = V2Root()
@@ -1610,6 +1655,28 @@ class TestV2Cli(unittest.TestCase):
         self.assertEqual(generate.call_args.kwargs["set_name"], "stress")
         stress.assert_called_once()
         evaluate.assert_not_called()
+
+    def test_main_accepts_exactly_the_documented_steps(self):
+        documented = ("consistency", "dev", "preflight", "freeze", "requests", "generate", "evaluate")
+        self.assertEqual(V2.STEPS, documented)
+        names = {"consistency": "consistency_step", "dev": "dev_step", "preflight": "preflight_step",
+                 "freeze": "freeze_step", "requests": "requests_step", "generate": "generate_step",
+                 "evaluate": "evaluate_step"}
+        for step in documented:
+            with self.subTest(step=step), patch.object(V2, names[step], return_value={"n_failing": 0}) as called, \
+                    contextlib.redirect_stdout(io.StringIO()):
+                V2.main(["--steps", step, "--iteration", "0"])
+                called.assert_called_once()
+        for step in ("render", "evaluate-stress", "stress"):
+            with self.subTest(step=step), self.assertRaises(SystemExit), \
+                    contextlib.redirect_stderr(io.StringIO()):
+                V2.main(["--steps", step])
+
+    def test_main_consistency_exits_non_zero_on_an_error(self):
+        with patch.object(V2, "consistency_step", return_value={"n_failing": 1}), \
+                contextlib.redirect_stdout(io.StringIO()), self.assertRaises(SystemExit) as caught:
+            V2.main(["--steps", "consistency"])
+        self.assertEqual(caught.exception.code, 1)
 
     def test_main_requires_iteration_for_dev(self):
         with patch.object(V2, "dev_step") as dev, self.assertRaises(SystemExit), \

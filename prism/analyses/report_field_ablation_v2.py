@@ -70,6 +70,8 @@ COMMON_CRITERIA = ("unsupported_number", "invalid_citation", "forbidden", "clini
 SHARED_RULE = ("shared follows: a sentence citing the change statement contains the new statement; old statement "
                "absent; old value written only where it is also a perturbed fact (unscorable)")
 STRICT_RULE = V1.FACTS_RULE + " (v1 strict: sentence equals the new statement)"
+# The CLI steps; the stress test is `--steps requests generate evaluate --sets stress`. There is no render step.
+STEPS = ("consistency", "dev", "preflight", "freeze", "requests", "generate", "evaluate")
 
 
 def _dev_records(root: Path) -> list[dict]:
@@ -1039,8 +1041,7 @@ def evaluate_stress_step(root: Path = REPO, output_root: Path = OUT2, v1_output_
 
 def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--steps", nargs="+", required=True,
-                        choices=("dev", "preflight", "freeze", "requests", "generate", "evaluate"))
+    parser.add_argument("--steps", nargs="+", required=True, choices=STEPS)
     parser.add_argument("--iteration", type=int, default=None, help="development iteration (0, 1 or 2) for dev")
     parser.add_argument("--sets", nargs="+", choices=SETS, default=["eval"],
                         help="sets for the evaluation requests, generation and evaluate steps")
@@ -1050,7 +1051,10 @@ def main(argv: list[str] | None = None) -> None:
     if "dev" in args.steps and args.iteration is None:
         parser.error("--iteration is required for the dev step")
     for step in args.steps:
-        if step == "dev":
+        if step == "consistency":
+            if consistency_step()["n_failing"]:
+                raise SystemExit(1)
+        elif step == "dev":
             dev_step(iteration=args.iteration, gpu_hour_price_usd=args.gpu_hour_price_usd)
         elif step == "preflight":
             preflight_step()

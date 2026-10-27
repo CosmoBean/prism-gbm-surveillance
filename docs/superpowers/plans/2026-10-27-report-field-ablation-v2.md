@@ -61,8 +61,8 @@ protocol differ, the protocol wins.
 
 - Create `prism/report/facts_only_v2.py`: the specification (forms, banned terms), prompt, parser reuse, checker and
   reference report.
-- Create `prism/analyses/report_field_ablation_v2.py`: the CLI steps `dev`, `freeze`, `preflight`, `requests`,
-  `generate`, `evaluate`, `stress`, `evaluate-stress` and `render`.
+- Create `prism/analyses/report_field_ablation_v2.py`: the CLI steps `consistency`, `dev`, `preflight`, `freeze`,
+  `requests`, `generate` and `evaluate`; the last three take `--sets eval` or `--sets stress`.
 - Create `tests/test_report_field_ablation_v2.py`: tests on synthetic records only.
 - Create `docs/results/REPORT_FIELD_ABLATION_V2.md`, after the runs only.
 
@@ -327,7 +327,7 @@ below is final.
 - [ ] **Step 5: Preflight.** Run `--steps preflight`. Fix and log any failure. The preflight uses no evaluation
   attempt.
 - [ ] **Step 6: Evaluation.** Run `--steps requests generate evaluate --sets eval`, then `--steps requests generate
-  evaluate-stress --sets stress`, then `--steps render`. If both whole-batch attempts fail, keep every artifact and
+  evaluate --sets stress`. There is no render step. If both whole-batch attempts fail, keep every artifact and
   report it. Do not re-run.
 - [ ] **Step 7: Result document.** Write `docs/results/REPORT_FIELD_ABLATION_V2.md`. It reports:
   - v1's 0/406 as the first attempt;
