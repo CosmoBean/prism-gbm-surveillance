@@ -1,7 +1,7 @@
 # Paired report-field ablation, facts-only v2: pre-specified protocol
 
-Written 2026-10-27, before any v2 code, prompt, request or generation. Status: **draft; awaiting the author's
-approval.** No development iteration runs until the author approves this protocol. Implementation plan:
+Written 2026-10-27, before any v2 code, prompt, request or generation. Status: **approved by the author on
+2026-10-27**, before any v2 code, prompt, request or generation. Implementation plan:
 [2026-10-27-report-field-ablation-v2.md](../superpowers/plans/2026-10-27-report-field-ablation-v2.md).
 
 This is the second pre-registered attempt at the facts-only arm. The first attempt
