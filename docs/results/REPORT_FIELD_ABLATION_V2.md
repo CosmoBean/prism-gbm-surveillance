@@ -10,7 +10,7 @@ pre-specified interpretability gate was met.**
   found supported, with a median of 16 distinct fields per report.
 - **Shared facts.** On these lexical checks, the model-derived fields were added without losing any clinical fact
   the facts-only arm stated: no volume or change statement was dropped. The facts-only arm cited 2.8 more shared keys
-  per report, and these were only the cohort, availability and previous-scan sentences.
+  per report; an exploratory count shows these were only the cohort, availability and previous-scan sentences.
 - **Stress test.** The facts-only arm followed the shared-fact edit in 6/6. The full arm followed it in 0/6 under the
   pre-specified rule, which needs the new change statement verbatim. An exploratory count shows the full arm wrote
   the new magnitude and direction in 6/6, in its own wording.
@@ -137,9 +137,8 @@ statement must be absent. No old changed value may be written unless it is also 
 magnitude and direction. None of them reproduces the statement verbatim, so the miss is wording, not content.
 
 **Ambiguity.**
-- The ambiguity set for each arm is its own perturbed facts. For the full arm these include model-derived numbers, for
-  example the card's rule and the conformal statements. That makes 2/6 records ambiguous by construction for the full
-  arm and 0/6 for facts-only.
+- The ambiguity set for each arm is its own perturbed facts. For the full arm these include model-derived numbers.
+  That makes 2/6 records ambiguous by construction for the full arm and 0/6 for facts-only.
 - No record was unscorable.
 
 **Comparison with v3.1.** The v3.1 S7 result for the full arm (28/30; ET change 4/6 under the v3 rule) is unchanged and
