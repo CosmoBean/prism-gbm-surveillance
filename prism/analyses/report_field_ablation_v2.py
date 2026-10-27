@@ -2,10 +2,12 @@
 
 Run ``python -m prism.analyses.report_field_ablation_v2 --steps dev --iteration <k>`` for a development iteration on
 the 58-record development partition, and ``--steps preflight`` for the one-record synthetic engine check. Then
-``--steps freeze``, ``requests``, ``generate`` and ``evaluate`` for the one evaluation on the locked 406 records. The v1
+``--steps freeze``, ``requests``, ``generate`` and ``evaluate`` for the one evaluation on the locked 406 records, and
+the same three steps with ``--sets stress`` for the paired shared-fact stress test on v1's frozen 6-record set. The v1
 gate (v3.1 artifacts, checker, frozen prism/report sources, writer, the v1 lock) runs before every v2 step; v1 and v3.1
 outputs are read only. Summaries hold aggregate counts only: no report text and no record IDs. Per-record files
-(checks_*.csv, paired_rows.csv) hold record IDs with booleans and counts only, and stay untracked under outputs/.
+(checks_*.csv, paired_rows.csv, stress_paired.csv) hold record IDs with statuses, booleans and counts only, and stay
+untracked under outputs/.
 """
 
 from __future__ import annotations
@@ -141,7 +143,10 @@ def _refuse_iteration(output_root: Path, iteration: int) -> None:
             raise RuntimeError(f"development iteration {iteration - 1} has no summary")
 
 
-def _require_preflight(output_root: Path) -> None:
+def _require_preflight(output_root: Path, frozen: bool = False) -> None:
+    """A passing preflight (complete and parsed). With frozen=True (evaluation and stress steps, after the frozen
+    guard), the preflight must also have run the frozen specification and runner: its recorded git blobs must equal
+    FROZEN_v2.json's."""
     path = output_root / PREFLIGHT
     try:
         state = json.loads(path.read_text()) if path.exists() else {}
@@ -150,6 +155,14 @@ def _require_preflight(output_root: Path) -> None:
     if state.get("complete") is not True or state.get("parsed") is not True:
         raise RuntimeError("run a passing preflight (complete and parsed) before a development iteration or the "
                            "evaluation")
+    if frozen:
+        try:
+            code = json.loads((output_root / FROZEN).read_text())
+        except (OSError, ValueError):
+            code = {}
+        if any(not state.get(key) or state.get(key) != code.get(key) for key in ("spec_blob", "runner_blob")):
+            raise RuntimeError("run a passing preflight of the frozen specification and runner before the "
+                               "evaluation or stress steps")
 
 
 def _quarantine(output_root: Path, iteration: int, meta: dict) -> Path:
@@ -331,6 +344,7 @@ def preflight_step(root: Path = REPO, output_root: Path = OUT2, v1_output_root: 
     claims = A.parse_facts_only(out["text"]) if out else None
     result = {"complete": bool(meta.get("complete")), "parsed": claims is not None,
               "request_sha256": V1._digest(request), "run": run, "spec_version": S.SPEC_VERSION,
+              "spec_blob": V1._git_blob(root / SPEC), "runner_blob": V1._git_blob(root / RUNNER),
               "n_attempts": meta.get("n_attempts")}
     with (base / "preflight_log.jsonl").open("a") as log:
         log.write(json.dumps(result) + "\n")
@@ -450,7 +464,7 @@ def requests_step(root: Path = REPO, output_root: Path = OUT2, set_name: str = "
         raise ValueError(f"unknown set: {set_name}")
     root, output_root = Path(root), Path(output_root)
     manifest = guard_frozen(root, output_root, v1_output_root)
-    _require_preflight(output_root)
+    _require_preflight(output_root, frozen=True)
     records = V1._records(root)
     (output_root / "llm").mkdir(parents=True, exist_ok=True)
     full = (root / V1.BASE / "llm/requests_eval.jsonl").read_bytes()
@@ -476,7 +490,7 @@ def _record_request_hashes(output_root: Path, hashes: dict) -> None:
 
 def _guard_requests(root: Path, output_root: Path, v1_output_root: Path) -> dict:
     manifest = guard_frozen(root, output_root, v1_output_root)
-    _require_preflight(output_root)
+    _require_preflight(output_root, frozen=True)
     frozen = output_root / REQUEST_HASHES
     if not frozen.exists():
         raise RuntimeError("run requests before generation or evaluation")
@@ -500,6 +514,15 @@ def _import_full(root: Path, output_root: Path) -> None:
             shutil.copyfile(source, dest)
 
 
+def _refuse_regeneration(target: Path) -> None:
+    """Generated once: a missing output whose batch metadata or attempt artifacts exist is not generated again."""
+    stem = target.stem
+    if target.parent.exists() and any(p.name.startswith((f"{stem}.", f"{stem}_attempt"))
+                                      for p in target.parent.glob(f"{stem}*")):
+        raise RuntimeError(f"{target.name} is missing but its batch metadata or attempts exist; it is generated "
+                           "once, and a logged deviation is required before generating it again")
+
+
 def generate_step(root: Path = REPO, output_root: Path = OUT2, set_name: str = "eval",
                   v1_output_root: Path = V1.OUT) -> dict | None:
     """Import the full arm; generate the facts-only v2 arm once, as one whole batch with at most one identical retry.
@@ -514,6 +537,7 @@ def generate_step(root: Path = REPO, output_root: Path = OUT2, set_name: str = "
     target = _output_path(output_root, FACTS_V2)
     if target.exists():
         return None
+    _refuse_regeneration(target)
     meta = V1._whole_batch(root, _request_path(output_root, FACTS_V2), target,
                            lambda: _guard_requests(root, output_root, v1_output_root))
     _guard_requests(root, output_root, v1_output_root)
@@ -566,10 +590,11 @@ def _ci(group: pd.DataFrame, outcome: str) -> tuple[float | None, float | None]:
     return V1._cluster_ci(group, outcome) if len(group) else (None, None)
 
 
-def information_added(paired: pd.DataFrame, full_details: dict, facts_only_claims: dict) -> pd.DataFrame:
-    """Secondary outcome 1 on records where both arms pass. Model-derived keys count only when cited in a full-arm
-    claim the frozen checker marks supported with valid citations. Shared keys are the facts-only keys; coverage is
-    the number of distinct shared keys each arm cites, paired full minus facts-only with a patient-cluster CI."""
+def information_added(paired: pd.DataFrame, full_details: dict, facts_only_details: dict) -> pd.DataFrame:
+    """Secondary outcome 1 on records where both arms pass. A key counts only when cited in a claim that
+    checker.check_claim marks supported with valid citations, in both arms (`*_details` hold those per-claim
+    results, each against that arm's facts). Shared keys are the facts-only keys; coverage is the number of distinct
+    shared keys each arm cites, paired full minus facts-only with a patient-cluster CI."""
     prefixes = [p.rstrip(".") for p in A.FULL_ONLY_PREFIXES]
     both = paired[paired[f"{A.FULL_EVIDENCE}_pass"].astype(bool) & paired[f"{A.FACTS_ONLY}_pass"].astype(bool)]
     rows = []
@@ -578,8 +603,8 @@ def information_added(paired: pd.DataFrame, full_details: dict, facts_only_claim
         valid = [r for r in (full_details.get(rid) or []) if r["supported"] and not r["invalid_fields"]]
         model = {k for r in valid for k in r["fields"] if k.startswith(A.FULL_ONLY_PREFIXES)}
         full_shared = {k for r in valid for k in r["fields"] if not k.startswith(A.FULL_ONLY_PREFIXES)}
-        facts_shared = {k for c in (facts_only_claims.get(rid) or []) for k in c.get("fields", [])
-                        if not k.startswith(A.FULL_ONLY_PREFIXES)}
+        facts_valid = [r for r in (facts_only_details.get(rid) or []) if r["supported"] and not r["invalid_fields"]]
+        facts_shared = {k for r in facts_valid for k in r["fields"] if not k.startswith(A.FULL_ONLY_PREFIXES)}
         rows.append({"scan_id": rid, "cohort": item["cohort"], "patient_id": item["patient_id"],
                      "n_model_keys": len(model),
                      **{f"keys_{p}": sum(k.startswith(p + ".") for k in model) for p in prefixes},
@@ -617,9 +642,10 @@ def information_added(paired: pd.DataFrame, full_details: dict, facts_only_claim
 
 def common_criteria(full_claims: dict, facts_only_claims: dict, facts: dict) -> pd.DataFrame:
     """Secondary outcome 2, per arm and record: the same arm-agnostic tests on both arms, each against that arm's
-    facts (`facts` holds the full facts; the facts-only facts are derived by the field contract). As in the v2
-    checker, forbidden wording and clinical inference skip verbatim copies of supplied statements. An unparsed or
-    missing output fails every criterion."""
+    facts (`facts` holds the full facts; the facts-only facts are derived by the field contract). Forbidden
+    wording and clinical inference skip verbatim copies of the shared (facts-only) statements only, identically in
+    both arms; a copied model-derived statement in the full arm is checked. An unparsed or missing output fails every
+    criterion."""
     rows = []
     for rid, full in facts.items():
         shared = {k: v for k, v in full.items() if not k.startswith(A.FULL_ONLY_PREFIXES)}
@@ -631,7 +657,7 @@ def common_criteria(full_claims: dict, facts_only_claims: dict, facts: dict) -> 
                             **{f"fail_{c}": True for c in COMMON_CRITERIA}})
             else:
                 checked = [checker.check_claim(c, arm_facts) for c in claims]
-                text = " ".join(S._without_statements(c["text"], arm_facts) for c in claims)
+                text = " ".join(S._without_statements(c["text"], shared) for c in claims)
                 n_numbers = sum(len(r["unsupported_numbers"]) for r in checked)
                 n_invalid = sum(len(r["invalid_fields"]) for r in checked)
                 row.update({"n_claims": len(claims), "n_unsupported_numbers": n_numbers,
@@ -666,18 +692,30 @@ def _common_summary(per_record: pd.DataFrame, paired: pd.DataFrame) -> pd.DataFr
     return pd.DataFrame(out)
 
 
-def _reference_check(manifest: dict, records: dict) -> pd.DataFrame:
-    """The deterministic reference report checked on every record's facts, with no model; aggregate counts only."""
+def _reference_rows(manifest: dict, records: dict) -> pd.DataFrame:
+    """The deterministic reference report checked on every record's facts, with no model; one row per record."""
     rows = []
     for item in manifest["records"]:
         facts = A.facts_for_arm(records[item["record_id"]], A.FACTS_ONLY)
         result = S.check(S.reference_report(facts), facts)
-        rows.append({"cohort": item["cohort"], "pass": bool(result["pass"]),
+        rows.append({"record_id": item["record_id"], "cohort": item["cohort"], "pass": bool(result["pass"]),
                      "consistency_error": bool(S.consistency_errors(facts)), **{c: bool(result[c]) for c in S.CRITERIA}})
-    frame = pd.DataFrame(rows)
-    return pd.DataFrame([{"cohort": cohort, "n": len(group), "pass": int(group["pass"].sum()),
-                          "consistency_errors": int(group.consistency_error.sum()),
-                          **{c: int(group[c].sum()) for c in S.CRITERIA}} for cohort, group in _groups(frame)])
+    return pd.DataFrame(rows)
+
+
+def _reference_check(reference: pd.DataFrame, checks: pd.DataFrame) -> pd.DataFrame:
+    """Aggregate reference counts by cohort, with the writer x reference pass/fail cross-tab (no record IDs)."""
+    frame = reference.assign(writer=reference.record_id.map(checks.set_index("record_id")["pass"]).astype(bool))
+    out = []
+    for cohort, group in _groups(frame):
+        row = {"cohort": cohort, "n": len(group), "pass": int(group["pass"].sum()),
+               "consistency_errors": int(group.consistency_error.sum()), **{c: int(group[c].sum()) for c in S.CRITERIA}}
+        for writer in (False, True):
+            for ref in (False, True):
+                name = f"writer_{'pass' if writer else 'fail'}_reference_{'pass' if ref else 'fail'}"
+                row[name] = int(((group.writer == writer) & (group["pass"] == ref)).sum())
+        out.append(row)
+    return pd.DataFrame(out)
 
 
 def evaluate_step(root: Path = REPO, output_root: Path = OUT2, v1_output_root: Path = V1.OUT,
@@ -698,17 +736,22 @@ def evaluate_step(root: Path = REPO, output_root: Path = OUT2, v1_output_root: P
     baseline = pd.read_csv(root / V1.BASE / "checks_eval.csv", dtype={"scan_id": str}).set_index("scan_id")
     full_rows, full_claims, full_details = _full_arm(manifest, ordered, V1._output_map(full_path, expected), baseline)
     facts_outputs = V1._output_map(facts_path, expected)
-    facts_rows, facts_claims = [], {}
+    facts_rows, facts_claims, facts_details = [], {}, {}
     for rid, rec in ordered.items():
         out = facts_outputs.get(f"eval|{rid}")
         facts_rows.append(_check_row(rec, out)[0])
-        facts_claims[rid] = A.parse_facts_only(out["text"]) if out else None
+        claims = A.parse_facts_only(out["text"]) if out else None
+        facts_claims[rid] = claims
+        shared = A.facts_for_arm(rec, A.FACTS_ONLY)
+        facts_details[rid] = [checker.check_claim(c, shared) for c in claims] if claims is not None else None
     checks = pd.DataFrame(facts_rows)
+    reference = _reference_rows(manifest, ordered)
+    checks["reference_pass"] = checks.record_id.map(reference.set_index("record_id")["pass"]).astype(bool)
     checks.to_csv(output_root / f"checks_{FACTS_V2}.csv", index=False)
     meta = json.loads(meta_path.read_text())
     summary = summarise_dev(checks, meta, gpu_hour_price_usd)
     summary.to_csv(output_root / f"summary_{FACTS_V2}.csv", index=False)
-    _reference_check(manifest, ordered).to_csv(output_root / "reference_check.csv", index=False)
+    _reference_check(reference, checks).to_csv(output_root / "reference_check.csv", index=False)
     facts_lookup = {row["record_id"]: {"pass": row["pass"], "parsed": row["parsed"],
                                        "required_content_pass": row["parsed"] and not row["fail_required_missing"],
                                        "missing_output": row["missing_output"]} for row in facts_rows}
@@ -717,7 +760,7 @@ def evaluate_step(root: Path = REPO, output_root: Path = OUT2, v1_output_root: P
     V1.paired_summary(paired).to_csv(output_root / "paired_summary.csv", index=False)
     result = gate(summary)
     (output_root / "gate.json").write_text(json.dumps(result, indent=2) + "\n")
-    information_added(paired, full_details, facts_claims).to_csv(output_root / "information_added.csv", index=False)
+    information_added(paired, full_details, facts_details).to_csv(output_root / "information_added.csv", index=False)
     common = common_criteria(full_claims, facts_claims,
                              {rid: A.facts_for_arm(rec, A.FULL_EVIDENCE) for rid, rec in ordered.items()})
     common.to_csv(output_root / "checks_common_criteria.csv", index=False)
@@ -773,7 +816,7 @@ def _guard_stress(root: Path, output_root: Path, v1_output_root: Path) -> list[d
     """The frozen guard (which hash-checks v1's stress records and log against FROZEN_v2.json) and the preflight;
     returns v1's stress entries, whose expected field updates are re-derived. v1's set is read only."""
     guard_frozen(root, output_root, v1_output_root)
-    _require_preflight(output_root)
+    _require_preflight(output_root, frozen=True)
     return V1._stress_entries(root, Path(v1_output_root))
 
 
@@ -821,6 +864,7 @@ def _stress_generate(root: Path, output_root: Path, v1_output_root: Path) -> dic
         if target.exists():
             metas[arm] = None
             continue
+        _refuse_regeneration(target)
         metas[arm] = V1._whole_batch(root, _stress_request_path(output_root, arm), target,
                                      lambda: _guard_stress_requests(root, output_root, v1_output_root))
         _guard_stress_requests(root, output_root, v1_output_root)

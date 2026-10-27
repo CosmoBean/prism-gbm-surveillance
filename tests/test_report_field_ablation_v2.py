@@ -426,6 +426,16 @@ def failed_batch(calls=None):
     return run
 
 
+def bind_preflight(out: Path, root: Path = REPO_ROOT, frozen: bool = True, **override) -> None:
+    """A passing preflight.json recording the spec and runner blobs of `root`, and (frozen=True) a FROZEN_v2.json
+    holding the same blobs, for roots whose frozen guard is stood in."""
+    blobs = {"spec_blob": V1._git_blob(root / SPEC), "runner_blob": V1._git_blob(root / RUNNER)}
+    out.mkdir(parents=True, exist_ok=True)
+    (out / "preflight.json").write_text(json.dumps({"complete": True, "parsed": True, **blobs, **override}))
+    if frozen:
+        (out / "FROZEN_v2.json").write_text(json.dumps(blobs))
+
+
 def _no_model(*_args, **_kwargs):
     raise AssertionError("model runner must not start")
 
@@ -575,6 +585,11 @@ class TestDevStep(unittest.TestCase):
         self.assertTrue((out / "summary_dev_iter0.csv").exists())
         self.assertTrue((out / "dev_iter0.json").exists())
 
+    def test_dev_accepts_a_passing_preflight_without_code_blobs(self):
+        self.env.pass_preflight()
+        self.assertNotIn("runner_blob", json.loads((self.env.out / "preflight.json").read_text()))
+        self.assertIn("qualifies", self.env.dev_step(0))
+
     def test_dev_refuses_without_a_passing_preflight(self):
         (self.env.out / "preflight.json").unlink()
         with self.assertRaisesRegex(RuntimeError, "passing preflight"):
@@ -708,6 +723,14 @@ class TestPreflight(unittest.TestCase):
         self.assertFalse((self.env.out / "llm").exists())
         self.assertFalse((self.env.out / "request_hashes.json").exists())
 
+    def test_preflight_records_the_code_blobs(self):
+        self.env.preflight(fake_batch([V2.synthetic_record()]))
+        state = json.loads((self.env.out / "preflight.json").read_text())
+        self.assertEqual(state["spec_blob"], V1._git_blob(self.env.root / SPEC))
+        self.assertEqual(state["runner_blob"], V1._git_blob(self.env.root / RUNNER))
+        log = V1._jsonl(self.env.out / "preflight" / "preflight_log.jsonl")
+        self.assertEqual(log[-1]["runner_blob"], state["runner_blob"])
+
     def test_preflight_can_be_repeated_and_logs_each_run(self):
         failed = fake_batch([])  # output does not parse
         self.assertFalse(self.env.preflight(failed)["parsed"])
@@ -837,6 +860,23 @@ class TestEvalRequestGuards(unittest.TestCase):
             self.env.eval_requests()
         self._no_eval_requests()
 
+    def test_eval_and_stress_require_a_preflight_of_the_frozen_code(self):
+        self.env.freeze()
+        stale = "0" * 40
+        for key in (None, "spec_blob", "runner_blob"):
+            if key is None:
+                self.env.pass_preflight()  # complete and parsed, but bound to no code
+            else:
+                bind_preflight(self.env.out, self.env.root, frozen=False, **{key: stale})
+            with self.subTest(stale=key):
+                with self.assertRaisesRegex(RuntimeError, "passing preflight of the frozen specification and runner"):
+                    self.env.eval_requests()
+                for step in (V2.requests_step, V2.generate_step):
+                    with patch.object(V1, "_whole_batch", _no_model), contextlib.redirect_stdout(io.StringIO()), \
+                            self.assertRaisesRegex(RuntimeError, "frozen specification and runner"):
+                        step(self.env.root, self.env.out, "stress", v1_output_root=self.env.v1)
+        self._no_eval_requests()
+
 
 def synthetic_eval() -> list[dict]:
     """Four synthetic evaluation records (MU 2 from one patient, LUMIERE 1, UCSF 1)."""
@@ -877,8 +917,7 @@ class EvalEnv:
                        "fail_required_missing": False} for r in self.records]).to_csv(base / "checks_eval.csv",
                                                                                       index=False)
         self.out = self.root / "v2"
-        self.out.mkdir()
-        (self.out / "preflight.json").write_text(json.dumps({"complete": True, "parsed": True}))
+        bind_preflight(self.out)
 
     def _patched(self, batch=None):
         stack = contextlib.ExitStack()
@@ -939,6 +978,21 @@ class TestEvalSteps(unittest.TestCase):
         with self.env._patched(_no_model):  # an existing facts-only output is never regenerated
             self.assertIsNone(V2.generate_step(self.env.root, self.env.out, "eval"))
 
+    def test_generation_refuses_when_an_earlier_batch_left_artifacts(self):
+        self.env.run(steps=("requests",))
+        llm = self.env.out / "llm"
+        for name in ("outputs_facts_only_v2.jsonl.meta.json", "outputs_facts_only_v2_attempt1.log",
+                     "outputs_facts_only_v2_attempt2.jsonl.meta.json"):
+            (llm / name).write_text("{}")
+            with self.subTest(artifact=name), self.env._patched(_no_model), \
+                    self.assertRaisesRegex(RuntimeError, "logged deviation"):
+                V2.generate_step(self.env.root, self.env.out, "eval")
+            (llm / name).unlink()
+        self.env.run(steps=("generate",))
+        (llm / "outputs_facts_only_v2.jsonl").unlink()  # a deleted output is not generated again
+        with self.env._patched(_no_model), self.assertRaisesRegex(RuntimeError, "logged deviation"):
+            V2.generate_step(self.env.root, self.env.out, "eval")
+
     def test_generation_refuses_changed_requests(self):
         self.env.run(steps=("requests",))
         path = self.env.out / "llm/requests_facts_only_v2.jsonl"
@@ -981,6 +1035,13 @@ class TestEvalSteps(unittest.TestCase):
             self.assertEqual(int(common.loc["all", f"facts_only_fail_{criterion}"]), 1, criterion)
         reference = pd.read_csv(out / "reference_check.csv").set_index("cohort")
         self.assertEqual((int(reference.loc["all", "n"]), int(reference.loc["all", "pass"])), (4, 4))
+        self.assertTrue(checks["reference_pass"].astype(bool).all())
+        self.assertEqual({k: int(reference.loc["all", k]) for k in (
+            "writer_fail_reference_fail", "writer_fail_reference_pass", "writer_pass_reference_fail",
+            "writer_pass_reference_pass")}, {"writer_fail_reference_fail": 0, "writer_fail_reference_pass": 1,
+                                             "writer_pass_reference_fail": 0, "writer_pass_reference_pass": 3})
+        self.assertEqual((int(reference.loc["mu", "writer_fail_reference_pass"]),
+                          int(reference.loc["ucsf", "writer_fail_reference_pass"])), (1, 0))
         for name in ("summary_facts_only_v2.csv", "paired_summary.csv", "gate.json", "information_added.csv",
                      "common_criteria.csv", "reference_check.csv"):
             text = (out / name).read_text()
@@ -1039,8 +1100,11 @@ class TestAnalyses(unittest.TestCase):
             "b": [claim(["scan.phase"]), claim(["card.tier"], supported=False),
                   claim(["flags.out_of_range.reason"], supported=False, invalid=["flags.out_of_range.reason"])],
             "c": [claim(["card.tier"]), claim(["conformal.combined.80.statement"])]}
-        facts_claims = {"a": [{"fields": ["scan.phase"]}, {"fields": ["meas.enhancing_cc"]}],
-                        "b": [{"fields": ["scan.phase"]}], "c": None}
+        # The same filter in both arms: an unsupported or invalidly cited facts-only claim does not count.
+        facts_claims = {"a": [claim(["scan.phase"]), claim(["meas.enhancing_cc"]),
+                              claim(["meas.necrosis_cc"], supported=False)],
+                        "b": [claim(["scan.phase"]), claim(["meas.cavity_cc", "nothing.here"], supported=False,
+                                                           invalid=["nothing.here"])], "c": None}
         info = V2.information_added(self._paired(), details, facts_claims).set_index("cohort")
         row = info.loc["all"]
         self.assertEqual(int(row["n_both_pass"]), 2)
@@ -1153,8 +1217,7 @@ class StressEnv:
         with patch.object(V1, "_records", return_value=self.lookup()):
             self.entries = V1._stress_entries(self.root, self.v1)
         self.out = self.root / "v2"
-        self.out.mkdir()
-        (self.out / "preflight.json").write_text(json.dumps({"complete": True, "parsed": True}))
+        bind_preflight(self.out)
 
     def lookup(self):
         return {r["record_id"]: r for r in self.sources}
@@ -1302,6 +1365,15 @@ class TestStress(unittest.TestCase):
         # Existing outputs are never regenerated.
         self.assertEqual(self.env.step("generate"), {"full_evidence": None, "facts_only_v2": None})
 
+    def test_stress_generation_refuses_when_an_earlier_batch_left_artifacts(self):
+        self.env.step("requests")
+        self.env.step("generate", stress_batch(self.env.entries))
+        llm = self.env.out / "llm"
+        (llm / "outputs_stress_full_evidence.jsonl").unlink()
+        with self.assertRaisesRegex(RuntimeError, "logged deviation"):
+            self.env.step("generate")
+        self.assertFalse((llm / "outputs_stress_full_evidence.jsonl").exists())
+
     def test_stress_evaluate_requires_generation(self):
         self.env.step("requests")
         with self.assertRaisesRegex(RuntimeError, "run generate --sets stress"):
@@ -1353,6 +1425,27 @@ class TestStress(unittest.TestCase):
         text = (self.env.out / "summary_stress_paired.csv").read_text()
         self.assertTrue("synthetic" not in text, "record ID in summary_stress_paired.csv")
         self.assertFalse((self.env.v1 / "llm").exists())  # nothing is written under the v1 output root
+
+
+class TestCommonCriteriaExemption(unittest.TestCase):
+    def test_only_copied_shared_statements_are_exempt_in_both_arms(self):
+        rec = synthetic_eval()[0]
+        full = facts_for_arm(rec, FULL_EVIDENCE)
+        phrase = "the tumour has grown and progression is likely"  # clinical inference and forbidden wording
+        full["pathways.agreement_statement"] = phrase
+        full[V1.STATEMENT_KEY] = shared = phrase + " since the previous scan"
+        model_copy = [{"text": "The " + full["pathways.agreement_statement"] + ".",
+                       "fields": ["pathways.agreement_statement"]}]
+        shared_copy = [{"section": "longitudinal", "text": "The " + shared + ".",
+                        "fields": [V1.STATEMENT_KEY]}]
+        frame = V2.common_criteria({"m": model_copy, "s": shared_copy}, {"m": shared_copy, "s": shared_copy},
+                                   {"m": full, "s": full}).set_index(["record_id", "arm"])
+        self.assertTrue(bool(frame.loc[("m", "full_evidence"), "fail_clinical_inference"]))
+        self.assertTrue(bool(frame.loc[("m", "full_evidence"), "fail_forbidden"]))
+        for arm in ("full_evidence", "facts_only"):
+            self.assertFalse(bool(frame.loc[("s", arm), "fail_clinical_inference"]), arm)
+            self.assertFalse(bool(frame.loc[("s", arm), "fail_forbidden"]), arm)
+        self.assertFalse(bool(frame.loc[("m", "facts_only"), "fail_clinical_inference"]))
 
 
 class TestV2Cli(unittest.TestCase):
