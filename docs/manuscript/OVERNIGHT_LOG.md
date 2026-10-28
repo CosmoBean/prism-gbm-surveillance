@@ -286,3 +286,26 @@ Changed:
   Discussion. Section 3.3 and Figure 3 now say concretely what drove the scores ("followed the treatment schedule
   at MU and enhancement at UCSF") instead of "what carries a score".
 Main text: 2,813 words.
+
+## Loop 15: validation of loop 14 (audit, cold read, hostile read)
+
+Cold read: 7 article, 6 concise, 7 figures; 3.2 and 3.4 still stacked secondary contrasts. Hostile: minor revision
+(missing daggers on disagreement results; causal phrasing). Audit: every number correct; 11 fixes.
+Changed:
+- 3.2 and 3.4 trimmed harder. Secondary contrasts now live in Table 3 and Figures 2 and 4: the single-scan change
+  when trained at UCSF, the share flagged by MU medians, the conformal-set flag, and the Brier details. The text
+  keeps the planned results, the failures and one line per exploratory result.
+- Daggers are on every disagreement result (Table 3 rows and Met cells, 3.4, Limits) and on the 3.1 between-phase
+  statement and the Discussion's enhancing-volume point.
+- Causal wording calibrated: "partly because the interval…" became "part of its AUC tracks the interval…"; "so its
+  change inputs transferred less well" became the difference itself (−0.07, −0.13 to −0.01); "the audits showed it"
+  became "did"; the Conclusion no longer gives a post-hoc finding as the design reason.
+- The per-outcome calibration result is now the honest one: it left non-progression coverage below the threshold
+  even on MU (73%, 63–82%). The overreaching "not exchangeable" inference is gone.
+- The deviation is checked on the right terms (all-glioma fit 0.768 vs 0.773 at LUMIERE; at UCSF the all-glioma
+  models were tested on all-glioma scans). The reduced combined form on MU is marked planned. LUMIERE enhancing
+  volume names its scan set. The 3.2 heading and Figure 2 title name the combined and image models; the reduced
+  timeline at UCSF did not rank well. "Smaller models did not" became "only Gemma-4 31B also did".
+- Figures: the Figure 4B legend moved below the axis, with the dagger in the caption; Figure 5B weights to one
+  decimal.
+Main text: 2,725 words.

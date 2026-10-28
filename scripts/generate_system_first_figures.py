@@ -297,18 +297,18 @@ def fig4(output: Path) -> None:
     bx = fig.add_axes([0.585, 0.515, 0.395, ax_top - 0.515])
     panel(fig, 0.51, bx, "B"); title(bx, "Where the pathways agree versus disagree")
     forest(bx, [("MU, own medians", 0.307, 0.175, 0.432, C["ink"], True),
-                ("MU, other folds' medians†", 0.313, 0.184, 0.431, C["ink"], False),
+                ("MU, other folds' medians", 0.313, 0.184, 0.431, C["ink"], False),
                 ("LUMIERE, own medians", 0.105, -0.049, 0.266, C["ink"], True),
-                ("LUMIERE, MU-fixed†", 0.222, 0.102, 0.337, C["ink"], False),
+                ("LUMIERE, MU-fixed", 0.222, 0.102, 0.337, C["ink"], False),
                 ("UCSF, own medians", -0.019, -0.218, 0.175, C["ink"], True),
-                ("UCSF, MU-fixed†", 0.134, -0.096, 0.397, C["ink"], False)],
+                ("UCSF, MU-fixed", 0.134, -0.096, 0.397, C["ink"], False)],
            "AUC difference, agree minus disagree", xlim=(-0.3, 0.5))
     for y in (1.5, 3.5):
         bx.axhline(y + 0.2, color="0.88", lw=0.6, zorder=0)
-    bx.legend(handles=[Line2D([], [], marker="o", ls="none", color=C["ink"], ms=4.8, label="own medians†"),
+    bx.legend(handles=[Line2D([], [], marker="o", ls="none", color=C["ink"], ms=4.8, label="own medians"),
                        Line2D([], [], marker="o", ls="none", color=C["ink"], mfc="white", ms=4.8, mew=1.1,
-                              label="MU medians†")],
-              frameon=False, loc="center right", fontsize=6.8, handletextpad=0.2, borderaxespad=0.1)
+                              label="medians fixed on MU")],
+              frameon=False, loc="upper center", bbox_to_anchor=(0.5, -0.2), ncol=2, fontsize=6.8, handletextpad=0.2)
 
     cx = fig.add_axes([0.145, 0.10, 0.55, 0.20])
     panel(fig, LETTER_X, cx, "C"); title(cx, "Reliability card†: scans in a tested situation")
@@ -382,7 +382,7 @@ def fig5(output: Path) -> None:
     for i, (name, gib, k, ok) in enumerate(ladder):
         y = len(ladder) - 1 - i
         bx.barh(y, k / 406, color=dark if ok else light, height=0.5)
-        bx.text(0, y + 0.3, f"{name} ({gib:.0f} GiB)", va="bottom", ha="left", fontsize=6.8, color=C["ink"],
+        bx.text(0, y + 0.3, f"{name} ({gib:.1f} GiB)", va="bottom", ha="left", fontsize=6.8, color=C["ink"],
                 weight="bold" if ok else "normal")
         inside = k >= 330
         bx.text(k / 406 - 0.02 if inside else k / 406 + 0.02, y, str(k), va="center", ha="right" if inside else "left",
