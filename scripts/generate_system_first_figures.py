@@ -96,7 +96,7 @@ def fig1(output: Path) -> None:
     box(bx, 0.34, 0.25, 0.14, 0.36, "Fit once on MU,\nlock the models\nand write the plan", C["soft"])
     box(bx, 0.54, 0.42, 0.20, 0.36, "LUMIERE (locked)\n178 scans,\nno treatment dates", tint(C["images"], 0.85))
     box(bx, 0.54, 0.02, 0.20, 0.32, "UCSF-ALPTDG (locked)\n69 second scans", tint(C["images"], 0.85))
-    box(bx, 0.80, 0.12, 0.19, 0.62, "Reports\n406 records from\nall three cohorts,\nfrozen checker", "#fff3d6")
+    box(bx, 0.80, 0.12, 0.19, 0.62, "Reports\n406 records from\nall three cohorts,\nunchanged checker", "#fff3d6")
     arrow(bx, (0.28, 0.43), (0.34, 0.43)); arrow(bx, (0.48, 0.48), (0.54, 0.59)); arrow(bx, (0.48, 0.38), (0.54, 0.21))
     arrow(bx, (0.74, 0.59), (0.80, 0.50)); arrow(bx, (0.74, 0.21), (0.80, 0.36))
     save(fig, output, "fig1_system")
@@ -212,7 +212,7 @@ def fig4(output: Path) -> None:
     bx = fig.add_axes([0.70, 0.50, 0.28, 0.40])
     bx.set_title("B   Where the pathways agree\n     versus disagree", loc="left", weight="bold", x=-0.6)
     forest(bx, [("MU, own medians", 0.307, 0.175, 0.432, C["ink"], True),
-                ("MU, MU-fixed medians†", 0.313, 0.184, 0.431, C["ink"], False),
+                ("MU, other folds' medians†", 0.313, 0.184, 0.431, C["ink"], False),
                 ("LUMIERE, own medians", 0.105, -0.049, 0.266, C["ink"], True),
                 ("LUMIERE, MU-fixed†", 0.222, 0.102, 0.337, C["ink"], False),
                 ("UCSF, own medians", -0.019, -0.218, 0.175, C["ink"], True),
@@ -241,22 +241,22 @@ REPORT = [
     ("Scan", "This scan was taken 8 weeks after the end of radiotherapy, early after radiotherapy.", "scan.phase"),
     ("Scan", "The automatic segmentation gives indicative volumes of 6.0 cc enhancing tumour and 31.0 cc FLAIR hyperintensity.", "meas.label, meas.enhancing_cc, …"),
     ("Scan", "Enhancing tumour is 2.0 cc larger than at the previous scan.", "meas.enhancing_change_…"),
-    ("Pathways", "The timeline pathway, based on clinical data and the position in treatment, scores this scan below its cohort median.", "pathway.timeline.*"),
-    ("Pathways", "The image pathway, based on the segmented tumour and its change, scores this scan above its cohort median.", "pathway.images.*"),
-    ("Pathways", "The two pathways disagree.", "pathways.agreement_statement"),
-    ("Combined", "The combined score, based on the inputs of both pathways, is below its cohort median.", "pathway.combined.*"),
+    ("Pathways", "The timeline pathway is based on clinical data and the position in treatment: timeline score 0.21, below the median of its scores in the MU-Glioma-Post evaluation scans (0.38).", "pathway.timeline.*"),
+    ("Pathways", "The image pathway is based on the segmented tumour and its change: image score 0.64, above the median of its scores in the MU-Glioma-Post evaluation scans (0.45).", "pathway.images.*"),
+    ("Pathways", "The two pathways disagree: the timeline score is below its median and the image score is above its median.", "pathways.agreement_statement"),
+    ("Combined", "The combined score, based on the inputs of both pathways, is 0.33.", "pathway.combined.*"),
     ("Combined", "The 80% conformal set holds both outcomes.", "conformal.combined.80.statement"),
     ("Trust", "This situation, early after radiotherapy with enhancing tumour increased, has few cases: 1 of 9 scans was progression.", "card.situation, card.tier_statement"),
-    ("Trust", "The pathway disagreement flag is raised: the two pathways lie on opposite sides of their medians.", "flags.disagreement.*"),
+    ("Trust", "The pathways disagree flag is raised: the timeline score is below its median and the image score is above its median.", "flags.disagreement.*"),
 ]
 
 
 def fig5(output: Path) -> None:
     """Report anatomy (synthetic example) and the automatic evaluation. NUMBERS.md 7."""
     fig = plt.figure(figsize=(7.2, 4.6))
-    ax = fig.add_axes([0.0, 0.0, 0.66, 1.0]); ax.set_xlim(0, 1); ax.set_ylim(-0.02, 1); ax.axis("off")
+    ax = fig.add_axes([0.0, 0.0, 0.66, 1.0]); ax.set_xlim(0, 1); ax.set_ylim(-0.06, 1); ax.axis("off")
     ax.text(0.01, 0.985, "A   A PRISM report (synthetic example)", fontsize=8.5, weight="bold", va="top")
-    ax.add_patch(FancyBboxPatch((0.01, 0.0), 0.97, 0.94, boxstyle="round,pad=0.005,rounding_size=0.01",
+    ax.add_patch(FancyBboxPatch((0.01, -0.05), 0.97, 0.99, boxstyle="round,pad=0.005,rounding_size=0.01",
                                 facecolor="#fbfbfb", edgecolor="#9aa5b1", lw=0.8))
     y = 0.915; current = None
     sec_col = {"Scan": C["images"], "Pathways": C["timeline"], "Combined": C["combined"], "Trust": C["thin"]}
@@ -284,7 +284,7 @@ def fig5(output: Path) -> None:
     cx = fig.add_axes([0.70, 0.04, 0.29, 0.36]); cx.axis("off")
     cx.text(0.0, 1.0, "Also checked, all 406 reports:", fontsize=7, weight="bold", va="top")
     cx.text(0.0, 0.86, "• 220 of 220 state a few-case or\n   untested tier where one applies\n"
-            "• 28 of 30 changed records followed\n   (rule fixed in advance: ≥ 27)\n"
+            "• 28 of 30 changed records followed\n   (planned minimum: 27)\n"
             "• no unsupported number, invalid\n   citation or forbidden wording\n\n"
             "Lexical check only: it cannot judge\nemphasis, order or what a\nclinician would infer.",
             fontsize=6.6, va="top", linespacing=1.3, color=C["ink"])

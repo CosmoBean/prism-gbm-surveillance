@@ -67,3 +67,19 @@ Changed:
   no-refitting point is stated as a property of a table; the novelty sentence keeps its hedge and says what the
   combination is.
 - Table 1: "index scans" (never defined) became "scans with a 120-day label".
+
+## Loop 4: voice edit and the second cold read
+
+Readers: a new cold reader (remembered 0.82 vs 0.71, 0.77 and 0.88; claim correct, and calibration now noticed)
+and a copy editor checking the voice against STYLE.md §6 (25 edits). Most re-reading came from model names (P7) and
+the two median rules (P6, a real system–text mismatch).
+
+Changed (voice): the colon reveals and "X is not Y" slogans in the Introduction; "PRISM is that system."; the
+Results route map and the 3.2→3.3 seam ("we audited…" twice); the signposts closing 3.3 and 3.4; "fixed in advance"
+→ "planned" in prose (kept in the dagger definition and Table 2); "frozen" and "second evaluation"; sentences with
+three or more qualifying clauses split in 2.1, 2.2, 3.2, 3.4 and 3.5; the risk-scale caveat is stated twice (3.2,
+Discussion ¶1), not three times; "no clinician has read" stays in the Limits only.
+Changed (clarity): within-phase AUC defined in 2.3 (pairs from the same phase); 3.3 and 3.4 paragraphs open on their
+findings; Figure 4B's MU rows labelled (the system's rule on MU uses the other folds' medians); Figure 4C says no
+scan was untested; Figure 5A uses the reports' real sentence forms.
+Kept against the editor: the intended-use 0.60 stays in the Discussion (STYLE.md §4 requires it there and in 3.1).

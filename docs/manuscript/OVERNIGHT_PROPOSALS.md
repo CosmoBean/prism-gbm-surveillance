@@ -31,3 +31,19 @@ model-size ladder (which models pass the check), which shows something the text 
 ## P5. Move the report earlier (loop 2: cold reader)
 The synthetic report (Figure 5A) is the only place the cold reader understood what a clinician sees. Option: make it
 Figure 1C or cite it from Section 2.1.
+
+## P6. Which medians does the agreement rule use? (loop 4: cold reader) — needs a decision
+Section 2.1 says the system places each pathway's score against its median **on MU** (rounds 4–5 of the council).
+The evaluated reports (`prism/report/facts_v3.py`, the pathway statements and `pathways.agreement_statement`) place
+it against "the median of its scores in the <cohort> evaluation scans", i.e. **each cohort's own** median, which
+is the planned rule of Table 2. So the 406 checked reports implement the planned rule, not the rule the text calls
+the system's. Figure 5A now copies the report's real wording (with invented numbers). Options: (a) say in 2.1 that
+the reports use each cohort's own medians and that the MU-fixed rule is the one a new centre would compute at a
+single scan (exploratory); or (b) regenerate reports with MU-fixed medians (a new run, out of scope tonight).
+Overnight changed nothing on this point except making Figure 5A faithful.
+
+## P7. A table naming every score once (loop 4: cold reader)
+"Most re-reading came from losing track of which model a number belonged to": clinical-only, timeline (full and
+reduced), image pathway, single-scan images, the planned imaging model, the combined score and enhancing volume
+alone. A six-row Methods table (inputs, uses dates?, planned?) would end it. Not added tonight because it adds a
+display item; ready to draft if you want it.
