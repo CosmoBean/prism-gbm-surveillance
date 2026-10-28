@@ -113,3 +113,9 @@ the Figure 3 caption no longer calls the planned UCSF AUCs exploratory. Figure 1
 one model on both inputs, and the MU box says that the locked models were fitted on all 181 grade 4 scans. Figure 4:
 the threshold label no longer collides with a bar.
 Left: P10 (the label-circularity caveat in the Conclusion).
+
+## Loop 7: my own whole read after six loops of edits
+
+First-sentence test passed: read alone, the paragraph openers give the argument. Two small breakages from earlier
+loops were fixed: an ambiguous "They" in the Introduction, and in 3.4 "the rule then flagged…", which after loop 6
+referred to the wrong rule (now attached to the MU-median rule, before the conformal-set sentence).

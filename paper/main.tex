@@ -66,7 +66,7 @@ longitudinal: images and their change, treatment timing and the parts of the rec
 % Sources: OUTLINE.md (spine C1--C5); SYSTEM_LANDSCAPE.md rows 1.7, 6.3; refs an2021, varoquaux2018, yu2022.
 Radiomics and other prediction models can quantify image patterns, but a probability alone does not show the
 treatment context, the measurements behind an image input, the uncertainty around a score, or what the model did not
-use. They are hard to fill from surveillance data, because public datasets often contain images but few treatment dates,
+use. Surveillance data make these gaps hard to close, because public datasets often contain images but few treatment dates,
 centres document progression differently, the hardest situations are uncommon, and segmented volumes need inspection
 before they are used as inputs. Small cohorts also make a single test split an
 unstable account of performance \citep{an2021,varoquaux2018}. Only 3 of 20 studies in a recent systematic review of
@@ -294,9 +294,9 @@ scans aside also gained 0.08 (0.05--0.12) more than removing the same number of 
 (Table~\ref{tab:2}; Figure~\ref{fig:4}B). The planned tests at the external centres, which
 placed each cohort's medians on its own scores, were not met; at LUMIERE the difference was 0.11 ($-$0.05 to 0.27).
 With the MU medians that the system uses, LUMIERE's AUCs were 0.89 where the pathways agreed and 0.67 where they
-disagreed (difference 0.22, 0.10--0.34)\expl, while at UCSF the interval still included zero. A conformal set holding both outcomes, used
-as a flag, met one of the two planned tests at LUMIERE and one at UCSF (Table~\ref{tab:2}). The rule then flagged
-60\% of LUMIERE scans and 48\% of UCSF scans (\todo{Supplementary section: system results}).
+disagreed (difference 0.22, 0.10--0.34)\expl, while at UCSF the interval still included zero; with these medians the pathways disagreed on 60\% of LUMIERE scans
+and 48\% of UCSF scans (\todo{Supplementary section: system results}). A conformal set holding both outcomes, used as
+a flag, met one of the two planned tests at LUMIERE and one at UCSF (Table~\ref{tab:2}).
 
 % Sources: RELIABILITY_CARD.md (Reading, lookup table); SYSTEM_RESULTS.md S4; NUMBERS.md mismatch 14 and section 6.
 % Round 5 (audit WRONG 6): MU denominator is the 146 intended-use scans of S4 (54 tested, 92 few cases).
