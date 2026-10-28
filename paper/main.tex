@@ -544,15 +544,15 @@ system results}: both tests for each flag in each cohort, with both median rules
 \centering
 \figslot{fig1_system.pdf}{0.40\textheight}{PRISM is built of modules, each answering a known challenge: scan and
 record; segmentation and measurements; the timeline pathway; the image pathway; the combined score; the confidence
-(conformal set, agreement, card); the local report. One worked example scan.}
-\caption{\textbf{PRISM is built of modules, each answering a known challenge.} A scan and its record enter two
-pathways: the timeline pathway (clinical data and the patient's position in treatment) and the image pathway
-(measurements from the segmentation masks supplied with each cohort). The combined score, one ridge model on both
-sets of inputs, is shown beside them. The confidence has three parts:
-a conformal prediction set at the 80\% level, a statement of whether the two pathways agree, and the reliability
-card's tier for the scan's situation. A local language model writes the report from the record, and a deterministic
-checker tests its numbers, flags and confidence statements against the record. One example scan is followed through
-each module.}
+(conformal set, agreement, card); the local report; and the evaluation design.}
+\caption{\textbf{PRISM and how it was evaluated.} (A) At each scan, measurements from the segmentation masks feed
+the image pathway, and clinical data with the patient's position in treatment feed the timeline pathway; the
+combined score, one ridge model on both sets of inputs, is shown beside them. The confidence has three parts: an
+80\% conformal prediction set, a statement of whether the two pathways agree, and the reliability card's tier for
+the scan's situation. Every value enters a structured record with its source; a local language model writes the
+report from that record, and a deterministic checker tests its numbers, flags and wording against it. (B) Models
+were developed on MU-Glioma-Post by repeated cross-validation, fitted once and applied unchanged to LUMIERE and
+UCSF-ALPTDG under plans committed in advance; reports were evaluated on records from all three cohorts.}
 \label{fig:1}
 \end{figure}
 
@@ -565,9 +565,10 @@ each module.}
 progression was documented, by pathway (clinical data alone, timeline, images, combined) and cohort: MU-Glioma-Post
 (repeated cross-validation, intended use); LUMIERE and UCSF-ALPTDG (models fitted once on MU-Glioma-Post and applied
 unchanged); and UCSF-ALPTDG with models trained there, as a reference. At LUMIERE and UCSF-ALPTDG the timeline is the
-reduced version, and the clinical-only model at LUMIERE is marked \textdagger. At UCSF-ALPTDG the images are shown for the
-single-scan model and for the image pathway with change features, which is the system's image pathway. The grey bar
-is the log enhancing tumour volume of the scan alone, with no fitted model\expl. Bars are 95\% patient-bootstrap CIs.}
+reduced version; the clinical-only model at LUMIERE was not fixed in advance. At UCSF-ALPTDG the images are shown for the
+single-scan model and for the image pathway with change features, which is the system's image pathway. The hatched bar
+is the log enhancing tumour volume of the scan alone, with no fitted model\expl. Error bars are 95\% patient-bootstrap
+CIs; the dotted line is chance.}
 \label{fig:2}
 \end{figure}
 
@@ -593,11 +594,10 @@ with and without the disagreement warning. (C) The reliability card: situations 
 \caption{\textbf{The confidence keeps its coverage on average, and disagreement marks the less accurate scans at
 MU-Glioma-Post.} (A) Coverage of the 80\% conformal sets by cohort and pathway; the dashed line is the threshold fixed
 in advance, met by the combined score on point estimates in all three cohorts; by outcome, coverage fell short for one outcome at
-LUMIERE and UCSF-ALPTDG (Section~\ref{sec:3.4}). (B) AUC of the combined score where
-the pathways agree and where they disagree, and after the disagreeing scans are set aside, compared with removal
-matched for phase of care, at MU-Glioma-Post. With each cohort's own medians, as fixed in advance, disagreement did
-not mark the less accurate scans at LUMIERE or UCSF-ALPTDG; with medians fixed on MU\expl, it did at LUMIERE. (C) The reliability card: situations (phase of care by change in enhancing tumour) in each
-cohort, shaded by tier (tested, few cases, not tested). The agreement rule and the card were defined after the cohort results had been seen (\textdagger).}
+LUMIERE and UCSF-ALPTDG (Section~\ref{sec:3.4}). (B) The combined score's AUC where
+the pathways agree minus where they disagree, by cohort, with each cohort's own medians (filled, as fixed in
+advance) and with medians fixed on MU-Glioma-Post (open\expl). (C) Scans whose situation (phase of care by change in
+enhancing tumour) reached the card's tested tier, by cohort; the rest have few cases. The agreement rule and the card were defined after the cohort results had been seen (\textdagger).}
 \label{fig:4}
 \end{figure}
 
@@ -606,9 +606,11 @@ cohort, shaded by tier (tested, few cases, not tested). The agreement rule and t
 \centering
 \figslot{fig5_report.pdf}{0.40\textheight}{One rendered report (segmentation figure, pathways, combined score,
 confidence) and faithfulness by cohort.}
-\caption{\textbf{The report states the evidence and passes a check against the record.} Left: one report as the clinician receives
-it, with the segmentation figure and its volumes, the two pathway scores, the combined score, the conformal set, the
-agreement statement and the card's tier. Right: share of reports passing the lexical check of numbers, flags and wording, by cohort, in the
+\caption{\textbf{The report states the evidence and passes a check against the record.} (A) The narrative of a
+PRISM report for a synthetic scan taken eight weeks after radiotherapy with growing enhancement, the situation of
+Section~\ref{sec:4}; the volumes are invented, and the card row is MU-Glioma-Post's. Each sentence lists the record
+fields it cites, which the checker uses; the delivered report also holds the segmentation figure, tables of every
+value and a fixed limitations section. (B) Reports passing the lexical check of numbers, flags and wording in the
 second evaluation, after one revision of the prompt following a failure at LUMIERE (Section~\ref{sec:3.5}).}
 \label{fig:5}
 \end{figure}
