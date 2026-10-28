@@ -161,9 +161,8 @@ UCSF.
 The primary task is to decide, at each scan, whether this is the scan at which progression is documented. On MU a positive is the first
 scan on or after the documented progression date, and a negative is a scan followed by at least 120 days without
 progression. At LUMIERE a positive is the first scan rated as progressive disease, and a negative is an earlier scan
-rated stable or responding. At UCSF a positive is a second scan with progression dated within 30 days of it and
-nearer to it than to the first scan; a negative is a second scan with progression at least 120 days later, or with at
-least 120 days of follow-up without progression. On MU the intended use is scans from the start of radiotherapy
+rated stable or responding. At UCSF a positive is a second scan whose progression date lies within 30 days of it and closer to it than to the
+first scan; a negative is a second scan followed by at least 120 days without progression. On MU the intended use is scans from the start of radiotherapy
 onwards, and unless stated MU results are for this population; LUMIERE and UCSF are evaluated on all scans in their
 detection sets. We divide the intended use into three phases of care: during radiotherapy, early after radiotherapy (up to 12
 weeks after its end) and later. A secondary task, predicting progression within 120 days of a scan, is reported in
@@ -259,7 +258,8 @@ the timeline, with AUCs of 0.68 (0.58--0.77) and 0.64 (0.51--0.78).
 We built the image model on MU in three steps\expl{} to see which inputs raised its AUC (Figure~\ref{fig:3}C). Adding
 change from earlier scans to the current scan's measurements gave the image pathway, 0.05 higher with an interval that included zero (0.00 to 0.11), and adding the three
 schedule inputs of the planned imaging model (the interval since the previous scan, a flag for whether there was one
-and the smallest volume counted from the end of radiotherapy) raised the AUC by a further 0.10 (0.05--0.15) across
+and the smallest volume counted from the end of radiotherapy), which gives that model's image inputs without its
+timeline, raised the AUC by a further 0.10 (0.05--0.15) across
 phases of care but not within them ($-$0.01, $-$0.06 to $+$0.04).
 
 % Sources: UCSF_AUDIT.md sections 3--6, EXPLORATORY intervals table and Overall verdict; NUMBERS.md 5. Council ruling 2.
@@ -547,7 +547,8 @@ UCSF-ALPTDG under plans committed in advance; reports were checked on records fr
 \caption{\textbf{The models rank scans at two external centres without refitting.} AUC for detecting the scan at which
 progression was documented, by pathway (clinical data alone, timeline, images, combined) and cohort: MU-Glioma-Post
 (repeated cross-validation, intended use); LUMIERE and UCSF-ALPTDG (models fitted once on MU-Glioma-Post and applied
-unchanged); and UCSF-ALPTDG with models trained there, as a reference. At LUMIERE and UCSF-ALPTDG the timeline is the
+unchanged); and UCSF-ALPTDG with models trained there, as a reference, where clinical data alone fall below 0.5, as a model with
+no signal can under cross-validation. At LUMIERE and UCSF-ALPTDG the timeline is the
 reduced version; the clinical-only model at LUMIERE was not fixed in advance. At UCSF-ALPTDG the images are shown for the
 single-scan model and for the image pathway with change features, which is the system's image pathway. The hatched bar
 is the log enhancing tumour volume of the scan alone, with no fitted model\expl. Error bars are 95\% patient-bootstrap

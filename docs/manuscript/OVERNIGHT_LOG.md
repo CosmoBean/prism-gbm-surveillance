@@ -83,3 +83,12 @@ Changed (clarity): within-phase AUC defined in 2.3 (pairs from the same phase); 
 findings; Figure 4B's MU rows labelled (the system's rule on MU uses the other folds' medians); Figure 4C says no
 scan was untested; Figure 5A uses the reports' real sentence forms.
 Kept against the editor: the intended-use 0.60 stays in the Discussion (STYLE.md §4 requires it there and in 3.1).
+
+## Loop 5: the cold reader's remaining confusions
+
+Changed: the UCSF label definition in plain words (one negative clause, the same meaning); the third step of the
+image-model ladder is identified as the planned imaging model's image inputs without its timeline, which explains
+why Figure 3C (0.81) differs from the planned model (0.84); the Figure 2 caption explains the UCSF-trained
+clinical-only bar below 0.5; Figure 1B gives the report counts by cohort (130 UCSF second scans against 69 in the
+detection set). Checked P6 against the code: the report medians are taken over each cohort's own evaluation scans
+(`prism/analyses/system.py`, `derive`).
