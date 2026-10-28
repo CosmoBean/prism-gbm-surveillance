@@ -1,5 +1,13 @@
 # Outline: the argument of the PRISM paper (layer 1)
 
+## Structure after the 2026-10-28 overnight passes (not a change of story)
+
+Main text 2,794 words, figures and tables in the text. Table 1: the scores (inputs, dates, planned or not fixed in
+advance). Table 2: cohorts. Table 3: tests fixed in advance (verdict register). Results: 3.1 the timeline led at MU,
+and the combined and image models transferred; 3.2 the scores followed the schedule at MU and enhancement at UCSF;
+3.3 coverage and disagreement; 3.4 the report check. The agreement rule as evaluated uses each cohort's own medians
+(MU-fixed medians are exploratory). Details: OVERNIGHT_LOG.md; open decisions: OVERNIGHT_PROPOSALS.md.
+
 ## System-first revision (approved 2026-10-26)
 
 This revision supersedes the earlier model-audit-first framing below. The paper begins with the clinical problem:
