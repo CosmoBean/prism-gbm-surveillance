@@ -178,3 +178,27 @@ Pre-pass copy: `paper/backup/main_pre-loop10_2026-10-28.{pdf,tex}`. Author direc
   Now 2.1 says so, the MU-median rule is the exploratory variant, and 3.4, Figure 4B and the Table 3 note follow.
   **This weakens one sentence** (the LUMIERE agreement result is now plainly exploratory), so check it.
 - Captions rewritten at about half their length; Figure 5's title is now "What the clinician receives, and the check".
+
+## Loop 11: validation of the rewrite (integrity audit, cold read, hostile read)
+
+Audit (old vs new text and NUMBERS.md): every number correct; 18 items fixed. These were lost qualifiers ("an
+interval that included zero", "point estimates", "re-selected and re-tested", "segmentation" in elyassirad2025,
+"preoperative and postoperative MRI" in chen2026), lost content (the locked models' training set, 181 grade 4
+scans; external CIs; caption clauses), missing daggers (Discussion ¶1, Figure 4C, Figure 5B), and two claims made
+stronger in the rewrite (the 3.5 heading, now "After one revision, every report passed…"; the novelty sentence,
+whose condition was restored).
+Cold read: 7/10 article, 6/10 concise. Too-compressed spots were expanded (the UCSF positive, why MU medians are
+needed, why a scan's own result in the card is acceptable). Overlong sentences were split (3.2, 3.4 coverage). The
+3.4 heading was shortened.
+Hostile read: the planned-or-post-hoc status of the agreement rule is now consistent. The flag and its tests were
+planned and the median rule was written down later (2.3, Table 3 note, 3.4). Overclaims were calibrated: "keeping
+the pathways apart does" → "the separate pathways and the audits of 3.3 can"; UCSF "scores well largely by agreeing"
+→ "can score well there by tracking enhancement"; "the clinician sees" → "the report states"; the card "is designed
+so that" a cohort adds rows. One Limits sentence now says which parts of the confidence held externally (only
+average coverage). The Conclusion now carries the cohort finding. The locked combined model's MU cross-validation
+AUC (0.80) is now given, so "applied unchanged" is checkable.
+Figure 5B replaced (P4): the reports passing the check for seven local models with the same prompt; the two largest
+dense models pass in every cohort.
+Supplement: two "main Table 1" references now point to Table 2 (cohorts). The supplement's other cross-references
+were already stale (old "M2.x" numbering); see P12.
+Main text: 2,898 words (loop 10: 2,736; before the second pass: 3,867).

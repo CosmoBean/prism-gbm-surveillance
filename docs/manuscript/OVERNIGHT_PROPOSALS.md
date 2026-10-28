@@ -72,3 +72,14 @@ fails externally while the exploratory MU-median rule is the one the system uses
 split into two paragraphs (the planned result first and stated plainly, then the MU-median result marked †). A
 fuller fix is a small grid in the supplement or as Table 2's replacement rows: cohorts × {disagreement, set} under
 the planned rule, plus one † row for the MU medians. It changes a display item, so it is left to you.
+
+## Status after the second pass
+- P4 done (Figure 5B is now the report-model ladder). P6 done in the text (2.1, 3.4, Figure 4B, Table 3 note). P7
+  done (Table 1, the scores). P11 partly done: 3.4 states the planned result first, and the Limits say which parts
+  of the confidence held. P10 partly done: 3.3 and the Conclusion now carry the label point.
+
+## P12. The supplement's cross-references are stale
+`supplement.tex` refers to main-text sections as "M2.8", "M2.11" and so on, from an older structure, and to old table
+numbers. The main text is now 2.1–2.3, 3.1–3.5, Table 1 (scores), Table 2 (cohorts) and Table 3 (planned
+questions). Every `\todo{Supplementary section: …}` in the main text also still needs its supplement section.
+This is a separate reconciliation pass.

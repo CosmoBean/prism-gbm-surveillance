@@ -274,20 +274,21 @@ def fig5(output: Path) -> None:
     ax.text(0.03, y - 0.004, "Fixed limitations section (excerpt): the scores rank scans; they are not a diagnosis and the\n"
             "report gives no recommendation or decision. No clinician has evaluated this report.", fontsize=6.3, va="top", color="#555", style="italic")
 
-    bx = fig.add_axes([0.76, 0.55, 0.22, 0.33])
-    bx.set_title("B   Reports passing the check", loc="left", weight="bold", x=-0.38)
-    counts = [("MU", 114, 114), ("LUMIERE", 162, 162), ("UCSF", 130, 130)]
-    for i, (name, k, n) in enumerate(counts):
-        bx.barh(2 - i, k / n, color=C["combined"], height=0.55)
-        bx.text(0.5, 2 - i, f"{k} of {n}", ha="center", va="center", color="white", fontsize=7, weight="bold")
-    bx.set(yticks=[2, 1, 0], yticklabels=[c[0] for c in counts], xlim=(0, 1), xlabel="Share of reports")
-    cx = fig.add_axes([0.70, 0.04, 0.29, 0.36]); cx.axis("off")
-    cx.text(0.0, 1.0, "Also checked, all 406 reports:", fontsize=7, weight="bold", va="top")
-    cx.text(0.0, 0.86, "• 220 of 220 state a few-case or\n   untested tier where one applies\n"
-            "• 28 of 30 changed records followed\n   (planned minimum: 27)\n"
-            "• no unsupported number, invalid\n   citation or forbidden wording\n\n"
-            "Lexical check only: it cannot judge\nemphasis, order or what a\nclinician would infer.",
-            fontsize=6.6, va="top", linespacing=1.3, color=C["ink"])
+    # Model-size ladder (NUMBERS.md 7: v3.1, frozen prompt, no per-model tuning; descriptive).
+    bx = fig.add_axes([0.83, 0.30, 0.16, 0.56])
+    bx.set_title("B   Reports passing the check,\n     by local model (of 406)", loc="left", weight="bold", x=-0.62)
+    ladder = [("Qwen 2B", 3.6, 21, False), ("Qwen 4B", 8.0, 306, False), ("Gemma E4B", 14.5, 117, False),
+              ("Qwen 9B", 16.8, 368, False), ("Qwen 27B, used", 50.2, 406, True),
+              ("Gemma 31B", 57.9, 406, True), ("Qwen 35B-A3B", 64.7, 389, False)]
+    for i, (name, gib, k, ok) in enumerate(ladder):
+        y = len(ladder) - 1 - i
+        bx.barh(y, k / 406, color=C["combined"] if ok else tint(C["combined"], 0.55), height=0.62)
+        bx.text(k / 406 + 0.02 if k < 330 else k / 406 - 0.02, y, str(k), va="center", ha="left" if k < 330 else "right",
+                fontsize=6.3, color="white" if ok else C["ink"], weight="bold")
+    bx.set(yticks=range(len(ladder)), xlim=(0, 1), xlabel="Share of reports")
+    bx.set_yticklabels([f"{n} ({g:.0f} GiB)" for n, g, _, _ in ladder][::-1], fontsize=6.3)
+    bx.text(0, -0.30, "Dark: passed in every cohort (≥ 95%).\nSame prompt for every model.", transform=bx.transAxes,
+            fontsize=6.2, va="top", color="#444444")
     save(fig, output, "fig5_report")
 
 
