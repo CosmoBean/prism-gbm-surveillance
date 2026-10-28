@@ -159,3 +159,22 @@ panel B as drawn; the Figure 5 caption names the card's population.
   was found and not fixed (P6: the reports use each cohort's own medians, while the text says MU medians).
 - Decisions for you: OVERNIGHT_PROPOSALS.md, P1–P11. The most important are P1 (abstract), P6 (medians) and P11
   (flag grid).
+
+# Second pass (2026-10-28, author: "concise and right, not just look right"; figures in the text)
+
+Pre-pass copy: `paper/backup/main_pre-loop10_2026-10-28.{pdf,tex}`. Author direction recorded in STYLE.md §10.
+
+## Loop 10: figures in the text, the concise rewrite, the score table, the median fix
+
+- Floats: figures and tables now sit after the paragraph that first cites them (no "Tables" / "Figure legends"
+  sections); figures enlarged; 17 → 14 pages.
+- Concision: main text 3,867 → 2,736 words (−29%). Every section was rewritten from its findings; the "always in the
+  main text" items (STYLE.md §4) were kept: intended-use 0.60 (3.1 and Limits), the timing baseline, the
+  within-phase result, the planned/† marking, the scope limits, the results that fail (planned flag tests externally,
+  the report's first failure).
+- P7 done: new Table 1, "The scores in this paper" (inputs, dates, planned or †), so the prose names each score once.
+- P6 fixed in the text: the evaluated system and the reports place each pathway score against the median of its own
+  cohort's evaluation scans (`prism/analyses/system.py`, `derive`); the text had said the system uses MU medians.
+  Now 2.1 says so, the MU-median rule is the exploratory variant, and 3.4, Figure 4B and the Table 3 note follow.
+  **This weakens one sentence** (the LUMIERE agreement result is now plainly exploratory), so check it.
+- Captions rewritten at about half their length; Figure 5's title is now "What the clinician receives, and the check".

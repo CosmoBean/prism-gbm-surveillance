@@ -235,3 +235,6 @@ Add each reaction as a dated, one-line rule.
 - 2026-10-27: the proposed system-first abstract reads as fragments (a component inventory, five AUCs from different
   pathways, a report check, a disclaimer). The abstract must tell one narrative with a punchline up front; describe
   what the system is for, not every part it has; no factual-report tone.
+- 2026-10-28: the author liked the overnight pass and asked for more: concise and right, not just right-looking. "Not
+  a million words, but the 100 words that actually drive the impact." Cut every sentence that does not move the
+  argument; figures and tables sit in the text next to their first mention, not at the end.

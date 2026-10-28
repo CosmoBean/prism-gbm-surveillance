@@ -1,0 +1,606 @@
+% main.tex -- manuscript. SOURCE OF TRUTH from 2026-10-15 (docs/manuscript/DRAFT.md is a frozen snapshot).
+% Build: ./build.sh (tectonic). Figures are read from ../docs/manuscript/figures/ (see macros.tex).
+% LAYER: PROSE DRAFT (2026-10-26), council rounds 1 to 5 applied (docs/manuscript/council/round{1,2,3,4,5}_decisions.md). Every number
+% is from docs/manuscript/NUMBERS.md; each paragraph names its sources in a one-line comment. The skeleton is in git
+% history (commit 69d6e09) and in paper/backup/.
+\documentclass[largeformat]{interact} % Taylor & Francis template (CMBBE: Imaging & Visualization)
+\input{macros}
+% Council round 5: one marker for results of analyses not fixed in advance (defined in Section 2.3).
+\newcommand{\expl}{\textsuperscript{\textdagger}}
+
+\begin{document}
+\linenumbers
+
+\articletype{ARTICLE}
+
+\title{\papertitle}
+
+\author{
+\name{Sri Datta Ganesh Bandreddi\textsuperscript{a}\thanks{CONTACT Sri Datta Ganesh Bandreddi. Email: sbandred@andrew.cmu.edu; ORCID: 0009-0004-3617-6734}
+  and Jessica Zhang\textsuperscript{b}}
+\affil{\textsuperscript{a}Department of Biomedical Engineering, Carnegie Mellon University, Pittsburgh, PA, USA;
+\textsuperscript{b}Department of Mechanical Engineering, Carnegie Mellon University, Pittsburgh, PA, USA}
+}
+
+\maketitle
+
+% Unstructured abstract, 100--150 words (journal instructions).
+% PROPOSED 2026-10-26, to replace the abstract locked on 2026-10-24 (docs/manuscript/LOCKED.md), which predates the
+% external tests and the system results. Not locked until the author approves it. Council round 3
+% (docs/manuscript/council/round3_decisions.md): the voice reviewer's proposal as the base; the first sentence gives the
+% clinical reason (treatment effects mimic progression) and "so the clinician sees what each score uses"; "a model
+% trained there did better" quantified as 0.86 (the image pathway trained at UCSF, Section 3.2); coverage "on point
+% estimates". Council round 4 (round4_decisions.md): coverage "on average", short for one outcome at both external
+% centres (NUMBERS.md 12B); cuts for length. Council round 5 (round5_decisions.md): the fresh editor's proposal, with
+% the card ("stating where evidence is thin"), the schedule finding ("when in treatment patients were scanned") and the
+% image pathway on MU (0.71, exploratory model). 149 words. Sources: NUMBERS.md sections 1, 3, 4 and 12B.
+\begin{abstract}
+Surveillance MRI after treatment for glioblastoma and other aggressive gliomas must be interpreted with prior imaging
+and the treatment course. A progression score alone does not show the clinician the evidence that produced it or what
+it leaves out. We built PRISM, a modular system that combines image-derived measurements, treatment context, separate
+image and timeline pathways, uncertainty and provenance in a locally generated, checked report. On MU-Glioma-Post,
+the timeline and image pathways reached AUCs of 0.82 and 0.71. Applied unchanged, the combined score reached 0.77 on
+LUMIERE; at UCSF-ALPTDG, single-scan image measurements reached 0.80 and the image pathway 0.73. The evidence behind
+the scores differed by cohort: treatment timing at MU-Glioma-Post and enhancing volume at UCSF-ALPTDG. In a second,
+cross-cohort report evaluation, 406 of 406 reports passed a lexical check against their structured records. PRISM is
+designed to make evidence inspectable, not to replace clinical judgement; its effect on clinical decisions needs a
+reader study.
+\end{abstract}
+
+% No more than 3 keywords (journal instructions).
+\begin{keywords}
+glioma surveillance; external validation; clinical decision support
+\end{keywords}
+
+% =====================================================================================================
+\section{Introduction}\label{sec:1}
+
+% Sources: OUTLINE.md (Introduction 1); refs taal2008, brandes2008.
+Glioblastoma and other aggressive gliomas require repeated MRI surveillance after surgery and chemoradiotherapy. At
+each scan, the clinical team interprets the current images against earlier images and the course of treatment. The
+decision is hardest soon after radiotherapy, when treatment can increase contrast enhancement without tumour growth.
+This pseudoprogression is most common in the first weeks after chemoradiotherapy and more frequent when the promoter
+of MGMT, a DNA-repair gene, is methylated \citep{taal2008,brandes2008}. The information needed for that judgement is
+longitudinal: images and their change, treatment timing and the parts of the record that are known on the scan day.
+
+% Sources: OUTLINE.md (spine C1--C5); SYSTEM_LANDSCAPE.md rows 1.7, 6.3; refs an2021, varoquaux2018, yu2022.
+Radiomics and other prediction models can quantify image patterns, but a probability alone does not show the
+treatment context, the measurements behind an image input, the uncertainty around a score, or what the model did not
+use. Surveillance data make these gaps hard to close, because public datasets often contain images but few treatment dates,
+centres document progression differently, the hardest situations are uncommon, and segmented volumes need inspection
+before they are used as inputs. Small cohorts also make a single test split an
+unstable account of performance \citep{an2021,varoquaux2018}. Only 3 of 20 studies in a recent systematic review of
+automated response assessment included external evaluation \citep{shi2025}.
+
+% Sources: OUTLINE.md (question).
+Our initial radiomics work on MU-Glioma-Post led us to ask whether a system could turn the evidence available at a
+post-treatment scan into a report that a clinician can inspect: one that keeps image and treatment-timeline evidence
+separate, transfers to other centres without refitting, states where the evidence is thin and is written inside the
+hospital.
+
+% Sources: OUTLINE.md (claim); NUMBERS.md sections 3--7.
+PRISM, the system we built, turns each scan into a structured evidence record: clinical and treatment-timeline inputs,
+measurements from the segmented tumour, separate image and timeline scores, a combined score, uncertainty fields and
+their provenance. A local language model writes the narrative from that record, and a deterministic checker tests the
+narrative against it. We developed PRISM on MU-Glioma-Post (MU) and applied its models unchanged to LUMIERE and UCSF-ALPTDG (UCSF). The
+component models ranked scans at the external centres, but the inputs that drove a score differed by cohort, so the report shows the two pathway scores separately, each with the inputs it is based on.
+
+% =====================================================================================================
+\section{Methods}\label{sec:2}
+
+\subsection{PRISM}\label{sec:2.1}
+
+% Sources: OUTLINE.md (spine table); SYSTEM_PLAN.md section 1.
+PRISM handles each scan in five modules (Figure~\ref{fig:1}) and writes their outputs to one structured evidence
+record. The timeline pathway and the image pathway keep the two kinds of evidence apart, so that the image pathway
+can run where no treatment dates exist and the audit can show which evidence a score used. Segmentation masks supply
+the measurements and images displayed in the report. The record also carries a set of plausible outcomes, agreement
+between pathways, how many scans like this one have been tested and the provenance of every displayed value. The
+report is written locally from that record, so patient data do not leave the hospital.
+
+% Sources: DETECTION_TASK.md (Plan, B1, B0; External test, Tbase); UCSF_RESULTS.md deviation 3; NUMBERS.md 2.1.
+The timeline pathway scores a scan from clinical data and the patient's position in treatment. On MU its inputs are age, sex, IDH mutation and MGMT promoter methylation, the days since diagnosis and since
+surgery, the start, end and dose of radiotherapy, chemotherapy and the visit index, each taken as of the scan day. The
+first four alone form the clinical-only reference model. Where a cohort records no treatment dates, PRISM uses a reduced timeline that
+keeps the clinical inputs, the days since surgery and a flag for the first weeks after radiotherapy. The flag comes
+from the rater's note at LUMIERE and is approximated from the start of radiotherapy at UCSF. Both pathways are ridge
+logistic regressions; scaling and any selection were fitted on the training data only. An unknown IDH or MGMT status
+is coded as the reference category, and a missing measurement is filled with the training median, with a
+missing-value indicator, inside the fitted pipeline.
+
+% Sources: DETECTION_TASK.md (EXPLORATORY pure imaging); UCSF_IMAGING.md; SPLIT_VARIANCE.md; SYSTEM_RESULTS.md Deviations 1.
+The image pathway scores a scan from simple measurements of the segmented tumour. On MU its 27 inputs are the
+volumes, shape and relative intensity of the segmented compartments at the scan, their change from the previous
+scan, and the enhancing and total lesion volumes relative to the smallest in the patient's history
+(\todo{Supplementary section: image pathway inputs and their harmonisation at LUMIERE and UCSF}). It holds no dates,
+intervals or treatment flags, because such inputs carry when a scan was taken, which the timeline already holds, and
+the image pathway has to run where no dates exist (Section~\ref{sec:3.3}). A single-scan version keeps only the 19
+measurements of the current scan.
+
+The combined score is one ridge model fitted on the inputs of both pathways and is shown beside them. At LUMIERE and
+UCSF its inputs are the reduced timeline, the harmonised volumes and their change, the interval since the previous
+scan and whether there was one.
+
+% Sources: SEG_FIGURE.md; UCSF_IMAGING.md; NUMBERS.md mismatch 6; refs mahmoud2025, suter2022, fields2024.
+The measurements come from the segmentation masks supplied with each cohort, which are the automatic masks released with MU
+\citep{mahmoud2025}, the DeepBraTumIA masks of LUMIERE \citep{suter2022} and the masks provided with UCSF
+\citep{fields2024}. PRISM renders the report's figure from the same masks by code.
+
+% Sources: SYSTEM_PLAN.md section 2; SYSTEM_RESULTS.md Specification and "cost of the split"; RELIABILITY_CARD.md;
+% refs angelopoulos2023, mitchell2019. Agreement rule with medians fixed on MU: NUMBERS.md 12A (round 4).
+Each scan's confidence has three parts, a conformal set, a pathway-agreement statement and a reliability card
+\citep{mitchell2019}. The conformal set is a patient-level split conformal prediction set at the 80\% level
+\citep{angelopoulos2023}, built to contain the true outcome for at least 80\% of scans; it holds one outcome when
+the score is clear and both when it is not. It comes from the combined model refitted on 70\% of the MU patients and calibrated on the remaining 30\%
+(\todo{Supplementary section: system results}). On MU this split is made inside each training fold. For the external
+cohorts we applied one MU-calibrated set unchanged, which assumes that their scans are exchangeable with MU's. The two pathways agree when both scores lie
+above, or both below, each pathway's median on MU, so the rule needs no labels and can be applied to a single scan. The medians come
+from the MU training scans of the locked models, or, on MU, from the held-out scores of the other folds.
+The reliability card describes the scan's situation, its phase of care crossed with the change in enhancing tumour
+since the previous scan, by looking it up in a table of that cohort's held-out results. The card is a record of measured results, so the
+scan's own result is part of its row. A situation with at least 10 progression and 10
+non-progression scans is tested, and the card gives its AUCs. A situation with fewer has few cases, and the card
+gives counts only; a situation with none is not tested.
+
+% Sources: REPORT_V3.md (Design, Checker v3); REPORT_V3_1.md; Supplementary S19.
+A local language model writes the report from the scan's record, and a deterministic checker tests the report
+against that record. The model (Qwen3.8-27B) runs offline on one GPU at temperature 0 and receives only the record; the checker
+rejects any number, flag or confidence statement that is not in the record, any omission of required content, and any
+wording that offers a diagnosis, advice or a probability (Supplementary Section~S19).
+
+\subsection{Cohorts and the task}\label{sec:2.2}
+
+% Sources: TABLE1_COHORT.md; UCSF_DATA.md; UCSF_PLAN.md; refs mahmoud2025, suter2022, fields2024.
+In all three cohorts the primary population is grade 4 glioma. We fitted each model once on MU and applied it
+unchanged to LUMIERE and UCSF, and we call these models locked. Table~\ref{tab:1} lists what each cohort
+records; UCSF holds one pair of consecutive post-treatment scans per patient, and because the first scan has no earlier
+scan we evaluated the second only. Progression is documented in each cohort's own record, as a dated clinical decision
+at MU, as an expert rating of response at each scan at LUMIERE and as a progression date supplied with the dataset at
+UCSF.
+
+% Sources: DETECTION_TASK.md (Plan, Cohort, External test); UCSF_PLAN.md; INTENDED_USE.md.
+The primary task is to decide, at each scan, whether this is the scan at which progression is documented. On MU a positive is the first
+scan on or after the documented progression date, and a negative is a scan followed by at least 120 days without
+progression. At LUMIERE a positive is the first scan rated as progressive disease, and a negative is an earlier scan
+rated stable or responding. At UCSF a positive is a second scan whose progression date lies within 30 days of it and closer to it than to the
+first scan; a negative is a second scan followed by at least 120 days without progression. On MU the intended use is scans from the start of radiotherapy
+onwards, and unless stated MU results are for this population; LUMIERE and UCSF are evaluated on all scans in their
+detection sets. We divide the intended use into three phases of care: during radiotherapy, early after radiotherapy (up to 12
+weeks after its end) and later. A secondary task, predicting progression within 120 days of a scan, is reported in
+the supplement.
+
+\subsection{Evaluation}\label{sec:2.3}
+
+% Sources: DETECTION_TASK.md (Plan); SPLIT_VARIANCE.md (Results table 1); Supplementary S8 and Figure S2.
+% OUTLINE open question (split variance): settled here as one paragraph + supplementary pointer (council round 1
+% recommendation, pending author). UCSF own-split result moved to RESERVE.md.
+On MU, every model was evaluated by repeated patient-grouped cross-validation. We used five repeats of five folds,
+with all scans of a patient in the same fold, and report the mean over repeats of the pooled held-out AUC with a 95\%
+confidence interval (CI) from 1,000 patient-level bootstrap draws. For the models and the conformal sets, no
+patient appears in more than one of fitting, calibration and testing. We chose repeated splits because an earlier radiomics model on MU reached an AUC of
+0.80 on one test split and averaged 0.72 when re-selected and re-tested over 500 splits of the same design
+(Supplementary Section~S8 and Figure~S2).
+
+% Sources: UCSF_PLAN.md (0e7c9fe); SYSTEM_PLAN.md (e7cba80); REPORT_V3_1_PLAN.md (4f7e7b9); UCSF_RESULTS.md Part A, B.
+For the external tests, the locked models, fitted on all grade 4 detection scans of MU from every phase of care,
+were applied under plans committed before any model score was compared with an external label. We made one deviation: the UCSF-ALPTDG plan named all MU detection scans for fitting, but we fitted on the grade 4
+scans. Fitting on all gliomas gave almost the same AUC at LUMIERE (0.77); at UCSF we tested the all-glioma models on
+all-glioma scans (\todo{Supplementary section: deviations from the plans}).
+External AUCs have 95\% CIs from 1,000 patient-level bootstrap draws. As a reference, we also fitted each
+UCSF model on UCSF itself by repeated cross-validation. To test whether deep networks see more in the images than the
+measurements do, we fine-tuned segmentation networks to score each scan directly, against a control trained on
+permuted labels (\todo{Supplementary section: deep networks at MU and UCSF}). Table~\ref{tab:2} lists the planned questions and their answers.
+
+% Sources: NUMBERS.md (status column) and section 12; OUTLINE.md decision 8. Round 5: one marker (dagger) replaces the
+% "(exploratory)" tags; the full list moves to the supplement; report-model comparison is planned (REPORT_V3_1_PLAN.md 4).
+Results of analyses not fixed in advance carry a dagger (\textdagger) where they first appear in a paragraph,
+legend or table, and the analyses are listed in \todo{Supplementary section: analyses not fixed in advance}. Among
+them are the definition of the image pathway on MU, whose use at UCSF and in the system tests was planned, and the
+agreement rule and the reliability card, which were defined after the cohort results had been seen. We use comparisons within a phase of care or within an enhancement category to diagnose what a score depends on; a
+within-phase AUC pools only the pairs of a progression and a non-progression scan from the same phase.
+
+% =====================================================================================================
+\section{Results}\label{sec:3}
+
+
+
+\subsection{The pathways provide distinct evidence at the development centre}\label{sec:3.1}
+
+% Sources: DETECTION_TASK.md (Primary table; EXPLORATORY pure imaging, images + clinical); INTENDED_USE.md; NUMBERS.md 3.
+In the intended use on MU (146 scans; Table~\ref{tab:1}), the image pathway\expl{} detected the progression scan
+with an AUC of 0.71 (95\% CI 0.63--0.78), and the timeline pathway with 0.82 (0.75--0.90), mostly by separating
+phases of care, within which it did no better than the images (Section~\ref{sec:3.3}). Clinical data alone, without
+the timeline, scored 0.53, close to chance. The combined score that PRISM shows, fitted on the inputs of both
+pathways\expl, also reached 0.82, so on MU the images did not raise the timeline's AUC. A planned model that adds image measurements and three schedule inputs to the timeline fell short of its target gain
+of 0.03 (Table~\ref{tab:2}; Section~\ref{sec:3.3}). Predicting progression within 120 days of a scan was harder;
+the model reached 0.60 (0.52--0.69) in the intended use (Supplementary Section~S23). A timeline pathway needs treatment dates, which the two
+external cohorts largely lack, so we next tested how each pathway transfers to them.
+
+\subsection{The components rank scans at two external centres without refitting}\label{sec:3.2}
+
+% Sources: DETECTION_TASK.md (External test; EXPLORATORY clinical alone on LUMIERE); UCSF_RESULTS.md Part A; NUMBERS.md 4;
+% enhancing volume alone: NUMBERS.md 12C (MU 0.622 on MU-IU, not 0.635).
+The locked combined model reached 0.77 (0.68--0.86) on LUMIERE (Figure~\ref{fig:2}) and met its planned transfer
+rule (Table~\ref{tab:2}). At LUMIERE the combined score was above either pathway alone, images 0.65 and the reduced
+timeline 0.69\expl{} (the gain over the timeline alone had an interval that included zero). Clinical data alone
+stayed close to chance in all three cohorts (at LUMIERE\expl; Figure~\ref{fig:2}). Enhancing tumour volume alone, with no fitted
+model\expl, scored 0.62 on MU, below the image pathway, and 0.66 on LUMIERE, level with the image pathway and the timeline (Figure~\ref{fig:2}).
+
+% Sources: UCSF_RESULTS.md (Part A, Part B, Q1--Q3, contrasts); NUMBERS.md mismatch 1. Council ruling 1.
+At UCSF, both planned image models transferred. Measurements of the single scan reached 0.80 (0.69--0.89), and the
+image pathway, which adds change from the previous scan, reached 0.73 (0.60--0.84), meeting its planned transfer rule
+(Table~\ref{tab:2}). With coefficients fitted on MU, the change inputs therefore transferred less well than the measurements of the scan itself
+(paired difference $-$0.07, $-$0.13 to $-$0.01).
+Training at UCSF raised the image pathway to 0.86 (difference 0.14, 0.03--0.26), while the single-scan model scored
+about the same when trained there\expl. The reduced timeline had the lower AUC of the two pathways, 0.56; UCSF can only approximate its flag for the early
+weeks after radiotherapy (Section~\ref{sec:2.1}). The locked combined score reached 0.86 (0.76--0.93). It uses the approximated flag, and part of its AUC comes from
+the interval between the two scans, which was shorter before progression\expl{} (Figure~\ref{fig:2}).
+
+% Sources: NUMBERS.md 12D (operating point, EXPLORATORY) and 12F (calibration: UCSF PLANNED secondary, LUMIERE
+% EXPLORATORY); SYSTEM_RESULTS.md review-round-3 sections D and F.
+Read as a risk, the combined score was calibrated in the large at
+LUMIERE\expl{} but overpredicted progression at UCSF (observed over expected 0.72, 0.55--0.91), and a
+threshold set at the MU median\expl{} called 90\% of UCSF scans positive. A new centre therefore needs to recalibrate the score
+before reading it as a probability or applying a threshold (\todo{Supplementary section: calibration and
+thresholds}). 
+
+\subsection{The evidence behind a score differs by cohort}\label{sec:3.3}
+
+% Sources: DETECTION_TASK.md (Cohort by phase; within phase; EXPLORATORY images + clinical); STORY.md gap 3.
+At MU the scores depended mainly on where the patient was in treatment, and at UCSF on how much the tumour
+enhanced\expl{} (Figure~\ref{fig:3}). At MU the scan schedule alone separates most
+progression scans from most non-progression scans, because most progression scans came more than 12 weeks after
+radiotherapy and most non-progression scans came within those 12 weeks (Table~\ref{tab:1}). Across phases of care, adding the timeline to clinical data and images gained 0.11
+(0.04--0.20); within a phase it gained $-$0.02 ($-$0.13 to $+$0.11) (Figure~\ref{fig:3}A).
+Within a phase of care, where the schedule cannot separate the scans, the image pathway gave about as much evidence as
+the timeline, with AUCs of 0.68 (0.58--0.77) and 0.64 (0.51--0.78).
+
+% Sources: DETECTION_TASK.md (EXPLORATORY pure imaging; I as run); NUMBERS.md 5 ladder and mismatch 8 (the middle
+% step's CI is now NUMBERS.md 12E: +0.050 (-0.003 to +0.106); third step +0.097 (+0.047 to +0.153)).
+Adding inputs to the image model one step at a time showed which of them raised its AUC on MU\expl{}
+(Figure~\ref{fig:3}C). Adding
+change from earlier scans to the current scan's measurements gave the image pathway, 0.05 higher with an interval
+that included zero ($-$0.003 to $+$0.106). The third step added the three schedule inputs of the planned model of
+Section~\ref{sec:3.1}: the interval since the previous scan, a flag for whether there was one, and the smallest volume
+counted from the end of radiotherapy. They raised the AUC by a further 0.10 (0.05--0.15) across phases of care but not
+within them ($-$0.01, $-$0.06 to $+$0.04).
+
+% Sources: UCSF_AUDIT.md sections 3--6, EXPLORATORY intervals table and Overall verdict; NUMBERS.md 5. Council ruling 2.
+% DETECTION_DEEP.md; UCSF_RESULTS.md Part C (Q4); NUMBERS.md mismatch 6. Council ruling 6; resegmentation in RESERVE.md.
+At UCSF the progression calls followed enhancement. Enhancing tumour volume alone, the simplest baseline, gave
+an AUC of 0.88 (0.79--0.95)\expl, higher than the point estimates of the locked image models; UCSF rated enhancement as
+increased at 27 of the 29 progression scans, and progression was dated a median of 7 days after the evaluated scan
+(Figure~\ref{fig:3}B). Among the 37 scans rated as showing increased enhancement, the single-scan image model reached
+0.65 (0.44--0.84), so beyond that rating the measurements added little that this sample could detect. At UCSF a model therefore scores well
+largely by agreeing with a progression call that was itself made from enhancement at the same scan, which is what the
+image pathway measures. Deep networks fine-tuned on UCSF scans learned above a permuted-label control
+(Table~\ref{tab:2}), and their scores tracked enhancing volume\expl{} (\todo{Supplementary section: deep networks at
+MU and UCSF}). 
+
+\subsection{The confidence keeps its coverage on average, and disagreement marks the less accurate scans at MU}\label{sec:3.4}
+
+% Sources: SYSTEM_RESULTS.md S1 and Specification; NUMBERS.md 6 and mismatch 13; by outcome NUMBERS.md 12B. Council ruling 4.
+The 80\% conformal sets of the combined score covered 78\% to 87\% of scans in the three cohorts, at or above the planned threshold of 78\% (Figure~\ref{fig:4}A). Most sets were informative, holding a single outcome for 62\% to 75\% of scans. At UCSF the
+point estimate sat at the threshold and its interval reached below it (68\% to 87\%). Coverage was uneven by outcome\expl: 77\% (67\% to 87\%) of progression scans at LUMIERE against 94\% of
+non-progression scans, and 65\% (51\% to 79\%) of non-progression scans at UCSF against 97\% of progression scans; on
+MU the two were 82\% and 83\%. Thresholds fitted for each outcome on MU did
+not correct this (\todo{Supplementary section: system results}).
+
+% Sources: SYSTEM_RESULTS.md S2, S3; NUMBERS.md mismatches 4 and 5; medians fixed on MU: NUMBERS.md 12A and
+% SYSTEM_RESULTS.md review-round-3 section A (MU fold-held-out median gives the same 40% / 0.90 / 0.59).
+% Round 5 (audit WRONG 3): the planned own-median result first, the MU-fixed-median rule second and marked.
+Disagreement between the pathways marked the less accurate scans at MU but not, under the planned rule, at the
+external centres. On MU the pathways disagreed on 40\% of scans, and the combined score's AUC was 0.90 where they
+agreed and 0.59 where they disagreed; setting the disagreeing scans aside also gained 0.08 (0.05--0.12) more than
+removing the same number of scans matched for phase of care. Both results met their planned tests (Table~\ref{tab:2};
+Figure~\ref{fig:4}B). At LUMIERE and UCSF the planned tests, which took each cohort's medians from its own scores,
+were not met (at LUMIERE, 0.11, $-$0.05 to 0.27).
+
+With the MU medians that the system uses, because they can be applied to a single scan, disagreement did mark the
+less accurate scans at LUMIERE\expl. The pathways disagreed on 60\% of LUMIERE scans and 48\% of UCSF scans. At LUMIERE the AUC was 0.89
+where they agreed and 0.67 where they disagreed (0.22, 0.10--0.34), and setting the disagreeing scans aside gained
+0.12 (0.05--0.19) over removing the same number at random; at UCSF the intervals included zero. A conformal set holding both outcomes,
+used as a flag, met one of the two planned tests in each cohort (Table~\ref{tab:2}; \todo{Supplementary section:
+system results}).
+
+% Sources: RELIABILITY_CARD.md (Reading, lookup table); SYSTEM_RESULTS.md S4; NUMBERS.md mismatch 14 and section 6.
+% Round 5 (audit WRONG 6): MU denominator is the 146 intended-use scans of S4 (54 tested, 92 few cases).
+Only four situations on the reliability card\expl{} reached the tested tier, one at MU and three at LUMIERE. Because LUMIERE
+records no phase of care, its situations differ by enhancement only. Of the 146 MU scans, 54 fell in the tested
+situation, most LUMIERE scans did, and every situation at UCSF had few cases (Figure~\ref{fig:4}C). At MU no situation in the first 12 weeks after radiotherapy held more than three progression
+scans. Tested situations had lower error than few-case situations at LUMIERE, with overlapping intervals
+(Table~\ref{tab:2}; intervals in the supplement); at MU the order was reversed, because the few-case scans there were mostly non-progression scans
+early after radiotherapy, which the models score easily. 
+
+\subsection{The report passes an automatic check against its structured record}\label{sec:3.5}
+
+% Sources: REPORT_V3_1.md (S5--S7, ladder); REPORT_V3.md (S5 failure); NUMBERS.md 7 and mismatches 9, 10. Council ruling 5.
+Every report written by the local model passed the check of its numbers, flags and wording against its
+structured record, 114 reports at MU, 162 at LUMIERE and 130 at UCSF, 406 in total (Figure~\ref{fig:5}B). All 220
+reports whose situation had few cases or was untested said so, and when a field of the record was changed, 28 of 30
+reports followed the change, against a planned minimum of 27 (Table~\ref{tab:2}). These results follow one revision of the prompt\expl. Before it, every LUMIERE report failed, because a fixed
+sentence about the rater's three-month flag quoted a number held in no field. We corrected the prompt, left the
+checker unchanged and evaluated again on patients not used for the revision (\todo{Supplementary section: report revision}).
+The check is lexical and cannot judge emphasis, order or what a clinician would infer.
+
+% =====================================================================================================
+\section{Discussion}\label{sec:4}
+
+% Sources: OUTLINE.md (Discussion 1); NUMBERS.md 3--6.
+PRISM is a system for making longitudinal surveillance evidence inspectable. It gives the clinician separate image
+and treatment-timeline evidence at each scan, the measurements and context behind those fields, and a report written
+inside the hospital that states where the evidence is thin. The component models ranked scans at two external centres
+without refitting, but their evidence differed by setting. At the development centre the timeline provided most of the
+evidence, largely because of when patients were scanned; within a phase of care the images provided about as much. At
+UCSF enhancing volume provided the score, and enhancing volume alone\expl{} did as well as the image pathway trained there.
+The ranking transferred, and the risk scale did not transfer to UCSF, so a group deploying PRISM at a
+new centre would recalibrate a probability and set any threshold on local scans.
+
+% Sources: OUTLINE.md (Discussion 2); SYSTEM_PLAN.md. Council ruling 7 (combined score definition).
+Because its modules are separate, PRISM can run where treatment dates are missing. The image pathway needs only the scans and
+their masks, which is what most public surveillance datasets hold; at LUMIERE and UCSF it ran without full treatment dates. Where dates exist, the timeline is added as a second pathway, and the combined score is shown beside both without changing the image model. The reliability card is a lookup table, so a new cohort adds rows to it, and a situation's tier can
+change as evidence accumulates without refitting anything.
+
+% Sources: RELIABILITY_CARD.md (example card); NUMBERS.md 10 (scenario).
+Consider, as an illustration, a scan eight weeks after radiotherapy in which the enhancing tumour has grown. At MU, 1
+of the 9 scans in this situation on the card (all grade 4 detection scans) was progression\expl. The timeline pathway scores such a scan
+low, because most scans at this point in treatment are not progression, and the image pathway scores it high, because
+enhancement has grown. PRISM's report would show both scores, state that they disagree, give a conformal set that
+holds both outcomes and record that the card has few cases for this situation. The clinician then sees that the
+system has too few tested cases to support a call at this scan, in the weeks when pseudoprogression is most common, and decides
+with information PRISM does not use, such as symptoms, steroid dose and the radiotherapy plan.
+
+% Sources: SYSTEM_LANDSCAPE.md (1.3, 1.13, 2.1, 3.1, Finding); COMPARABLE_RESULTS.md; RESERVE.md (Christodoulou).
+Each of PRISM's components has been described before, but we are not aware of a system that combines them at a
+single scan, with each kind of evidence kept apart and the system's own test results attached.
+Automatic segmentation of post-treatment glioma with measurement of change between scans is established
+\citep{rudie2022}, conformal prediction has been applied to glioma segmentation \citep{elyassirad2025}, clinical and
+imaging data have been fused to separate pseudoprogression from progression \citep{gomaa2025}, and model cards report
+performance by subgroup \citep{mitchell2019}. The closest system we found combines treatment variables extracted by a
+language model with tumour volumes to assign a structured follow-up category at one centre, without an uncertainty
+attached to the output \citep{jabal2026}. On MU \citet{christodoulou2026} predicted a label assigned at the patient level, on LUMIERE \todo{cite Tikhonov 2025,
+arXiv:2509.06511; full reference not yet verified} classified each scan into four response categories, and
+\citet{chen2026} predicted recurrence risk from preoperative and postoperative MRI across centres; none of these is
+detection at the scan.
+
+% Sources: OUTLINE.md (Discussion 5); NUMBERS.md 10; UCSF_AUDIT.md (caveat sentence); REPORT_V3_1.md Limits.
+PRISM was developed at one centre (Table~\ref{tab:1}), and the two external tests are its only evidence that
+its ranking of scans transfers. The label is progression as each centre
+documented it; no scan was re-read for this study, and at UCSF most progression scans were also rated as showing
+increased enhancement. Subgroups are small, and the analyses marked \textdagger{} need testing on new data. No
+clinician has yet read the reports. PRISM forecast progression within 120 days less well than it detected progression at the scan
+(AUC 0.60 in the intended use).
+
+% Sources: OUTLINE.md (Discussion 6); RELATED_WORK.md section 3 (Burdenko, UCSD-PTGBM).
+The next step is to pool the rare situations, early progression after radiotherapy and growing enhancement without
+it, across cohorts and train on them. The Burdenko and UCSD-PTGBM datasets add radiotherapy detail and advanced
+sequences, and models fine-tuned on these long-tail cases could be tested on their scans in the card's thin
+situations. A reader study in which clinicians use PRISM's
+reports at the scan would show whether separate evidence and a stated confidence change their decisions.
+
+\subsection*{Conclusion}
+
+% Sources: OUTLINE.md (claim). Round 4: one sentence (round4_trim.md C29 fallback, coordinator ruling).
+PRISM keeps image and treatment-timeline evidence apart and shows the clinician both scores at every scan with how
+far each has been tested there; its models ranked scans at two other centres without refitting.
+
+% =====================================================================================================
+\section*{Acknowledgements}
+\todo{PENDING AUTHOR DECISION}.
+
+\section*{Disclosure statement}
+\todo{PENDING AUTHOR DECISION: competing interests, or ``The authors report there are no competing interests to
+declare.''} If any author serves on the editorial or advisory board of this journal, state it here.
+
+\section*{Declaration of generative AI use}
+\todo{DRAFT, PENDING AUTHOR CONFIRMATION:} Generative AI is part of the system studied. PRISM's report generator uses
+a local language model (Qwen3.8-27B; six other open-weight models in a comparison); all ran offline on the authors'
+computing cluster and saw only derived system records. An AI assistant (Claude, Anthropic) was used to write and run
+analysis code and to draft and edit the manuscript under the authors' direction; it was given no patient-level
+data through any hosted service. The authors reviewed all code, results and text and take full responsibility for
+the content of this article.
+
+\section*{Funding}
+No funding was obtained for this work.
+
+\section*{Ethics statement}
+\todo{PENDING AUTHOR DECISION: secondary analysis of de-identified datasets (MU-Glioma-Post and LUMIERE, public;
+UCSF-ALPTDG under a data use agreement); state the institutional determination or waiver and cite the source
+datasets' approvals.} No registered protocol. Analysis plans were committed to the repository before each external
+test; their commits are listed in Table~\ref{tab:2}. Patient and public involvement: none.
+
+\section*{Data availability statement}
+\todo{PENDING AUTHOR DECISION: MU-Glioma-Post (TCIA, doi:10.7937/\allowbreak 7K9K-3C83) and LUMIERE (figshare;
+\citealp{suter2022}) are public; UCSF-ALPTDG is available from its provider under a data use agreement; state which
+derived tables, fold assignments and locked model files are released, with a DOI.} Code: \todo{PENDING: public
+repository link and release tag.}
+
+\section*{Supplemental material}
+Supplemental data for this article are provided as a separate file.
+
+\section*{Notes on contributors}
+\todo{PENDING: a short biographical note for each author (no more than 200 words each).}
+
+\bibliography{refs}
+
+% =====================================================================================================
+\clearpage
+\section*{Tables}
+
+% Sources: NUMBERS.md 2.2 (TABLE1_COHORT.md; DETECTION_TASK.md Cohort and External test; UCSF_DATA.md; UCSF_RESULTS.md
+% Part A) and mismatch 7. Characteristics and detection counts describe different rows; the notes say which.
+\begin{table}[!htbp]
+\centering
+\caption[The three cohorts]{\textbf{The three cohorts.} What each cohort records, and the scans in the detection task.
+Grade 4 glioma is the primary population.}
+\label{tab:1}
+\begin{threeparttable}
+\begin{tabularx}{\linewidth}{@{}R{3.3cm}LLL@{}}
+\toprule
+ & MU-Glioma-Post & LUMIERE & UCSF-ALPTDG \\
+\midrule
+Role & Development (repeated cross-validation) & External, locked & External, locked \\
+Access & Public & Public & Data use agreement \\
+Scans per patient & Up to 6 scans with a 120-day label (median 2) & Up to 10 scans with a 120-day label (median 2) & One consecutive pair \\
+Treatment dates & Surgery, radiotherapy start and end, dose, chemotherapy & Days from surgery only; rater flag for scans within three months of radiotherapy & Days from surgery; radiotherapy start only \\
+Documented progression (the label) & Documented date in the clinical record & Expert response rating of each scan & Progression date supplied with the dataset \\
+Segmentation masks & Automatic masks released with the dataset & DeepBraTumIA (three labels) & Masks provided with the dataset \\
+\addlinespace
+Patients\tnote{a} & 126 & 61 & 140 \\
+Age, median & 62.5 (IQR 53--70) & 62 (IQR 53--70) & 57.5 \\
+Male & 66 (52\%) & 32 (52\%) & 81 (58\%) \\
+IDH wildtype / mutant / unknown & 112 / 8 / 6 & 38 / 1 / 22 & 81 / 13 / 46 \\
+MGMT methylated / unmethylated / unknown & 45 / 62 / 19 & 26 / 28 / 7 & 71 / 43 / 26 \\
+\addlinespace
+Detection task\tnote{b}: progression / non-progression scans (patients) & 62 / 84 (80) in the intended use; 64 / 117 (92) over all scans & 73 / 105 (79) & 29 / 40 (69), second scan only \\
+Phase of care in the detection set & Progression: 56 of 62 later after radiotherapy; non-progression: 51 of 84 early after radiotherapy & Not recorded & 65 of 69 later after radiotherapy\tnote{c} \\
+\bottomrule
+\end{tabularx}
+\begin{tablenotes}\footnotesize
+\item[a] Patient characteristics describe the cohorts of the secondary 120-day task at MU-Glioma-Post (grade 4)
+and LUMIERE, and all grade 4 patients at UCSF-ALPTDG. Age is at diagnosis at MU-Glioma-Post and at surgery at
+LUMIERE.
+\item[b] Positives are the scan at which progression was documented; negatives are defined per cohort in
+Section~\ref{sec:2.2}. The LUMIERE detection set has more patients than the 120-day cohort because it includes patients
+who contribute only a progression scan. At MU-Glioma-Post, the 146 scans of the intended use are the 181 grade 4
+detection scans less the 35 taken before radiotherapy started, and 42 grade 4 progression scans of patients with no
+scan carrying a 120-day label are excluded. Reports were evaluated on the 114 intended-use scans of the
+60 MU-Glioma-Post patients not used to develop the prompt, on 162 of the 178 LUMIERE scans and on 130 of the 140
+grade 4 second scans at UCSF-ALPTDG, the rest belonging to development patients (Section~\ref{sec:3.5}).
+\item[c] UCSF-ALPTDG gives only the first radiotherapy start; the phase assumes a six-week course. Two scans were
+early after radiotherapy and two had no radiotherapy date.
+\end{tablenotes}
+\end{threeparttable}
+\end{table}
+
+% Sources: NUMBERS.md section 9 (DETECTION_TASK.md; UCSF_PLAN.md; SYSTEM_PLAN.md; REPORT_V3.md; REPORT_V3_1.md).
+% Numbers already given in the Results are pointed to by section and not repeated.
+\begin{table}[!htbp]
+\centering
+\caption[Questions fixed in advance and their answers]{\textbf{Questions fixed in advance and their answers.} Each
+rule was committed to the repository before the analysis it governs. AUC differences with 95\% CIs.}
+\label{tab:2}
+\begin{threeparttable}
+\footnotesize
+\begin{tabularx}{\linewidth}{@{}R{3.6cm}R{3.8cm}LR{2.6cm}@{}}
+\toprule
+Question & Rule fixed in advance & Result & Met \\
+\midrule
+\multicolumn{4}{@{}l}{\textit{Detection on MU-Glioma-Post}} \\
+Do image measurements add to the timeline? & Planned model $\geq$ 0.75 (lower bound $\geq$ 0.65) and gain $\geq$ 0.03 with CI above 0 & Model 0.837 (0.763--0.904); gain $+$0.015 ($-$0.032 to $+$0.063) & No \\
+Do fine-tuned deep networks add? & Gain $\geq$ 0.03 with CI above 0; permuted-label control covers 0.5 & No network added; control 0.483 (0.436--0.527) & No (control valid) \\
+Does the locked model transfer to LUMIERE? & External AUC $\geq$ 0.65 & AUC above 0.65 (Section~\ref{sec:3.2}) & Yes \\
+\addlinespace
+\multicolumn{4}{@{}l}{\textit{UCSF-ALPTDG}} \\
+Does the image pathway transfer? & AUC $\geq$ 0.65, lower bound $>$ 0.5 & Both conditions met (Section~\ref{sec:3.2}) & Yes \\
+Do images add to clinical data without a timeline? & Gain with CI above 0 & $+$0.248 ($+$0.096 to $+$0.392) & Yes \\
+Does training at UCSF-ALPTDG do better than the locked model? & Descriptive & Image pathway higher when trained there; single-scan model about the same (Section~\ref{sec:3.2}) & Descriptive \\
+Do deep networks learn at UCSF-ALPTDG? & Above the permuted-label control; control covers 0.5 & $+$0.201 ($+$0.094 to $+$0.306) over a control of 0.541 (0.480--0.603) & Yes \\
+\addlinespace
+\multicolumn{4}{@{}l}{\textit{The system (MU-Glioma-Post, LUMIERE, UCSF-ALPTDG)}} \\
+Do conformal sets keep their coverage? & Coverage $\geq$ 0.78 at the 80\% level in each cohort & Combined score met on point estimates in all three, but not for every outcome (Section~\ref{sec:3.4}); images at LUMIERE 0.708 and timeline at UCSF-ALPTDG 0.696 & Yes (combined) \\
+Do flags pick out less accurate scans? & AUC unflagged minus flagged $>$ 0, CI above 0 & Disagreement at MU-Glioma-Post $+$0.307 ($+$0.175 to $+$0.432); per-cohort results in the supplement\tnote{a} & MU: disagreement and set; LUMIERE: set; UCSF: neither \\
+Does setting flagged scans aside beat matched removal? & Retained AUC minus matched removal $>$ 0, CI above 0 & Disagreement met at MU-Glioma-Post (Section~\ref{sec:3.4}); per-cohort results in the supplement\tnote{a} & MU: disagreement; LUMIERE: neither; UCSF: set \\
+Do tested situations have lower error? & Descriptive: tested below few cases in Brier score and error & Brier 0.187 vs 0.258 at LUMIERE; reversed at MU-Glioma-Post (Section~\ref{sec:3.4}) & Descriptive \\
+Are reports faithful to the record? & $\geq$ 95\% pass the checker in each cohort & First evaluation failed at LUMIERE; second evaluation: all passed (Section~\ref{sec:3.5}) & No, then yes \\
+Is the tier stated where evidence is thin? & 100\% & All (Section~\ref{sec:3.5}) & Yes \\
+Do reports follow a changed record? & $\geq$ 27 of 30 perturbed records & 28 of 30 (Section~\ref{sec:3.5}) & Yes \\
+Smallest report model passing the checker rule in every cohort & Descriptive & Qwen3.8-27B (supplement) & Descriptive \\
+\bottomrule
+\end{tabularx}
+\begin{tablenotes}\footnotesize
+\item Plans were committed before each analysis: detection (commit 2b4c927), UCSF-ALPTDG (0e7c9fe), the system
+(e7cba80) and the second report evaluation (4f7e7b9). In the first row, the planned model gained $+$0.041 ($+$0.006
+to $+$0.081) over all scans of all gliomas, which may reflect its schedule inputs (Section~\ref{sec:3.3}).  Matched removal keeps the
+phase-of-care mix of the removed scans (random removal at LUMIERE, which has no phase); ``set'' is a conformal set
+holding both outcomes. The flag and tier tests were fixed in advance, but the agreement rule and the card tiers were
+defined after the cohort results had been seen\expl.
+\item[a] The Met cells use each cohort's own medians, as fixed in advance. With the medians fixed on MU, which the
+system uses (Section~\ref{sec:2.1}), disagreement also met both tests at LUMIERE\expl. \todo{Supplementary section:
+system results}: both tests for each flag in each cohort, with both median rules and with the rule that flags any scan.
+\end{tablenotes}
+\end{threeparttable}
+\end{table}
+
+% =====================================================================================================
+\clearpage
+\section*{Figure legends}
+
+% Sources: OUTLINE.md (Fig 1); SYSTEM_PLAN.md section 1.
+\begin{figure}[!htbp]
+\centering
+\figslot{fig1_system.pdf}{0.40\textheight}{PRISM is built of modules, each answering a known challenge: scan and
+record; segmentation and measurements; the timeline pathway; the image pathway; the combined score; the confidence
+(conformal set, agreement, card); the local report; and the evaluation design.}
+\caption{\textbf{PRISM and how it was evaluated.} (A) At each scan, measurements from the segmentation masks feed
+the image pathway, and clinical data with the patient's position in treatment feed the timeline pathway; the
+combined score, one ridge model on both sets of inputs, is shown beside them. The confidence has three parts: an
+80\% conformal prediction set, a statement of whether the two pathways agree, and the reliability card's tier for
+the scan's situation. Every value enters a structured record with its source; a local language model writes the
+report from that record, and a deterministic checker tests its numbers, flags and wording against it. (B) Models
+were developed on MU-Glioma-Post by repeated cross-validation, fitted once and applied unchanged to LUMIERE and
+UCSF-ALPTDG under plans committed in advance; reports were checked on records from all three cohorts.}
+\label{fig:1}
+\end{figure}
+
+% Sources: NUMBERS.md section 11 (Fig 2).
+\begin{figure}[!htbp]
+\centering
+\figslot{fig2_transport.pdf}{0.40\textheight}{AUC by pathway (clinical alone, timeline, images, combined; enhancing volume alone as a grey reference bar) and cohort
+(MU internal; LUMIERE and UCSF locked; UCSF-trained as a reference).}
+\caption{\textbf{The models rank scans at two external centres without refitting.} AUC for detecting the scan at which
+progression was documented, by pathway (clinical data alone, timeline, images, combined) and cohort: MU-Glioma-Post
+(repeated cross-validation, intended use); LUMIERE and UCSF-ALPTDG (models fitted once on MU-Glioma-Post and applied
+unchanged); and UCSF-ALPTDG with models trained there, as a reference, where clinical data alone fall below 0.5, as a model with
+no signal can under cross-validation. At LUMIERE and UCSF-ALPTDG the timeline is the
+reduced version; the clinical-only model at LUMIERE was not fixed in advance. At UCSF-ALPTDG the images are shown for the
+single-scan model and for the image pathway with change features, which is the system's image pathway. The hatched bar
+is the log enhancing tumour volume of the scan alone, with no fitted model\expl. Error bars are 95\% patient-bootstrap
+CIs; the dotted line is chance.}
+\label{fig:2}
+\end{figure}
+
+% Sources: NUMBERS.md section 11 (Fig 3).
+\begin{figure}[!htbp]
+\centering
+\figslot{fig3_evidence.pdf}{0.40\textheight}{(A) MU: the timeline's gain lies between phases of care. (B) UCSF:
+enhancing volume alone scores above the image models. (C) The image-model ladder.}
+\caption{\textbf{What each score rests on depends on the cohort.} (A) MU-Glioma-Post: the gain from adding the
+timeline to clinical data and images, across phases of care and within them. (B) UCSF-ALPTDG: AUC of enhancing tumour
+volume alone beside the locked image models, with the counts of progression and non-progression scans that UCSF rated
+as showing increased enhancement noted below the panel. (C) The image model on MU-Glioma-Post built in three steps (current scan; with
+change from earlier scans; with schedule inputs), across and within phases of care; the interval of the second step includes zero. The audits in all panels were not fixed in advance (\textdagger); the locked UCSF-ALPTDG model AUCs in (B) were
+planned, and the last bar of (B) is restricted to the scans rated as showing increased enhancement.
+Bars are 95\% patient-bootstrap CIs.}
+\label{fig:3}
+\end{figure}
+
+% Sources: NUMBERS.md section 11 (Fig 4).
+\begin{figure}[!htbp]
+\centering
+\figslot{fig4_confidence.pdf}{0.40\textheight}{(A) Conformal coverage at the 80\% level by cohort and pathway. (B) AUC
+with and without the disagreement warning. (C) The reliability card: situations by cohort with their evidence tier.}
+\caption{\textbf{The confidence keeps its coverage on average, and disagreement marks the less accurate scans at
+MU-Glioma-Post.} (A) Coverage of the 80\% conformal sets by cohort and pathway; the dashed line is the threshold fixed
+in advance, met by the combined score on point estimates in all three cohorts; by outcome, coverage fell short for one outcome at
+LUMIERE and UCSF-ALPTDG (Section~\ref{sec:3.4}). (B) The combined score's AUC where
+the pathways agree minus where they disagree, by cohort, with each cohort's own medians (filled, as planned) and with the medians the system uses, fixed on MU-Glioma-Post
+(open\expl; on MU-Glioma-Post, the other folds' medians). (C) Scans whose situation (phase of care by change in
+enhancing tumour) reached the card's tested tier, by cohort; the rest have few cases, and none of these scans was in an untested situation.}
+\label{fig:4}
+\end{figure}
+
+% Sources: NUMBERS.md section 11 (Fig 5); REPORT_V3_1.md.
+\begin{figure}[!htbp]
+\centering
+\figslot{fig5_report.pdf}{0.40\textheight}{One rendered report (segmentation figure, pathways, combined score,
+confidence) and faithfulness by cohort.}
+\caption{\textbf{The report states the evidence and passes a check against the record.} (A) The narrative of a
+PRISM report for a synthetic scan taken eight weeks after radiotherapy with growing enhancement, the situation of
+Section~\ref{sec:4}; the volumes and scores are invented, and the card row is MU-Glioma-Post's (all grade 4 detection scans). Each sentence lists the record
+fields it cites, which the checker uses; the delivered report also holds the segmentation figure, tables of every
+value and a fixed limitations section. (B) Reports passing the lexical check of numbers, flags and wording, after one revision of the prompt following a failure at LUMIERE (Section~\ref{sec:3.5}).}
+\label{fig:5}
+\end{figure}
+
+\end{document}
