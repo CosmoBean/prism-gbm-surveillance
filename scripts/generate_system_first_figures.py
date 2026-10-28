@@ -305,9 +305,9 @@ def fig4(output: Path) -> None:
            "AUC difference, agree minus disagree", xlim=(-0.3, 0.5))
     for y in (1.5, 3.5):
         bx.axhline(y + 0.2, color="0.88", lw=0.6, zorder=0)
-    bx.legend(handles=[Line2D([], [], marker="o", ls="none", color=C["ink"], ms=4.8, label="planned"),
+    bx.legend(handles=[Line2D([], [], marker="o", ls="none", color=C["ink"], ms=4.8, label="own medians†"),
                        Line2D([], [], marker="o", ls="none", color=C["ink"], mfc="white", ms=4.8, mew=1.1,
-                              label="sensitivity†")],
+                              label="MU medians†")],
               frameon=False, loc="center right", fontsize=6.8, handletextpad=0.2, borderaxespad=0.1)
 
     cx = fig.add_axes([0.145, 0.10, 0.55, 0.20])
@@ -336,6 +336,7 @@ REPORT = [
     ("Pathways", "The image pathway is based on the segmented tumour and its change: image score 0.64, above the median of its scores in the MU-Glioma-Post evaluation scans (0.45).", "pathway.images.*"),
     ("Pathways", "The two pathways disagree: the timeline score is below its median and the image score is above its median.", "pathways.agreement_statement"),
     ("Combined", "The combined score, based on the inputs of both pathways, is 0.33.", "pathway.combined.*"),
+    ("Combined", "Each score is a model output between 0 and 1 that ranks scans by how closely they resemble the progression scans of the training data; it is not a diagnosis and not a calibrated probability for this patient.", "pathways.score_meaning"),
     ("Combined", "The 80% conformal set holds both outcomes.", "conformal.combined.80.statement"),
     ("Trust", "This situation, early after radiotherapy with enhancing tumour increased, has few cases: 1 of 9 scans was progression.", "card.situation, card.tier_statement"),
     ("Trust", "The pathways disagree flag is raised: the timeline score is below its median and the image score is above its median.", "flags.disagreement.*"),
@@ -346,7 +347,7 @@ LIMITATIONS = ("Fixed limitations section (excerpt): the scores rank scans; they
 
 def fig5(output: Path) -> None:
     """Report anatomy (synthetic example) and the automatic evaluation. NUMBERS.md 7."""
-    height = 5.25
+    height = 6.0
     fig = plt.figure(figsize=(WIDTH, height))
     ax_h = 0.93
     ax = fig.add_axes([0.04, 0.012, 0.61, ax_h]); ax.set_xlim(0, 1); ax.set_ylim(0, 1); ax.axis("off")

@@ -255,3 +255,34 @@ Fixed:
   externally"), the tiers, and why the UCSF scan interval matters ("carries the schedule rather than the tumour").
 - Layout: float pages are aligned to the top.
 Main text: 2,706 words. That is up from 2,511 because clarity and disclosures came back; it is −30% from 3,867.
+
+## Loop 14: voice, clinical wording and statistical wording
+
+Readers: a copy editor (20 voice edits), a neuro-oncologist (clinical wording; the takeaway "PRISM shows separately
+what the scan and the treatment calendar say, and states when it has not been tested on cases like this one") and a
+statistically literate referee (minor revision; the reason was the planned-or-post-hoc wording of the disagreement
+rule).
+Changed:
+- The disagreement rule is settled once (2.3): the flag and its tests were planned, but the median rule was written
+  down after the results had been seen, so every disagreement result carries a dagger. "Under the planned rule" is
+  gone from 3.4, the Discussion and Figure 4B; the legend reads "own medians†" and "MU medians†".
+- Statistical wording: every "about the same", "did not raise" and "did not correct" now has its number. These are
+  MU combined vs timeline −0.001 (−0.05 to +0.05); UCSF single scan trained there 0.03 (−0.05 to +0.12); LUMIERE
+  calibration O/E 0.97 (0.81–1.14); per-outcome calibration non-progression coverage 51% (39–64%) at LUMIERE and 18%
+  (6–31%) at UCSF, which suggests the external scans are not exchangeable with MU's; MU Brier 0.22 vs 0.15. Overlap
+  of intervals is no longer used as an argument. "At least as well" became "as high a point estimate". "About as
+  much" became "no difference detectable". "Most of the advantage lay between phases" became "the gain appeared
+  across phases but not within them". "Measurements added little" became "this sample cannot show whether…". "So
+  carries the schedule" became "an input that reflects when scans were taken". The card's MU reversal is "possibly
+  because". The heading of 3.4 now says "on point estimates".
+- 3.5 gives the 220 by cohort (71, 19, 130). The check "confirms that a report matches its record; it cannot judge
+  emphasis, what a clinician would infer, or whether the segmentation is right" (clinician).
+- Clinical wording: "the volume of enhancing tissue" and "change in enhancing volume" replace "how much the tumour
+  enhanced" where the text describes the evidence. Figure 5A now carries the report's real "each score… is not a
+  calibrated probability for this patient" sentence, because the clinician read the scores as probabilities.
+  Suggestions that would add RANO were not taken (project rule). The report's own wording in Figure 5A was kept,
+  because it is the system's output format.
+- Voice: colon reveals, triplets and stacked clauses were split in the Introduction, 2.1, 2.3, 3.2–3.5 and the
+  Discussion. Section 3.3 and Figure 3 now say concretely what drove the scores ("followed the treatment schedule
+  at MU and enhancement at UCSF") instead of "what carries a score".
+Main text: 2,813 words.
