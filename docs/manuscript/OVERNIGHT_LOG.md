@@ -119,3 +119,19 @@ Left: P10 (the label-circularity caveat in the Conclusion).
 First-sentence test passed: read alone, the paragraph openers give the argument. Two small breakages from earlier
 loops were fixed: an ambiguous "They" in the Introduction, and in 3.4 "the rule then flagged…", which after loop 6
 referred to the wrong rule (now attached to the MU-median rule, before the conformal-set sentence).
+
+## Loop 8: fresh cold and hostile reads (convergence check)
+
+Cold reader: "Methods, 3.1–3.3 and the Discussion now read as an argument; 3.4 is still a log", scored 7/10. Hostile
+reader: most numbers agree; the flag evaluation is the remaining presentation risk (P11).
+
+Changed: 3.4 split into a planned-result paragraph that opens on the plain finding ("marked the less accurate scans at
+MU but not, under the planned rule, at the external centres") and a † paragraph for the MU medians the system uses
+(now with the LUMIERE removal gain, 0.12, 0.05–0.19, against random removal, so footnote a's "both tests" is
+visible in the text); coverage by outcome in one sentence; the conformal-set flag result is stated for all three
+cohorts; the 2.3 deviation, the ladder's third step and the card's tested situations are split into readable
+sentences; the term "planned imaging model" is no longer used before it is defined; the 3.3 closing signpost is cut;
+the 3.4 heading uses the figure's wording ("less accurate"); LUMIERE's clinical-only result is marked †; "transferred
+less well" is qualified by "with coefficients fitted on MU"; "measurements added little" became "added little that
+this sample could detect"; in Table 2 the coverage cell says "not for every outcome" and the training-at-UCSF cell
+names both image models; Figure 1B says "406 reports".

@@ -96,7 +96,7 @@ def fig1(output: Path) -> None:
     box(bx, 0.34, 0.25, 0.14, 0.36, "Fit once on MU,\nlock the models\nand write the plan", C["soft"])
     box(bx, 0.54, 0.42, 0.20, 0.36, "LUMIERE (locked)\n178 scans,\nno treatment dates", tint(C["images"], 0.85))
     box(bx, 0.54, 0.02, 0.20, 0.32, "UCSF-ALPTDG (locked)\n69 second scans", tint(C["images"], 0.85))
-    box(bx, 0.80, 0.12, 0.19, 0.62, "Reports checked\n406 records:\n114 MU, 162 LUMIERE,\n130 UCSF second scans", "#fff3d6")
+    box(bx, 0.80, 0.12, 0.19, 0.62, "Reports checked\n406 reports:\n114 MU, 162 LUMIERE,\n130 UCSF second scans", "#fff3d6")
     arrow(bx, (0.28, 0.43), (0.34, 0.43)); arrow(bx, (0.48, 0.48), (0.54, 0.59)); arrow(bx, (0.48, 0.38), (0.54, 0.21))
     arrow(bx, (0.74, 0.59), (0.80, 0.50)); arrow(bx, (0.74, 0.21), (0.80, 0.36))
     save(fig, output, "fig1_system")

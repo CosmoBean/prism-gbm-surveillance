@@ -64,3 +64,11 @@ Conclusion ("its models ranked scans at two other centres without refitting") to
 that most UCSF progression scans were rated as showing increased enhancement. Softening the Conclusion changes a
 council-ruled sentence, so it is left to you. Suggested: "…ranked scans at two other centres without refitting,
 though at UCSF the ranking largely follows the enhancement on which progression was called."
+
+## P11. Present the flag results as a grid (loop 8: hostile)
+The flag evaluation (3.4, Table 2 rows 9–10 with footnote a, Figure 4B) mixes two flags, two tests and two median
+rules, and the reviewer judged it the item most likely to draw a "major revision" on presentation: the planned rule
+fails externally while the exploratory MU-median rule is the one the system uses (see also P6). Overnight, 3.4 was
+split into two paragraphs (the planned result first and stated plainly, then the MU-median result marked †). A
+fuller fix is a small grid in the supplement or as Table 2's replacement rows: cohorts × {disagreement, set} under
+the planned rule, plus one † row for the MU medians. It changes a display item, so it is left to you.
