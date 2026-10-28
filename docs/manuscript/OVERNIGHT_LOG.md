@@ -92,3 +92,24 @@ why Figure 3C (0.81) differs from the planned model (0.84); the Figure 2 caption
 clinical-only bar below 0.5; Figure 1B gives the report counts by cohort (130 UCSF second scans against 69 in the
 detection set). Checked P6 against the code: the report medians are taken over each cohort's own evaluation scans
 (`prism/analyses/system.py`, `derive`).
+
+## Loop 6: number audit and a third hostile read
+
+Number audit (every number in the text, tables, captions and figure generator against NUMBERS.md): all figure
+values matched. Fixed: "at LUMIERE only the combined score did better than [enhancing volume alone]" was wrong (the
+timeline at 0.69 also did); missing daggers on enhancing volume alone (3.3, Discussion); the ladder's middle-step
+interval had lost its sign (now −0.003 to +0.106); "the same AUC" for the all-glioma fit became "almost the same
+(0.77)". The LUMIERE AUCs 0.89 and 0.67 (MU-fixed medians) were not in NUMBERS.md; they were verified in the
+aggregate CSV and added to NUMBERS.md 12A. MU age (P8) and the Tikhonov detail (P9) were left for the author.
+
+Hostile read, fixed: Table 1 now says LUMIERE records days from surgery (used by the reduced timeline); the card's
+three tested LUMIERE situations are explained (no phase recorded, so they differ by enhancement only); the deviation
+promised in 2.3 is now stated there; the conformal-set flag's results are given in 3.4 (it met one planned test at
+each external centre); unquantified claims now carry numbers (matched-removal gain 0.08, 0.05–0.12; MU coverage by
+outcome 82% and 83%; the paired transfer difference of the change inputs, −0.07, −0.13 to −0.01); "the risk scale did
+not transfer" is now limited to UCSF (it was calibrated at LUMIERE); "no measured basis" became "too few tested
+cases"; the claim that the Discussion's PRISM "ran without treatment dates" became "without full treatment dates";
+the Figure 3 caption no longer calls the planned UCSF AUCs exploratory. Figure 1: the combined score is labelled as
+one model on both inputs, and the MU box says that the locked models were fitted on all 181 grade 4 scans. Figure 4:
+the threshold label no longer collides with a bar.
+Left: P10 (the label-circularity caveat in the Conclusion).

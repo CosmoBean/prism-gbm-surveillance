@@ -67,7 +67,7 @@ def fig1(output: Path) -> None:
     box(ax, 0.23, 0.70, 0.17, 0.15, "Measurements\nvolumes, shape,\nintensity and change", tint(C["images"]))
     box(ax, 0.45, 0.70, 0.15, 0.15, "Image pathway\nridge model,\nno dates", tint(C["images"], 0.6), weight="bold")
     box(ax, 0.45, 0.34, 0.15, 0.15, "Timeline pathway\nridge model on\ntreatment position", tint(C["timeline"], 0.6), weight="bold")
-    box(ax, 0.45, 0.52, 0.15, 0.12, "Combined score\nshown beside both", tint(C["combined"], 0.6), weight="bold")
+    box(ax, 0.45, 0.52, 0.15, 0.12, "Combined score: one\nmodel on both inputs", tint(C["combined"], 0.6), weight="bold")
     arrow(ax, (0.18, 0.775), (0.23, 0.775)); arrow(ax, (0.40, 0.775), (0.45, 0.775))
     arrow(ax, (0.18, 0.535), (0.45, 0.43)); arrow(ax, (0.18, 0.295), (0.45, 0.40))
     arrow(ax, (0.525, 0.70), (0.525, 0.64)); arrow(ax, (0.525, 0.49), (0.525, 0.52))
@@ -86,13 +86,13 @@ def fig1(output: Path) -> None:
     box(ax, 0.84, 0.10, 0.15, 0.13, "Deterministic checker\nnumbers, flags and\nwording vs record", C["soft"])
     box(ax, 0.57, 0.10, 0.22, 0.13, "Report to the clinician\nfigure, scores, confidence\nand what was not used", tint(C["combined"], 0.85), weight="bold", size=6.9)
     arrow(ax, (0.915, 0.52), (0.915, 0.43)); arrow(ax, (0.915, 0.30), (0.915, 0.23)); arrow(ax, (0.84, 0.165), (0.79, 0.165))
-    ax.text(0.30, 0.13, "Where a cohort records no treatment dates,\nthe timeline is reduced and the image\npathway runs on its own.",
+    ax.text(0.30, 0.13, "Where a cohort lacks treatment dates,\nthe timeline is reduced; the image\npathway needs no dates at all.",
             fontsize=6.8, color="#555555", ha="center", va="center", style="italic")
 
     bx = fig.add_axes([0, 0, 1, 0.28]); bx.set_xlim(0, 1); bx.set_ylim(0, 1); bx.axis("off")
     letter(bx, "B", x=0.0, y=0.92)
     bx.text(0.04, 0.99, "How it was evaluated", fontsize=8.5, weight="bold", va="top")
-    box(bx, 0.01, 0.12, 0.27, 0.62, "MU-Glioma-Post (development)\n146 scans in the intended use\n5 × 5 patient-grouped\ncross-validation", tint(C["timeline"], 0.85))
+    box(bx, 0.01, 0.12, 0.27, 0.62, "MU-Glioma-Post (development)\n5 × 5 patient-grouped CV,\n146 intended-use scans;\nlocked on all 181 grade 4 scans", tint(C["timeline"], 0.85))
     box(bx, 0.34, 0.25, 0.14, 0.36, "Fit once on MU,\nlock the models\nand write the plan", C["soft"])
     box(bx, 0.54, 0.42, 0.20, 0.36, "LUMIERE (locked)\n178 scans,\nno treatment dates", tint(C["images"], 0.85))
     box(bx, 0.54, 0.02, 0.20, 0.32, "UCSF-ALPTDG (locked)\n69 second scans", tint(C["images"], 0.85))
@@ -205,8 +205,8 @@ def fig4(output: Path) -> None:
             x = g + (i - 1) * 0.26
             ax.bar(x, v[0], 0.24, color=cols[k], label=k if g == 0 else None)
             ax.errorbar(x, v[0], yerr=[[v[0] - v[1]], [v[2] - v[0]]], fmt="none", ecolor="#333", elinewidth=0.7, capsize=1.5)
-    ax.axhline(0.78, color="#333", ls="--", lw=0.8); ax.text(2.45, 0.78, "threshold\n0.78", fontsize=6.3, va="center")
-    ax.set(xticks=range(3), xticklabels=["MU", "LUMIERE", "UCSF"], ylim=(0.5, 1.0), ylabel="Share of scans covered", xlim=(-0.5, 2.9))
+    ax.axhline(0.78, color="#333", ls="--", lw=0.8); ax.text(2.48, 0.74, "planned\nthreshold\n0.78", fontsize=6.0, va="center")
+    ax.set(xticks=range(3), xticklabels=["MU", "LUMIERE", "UCSF"], ylim=(0.5, 1.0), ylabel="Share of scans covered", xlim=(-0.5, 3.0))
     ax.legend(frameon=False, ncol=3, loc="upper left", fontsize=6.5)
 
     bx = fig.add_axes([0.70, 0.50, 0.28, 0.40])
@@ -231,7 +231,7 @@ def fig4(output: Path) -> None:
             cx.text(t / tot / 2, y, f"{t}", color="white", ha="center", va="center", fontsize=7)
         cx.text(t / tot + f / tot / 2, y, f"{f}", ha="center", va="center", fontsize=7)
     cx.set(yticks=[2, 1, 0], yticklabels=cohorts, xlim=(0, 1), xlabel="Share of scans")
-    cx.legend(frameon=False, ncol=2, loc="upper right", bbox_to_anchor=(1, 1.32))
+    cx.legend(frameon=False, ncol=2, loc="lower right", bbox_to_anchor=(1, 1.0), fontsize=6.5)
     save(fig, output, "fig4_confidence")
 
 

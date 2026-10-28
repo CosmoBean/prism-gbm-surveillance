@@ -47,3 +47,20 @@ Overnight changed nothing on this point except making Figure 5A faithful.
 reduced), image pathway, single-scan images, the planned imaging model, the combined score and enhancing volume
 alone. A six-row Methods table (inputs, uses dates?, planned?) would end it. Not added tonight because it adds a
 display item; ready to draft if you want it.
+
+## P8. Table 1 MU age: 62.5 or 62? (loop 6: number audit)
+Table 1 gives MU age 62.5 (IQR 53–70), following council decision 16 ("same population as TABLE1_COHORT.md").
+TABLE1_COHORT.md shows 62 [53–70] in the grade 4 columns. Please confirm which population and value is meant;
+the overnight pass left it unchanged.
+
+## P9. Tikhonov "four response categories" (loop 6: number audit)
+This is not in NUMBERS.md and the reference is still a `\todo`. Verify against arXiv:2509.06511 when the reference
+is resolved.
+
+## P10. Say that both external results partly reflect how the labels were made (loop 6: hostile)
+At UCSF the progression call was made from enhancement at the same scan, and enhancing volume alone (0.88) beats
+the locked image models. The reviewer asks for this to be stated as a limit of the transfer claim, and for the
+Conclusion ("its models ranked scans at two other centres without refitting") to carry it. The Limits already say
+that most UCSF progression scans were rated as showing increased enhancement. Softening the Conclusion changes a
+council-ruled sentence, so it is left to you. Suggested: "…ranked scans at two other centres without refitting,
+though at UCSF the ranking largely follows the enhancement on which progression was called."
