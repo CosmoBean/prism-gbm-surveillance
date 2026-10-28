@@ -309,3 +309,19 @@ Changed:
 - Figures: the Figure 4B legend moved below the axis, with the dagger in the caption; Figure 5B weights to one
   decimal.
 Main text: 2,725 words.
+
+## Loop 16: structural concision (a structure editor's plan)
+
+The diagnosis was that the paper said status, results and definitions three times each. Applied:
+- **Lean Table 3.** It is now a verdict register: question, rule, outcome, with Yes/No first. The three
+  descriptive rows went to the figures and the supplement. Every failed planned test is still there, including the
+  first report evaluation ("every LUMIERE report failed"). The notes went from about 120 words to 50.
+- **Results 3.1 and 3.2 merged** into one subsection, "The timeline led at MU, and the combined and image models
+  transferred without refitting". The forward pointer is gone, and Results now run 3.1–3.4.
+- **Reference-only numbers moved to Figure 2**: enhancing volume at MU and LUMIERE. The card's Brier detail moved
+  to the supplement.
+- **The deviation is one disclosed clause** (it changed the LUMIERE AUC by less than 0.01).
+- **The Discussion opener** no longer re-runs the Results.
+Not applied: the proposal to signal exploratory status only by paragraph-level grouping or figure markers. It would
+weaken "marked at first appearance", so the daggers stay.
+Main text: 2,642 words; Table 3 about half its former length.
