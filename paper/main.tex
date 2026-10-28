@@ -84,8 +84,7 @@ measurements from the segmented tumour, separate image and timeline scores, a co
 their provenance. A local language model writes the narrative from that record, and a deterministic checker tests the
 narrative against it. We developed PRISM on MU-Glioma-Post (MU) and tested locked models on LUMIERE and
 UCSF-ALPTDG (UCSF). The component models ranked scans at the external centres, but the evidence carrying a score
-differed by cohort. The report makes that distinction visible; its lexical grounding and required content were tested,
-but no clinician reader outcome was measured.
+differed by cohort, so the report shows the two pathway scores separately, each with the inputs it is based on.
 
 % =====================================================================================================
 \section{Methods}\label{sec:2}
@@ -202,11 +201,8 @@ within a phase of care or within an enhancement category serve as diagnostics of
 % =====================================================================================================
 \section{Results}\label{sec:3}
 
-The initial radiomics exercise showed why a progression model could be useful, but not what a clinician should see at a
-surveillance scan. PRISM therefore treats a score as one field in a longitudinal evidence record, alongside the
-measurements, treatment context, uncertainty and the inputs not available to the model. We first evaluate the two
-model pathways, then test whether their behaviour transfers and whether the report faithfully presents the resulting
-record.
+We report the two pathways at the development centre, their transfer to the two external centres, what each
+score depended on, the confidence attached to it, and the check of the report against its record.
 
 \subsection{The pathways provide distinct evidence at the development centre}\label{sec:3.1}
 
@@ -280,15 +276,14 @@ increased at 27 of the 29 progression scans, and progression was dated a median 
 largely by agreeing with a progression call that was itself made from enhancement at the same scan, which is what the
 image pathway measures. Deep networks fine-tuned on UCSF scans learned above a permuted-label control
 (Table~\ref{tab:2}), and their scores tracked enhancing volume\expl{} (\todo{Supplementary section: deep networks at
-MU and UCSF}). Because the evidence behind a score differs by cohort and by situation, PRISM attaches
-a confidence to each score.
+MU and UCSF}). A clinician reading a score therefore needs to know how far it has been tested in the
+scan's situation, which is what the confidence states.
 
-\subsection{The report states where its evidence is thin}\label{sec:3.4}
+\subsection{The confidence keeps its coverage on average, and disagreement marks doubtful scans at MU}\label{sec:3.4}
 
 % Sources: SYSTEM_RESULTS.md S1 and Specification; NUMBERS.md 6 and mismatch 13; by outcome NUMBERS.md 12B. Council ruling 4.
-At the 80\% level, the conformal sets of the combined score covered 78\% to 87\% of scans in the three cohorts,
-meeting on point estimates the threshold fixed in advance, the nominal level less two percentage points
-(Figure~\ref{fig:4}A). Most sets were informative, holding a single outcome for 62\% to 75\% of scans. At UCSF the
+The 80\% conformal sets of the combined score covered 78\% to 87\% of scans in the three cohorts, at or above the
+threshold of 78\% fixed in advance (Figure~\ref{fig:4}A). Most sets were informative, holding a single outcome for 62\% to 75\% of scans. At UCSF the
 point estimate sat at the threshold and its interval reached below it (68\% to 87\%). Coverage also differed by outcome\expl. The sets covered 77\%
 (67\% to 87\%) of progression scans at LUMIERE and 65\% (51\% to 79\%) of non-progression scans at UCSF, against
 94\% and 97\% for the other outcome; on MU the two outcomes were similar. Thresholds fitted for each outcome on MU did
@@ -320,17 +315,15 @@ we evaluated next.
 \subsection{The report passes an automatic check against its structured record}\label{sec:3.5}
 
 % Sources: REPORT_V3_1.md (S5--S7, ladder); REPORT_V3.md (S5 failure); NUMBERS.md 7 and mismatches 9, 10. Council ruling 5.
-In the second report evaluation\expl, every report written by the local model passed the frozen lexical check of its
-numbers, flags and wording against its structured record (114, 162 and 130 reports at MU, LUMIERE and UCSF; 406 in
-total; Figure~\ref{fig:5}). The check cannot judge emphasis, order, readability or what a clinician would infer from
-the wording. Its records exclude the 10 LUMIERE and 10 UCSF patients used to develop the revision. The first
-evaluation had failed at LUMIERE (0 of 178) because one sentence quoted a number that was in no cited field; we
-revised the prompt and left the checker unchanged. In the second evaluation, all 220 reports requiring a few-case or
-untested tier stated it, and 28 of 30 perturbed records met the prespecified follows rule
-(Table~\ref{tab:2}; \todo{Supplementary section: report v3.1}). Thus the report gives the clinician the
-segmentation figure and its volumes, separate pathway scores, confidence fields and the limits of the record, with
-each checked statement traceable to a record field. No clinician has yet evaluated whether this presentation helps a
-real surveillance decision.
+Every report written by the local model passed the frozen check of its numbers, flags and wording against its
+structured record: 114, 162 and 130 reports at MU, LUMIERE and UCSF, 406 in total (Figure~\ref{fig:5}B). All 220
+reports whose situation had few cases or was untested said so, and when a field of the record was changed, 28 of 30
+reports followed the change, against a rule of at least 27 fixed in advance (Table~\ref{tab:2}). These results come
+after one revision of the prompt\expl: in the first evaluation every LUMIERE report failed, because a fixed sentence
+about the rater's three-month flag quoted a number held in no field; we corrected the prompt, left the checker
+unchanged and evaluated again on patients not used for the revision (\todo{Supplementary section: report v3.1}).
+The check is lexical. It cannot judge emphasis, order or what a clinician would infer, and no clinician has yet read
+the reports.
 
 % =====================================================================================================
 \section{Discussion}\label{sec:4}
@@ -490,44 +483,41 @@ early after radiotherapy and two had no radiotherapy date.
 rule was committed to the repository before the analysis it governs. AUC differences with 95\% CIs.}
 \label{tab:2}
 \begin{threeparttable}
-\begin{tabularx}{\linewidth}{@{}R{3.4cm}R{3.9cm}LR{1.6cm}@{}}
+\footnotesize
+\begin{tabularx}{\linewidth}{@{}R{3.6cm}R{3.8cm}LR{2.6cm}@{}}
 \toprule
 Question & Rule fixed in advance & Result & Met \\
 \midrule
 \multicolumn{4}{@{}l}{\textit{Detection on MU-Glioma-Post}} \\
 Do image measurements add to the timeline? & Planned model $\geq$ 0.75 (lower bound $\geq$ 0.65) and gain $\geq$ 0.03 with CI above 0 & Model 0.837 (0.763--0.904); gain $+$0.015 ($-$0.032 to $+$0.063) & No \\
 Do fine-tuned deep networks add? & Gain $\geq$ 0.03 with CI above 0; permuted-label control covers 0.5 & No network added; control 0.483 (0.436--0.527) & No (control valid) \\
-Does the locked model transport to LUMIERE? & External AUC $\geq$ 0.65 (below: transport failure) & AUC above 0.65 (Section~\ref{sec:3.2}); no transport failure & Yes \\
+Does the locked model transfer to LUMIERE? & External AUC $\geq$ 0.65 & AUC above 0.65 (Section~\ref{sec:3.2}) & Yes \\
 \addlinespace
 \multicolumn{4}{@{}l}{\textit{UCSF-ALPTDG}} \\
-Does the image pathway transport? & AUC $\geq$ 0.65, lower bound $>$ 0.5 & Both conditions met (Section~\ref{sec:3.2}) & Yes \\
+Does the image pathway transfer? & AUC $\geq$ 0.65, lower bound $>$ 0.5 & Both conditions met (Section~\ref{sec:3.2}) & Yes \\
 Do images add to clinical data without a timeline? & Gain with CI above 0 & $+$0.248 ($+$0.096 to $+$0.392) & Yes \\
 Does training at UCSF-ALPTDG do better than the locked model? & Descriptive & Higher when trained there (Section~\ref{sec:3.2}) & Descriptive \\
 Do deep networks learn at UCSF-ALPTDG? & Above the permuted-label control; control covers 0.5 & $+$0.201 ($+$0.094 to $+$0.306) over a control of 0.541 (0.480--0.603) & Yes \\
 \addlinespace
 \multicolumn{4}{@{}l}{\textit{The system (MU-Glioma-Post, LUMIERE, UCSF-ALPTDG)}} \\
-Do conformal sets keep their coverage? & Coverage $\geq$ 0.78 at the 80\% level in each cohort & Combined score met on average in all three (by outcome, Section~\ref{sec:3.4}); images at LUMIERE 0.708 and timeline at UCSF-ALPTDG 0.696 & Yes (combined) \\
-Do flags pick out less accurate scans? & AUC unflagged minus flagged $>$ 0, CI above 0 & Disagreement at MU-Glioma-Post $+$0.307 ($+$0.175 to $+$0.432); per-cohort results in the supplement\tnote{a} & MU-Glioma-Post: yes (disagree\-ment; set holding both outcomes). LUMIERE: set only. UCSF-ALPTDG: no \\
-Does setting flagged scans aside beat matched removal? & Retained AUC minus matched removal $>$ 0, CI above 0 & Disagreement met at MU-Glioma-Post (Section~\ref{sec:3.4}); per-cohort results in the supplement\tnote{a} & MU-Glioma-Post: yes (disagree\-ment). LUMIERE: no. UCSF-ALPTDG: set only \\
-Do the card's tiers mean something? & Descriptive: tested below few cases in Brier score and error & Brier 0.187 vs 0.258 at LUMIERE; reversed at MU-Glioma-Post (Section~\ref{sec:3.4}) & Descriptive \\
+Do conformal sets keep their coverage? & Coverage $\geq$ 0.78 at the 80\% level in each cohort & Combined score met on point estimates in all three (by outcome, Section~\ref{sec:3.4}); images at LUMIERE 0.708 and timeline at UCSF-ALPTDG 0.696 & Yes (combined) \\
+Do flags pick out less accurate scans? & AUC unflagged minus flagged $>$ 0, CI above 0 & Disagreement at MU-Glioma-Post $+$0.307 ($+$0.175 to $+$0.432); per-cohort results in the supplement\tnote{a} & MU: disagreement and set; LUMIERE: set; UCSF: neither \\
+Does setting flagged scans aside beat matched removal? & Retained AUC minus matched removal $>$ 0, CI above 0 & Disagreement met at MU-Glioma-Post (Section~\ref{sec:3.4}); per-cohort results in the supplement\tnote{a} & MU: disagreement; LUMIERE: neither; UCSF: set \\
+Do tested situations have lower error? & Descriptive: tested below few cases in Brier score and error & Brier 0.187 vs 0.258 at LUMIERE; reversed at MU-Glioma-Post (Section~\ref{sec:3.4}) & Descriptive \\
 Are reports faithful to the record? & $\geq$ 95\% pass the checker in each cohort & First evaluation failed at LUMIERE; second evaluation: all passed (Section~\ref{sec:3.5}) & No, then yes \\
 Is the tier stated where evidence is thin? & 100\% & All (Section~\ref{sec:3.5}) & Yes \\
-Do reports follow a changed record? & $\geq$ 27 of 30 perturbed records & 29 of 30 in the first evaluation; Section~\ref{sec:3.5} for the second & Yes \\
+Do reports follow a changed record? & $\geq$ 27 of 30 perturbed records & 28 of 30 (Section~\ref{sec:3.5}) & Yes \\
 Smallest report model passing the checker rule in every cohort & Descriptive & Qwen3.8-27B (supplement) & Descriptive \\
 \bottomrule
 \end{tabularx}
 \begin{tablenotes}\footnotesize
-\item Plans: detection, \code{DETECTION\_TASK.md} (commit 2b4c927); UCSF-ALPTDG, \code{UCSF\_PLAN.md} (0e7c9fe);
-system, \code{SYSTEM\_PLAN.md} (e7cba80); second report evaluation, \code{REPORT\_V3\_1\_PLAN.md} (4f7e7b9). In the
-first row, the planned model gained $+$0.041 ($+$0.006 to $+$0.081) over all scans of all gliomas and $+$0.036
-($-$0.014 to $+$0.085) in the all-glioma intended use, which may reflect the schedule inputs of
-Section~\ref{sec:3.3}. The locked models were fitted on grade 4 rows where the
-UCSF-ALPTDG plan named all MU-Glioma-Post detection scans; the all-glioma fit gave the same AUC at LUMIERE, and at
-UCSF-ALPTDG the all-glioma models were tested on all-glioma scans. Matched
-removal keeps the phase-of-care mix of the removed scans (plain random removal at LUMIERE, which has no phase). The
-second report evaluation followed a failure seen in the first, with the checker unchanged. The flag and tier tests
-were fixed in advance, but the agreement rule and the card tiers they test were defined after the cohort results had
-been seen\expl.
+\item Plans were committed before each analysis: detection (commit 2b4c927), UCSF-ALPTDG (0e7c9fe), the system
+(e7cba80) and the second report evaluation (4f7e7b9). In the first row, the planned model gained $+$0.041 ($+$0.006
+to $+$0.081) over all scans of all gliomas, which may reflect its schedule inputs (Section~\ref{sec:3.3}). The locked
+models were fitted on grade 4 scans; an all-glioma fit gave the same AUC at LUMIERE. Matched removal keeps the
+phase-of-care mix of the removed scans (random removal at LUMIERE, which has no phase); ``set'' is a conformal set
+holding both outcomes. The flag and tier tests were fixed in advance, but the agreement rule and the card tiers were
+defined after the cohort results had been seen\expl.
 \item[a] The Met cells use each cohort's own medians, as fixed in advance. With the medians fixed on MU, which the
 system uses (Section~\ref{sec:2.1}), disagreement also met both tests at LUMIERE\expl. \todo{Supplementary section:
 system results}: both tests for each flag in each cohort, with both median rules and with the rule that flags any scan.
@@ -597,7 +587,7 @@ in advance, met by the combined score on point estimates in all three cohorts; b
 LUMIERE and UCSF-ALPTDG (Section~\ref{sec:3.4}). (B) The combined score's AUC where
 the pathways agree minus where they disagree, by cohort, with each cohort's own medians (filled, as fixed in
 advance) and with medians fixed on MU-Glioma-Post (open\expl). (C) Scans whose situation (phase of care by change in
-enhancing tumour) reached the card's tested tier, by cohort; the rest have few cases. The agreement rule and the card were defined after the cohort results had been seen (\textdagger).}
+enhancing tumour) reached the card's tested tier, by cohort; the rest have few cases.}
 \label{fig:4}
 \end{figure}
 
