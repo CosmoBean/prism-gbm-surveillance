@@ -325,3 +325,28 @@ The diagnosis was that the paper said status, results and definitions three time
 Not applied: the proposal to signal exploratory status only by paragraph-level grouping or figure markers. It would
 weaken "marked at first appearance", so the daggers stay.
 Main text: 2,642 words; Table 3 about half its former length.
+
+## Loop 17: validation of the structural edit
+
+Cold read: 7 article, 7 concise (up from 6), 8 figures (up from 7). Hostile: minor revision. Audit: every number
+correct, including each cell of the lean Table 3; 9 fixes.
+Changed:
+- **Restored a planned result that partly contradicts the claim** (STYLE.md §4): over all scans of all gliomas the
+  planned imaging model gained +0.041 (+0.006 to +0.081). It is now in the Table 3 note.
+- **Table 3.** The single-pathway coverage failures are back in the coverage cell (images at LUMIERE 0.708,
+  timeline at UCSF 0.696); the deep-network control reads as valid; the section heading no longer calls fine-tuned
+  networks "locked"; the +0.248 row names the locked comparison; the report rows point to 3.4 instead of repeating
+  counts.
+- **Statistical wording.** "Calibrated in the large" became "no detectable miscalibration in the large"; "less
+  accurate scans" became "scans the combined score ranks less well"; the MU coverage interval also reaches below
+  the threshold, which is now stated; the per-outcome MU result is a point-estimate shortfall only. One sentence
+  discloses that the MU intervals do not include refitting variance. The LUMIERE gain over the timeline has its
+  interval, 0.08 (−0.01 to +0.16), instead of pointing to a figure that does not show it.
+- **Calibrated claims.** The Introduction names the combined and image models; UCSF labels "coincided with" a rated
+  increase in enhancement; the audits "suggested" what a model used, and the pathways "put it in front of the
+  clinician"; "whatever a cohort holds" became "given scans and masks". The Limits now say the deployed disagreement
+  rule needs a batch of scans and the single-scan version is exploratory. The report-model comparison discloses that
+  the prompt was revised for Qwen3.8-27B.
+- The 3.1 pointer to the between-phase result is restored with its dagger; the orphan label was removed; the Figure
+  4 caption carries its dagger; the Figure 5B key explains the light bars.
+Main text: 2,759 words.

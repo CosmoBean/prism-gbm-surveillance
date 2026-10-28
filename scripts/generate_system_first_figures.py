@@ -389,7 +389,7 @@ def fig5(output: Path) -> None:
                 fontsize=6.7, color="white" if ok else C["ink"], weight="bold")
     bx.set(yticks=[], xlim=(0, 1), ylim=(-0.45, len(ladder) - 0.15), xlabel="Share of the 406 reports")
     bx.spines["left"].set_visible(False)
-    bx.text(0, -0.13, "Dark: passed in every cohort (≥ 95%).\nSame prompt for every model.", transform=bx.transAxes,
+    bx.text(0, -0.13, "Dark: ≥ 95% in every cohort; light: below\n95% in at least one. Same prompt for all.", transform=bx.transAxes,
             fontsize=6.6, va="top", color="#444444", linespacing=1.2)
     save(fig, output, "fig5_report")
 
