@@ -81,8 +81,12 @@ the planned rule, plus one † row for the MU medians. It changes a display item
 ## P12. The supplement's cross-references are stale
 `supplement.tex` refers to main-text sections as "M2.8", "M2.11" and so on, from an older structure, and to old table
 numbers. The main text is now 2.1–2.3, 3.1–3.5, Table 1 (scores), Table 2 (cohorts) and Table 3 (planned
-questions). Every `\todo{Supplementary section: …}` in the main text also still needs its supplement section.
-This is a separate reconciliation pass.
+questions). On 2026-10-28 the ten `\todo{Supplementary section: …}` pointers were removed from the main text: each now states
+its fact inline or needed no pointer. The supplement has no UCSF-ALPTDG results and no system (coverage, flag, card,
+report v3.1) results at all, so its rebuild must add: image-pathway inputs per cohort; the fitting-population
+deviation; deep networks at MU and UCSF; every flag x cohort x median-rule estimate; calibration and thresholds;
+Brier and error by card tier; the report-prompt revision. Source: docs/results/SYSTEM_RESULTS.md, UCSF_RESULTS.md,
+REPORT_V3_1.md. This is a separate reconciliation pass.
 
 ## P1 draft abstract (150 words by wc, not applied; written to the STYLE.md §9 recipe and the 2026-10-27 reaction)
 

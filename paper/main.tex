@@ -134,8 +134,9 @@ The timeline pathway scores a scan from clinical data and the patient's position
 scan day. Where a cohort lacks treatment dates, a reduced timeline keeps the inputs it has
 (Table~\ref{tab:models}), with the flag for the first weeks after radiotherapy taken from the rater's note at LUMIERE
 and approximated at UCSF. The image pathway scores the scan from 27 measurements of the segmented
-tumour and its change (Table~\ref{tab:models}; \todo{Supplementary section: image pathway inputs and their
-harmonisation at LUMIERE and UCSF}) and uses no dates or intervals. The measurements come from the masks released with each cohort
+tumour and its change (Table~\ref{tab:models}) and uses no dates or intervals. LUMIERE's masks have three
+compartments and no separate cavity, so there the image pathway uses the three volumes and their change since the
+previous scan, a reduction fixed before evaluation. The measurements come from the masks released with each cohort
 \citep{mahmoud2025,suter2022,fields2024}.
 
 % Sources: SYSTEM_PLAN.md section 2; SYSTEM_RESULTS.md Specification; prism/analyses/system.py (derive: medians over
@@ -144,8 +145,7 @@ harmonisation at LUMIERE and UCSF}) and uses no dates or intervals. The measurem
 The confidence has three parts. A patient-level split conformal set at the 80\% level \citep{angelopoulos2023}
 holds one outcome when the score is clear and both when it is not. It comes from the combined model refitted on 70\%
 of the MU patients and calibrated on the other 30\% (within each training fold on MU) and is applied unchanged
-elsewhere, which assumes that external scans are exchangeable with MU's (\todo{Supplementary section: system
-results}). The two pathways agree when both scores lie on the same side of their medians over the cohort's evaluation
+elsewhere, which assumes that external scans are exchangeable with MU's. The two pathways agree when both scores lie on the same side of their medians over the cohort's evaluation
 scans; because cohort medians need a batch of scans, we also tested medians fixed on MU, which can be applied to a single
 scan.
 The reliability card\expl{} \citep{mitchell2019} describes the scan's situation, its phase of care crossed with the
@@ -224,8 +224,8 @@ early after radiotherapy and two had no radiotherapy date.
 % Sources: DETECTION_TASK.md (Plan); SPLIT_VARIANCE.md; Supplementary S8 and Figure S2; UCSF_PLAN.md (0e7c9fe);
 % SYSTEM_PLAN.md (e7cba80); REPORT_V3_1_PLAN.md (4f7e7b9); UCSF_RESULTS.md Part A, B, C; NUMBERS.md status column.
 The locked models were fitted on all 181 grade 4 detection scans of MU, from every phase of care, and the external
-tests followed plans committed before any score was compared with an external label. One deviation, in the MU scans used for fitting, changed the LUMIERE AUC by less than 0.01 (\todo{Supplementary
-section: deviations from the plans}). On MU we evaluated every model by five
+tests followed plans committed before any score was compared with an external label. One deviation: the plans named all MU detection scans and we fitted on the grade 4 ones; fitting on all 229 scans
+of gliomas of every grade changed the LUMIERE AUC by less than 0.01. On MU we evaluated every model by five
 repeats of five-fold cross-validation grouped by patient and report the mean pooled held-out AUC with a 95\%
 confidence interval (CI) from 1,000 patient-level bootstrap draws; external AUCs carry a 95\% CI from the same patient-level bootstrap. The MU intervals resample held-out predictions
 and do not include the variance from refitting. No patient
@@ -234,11 +234,10 @@ unstable in small cohorts \citep{an2021,varoquaux2018}. An earlier radiomics mod
 one test split but averaged 0.72 when re-selected and re-tested over 500 splits of the same design (Supplementary
 Section~S8 and Figure~S2). As a reference, we also fitted each UCSF model on UCSF by cross-validation. To test whether deep networks see more
 than the measurements, we fine-tuned segmentation networks to score scans directly and compared them with the same
-networks trained on permuted labels
-(\todo{Supplementary section: deep networks at MU and UCSF}). Table~\ref{tab:2} lists the questions fixed in advance
+networks trained on permuted labels. Table~\ref{tab:2} lists the questions fixed in advance
 and their answers. Results of analyses not fixed in advance carry a dagger (\textdagger). The disagreement flag and
 its two tests were planned, but the median rule that defines disagreement was written down after the results had been
-seen, so every disagreement result carries a dagger (\todo{Supplementary section: analyses not fixed in advance}).
+seen, so every disagreement result carries a dagger.
 
 % Sources: NUMBERS.md section 9 (DETECTION_TASK.md; UCSF_PLAN.md; SYSTEM_PLAN.md; REPORT_V3.md; REPORT_V3_1.md).
 % Numbers already given in the Results are pointed to by section and not repeated.
@@ -279,8 +278,7 @@ Matched removal keeps the phase-of-care mix of the removed scans (random removal
 Over all scans of gliomas of all grades (a planned secondary population), the planned model gained $+$0.041 ($+$0.006 to $+$0.081) over the timeline, which may
 reflect its schedule inputs (Section~\ref{sec:3.3}).
 \item[a] With each cohort's own medians, the rule the reports use; the median rule was written down after the results
-had been seen\expl. With medians fixed on MU, disagreement also met both tests at LUMIERE. Every estimate, for each
-flag, cohort and median rule: \todo{Supplementary section: system results}.
+had been seen\expl. With medians fixed on MU, disagreement also met both tests at LUMIERE.
 \end{tablenotes}
 \end{threeparttable}
 \end{table}
@@ -330,7 +328,7 @@ two scans was shorter before progression\expl.
 % Sources: NUMBERS.md 12D (operating point, EXPLORATORY) and 12F (calibration).
 As a probability, the combined score showed no detectable miscalibration in the large at LUMIERE\expl{} (observed over
 expected 0.97, 0.81--1.14) but overpredicted progression at UCSF (0.72, 0.55--0.91), and a threshold at the MU median\expl{} called
-90\% of UCSF scans positive (\todo{Supplementary section: calibration and thresholds}).
+90\% of UCSF scans positive.
 
 \subsection{The scores followed the treatment schedule at MU and enhancement at UCSF}\label{sec:3.3}
 
@@ -372,7 +370,7 @@ median of 7 days after the scan (Figure~\ref{fig:3}B). Enhancing volume alone re
 locked image models, and above its AUC at MU and LUMIERE (Figure~\ref{fig:2}). Among the 37 scans rated as
 increased, the single-scan model reached 0.65 (0.44--0.84), so this sample cannot show whether the measurements add
 to that rating. Deep networks fine-tuned on UCSF scans beat the permuted-label control (Table~\ref{tab:2}), and their
-scores tracked enhancing volume\expl{} (\todo{Supplementary section: deep networks at MU and UCSF}).
+scores tracked enhancing volume\expl.
 
 \subsection{Coverage meets its target on point estimates; disagreement marks scans the combined score ranks less well at MU}\label{sec:3.4}
 
@@ -383,7 +381,7 @@ three cohorts, covering 78\% to 87\% of scans, and held a single outcome for 62\
 set at LUMIERE and the timeline set at UCSF fell below it. Coverage differed by outcome
 at the external centres\expl. LUMIERE covered 77\% (67\% to 87\%) of progression scans and 94\% of non-progression
 scans, and UCSF 97\% of progression and 65\% (51\% to 79\%) of non-progression scans. Calibrating the sets separately
-for each outcome on MU did not fix this, and non-progression coverage fell to 73\% (63\% to 82\%) even on MU (\todo{Supplementary section: system results}).
+for each outcome on MU did not fix this, and non-progression coverage fell to 73\% (63\% to 82\%) even on MU.
 
 % Sources: NUMBERS.md section 11 (Fig 4).
 \begin{figure}[!htbp]
@@ -413,8 +411,8 @@ flag, met one of the two planned tests in each cohort (Table~\ref{tab:2}).
 Only four situations on the reliability card\expl{} reached the tested tier (Figure~\ref{fig:4}C), one at MU and three
 at LUMIERE, where no phase of care is recorded and situations differ by enhancement only; no scan in these sets was in
 an untested situation. Every UCSF situation had few cases, and at MU no situation in the first 12 weeks after
-radiotherapy held more than three progression scans. In the planned descriptive comparison, tested situations had lower error than few-case ones at LUMIERE but not at MU (\todo{Supplementary section: system
-results}).
+radiotherapy held more than three progression scans. In the planned descriptive comparison, tested situations had lower error than few-case ones at LUMIERE (29\% against 42\% of scans misclassified at the cohort median) but not at MU (29\% against 24\%), where the few-case scans are mostly clear non-progression early after
+radiotherapy.
 
 \subsection{After one revision, every report passed an automatic check against its record}\label{sec:3.5}
 
@@ -426,7 +424,7 @@ also did (Figure~\ref{fig:5}B). All 220 reports in few-case or untested situatio
 three cohorts, 28 reports followed the change, against a planned minimum of 27 (Table~\ref{tab:2}). These results
 followed one revision of the prompt\expl. Before it, every LUMIERE report failed because a fixed sentence quoted a
 number held in no field, so we corrected the prompt, left the checker unchanged and evaluated again on patients not
-used for the revision (\todo{Supplementary section: report revision}). The check confirms that a report matches its
+used for the revision. The check confirms that a report matches its
 record; it cannot judge emphasis, what a clinician would infer, or whether the segmentation is right.
 
 % Sources: NUMBERS.md section 11 (Fig 5); REPORT_V3_1.md.
