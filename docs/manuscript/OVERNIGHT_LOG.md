@@ -217,3 +217,13 @@ models and the plans; the within-phase definition moved to where it is first use
 comes before the 0.88 it explains; the Discussion's second sentence states the thesis. MU disagreement is now the
 planned statistic with its interval (0.31, 0.18–0.43) rather than two AUCs without intervals.
 Main text: 2,511 words (start of the second pass: 3,867; −35%).
+
+## Loop 12b: figure redraw after a design review
+
+A figure designer reviewed the five PNGs, and the script was revised to its list, with no data changed. All
+figures are now 7.2 in wide and saved as drawn, with no text under 6.5 pt and the same panel-letter style. Figures 2
+and 4A are now points with intervals on a marked axis; bars starting at 0.3 had exaggerated the gaps. Figure 2 makes
+the combined score primary and shades "UCSF trained there" as a reference. Figure 1's boxes are a name plus one
+line, with no overflow. Figures 3A and 3C use the same filled/open encoding (across/within phases). Figure 4A shows
+the nominal 0.80 beside the 0.78 threshold. Figure 5B uses ink colours, since orange means "combined score"
+elsewhere. Captions for Figures 2 and 4 were updated.
