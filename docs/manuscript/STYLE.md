@@ -238,3 +238,8 @@ Add each reaction as a dated, one-line rule.
 - 2026-10-28: the author liked the overnight pass and asked for more: concise and right, not just right-looking. "Not
   a million words, but the 100 words that actually drive the impact." Cut every sentence that does not move the
   argument; figures and tables sit in the text next to their first mention, not at the end.
+- 2026-10-28: "why do we have red text that goes towards supplementary material and not directly in the main text?"
+  State the fact a reader needs inline, in one clause; no "see Supplementary section" placeholders in the main text.
+  The supplement holds full tables only and is cited by real section number once it is rebuilt.
+- 2026-10-28: the example report should look like a standard clinical report: a readable serif, black and grey
+  only, and images (a drawn segmentation strip, never a patient image).
