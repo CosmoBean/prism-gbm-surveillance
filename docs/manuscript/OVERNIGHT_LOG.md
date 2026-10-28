@@ -350,3 +350,39 @@ Changed:
 - The 3.1 pointer to the between-phase result is restored with its dagger; the orphan label was removed; the Figure
   4 caption carries its dagger; the Figure 5B key explains the light bars.
 Main text: 2,759 words.
+
+## Loop 18: convergence check, then the last fixes
+
+Cold read: 7 article, 6–7 concise, 8 figures (stable over loops 17–18). Hostile: minor revision; the one remaining
+reason was scope wording ("the scores" or "PRISM's models" where the evidence covers specific models). Audit: every
+number and dagger correct; every STYLE.md §4 item present, each listed with its location in audit_loop18.md.
+Changed: scope words name the models ("combined and image models"; "the timeline and combined scores … the image
+scores"); the 3.1 between-phase sentence now says the within-phase gain "was not detectable, although its interval
+cannot exclude a gain as large as the overall one"; the Limits no longer suggest that the cohort-median rule was
+planned; Table 3 asks "Does the combined score rank flagged scans less well?" and defines the all-grade secondary
+population; the conformal-set flag result is back in 3.3; the card comparison says LUMIERE yes, MU no; "PRISM has too
+few tested cases" became "the evidence PRISM holds for this situation is too thin"; the Conclusion no longer repeats
+the Discussion's phrase; small fixes to the Figures 3 and 5 captions.
+Stopped here: three successive reads are stable and the remaining points are wording. Figure 5A's sentence "how
+closely they resemble the progression scans" was kept, because it is the system's real report sentence.
+Main text: 2,794 words.
+
+## Summary of the second pass (loops 10–18)
+
+- Figures and tables sit in the text after their first mention. The figures were redrawn after a design review
+  (honest axes, one canvas width, consistent panel letters, readable print sizes). Figure 5B now shows which local
+  report models pass the check.
+- Main text 3,867 → 2,794 words (−28%). It reached 2,511 and was allowed to grow back where readers could not follow
+  or a disclosure had been lost. The paper is 17 → 15 pages; Table 3 is about half its former length.
+- New Table 1 names every score once (P7). The agreement-rule wording matches the evaluated system (P6). The rule
+  status is consistent: the flag and its tests were planned, the median rule was post hoc, and every disagreement
+  result carries a dagger.
+- Every kept number has its interval; loose wording ("about the same", "did not raise", "calibrated", "at least as
+  well") was replaced by the numbers. Two planned results that a cut had dropped were restored (+0.041 over all
+  gliomas; the single-pathway coverage failures).
+- Readers across both passes: 8 cold reads, 7 hostile reads, 5 integrity or number audits, 2 voice edits, 1
+  clinician, 1 impact editor, 1 structure editor, 1 figure designer. Cold scores ended at 7 article, 6–7 concise, 8
+  figures; the hostile verdict moved from a long list to minor revision on wording only.
+- Still for the author: P1 (the abstract; a 150-word draft is in OVERNIGHT_PROPOSALS.md), P8 (MU age 62.5 or 62),
+  P9 (Tikhonov reference), P10 (the Conclusion's label caveat, now partly carried), P12 (supplement
+  cross-references), and RANO in the cited LUMIERE paper's title (a citation; your call).
