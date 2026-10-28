@@ -47,3 +47,23 @@ Changed:
 
 Left: the abstract (P1), the report's content (P2), the scan-count table (P3), Figure 5B (P4) and the order of the
 report figure (P5) are in OVERNIGHT_PROPOSALS.md.
+
+## Loop 3: definitions a reader can follow on first reading
+
+Source: the remaining items from loop 2's reads (sentences the cold reader read three times; terms used before they
+were set up; overclaiming verbs in the Discussion).
+
+Changed:
+- 2.1: the agreement rule now says first what it is ("both scores above, or both below, their own median on MU")
+  and gives the medians' origin in brackets. The card's sentence now says plainly that a scan's own result is in its
+  row; this was disclosed before, but it read like leakage slipped in.
+- 2.2: the phases of care are given without "84 days, 12 weeks"; the 120-day task is introduced as secondary
+  before it appears in 3.1.
+- 2.3: one sentence introduces the deep networks and their permuted-label control before 3.3 and Table 2 use them.
+- 3.4: the agreement paragraph is reordered: the planned MU result, then the planned external tests (not met), then
+  the MU-fixed medians the system uses (†).
+- Discussion: "establish transfer of ranking" became "show that the ranking transferred, but the risk scale did
+  not"; "runs where data are incomplete" became "can run where treatment dates are missing"; the card's
+  no-refitting point is stated as a property of a table; the novelty sentence keeps its hedge and says what the
+  combination is.
+- Table 1: "index scans" (never defined) became "scans with a 120-day label".
