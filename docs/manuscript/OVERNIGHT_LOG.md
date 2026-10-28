@@ -135,3 +135,27 @@ the 3.4 heading uses the figure's wording ("less accurate"); LUMIERE's clinical-
 less well" is qualified by "with coefficients fitted on MU"; "measurements added little" became "added little that
 this sample could detect"; in Table 2 the coverage cell says "not for every outcome" and the training-at-UCSF cell
 names both image models; Figure 1B says "406 reports".
+
+## Loop 9: last cold read; stopped here
+
+The cold reader again scored the paper 7/10 ("reads as an argument… 3.4 is still a log of medians, rules and
+tests"), the same as loop 8, so the sentence-level gains have levelled off. What remains is structural (P1 abstract,
+P6/P11 flags and medians, P7 model table) and needs the author. Loop 10 was not run.
+
+Changed: the MU-median paragraph now opens on its finding; the deviation, the UCSF combined-score caveat and the
+card's tiers are split into plain sentences; the card sentence says why a scan's own result is in its row (the card
+is a record of measured results); the ladder paragraph opens on what it showed; the Figure 3 caption describes
+panel B as drawn; the Figure 5 caption names the card's population.
+
+## Morning summary
+
+- 9 loops, 9 commits on `manuscript-week` (37d815e → this one). Pre-pass copy: `paper/backup/main_pre-overnight_2026-10-28.{pdf,tex}`.
+- Readers: 4 cold reads (loops 2, 4, 8, 9), 3 hostile reads (2, 6, 8), 1 voice edit (4), 1 number audit (6).
+  Cold-reader recall moved from "felt misled" (loop 2) to a correct claim with the right numbers and 7/10 "reads
+  as an argument" (loops 8–9).
+- Unchanged by design: the abstract (verified identical), LOCKED.md, the argument and outline, every number's
+  source. One number was added to NUMBERS.md (LUMIERE 0.889 / 0.667, from the aggregate CSV).
+- Two wrong statements were found and fixed (LUMIERE baseline sentence; Table 2's 29/30). One system–text mismatch
+  was found and not fixed (P6: the reports use each cohort's own medians, while the text says MU medians).
+- Decisions for you: OVERNIGHT_PROPOSALS.md, P1–P11. The most important are P1 (abstract), P6 (medians) and P11
+  (flag grid).
