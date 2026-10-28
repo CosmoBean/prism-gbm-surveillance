@@ -83,3 +83,9 @@ the planned rule, plus one † row for the MU medians. It changes a display item
 numbers. The main text is now 2.1–2.3, 3.1–3.5, Table 1 (scores), Table 2 (cohorts) and Table 3 (planned
 questions). Every `\todo{Supplementary section: …}` in the main text also still needs its supplement section.
 This is a separate reconciliation pass.
+
+## P1 draft abstract (150 words by wc, not applied; written to the STYLE.md §9 recipe and the 2026-10-27 reaction)
+
+Surveillance MRI after treatment for glioblastoma is read against earlier scans and the course of treatment, but a progression score does not say which it used. We built PRISM, which scores each scan separately from its images and from its treatment timeline, states how far each score has been tested in the scan's situation, and writes a checked report locally. At the development centre, MU-Glioma-Post, the timeline carried most of the signal (AUC 0.82), largely because of when patients were scanned; within a phase of care, the images did as well. Applied unchanged at two other centres, the models still ranked scans (LUMIERE, 0.77), but at UCSF-ALPTDG the scores followed the enhancement on which progression was called, and enhancing volume alone reached 0.88. What carries a progression score depends on how a cohort was scanned and labelled, and separate evidence makes this visible. No clinician has yet used the reports.
+
+Sources: MU timeline 0.82 (NUMBERS.md 3); within-phase images 0.68 vs timeline 0.64 (5); LUMIERE 0.77 (4); UCSF enhancing volume alone 0.88 (5, exploratory, which the Methods dagger covers). Three numbers. The punchline is the cohort finding, not a component list. Replaces the proposed system-first abstract only if you approve.

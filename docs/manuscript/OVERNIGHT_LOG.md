@@ -202,3 +202,18 @@ dense models pass in every cohort.
 Supplement: two "main Table 1" references now point to Table 2 (cohorts). The supplement's other cross-references
 were already stale (old "M2.x" numbering); see P12.
 Main text: 2,898 words (loop 10: 2,736; before the second pass: 3,867).
+
+## Loop 12: the impact edit
+
+An editor-in-chief read marked the ~100 words that carry the paper and proposed a further 15% of cuts. They were
+applied, with three changes: numbers that had no interval got one (clinical alone 0.53, 0.45–0.61; MU combined
+0.82, 0.74–0.89; UCSF reduced timeline 0.56, 0.42–0.69; Limits 0.60, 0.52–0.69) instead of being cut; the locked
+model's MU cross-validation AUC stays (0.80, 0.73–0.89); and the fitting details (ridge, missing values) moved into
+Table 1's caption rather than out of the paper. Cut: sentences that repeated Table 1 or Figures 1, 2 and 5 (input
+lists, LUMIERE pathway AUCs, enhancing volume at MU and LUMIERE, the card's "1 of 9" in the Discussion); the
+recalibration implication in 3.2 (the Discussion carries it); restatements of the UCSF label point; and the
+Discussion's opening design restatement (the Conclusion carries it). Reordered: 2.3 now opens with the locked
+models and the plans; the within-phase definition moved to where it is first used (3.3); in 3.3 the UCSF rating
+comes before the 0.88 it explains; the Discussion's second sentence states the thesis. MU disagreement is now the
+planned statistic with its interval (0.31, 0.18–0.43) rather than two AUCs without intervals.
+Main text: 2,511 words (start of the second pass: 3,867; −35%).
