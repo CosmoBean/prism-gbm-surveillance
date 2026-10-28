@@ -227,3 +227,31 @@ the combined score primary and shades "UCSF trained there" as a reference. Figur
 line, with no overflow. Figures 3A and 3C use the same filled/open encoding (across/within phases). Figure 4A shows
 the nominal 0.80 beside the 0.78 threshold. Figure 5B uses ink colours, since orange means "combined score"
 elsewhere. Captions for Figures 2 and 4 were updated.
+
+## Loop 13: validation after the impact edit (audit, cold read, hostile read)
+
+Hostile verdict: minor revision. The one reason was inconsistent dagger labelling of the disagreement result. Cold
+read: 7 article, 6 concise, 7 figures; several cuts had gone too far.
+Fixed:
+- The audit found no wrong numbers, but it did find lost disclosures and meanings that had shifted. The deviation
+  says what it was again; the UCSF paragraph states its claim again; "every report passed" now names Qwen3.8-27B,
+  since smaller models did not (Figure 5B); MU and LUMIERE enhancing volume (0.62, 0.66) are back as the cohort
+  contrast; coverage is "uneven at the external centres"; Gomaa's fusion paper is described accurately; the Intro
+  says "mostly" again.
+- Daggers: the card in 2.1, the MU timeline audit, the UCSF rating, the MU disagreement result (its median rule was
+  post hoc), and the exploratory points listed in Figure 2's caption.
+- Hostile read:
+  - The conformal model is said to be refitted on 70% of MU and calibrated on 30%, which answers "calibrated on
+    patients it was fitted on?".
+  - The within-phase comparison is said to come mostly from the later phase (56/32).
+  - Figure 2 explains the full and reduced combined forms and the UCSF-trained clinical point below 0.5.
+  - "Untested: none" is now in the text and Figure 4C.
+  - The perturbation test says what was perturbed.
+  - Table 3 names the image pathway in the +0.248 row.
+  - The Discussion's UCSF claim now cites evidence instead of an inference.
+  - Coverage is given "on point estimates".
+  - The Discussion no longer says "and so" between disagreement and the card tier.
+- Too-compressed spots from the cold read were expanded: the deviation, "external form" (now "reduced form used
+  externally"), the tiers, and why the UCSF scan interval matters ("carries the schedule rather than the tumour").
+- Layout: float pages are aligned to the top.
+Main text: 2,706 words. That is up from 2,511 because clarity and disclosures came back; it is −30% from 3,867.
