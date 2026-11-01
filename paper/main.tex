@@ -26,26 +26,17 @@
 \maketitle
 
 % Unstructured abstract, 100--150 words (journal instructions).
-% PROPOSED 2026-10-26, to replace the abstract locked on 2026-10-24 (docs/manuscript/LOCKED.md), which predates the
-% external tests and the system results. Not locked until the author approves it. Council round 3
-% (docs/manuscript/council/round3_decisions.md): the voice reviewer's proposal as the base; the first sentence gives the
-% clinical reason (treatment effects mimic progression) and "so the clinician sees what each score uses"; "a model
-% trained there did better" quantified as 0.86 (the image pathway trained at UCSF, Section 3.2); coverage "on point
-% estimates". Council round 4 (round4_decisions.md): coverage "on average", short for one outcome at both external
-% centres (NUMBERS.md 12B); cuts for length. Council round 5 (round5_decisions.md): the fresh editor's proposal, with
-% the card ("stating where evidence is thin"), the schedule finding ("when in treatment patients were scanned") and the
-% image pathway on MU (0.71, exploratory model). 149 words. Sources: NUMBERS.md sections 1, 3, 4 and 12B.
+% Finding-first abstract, 2026-11-01, after the supervisor asked for clear contributions (STYLE.md 10); replaces the
+% system-first proposal of 2026-10-26 and the abstract locked on 2026-10-24 (LOCKED.md), pending the author's approval.
+% 149 words. Sources: NUMBERS.md 3 (0.82; within-phase 0.68 vs 0.64), 4 (0.77), 5 (UCSF enhancement), 6 (disagreement), 7 (406/406).
 \begin{abstract}
-Surveillance MRI after treatment for glioblastoma and other aggressive gliomas must be interpreted with prior imaging
-and the treatment course. A progression score alone does not show the clinician the evidence that produced it or what
-it leaves out. We built PRISM, a modular system that combines image-derived measurements, treatment context, separate
-image and timeline pathways, uncertainty and provenance in a locally generated, checked report. On MU-Glioma-Post,
-the timeline and image pathways reached AUCs of 0.82 and 0.71. Applied unchanged, the combined score reached 0.77 on
-LUMIERE; at UCSF-ALPTDG, single-scan image measurements reached 0.80 and the image pathway 0.73. The evidence behind
-the scores differed by cohort: treatment timing at MU-Glioma-Post and enhancing volume at UCSF-ALPTDG. In a second,
-cross-cohort report evaluation, 406 of 406 reports passed a lexical check against their structured records. PRISM is
-designed to make evidence inspectable, not to replace clinical judgement; its effect on clinical decisions needs a
-reader study.
+A progression score from surveillance MRI after glioma treatment can rank scans well largely by when they were taken,
+without showing which evidence carried it. We built PRISM, which splits each score into image and
+treatment-timeline evidence, attaches a confidence to each, and has a local language model write the report. At the development centre, MU-Glioma-Post, the timeline reached an AUC of 0.82, and the locked combined
+score reached 0.77 at LUMIERE without refitting. In exploratory analyses, within a phase of care at MU the images matched the timeline (0.68 against 0.64), and at UCSF-ALPTDG the scores followed the enhancement
+on which progression was called. Pathway disagreement marked less reliable scores at MU only. After one prompt
+revision, all 406 reports passed an automatic check against their records. What carries a progression score depends
+on how a cohort was scanned and labelled. No clinician has used the reports yet.
 \end{abstract}
 
 % No more than 3 keywords (journal instructions).
@@ -63,18 +54,45 @@ when treatment can increase contrast enhancement without tumour growth. This pse
 first weeks after chemoradiotherapy, and more so when the promoter of the DNA-repair gene MGMT is methylated
 \citep{taal2008,brandes2008}.
 
-% Sources: OUTLINE.md (spine C1--C5); refs an2021, varoquaux2018, shi2025.
-A model's probability alone does not show the treatment context, the
-measurements behind it, its uncertainty or what it left out. Surveillance data make these gaps hard to close, because
-public datasets often hold images but few treatment dates, centres document progression differently, and the hardest
-situations are rare. Only 3 of 20 studies in a recent review of automated response assessment tested
-their models externally \citep{shi2025}.
+% Sources: OUTLINE.md (spine C1--C5); refs shi2025. Challenges asked for by the supervisor (2026-11-01).
+A progression score from such scans can look better than it is, for three reasons. Scan timing follows treatment, so
+a model can rank scans by when they were taken rather than by what the tumour did. The hardest situations, such as
+growing enhancement soon after radiotherapy, are rare, so a model gives a number where it has seen few cases. And
+centres hold different data and document progression differently, so a model fitted at one centre meets missing
+inputs and a different label at the next. Only 3 of 20 studies in a recent review of automated response assessment
+tested their models externally \citep{shi2025}. A single probability shows none of this; a system can address each
+problem, with separate pathways that expose the schedule, a record of the situations with few cases, and modules
+that run on whatever a centre records.
 
-% Sources: OUTLINE.md (question, claim); NUMBERS.md sections 3--7.
-We built PRISM to write, inside the hospital, a report for each post-treatment scan; the report shows the image
-evidence and the treatment-timeline evidence separately and states how far each has been tested. We developed it on
-MU-Glioma-Post (MU) and applied its models unchanged to LUMIERE and UCSF-ALPTDG (UCSF). The combined and image models ranked scans at both external centres, but what drove a score differed by cohort, mostly the position in treatment at MU and
-enhancement at UCSF.
+% Sources: SYSTEM_PLAN.md (LLM never sees images); REPORT_V3_1.md.
+Language models now write fluent clinical text, but a general-purpose chat model cannot answer the question a
+radiologist asks of a follow-up scan: does the signal come from the tumour or from the treatment schedule, and has
+the system been tested on scans like this one? It does not measure the tumour, does not know how a model performed in
+a cohort, may state numbers held in no record, and, if hosted outside the hospital, cannot be given patient data.
+
+% Sources: OUTLINE.md (question, claim; name: 2026-11-01); NUMBERS.md sections 3--7.
+We built PRISM to make that question answerable at each scan. The name is not an acronym: as a prism splits white
+light into its colours, PRISM splits a progression score into the evidence behind it: an image pathway that uses only the segmented tumour and its change, a
+timeline pathway that uses clinical data and the position in treatment, and a combined score, each with a stated
+confidence. A language model running inside the hospital only puts the resulting record into words: it is given no images and no calculations to make, and every number it writes is checked against the record. We developed PRISM on
+MU-Glioma-Post (MU) and applied its models unchanged to LUMIERE and UCSF-ALPTDG (UCSF). The paper makes four
+contributions:
+\begin{enumerate}
+\item \textbf{A finding.} What carries a progression score depends on how a cohort was scanned and labelled: mostly
+the treatment schedule at MU and the enhancement on which progression was called at UCSF. A single score hides this;
+exploratory audits within phases of care expose it, and the separate pathways show it at each scan
+(Section~\ref{sec:3.3}).
+\item \textbf{A system.} PRISM keeps image and timeline evidence apart, attaches a three-part confidence to every
+score and records the source of every value (Section~\ref{sec:2.1}). Of the confidence parts, average coverage
+held at all three centres on point estimates, and disagreement marked less reliable scores at MU only
+(Section~\ref{sec:3.4}).
+\item \textbf{External tests fixed in advance.} Applied without refitting, the locked combined model at LUMIERE
+and the locked image models at UCSF met their planned transfer rules; the timeline did not transfer to UCSF
+(Section~\ref{sec:3.1}).
+\item \textbf{Checked local reports.} After one prompt revision, every report written by a local language model
+passed an automatic check against its record; of seven local models given the same prompt, only the two largest dense
+models passed in every cohort (Section~\ref{sec:3.5}).
+\end{enumerate}
 
 % =====================================================================================================
 \section{Methods}\label{sec:2}

@@ -1,5 +1,14 @@
 # Outline: the argument of the PRISM paper (layer 1)
 
+## Contributions and framing (2026-11-01, after the supervisor's review)
+
+Finding first, system as the response. The Introduction ends with four numbered contributions: (1) the finding: what
+carries a progression score depends on how a cohort was scanned and labelled (schedule at MU, enhancement at UCSF);
+(2) the system: separate image and timeline pathways, a three-part confidence, provenance; (3) external tests fixed in
+advance, locked models without refitting; (4) checked local reports (406/406) and the model size this needs. The
+name PRISM is kept and explained by the metaphor (a prism splits a score into its evidence); it replaces decision 7
+("no acronym", 2026-10-25) only in adding the explanation. Title states the question.
+
 ## Structure after the 2026-10-28 overnight passes (not a change of story)
 
 Main text 2,794 words, figures and tables in the text. Table 1: the scores (inputs, dates, planned or not fixed in

@@ -243,3 +243,9 @@ Add each reaction as a dated, one-line rule.
   The supplement holds full tables only and is cited by real section number once it is rebuilt.
 - 2026-10-28: the example report should look like a standard clinical report: a readable serif, black and grey
   only, and images (a drawn segmentation strip, never a patient image).
+- 2026-11-01 (supervisor's review, before reading the paper in full): "We need to be clear on what the contributions
+  and the system does, and everything else falls in place." The Introduction now ends with four numbered
+  contributions, finding first (overrides section 9's "no list of contributions"). It names the challenges a single
+  score hides, says how PRISM differs from a general-purpose chat model (the language model only words a checked
+  record, locally), and explains the name: as a prism splits light, PRISM splits a score into its evidence. Figures
+  should be illustrative, not box flowcharts.
