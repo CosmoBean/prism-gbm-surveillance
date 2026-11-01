@@ -249,3 +249,10 @@ Add each reaction as a dated, one-line rule.
   score hides, says how PRISM differs from a general-purpose chat model (the language model only words a checked
   record, locally), and explains the name: as a prism splits light, PRISM splits a score into its evidence. Figures
   should be illustrative, not box flowcharts.
+- 2026-11-01 (author): "Before saying this system is my design, I want to look for other systems with similar design
+  ... this has to read like coming from someone who has the expertise." Every contribution is stated against its
+  nearest precedent, which is cited by name (docs/literature/PRIOR_ART_2026-11-01.md). Claim combinations and
+  measurements, never components; use the field's terms for what we did (covariate-specific AUC, incorporation bias,
+  late fusion, deterministic check) instead of inventing names. No "first", no "novel".
+- 2026-11-01 (author): the title was a mouthful. Short title (about 12 words), the clinician's question first, no
+  system name, no "language model" (docs/manuscript/council/titles_2026-11-01.md).
