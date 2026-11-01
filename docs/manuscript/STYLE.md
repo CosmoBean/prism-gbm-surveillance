@@ -256,3 +256,5 @@ Add each reaction as a dated, one-line rule.
   late fusion, deterministic check) instead of inventing names. No "first", no "novel".
 - 2026-11-01 (author): the title was a mouthful. Short title (about 12 words), the clinician's question first, no
   system name, no "language model" (docs/manuscript/council/titles_2026-11-01.md).
+- 2026-11-01 (author): "at the development centre" reads as if PRISM was built with the centre's dataset. MU-Glioma-Post
+  is a public cohort we developed on: call it "the public development cohort", never "the development centre".
