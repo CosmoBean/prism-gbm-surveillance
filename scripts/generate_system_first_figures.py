@@ -156,20 +156,26 @@ def fig1(output: Path) -> None:
 
 def fig2(output: Path) -> None:
     """AUC by pathway and cohort. NUMBERS.md 3, 4, 11, 12C."""
-    groups = ["MU-Glioma-Post\ninternal (CV)", "LUMIERE\nlocked", "UCSF-ALPTDG\nlocked", "UCSF-ALPTDG\ntrained there"]
+    groups = ["MU-Glioma-Post", "LUMIERE", "UCSF-ALPTDG", "UCSF-ALPTDG\n(refitted there)"]
+    badges = [("development (CV)", C["ink"], "white"), ("locked, external", "white", C["ink"]),
+              ("locked, external", "white", C["ink"]), ("reference: trained there", "#f1f2f4", "0.35")]
     series = [  # label, colour, [(auc, lo, hi) or None per group], primary?, open reference marker?
-        ("Clinical data alone", C["clinical"], [(0.530, 0.450, 0.606), (0.554, 0.458, 0.635), (0.502, 0.364, 0.630), (0.407, 0.314, 0.494)], False, False),
+        ("Clinical data alone", "#858585", [(0.530, 0.450, 0.606), (0.554, 0.458, 0.635), (0.502, 0.364, 0.630), (0.407, 0.314, 0.494)], False, False),
         ("Timeline pathway", C["timeline"], [(0.822, 0.749, 0.902), (0.689, 0.600, 0.805), (0.561, 0.420, 0.687), (0.669, 0.549, 0.784)], False, False),
         ("Image pathway", C["images"], [(0.709, 0.630, 0.781), (0.655, 0.565, 0.733), (0.726, 0.603, 0.835), (0.863, 0.772, 0.934)], False, False),
-        ("Images, single scan", C["images2"], [None, None, (0.795, 0.686, 0.887), (0.826, 0.729, 0.909)], False, False),
+        ("Images, single scan", "#6cc2b5", [None, None, (0.795, 0.686, 0.887), (0.826, 0.729, 0.909)], False, False),
         ("Combined score", C["combined"], [(0.821, 0.744, 0.894), (0.773, 0.679, 0.857), (0.856, 0.758, 0.930), (0.871, 0.790, 0.938)], True, False),
         ("Enhancing volume alone†", C["et"], [(0.622, 0.530, 0.717), (0.662, 0.563, 0.751), (0.878, 0.793, 0.948), None], False, True),
     ]
-    fig = plt.figure(figsize=(WIDTH, 3.0))
-    ax = fig.add_axes([0.075, 0.16, 0.655, 0.80])
+    fig = plt.figure(figsize=(WIDTH, 3.25))
+    ax = fig.add_axes([0.075, 0.11, 0.655, 0.72])
+    title(ax, "Locked combined and image models ranked scans at both external centres", pad=24)
     ax.axvspan(2.5, 3.5, color="#f1f2f4", lw=0, zorder=0)
     ax.axvline(2.5, color="0.65", lw=0.7)
-    ax.text(3.0, 0.985, "reference, not locked", ha="center", va="top", fontsize=6.6, color="0.35", style="italic")
+    for g, (text, face, ink) in enumerate(badges):    # what each cohort group is, above the axes
+        ax.text(g, 1.035, text, transform=ax.get_xaxis_transform(), ha="center", va="bottom", fontsize=6.6,
+                color=ink, bbox={"boxstyle": "round,pad=0.25,rounding_size=0.4", "facecolor": face,
+                                 "edgecolor": C["ink"] if face != "#f1f2f4" else "0.65", "lw": 0.6})
     ax.axhline(0.5, color="0.55", lw=0.7, ls=":", zorder=1)
     ax.text(3.45, 0.497, "chance", fontsize=6.5, color="0.45", va="top", ha="right")
     step = 0.8 / 6
@@ -183,7 +189,7 @@ def fig2(output: Path) -> None:
             elif reference:
                 style = dict(fmt="D", ms=4.2, color=colour, mfc="white", mec=colour, mew=1.0, elinewidth=0.8, capsize=0, zorder=3)
             else:
-                style = dict(fmt="o", ms=4.2, color=colour, mfc=colour, mec=colour, alpha=0.6, elinewidth=0.8, capsize=0, zorder=3)
+                style = dict(fmt="o", ms=4.4, color=colour, mfc=colour, mec=colour, alpha=0.85, elinewidth=0.9, capsize=0, zorder=3)
             ax.errorbar(x, v[0], yerr=ci(v), **style)
     for label, colour, _, primary, reference in series:
         if primary:
@@ -191,7 +197,7 @@ def fig2(output: Path) -> None:
         elif reference:
             handles.append(Line2D([], [], marker="D", ms=4.2, color=colour, mfc="white", mew=1.0, lw=0.8, label=label))
         else:
-            handles.append(Line2D([], [], marker="o", ms=4.2, color=colour, alpha=0.6, lw=0.8, label=label))
+            handles.append(Line2D([], [], marker="o", ms=4.4, color=colour, alpha=0.85, lw=0.9, label=label))
     ax.set(xticks=range(len(groups)), xlim=(-0.5, 3.5), ylim=(0.3, 1.0), ylabel="AUC (axis from 0.3)")
     ax.set_xticklabels(groups)
     ax.tick_params(axis="x", length=0)
@@ -206,8 +212,8 @@ def forest(ax, rows, xlabel, ref=0.0, xlim=None):
         y = len(rows) - 1 - i
         ax.plot([lo, hi], [y, y], color=colour, lw=1.3, solid_capstyle="butt")
         ax.plot(est, y, "o", color=colour, mfc=colour if filled else "white", ms=4.8, mew=1.1, zorder=3)
-        ax.text(xlim[0] if xlim else lo, y + 0.22, label, fontsize=6.9, va="bottom", ha="left", color=C["ink"],
-                bbox={"facecolor": "white", "edgecolor": "none", "pad": 0.6}, zorder=2)
+        ax.text(xlim[0] if xlim else lo, y + 0.16, label, fontsize=6.9, va="bottom", ha="left", color=C["ink"],
+                zorder=2)
     ax.axvline(ref, color="0.5", lw=0.7, ls=":", zorder=1)
     ax.set_yticks([]); ax.spines["left"].set_visible(False)
     ax.set_ylim(-0.45, len(rows) - 0.25)
@@ -221,30 +227,35 @@ def fig3(output: Path) -> None:
     fig = plt.figure(figsize=(WIDTH, 4.7))
     ax_top = 0.885
     ax = fig.add_axes([0.06, 0.61, 0.36, ax_top - 0.61])
-    panel(fig, LETTER_X, ax, "A"); title(ax, "MU: gain from adding the timeline\nto clinical data and images")
+    panel(fig, LETTER_X, ax, "A"); title(ax, "MU†: the timeline's gain appears\nacross phases, not within them")
     forest(ax, [("Across phases of care", 0.114, 0.035, 0.196, C["timeline"], True),
                 ("Within a phase of care", -0.016, -0.134, 0.109, C["timeline"], False)], "AUC difference",
-           xlim=(-0.2, 0.3))
+           xlim=(-0.45, 0.3))
+    ax.set_xticks([-0.2, -0.1, 0, 0.1, 0.2, 0.3]); ax.spines["bottom"].set_bounds(-0.2, 0.3)   # labels sit left of -0.2
 
     bx = fig.add_axes([0.585, 0.61, 0.395, ax_top - 0.61])
-    panel(fig, 0.51, bx, "B"); title(bx, "UCSF: progression calls\nfollow enhancement")
+    panel(fig, 0.51, bx, "B"); title(bx, "UCSF†: the progression call\nfollows enhancement")
     labels = ["Enhancing\nvolume\nalone", "Single\nscan", "Image\npathway", "Single scan,\n'increased'\nscans only"]
     vals = [(0.878, 0.793, 0.948), (0.795, 0.686, 0.887), (0.726, 0.603, 0.835), (0.652, 0.444, 0.836)]
-    faces = ["white", C["images2"], C["images"], "white"]
-    edges = ["#3c3c3c", "white", "white", C["images"]]
-    hatches = ["////", None, None, "...."]
-    for i, (v, f, e, hch) in enumerate(zip(vals, faces, edges, hatches)):
-        bx.bar(i, v[0], 0.66, color=f, edgecolor=e, hatch=hch, lw=0.6 if f == "white" else 0.4)
-        bx.errorbar(i, v[0], yerr=ci(v), fmt="none", ecolor="#333", elinewidth=0.7, capsize=1.5)
-    bx.axhline(0.5, color="0.55", lw=0.7, ls=":")
-    bx.set(xticks=range(4), yticks=[0, 0.2, 0.4, 0.6, 0.8, 1.0], ylim=(0, 1.27), xlim=(-0.5, 3.5), ylabel="AUC")
-    bx.set_xticklabels(labels, fontsize=6.6); bx.spines["left"].set_bounds(0, 1.0)
+    marks = [dict(fmt="D", ms=4.6, color=C["et"], mfc="white", mec=C["et"], mew=1.0),     # as in Figure 2
+             dict(fmt="o", ms=5.0, color="#6cc2b5", mfc="#6cc2b5", mec="#6cc2b5"),
+             dict(fmt="o", ms=5.0, color=C["images"], mfc=C["images"], mec=C["images"]),
+             dict(fmt="o", ms=5.0, color=C["images"], mfc="white", mec=C["images"], mew=1.1)]   # restricted subset
+    for i, (v, m) in enumerate(zip(vals, marks)):
+        bx.errorbar(i, v[0], yerr=ci(v), elinewidth=1.0, capsize=0, zorder=3, **m)
+        bx.text(i + 0.12, v[0], f"{v[0]:.2f}", fontsize=6.6, va="center", ha="left", color=C["ink"])
+    bx.axvspan(2.5, 3.5, color="#f1f2f4", lw=0, zorder=0)
+    bx.axhline(0.5, color="0.55", lw=0.7, ls=":", zorder=1)
+    bx.text(-0.45, 0.497, "chance", fontsize=6.5, color="0.45", va="top", ha="left")
+    bx.set(xticks=range(4), yticks=[0.4, 0.6, 0.8, 1.0], ylim=(0.4, 1.0), xlim=(-0.5, 3.5), ylabel="AUC")
+    bx.set_xticklabels(labels, fontsize=6.6); bx.spines["left"].set_bounds(0.4, 1.0)
     bx.tick_params(axis="x", length=0)
-    bx.text(3.5, 1.27, "Rated 'enhancement increased': progression\n27 of 29 scans, non-progression 10 of 40",
-            ha="right", va="top", fontsize=6.6, color="#444444", linespacing=1.15)
+    bx.text(1.0, -0.36, "Rated 'enhancement increased': progression 27 of 29 scans, non-progression 10 of 40",
+            transform=bx.transAxes, ha="right", va="top", fontsize=6.6, color="#444444")
+    bx.text(3.0, 0.985, "subset", ha="center", va="top", fontsize=6.6, color="0.35", style="italic")
 
     cx = fig.add_axes([0.085, 0.085, 0.895, 0.305])
-    panel(fig, LETTER_X, cx, "C"); title(cx, "MU: the image model built in three steps")
+    panel(fig, LETTER_X, cx, "C"); title(cx, "MU†: adding schedule inputs raises the AUC across phases, not within one")
     steps = ["Current scan's\nmeasurements", "+ change from\nearlier scans\n(image pathway)", "+ three schedule\ninputs"]
     across = [(0.659, 0.567, 0.733), (0.709, 0.630, 0.781), (0.806, 0.747, 0.865)]
     within = [(0.680, None, None), (0.677, 0.580, 0.767), (0.664, 0.576, 0.750)]
@@ -272,10 +283,10 @@ def fig3(output: Path) -> None:
 
 def fig4(output: Path) -> None:
     """The confidence. NUMBERS.md 6 (S1, S2, S4) and 12A."""
-    fig = plt.figure(figsize=(WIDTH, 4.3))
-    ax_top = 0.915
+    fig = plt.figure(figsize=(WIDTH, 4.45))
+    ax_top = 0.875
     ax = fig.add_axes([0.085, 0.515, 0.37, ax_top - 0.515])
-    panel(fig, LETTER_X, ax, "A"); title(ax, "Coverage of the 80% conformal sets")
+    panel(fig, LETTER_X, ax, "A"); title(ax, "80% sets: the combined score met the\n0.78 target on point estimates")
     cov = {"Timeline": [(0.795, 0.731, 0.853), (0.798, 0.732, 0.868), (0.696, 0.594, 0.812)],
            "Images": [(0.844, 0.797, 0.890), (0.708, 0.648, 0.759), (0.826, 0.739, 0.913)],
            "Combined": [(0.823, 0.759, 0.883), (0.871, 0.807, 0.924), (0.783, 0.681, 0.870)]}
@@ -284,8 +295,10 @@ def fig4(output: Path) -> None:
     ax.axhline(0.78, color="#333", ls="--", lw=0.8, label="planned threshold 0.78")
     for i, (k, vals) in enumerate(cov.items()):
         for g, v in enumerate(vals):
-            ax.errorbar(g + (i - 1) * 0.24, v[0], yerr=ci(v), fmt="o", ms=4.8, color=cols[k], mec="white", mew=0.5,
-                        elinewidth=1.1, capsize=0, label=k if g == 0 else None, zorder=3)
+            primary = k == "Combined"                     # the planned coverage test, as in Figure 2
+            ax.errorbar(g + (i - 1) * 0.24, v[0], yerr=ci(v), fmt="o", ms=6.0 if primary else 4.4, color=cols[k],
+                        mec="white", mew=0.6, elinewidth=1.6 if primary else 0.9, alpha=1 if primary else 0.75,
+                        capsize=0, label=k if g == 0 else None, zorder=4 if primary else 3)
     ax.set(xticks=range(3), xlim=(-0.5, 2.5), ylim=(0.5, 1.0), ylabel="Share of scans covered\n(axis from 0.5)")
     ax.set_xticklabels(["MU", "LUMIERE", "UCSF"]); ax.tick_params(axis="x", length=0)
     h, l = ax.get_legend_handles_labels()
@@ -297,29 +310,32 @@ def fig4(output: Path) -> None:
     ax.legend_.set_zorder(5)
 
     bx = fig.add_axes([0.585, 0.515, 0.395, ax_top - 0.515])
-    panel(fig, 0.51, bx, "B"); title(bx, "Where the pathways agree versus disagree")
-    forest(bx, [("MU, own medians", 0.307, 0.175, 0.432, C["ink"], True),
-                ("MU, other folds' medians", 0.313, 0.184, 0.431, C["ink"], False),
-                ("LUMIERE, own medians", 0.105, -0.049, 0.266, C["ink"], True),
-                ("LUMIERE, MU-fixed", 0.222, 0.102, 0.337, C["ink"], False),
-                ("UCSF, own medians", -0.019, -0.218, 0.175, C["ink"], True),
-                ("UCSF, MU-fixed", 0.134, -0.096, 0.397, C["ink"], False)],
-           "AUC difference, agree minus disagree", xlim=(-0.3, 0.5))
+    panel(fig, 0.51, bx, "B"); title(bx, "Disagreement† marks scans the combined\nscore ranks less well at MU")
+    forest(bx, [("", 0.307, 0.175, 0.432, C["ink"], True),          # rows in pairs: own medians (filled),
+                ("", 0.313, 0.184, 0.431, C["ink"], False),         # medians fixed on MU (open; on MU, other folds)
+                ("", 0.105, -0.049, 0.266, C["ink"], True),
+                ("", 0.222, 0.102, 0.337, C["ink"], False),
+                ("", -0.019, -0.218, 0.175, C["ink"], True),
+                ("", 0.134, -0.096, 0.397, C["ink"], False)],
+           "AUC difference, agree minus disagree", xlim=(-0.62, 0.5))
+    bx.set_xticks([-0.2, 0, 0.2, 0.4]); bx.spines["bottom"].set_bounds(-0.3, 0.5)
+    for y, name in ((4.5, "MU"), (2.5, "LUMIERE"), (0.5, "UCSF")):  # one label per cohort, in the left gutter
+        bx.text(-0.62, y, name, fontsize=7, weight="bold", va="center", ha="left", color=C["ink"])
     for y in (1.5, 3.5):
-        bx.axhline(y + 0.2, color="0.88", lw=0.6, zorder=0)
+        bx.axhline(y, color="0.88", lw=0.6, zorder=0)
     bx.legend(handles=[Line2D([], [], marker="o", ls="none", color=C["ink"], ms=4.8, label="own medians"),
                        Line2D([], [], marker="o", ls="none", color=C["ink"], mfc="white", ms=4.8, mew=1.1,
                               label="medians fixed on MU")],
               frameon=False, loc="upper center", bbox_to_anchor=(0.5, -0.2), ncol=2, fontsize=6.8, handletextpad=0.2)
 
     cx = fig.add_axes([0.145, 0.10, 0.55, 0.20])
-    panel(fig, LETTER_X, cx, "C"); title(cx, "Reliability card†: scans in a tested situation")
+    panel(fig, LETTER_X, cx, "C"); title(cx, "Reliability card†: no UCSF scan is in a tested situation")
     cohorts = ["MU (146)", "LUMIERE (178)", "UCSF (69)"]
     tested = [54, 159, 0]; few = [92, 19, 69]
     for i, (t, f) in enumerate(zip(tested, few)):
         tot = t + f; y = 2 - i
         cx.barh(y, t / tot, color=C["ink"], height=0.6, label="Tested (≥10 of each outcome)" if i == 0 else None)
-        cx.barh(y, f / tot, left=t / tot, color=tint(C["thin"], 0.55), height=0.6, label="Few cases" if i == 0 else None)
+        cx.barh(y, f / tot, left=t / tot, color=tint(C["ink"], 0.78), height=0.6, label="Few cases" if i == 0 else None)
         if t:
             cx.text(t / tot / 2, y, f"{t}", color="white", ha="center", va="center", fontsize=7)
         cx.text(t / tot + f / tot / 2, y, f"{f}", ha="center", va="center", fontsize=7)
@@ -473,7 +489,8 @@ def fig5(output: Path) -> None:
 
 def generate(output: Path) -> None:
     output.mkdir(parents=True, exist_ok=True)
-    fig1(output); fig2(output); fig3(output); fig4(output); fig5(output)
+    from fig1_prism import fig1 as fig1_illustrated
+    fig1_illustrated(output); fig2(output); fig3(output); fig4(output); fig5(output)
 
 
 if __name__ == "__main__":

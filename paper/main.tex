@@ -88,15 +88,15 @@ PRISM writes everything it computes for a scan, with the source of every value, 
 % Sources: OUTLINE.md (Fig 1); SYSTEM_PLAN.md section 1.
 \begin{figure}[!htbp]
 \centering
-\figslot{fig1_system.pdf}{0.55\textheight}{PRISM is built of modules, each answering a known challenge: scan and
-record; segmentation and measurements; the timeline pathway; the image pathway; the combined score; the confidence
-(conformal set, agreement, card); the local report; and the evaluation design.}
-\caption{\textbf{PRISM and how it was evaluated.} (A) Measurements from the segmentation masks feed the image
-pathway; clinical data and the position in treatment feed the timeline pathway; one model on both sets of inputs gives
-the combined score. A three-part confidence is attached, every value enters one record with its source, and a local
-language model writes the report, which a deterministic checker tests against the record. (B) Models were developed
-on MU by repeated cross-validation, then fitted once and applied unchanged at LUMIERE and UCSF under plans committed in
-advance.}
+\figslot{fig1_system.pdf}{0.62\textheight}{Drawn MRI slices, a treatment timeline and clinical data enter a prism that
+splits them into image, combined and timeline scores, followed by confidence icons and a locally written, checked
+report; below, MU development, locked models applied to LUMIERE and UCSF, and 406 checked reports.}
+\caption{\textbf{PRISM and how it was evaluated.} (A) As a prism splits light, PRISM splits a progression score into its evidence; coloured brackets mark which inputs each pathway keeps. Measurements of the segmented tumour and its change feed the image pathway; clinical data and the
+position in treatment feed the timeline pathway; one model on both gives the combined score (values from the
+synthetic example of Figure~\ref{fig:5}). A three-part confidence is attached, every value enters one record with its
+source, and a local language model, given no images, writes the report, which a checker tests against the
+record. (B) Models were developed on MU by repeated cross-validation, then fitted once and applied unchanged at
+LUMIERE and UCSF under plans committed in advance.}
 \label{fig:1}
 \end{figure}
 
@@ -305,7 +305,7 @@ large as the overall one (Section~\ref{sec:3.3}).  Forecasting progression withi
 (MU internal; LUMIERE and UCSF locked; UCSF-trained as a reference).}
 \caption{\textbf{The combined and image models rank scans at two external centres without refitting.} AUC for detecting the scan at
 which progression was documented. MU: repeated cross-validation, intended use. LUMIERE and UCSF: models fitted once on
-MU and applied unchanged, with the reduced timeline. UCSF trained there: reference, where clinical data alone fall below 0.5, consistent with the downward bias of cross-validated AUC without signal. At MU the combined score is its full form; externally, its reduced form. At UCSF the images are shown
+MU and applied unchanged, with the reduced timeline. UCSF refitted there: reference, where clinical data alone fall below 0.5, consistent with the downward bias of cross-validated AUC without signal. At MU the combined score is its full form; externally, its reduced form. At UCSF the images are shown
 for the single-scan model and for the image pathway. The image pathway and combined score on MU and the
 clinical-only, reduced-timeline and image models at LUMIERE were not fixed in advance\expl. Open diamond: log enhancing tumour volume alone\expl{} (at LUMIERE, the 163 scans with enhancing
 tumour). Points with 95\% patient-bootstrap CIs on an axis from 0.3;
@@ -345,13 +345,12 @@ and by $-$0.02 ($-$0.13 to $+$0.11) within them (Figure~\ref{fig:3}A). Within a 
 \begin{figure}[!htbp]
 \centering
 \figslot{fig3_evidence.pdf}{0.55\textheight}{(A) MU: the timeline's gain lies between phases of care. (B) UCSF:
-enhancing volume alone scores above the image models. (C) The image-model ladder.}
+enhancing volume alone scores above the image models. (C) Adding schedule inputs raises the AUC across phases, not within one.}
 \caption{\textbf{The scores followed the schedule at MU and enhancement at UCSF.} (A) MU: gain from adding the timeline to clinical data
-and images, across and within phases of care. (B) UCSF: enhancing volume alone beside the locked image models; the
-last bar is restricted to the 37 scans rated as showing increased enhancement. (C) MU: the image model built in three
+and images, across and within phases of care. (B) UCSF: enhancing volume alone beside the locked image models; the open point is restricted to the 37 scans rated as showing increased enhancement. (C) MU: the image model built in three
 steps, across and within phases of care, against the timeline pathway; the third step adds the planned model's schedule inputs to the image inputs, without its
 timeline. The gain at the second step has an interval that includes zero, and the first within-phase point has no interval. The audits were not fixed in advance
-(\textdagger); the locked image models' AUCs over all 69 scans in (B) were planned. Error bars, 95\% patient-bootstrap CIs.}
+(\textdagger); the locked image models' AUCs over all 69 scans in (B) were planned. Points with 95\% patient-bootstrap CIs.}
 \label{fig:3}
 \end{figure}
 
