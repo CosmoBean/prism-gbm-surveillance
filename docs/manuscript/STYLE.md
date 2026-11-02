@@ -232,3 +232,29 @@ Add each reaction as a dated, one-line rule.
   segmentation feeding measurements and the report, and a confidence (card tier + conformal set). Deep networks are
   described as the segmenters, not as failed classifiers.
 - 2026-10-26: no RANO anywhere, including figure labels and report wording ("indicative volumes", not "not RANO").
+- 2026-10-27: the proposed system-first abstract reads as fragments (a component inventory, five AUCs from different
+  pathways, a report check, a disclaimer). The abstract must tell one narrative with a punchline up front; describe
+  what the system is for, not every part it has; no factual-report tone.
+- 2026-10-28: the author liked the overnight pass and asked for more: concise and right, not just right-looking. "Not
+  a million words, but the 100 words that actually drive the impact." Cut every sentence that does not move the
+  argument; figures and tables sit in the text next to their first mention, not at the end.
+- 2026-10-28: "why do we have red text that goes towards supplementary material and not directly in the main text?"
+  State the fact a reader needs inline, in one clause; no "see Supplementary section" placeholders in the main text.
+  The supplement holds full tables only and is cited by real section number once it is rebuilt.
+- 2026-10-28: the example report should look like a standard clinical report: a readable serif, black and grey
+  only, and images (a drawn segmentation strip, never a patient image).
+- 2026-11-01 (supervisor's review, before reading the paper in full): "We need to be clear on what the contributions
+  and the system does, and everything else falls in place." The Introduction now ends with four numbered
+  contributions, finding first (overrides section 9's "no list of contributions"). It names the challenges a single
+  score hides, says how PRISM differs from a general-purpose chat model (the language model only words a checked
+  record, locally), and explains the name: as a prism splits light, PRISM splits a score into its evidence. Figures
+  should be illustrative, not box flowcharts.
+- 2026-11-01 (author): "Before saying this system is my design, I want to look for other systems with similar design
+  ... this has to read like coming from someone who has the expertise." Every contribution is stated against its
+  nearest precedent, which is cited by name (docs/literature/PRIOR_ART_2026-11-01.md). Claim combinations and
+  measurements, never components; use the field's terms for what we did (covariate-specific AUC, incorporation bias,
+  late fusion, deterministic check) instead of inventing names. No "first", no "novel".
+- 2026-11-01 (author): the title was a mouthful. Short title (about 12 words), the clinician's question first, no
+  system name, no "language model" (docs/manuscript/council/titles_2026-11-01.md).
+- 2026-11-01 (author): "at the development centre" reads as if PRISM was built with the centre's dataset. MU-Glioma-Post
+  is a public cohort we developed on: call it "the public development cohort", never "the development centre".

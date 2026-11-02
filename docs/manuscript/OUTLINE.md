@@ -1,5 +1,31 @@
 # Outline: the argument of the PRISM paper (layer 1)
 
+## Contributions and framing (2026-11-01, after the supervisor's review)
+
+Finding first, system as the response. The Introduction ends with four numbered contributions: (1) the finding: what
+carries a progression score depends on how a cohort was scanned and labelled (schedule at MU, enhancement at UCSF);
+(2) the system: separate image and timeline pathways, a three-part confidence, provenance; (3) external tests fixed in
+advance, locked models without refitting; (4) checked local reports (406/406) and the model size this needs. The
+name PRISM is kept and explained by the metaphor (a prism splits a score into its evidence); it replaces decision 7
+("no acronym", 2026-10-25) only in adding the explanation. Title states the question.
+
+Narrowed the same day after an adversarial prior-art search (docs/literature/PRIOR_ART_2026-11-01.md; all four
+PARTIAL). (1) is now a measurement of something known in part (timing: Gomaa 2025, TRACE 2026), done within phases of
+care and across externally tested centres. (2) is the per-scan confidence that joins conformal set, pathway
+disagreement and the measured situation record; separate pathways and provenance are design properties, not
+contributions (Boehm 2022; TumorBoard 2026). (3) is locked tests at two external centres under rules fixed in
+advance (CLARITY already moved an MU model to UCSF, for survival). (4) is the deterministic check of every report
+(BTReport, Valerio already had local models write from measurements). Title (council): "Timing or tumour? The
+evidence behind glioma progression scores on post-treatment MRI", pending author approval.
+
+## Structure after the 2026-10-28 overnight passes (not a change of story)
+
+Main text 2,794 words, figures and tables in the text. Table 1: the scores (inputs, dates, planned or not fixed in
+advance). Table 2: cohorts. Table 3: tests fixed in advance (verdict register). Results: 3.1 the timeline led at MU,
+and the combined and image models transferred; 3.2 the scores followed the schedule at MU and enhancement at UCSF;
+3.3 coverage and disagreement; 3.4 the report check. The agreement rule as evaluated uses each cohort's own medians
+(MU-fixed medians are exploratory). Details: OVERNIGHT_LOG.md; open decisions: OVERNIGHT_PROPOSALS.md.
+
 ## System-first revision (approved 2026-10-26)
 
 This revision supersedes the earlier model-audit-first framing below. The paper begins with the clinical problem:

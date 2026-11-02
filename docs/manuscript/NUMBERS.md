@@ -608,6 +608,7 @@ the planned secondary of UCSF_PLAN.md.
 | Item | Value (95% CI) | Source (CSV) | Status |
 |---|---|---|---|
 | A. Agreement, MU-fixed medians (locked models' MU training-set medians); disagreement alone, S2 / S3 | LUM +0.222 (+0.102 to +0.337) / +0.115 (+0.049 to +0.190); UCSF +0.134 (-0.096 to +0.397) / +0.023 (-0.086 to +0.099); MU fold-held-out median +0.313 (+0.184 to +0.431) / +0.082 (+0.047 to +0.119) | A_agreement_mu_fixed.csv | EXPLORATORY |
+| A. MU-fixed disagreement, AUC unflagged / flagged (LUMIERE) | 0.889 / 0.667 (flagged 60%); added 2026-10-28 from the CSV for the 3.4 sentence | A_agreement_mu_fixed.csv | EXPLORATORY |
 | A. MU-fixed disagreement AND conformal {0,1}, S2 / S3 | MU +0.376 (+0.166 to +0.552) / +0.023 (+0.009 to +0.040); LUM +0.227 (+0.054 to +0.398) / +0.037 (-0.004 to +0.081); UCSF +0.024 (-0.162 to +0.322) / +0.023 (-0.028 to +0.076) | same | EXPLORATORY |
 | A. Flagged share (MU-fixed disagreement); status changed vs own median | LUM 60%, 31% changed; UCSF 48%, 48% changed; MU 40% | same; run_info.json | EXPLORATORY |
 | B. Combined set, alpha 0.2, coverage progression / non-progression (standard) | MU 0.819 (0.748-0.888) / 0.826 (0.731-0.908); LUM **0.767 (0.671-0.872)** / 0.943 (0.857-1.000); UCSF 0.966 (0.880-1.000) / **0.650 (0.511-0.791)** | B_class_conditional_coverage.csv | EXPLORATORY CIs (points PLANNED, conformal.csv) |
