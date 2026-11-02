@@ -50,4 +50,4 @@ Report briefly what the tests found and what was changed.
 
 Record each reaction as a dated one-line rule in STYLE.md section 10. If it changes the story, update OUTLINE.md.
 Standing project rules still apply: rebuild and commit `paper/main.pdf` after every change to the paper; atomic
-commits on `manuscript-week`; no Co-Authored-By line for Claude; never call PRISM "published".
+commits directly on `main` (no side branch, since 2026-11-02); no Co-Authored-By line for Claude; never call PRISM "published".

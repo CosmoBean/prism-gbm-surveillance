@@ -11,10 +11,12 @@ failed (tested, did not do what was hoped), abandoned (stopped without a result)
 
 ## Start here
 
+0. **Branch (2026-11-02).** All work is done directly on `main`. `manuscript-week` was merged into `main` (111aa5d) and deleted. Commit hashes cited below are unchanged and reachable from `main`. A machine reset on 2026-11-02 wiped `data/`, `outputs/`, the external-cohort folders and the environments; see D5.
+
 1. **Read the standing rules first: section D4.** In particular: no Claude co-author line in commits; never call PRISM
    "published"; patient data stays on the cluster and only local language models may see records; aggregate numbers
    only, and the UCSF download URL is secret; pre-specify a plan before any real-label run; rebuild and commit
-   `paper/main.pdf` after every paper change; `submit.sh` stays uncommitted; LOCKED text needs the author's approval.
+   `paper/main.pdf` after every paper change; `submit.sh` was committed by the author on 2026-11-02; LOCKED text needs the author's approval.
 2. **Current state in one paragraph.** PRISM is the author's own (unpublished) system for post-treatment glioma
    surveillance MRI: an image pathway (segmented tumour and its change), a treatment-timeline pathway and a combined
    score, each with a three-part confidence (conformal set, pathway disagreement, a reliability card by phase of care
@@ -2092,7 +2094,7 @@ MU t2f,t1c,t1n,t2w. BraTS 2024 contains Missouri cases: leakage risk for BraTS24
    is disclosed as such.
 7. **Rebuild and commit `paper/main.pdf`** (and `supplement.pdf`) with `paper/build.sh` after every manuscript change;
    the author reviews the PDF (line numbers on). Do not edit the frozen `DRAFT.md`/`SUPPLEMENT.md`.
-8. **`submit.sh` stays uncommitted** (user's local helper).
+8. **`submit.sh`** is the user's helper. It was kept uncommitted until 2026-11-02, when the user committed it on `main`.
 9. **LOCKED text needs approval.** Passages in `LOCKED.md` are not changed, not even for polish; if a result makes one
    wrong, flag it and propose the smallest edit. Proposals sit beside the locked text, flagged.
 10. **Writing method.** For any work on `paper/*.tex` load the `paper-writing` skill (reads LOCKED.md and STORY.md
@@ -2109,6 +2111,8 @@ MU t2f,t1c,t1n,t2w. BraTS 2024 contains Missouri cases: leakage risk for BraTS24
 ---
 
 ## D5. What is pending now (2026-11-01)
+
+- **2026-11-02 machine reset:** `data/`, `outputs/`, `/project/community/sbandred/{lumiere,ucsf,prism-golden-outputs-20261009,envs/prism-llm}`, `.venv` and the local LLM weights are gone. Git history is intact. Re-download the data (MU from the HF mirror, LUMIERE from its public release, UCSF with a fresh link from the author), rebuild the environments, and rerun the pipelines before any result is regenerated.
 
 - Author approvals: title, finding-first abstract (vs LOCKED 2026-10-24), council rulings, decisions in D2.10.
 - Supplement rebuild (P12): remove v1/v2 framing (S7, S19, S21), add UCSF, system (coverage by outcome, flags under
