@@ -37,7 +37,7 @@ distinguished surveillance scans with recorded progression from other scans (AUC
 external validation cohorts, prespecified models reached AUCs of 0.77 at LUMIERE and 0.80 at UCSF-ALPTDG. Across cohorts, the
 scores were linked to treatment timing at MU and enhancing volume at UCSF. PRISM presents
 the score with the measurements, treatment context, and provenance used to produce it. Across the three cohorts, an
-automatic consistency check found all 406 generated reports consistent with their structured records. Future work will
+all 406 reports met predefined automatic checks against the fields in their structured records. Future work will
 evaluate the reports with clinicians.
 \end{abstract}
 
@@ -70,16 +70,17 @@ writes the completed record, which an automatic checker compares with that recor
 PRISM was developed on the public MU-Glioma-Post cohort and externally validated in the LUMIERE and
 UCSF-ALPTDG cohorts. The paper makes four contributions.
 \begin{enumerate}
-\item \textbf{An audit of what carries a score.} We examine information associated with scores within phases of care and
-across cohorts, finding an association with treatment timing at MU and enhancing volume at UCSF
-(Section~\ref{sec:3.3}).
-\item \textbf{An evidence record for each scan.} PRISM retains measurements from images and treatment context as
-separate sources, shows their relationship to the combined score, and records their provenance and available support
-for each scan (Section~\ref{sec:2.1}).
-\item \textbf{External evaluation of prespecified models.} Models fixed before testing reached their transfer targets
-at LUMIERE and UCSF-ALPTDG (Section~\ref{sec:3.1}).
-\item \textbf{Checked report generation.} Across the three cohorts, all 406 reports passed the automatic consistency
-check against their structured records (Section~\ref{sec:3.5}).
+\item It shows that progression scores can be supported by different information across cohorts. Treatment timing was
+associated with scores at MU, whereas enhancing volume was associated with scores at UCSF. AUC alone therefore does
+not establish what supports a score (Section~\ref{sec:3.3}).
+\item It introduces an evidence framework for each scan that presents image measurements, treatment context, and separate
+pathway scores together. It also records whether the pathways agree and how the model has performed in comparable
+situations, allowing the basis of a progression score to be inspected for an individual scan (Section~\ref{sec:2.1}).
+\item It provides external validation of models developed on the public MU-Glioma-Post cohort in the LUMIERE and
+UCSF-ALPTDG cohorts (Section~\ref{sec:3.1}).
+\item It provides a locally deployed reporting workflow grounded in the evidence record. PRISM generates a report only after the
+evidence record is complete and automatically checks the report against its source fields. Across the three cohorts,
+the generated reports met the predefined criteria for consistency with those records (Section~\ref{sec:3.5}).
 \end{enumerate}
 The study evaluates model transport and consistency between reports and records, not clinical interpretation.
 
