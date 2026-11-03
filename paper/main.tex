@@ -55,12 +55,11 @@ scans and the course of treatment. One early challenge is pseudoprogression: tre
 enhancement that resembles tumour growth. Pseudoprogression is concentrated within 12 weeks of completing
 chemoradiotherapy \citep{wen2023} and is more common in MGMT promoter-methylated tumours \citep{taal2008,brandes2008}.
 
-Models intended to predict progression assign a score to each follow-up scan. The score ranks scans against the
-cohort's recorded progression outcome, but does not say whether that ranking reflects image-derived measurements,
-treatment context, or both. It does not show whether those sources agree or how much comparable evidence supports the
-assessment. This matters when models move between cohorts, where treatment records, scan schedules, and progression
-labels can differ. In a recent review of automated response assessment, only 3 of 20 studies included external
-testing \citep{shi2025}.
+Models that predict progression rank follow-up scans. Their scores do not show whether the ranking reflects
+image-derived measurements, treatment context, or both. They also do not show whether those sources agree or how well
+the model has performed on comparable scans. This matters when models move between cohorts, where treatment records,
+scan schedules, and progression labels can differ. In a recent review of automated response assessment, only 3 of 20
+studies included external testing \citep{shi2025}.
 
 PRISM is designed as an inspectable scan-level record that preserves this information. The name reflects its purpose:
 as a prism separates light, PRISM separates a progression score into image-derived measurements and treatment-context

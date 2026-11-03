@@ -270,3 +270,5 @@ Add each reaction as a dated, one-line rule.
 - 2026-11-03 (author): introduce a clinical term through the concrete problem it names before using its label; remove
   clinical detail that does not recur in the argument. Name a prediction score and its task before discussing its
   limitations; do not add qualifiers such as "automated" when they do not alter the point.
+- 2026-11-03 (author): do not write as if defending every sentence. Avoid staged definitions, colon reveals, and
+  formal qualifications when a plain active statement carries the point; name what the model does directly.

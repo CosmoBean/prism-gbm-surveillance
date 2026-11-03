@@ -32,6 +32,9 @@ claim or the reasoning, remove it.
 - Let the paper's structure create emphasis. Do not add emphasis words to announce it.
 - Give a count a reason to appear: attach its cohort, evaluation, or comparison rather than dropping it into a
   sentence without context.
+- Do not build a sentence around an unnecessary definition, contrast, or colon. State the action directly: “models
+  rank follow-up scans,” not “models reduce a scan to one number: a score.” Do not hedge a simple point into a
+  methodological aside.
 
 ## PRISM-specific language
 
@@ -84,7 +87,7 @@ Before accepting a paragraph, ask:
 ## Paste-ready revision prompt
 
 > Revise the following passage for the PRISM manuscript. Preserve its scientific accuracy and intended meaning.
-> Write direct, precise prose for an informed research reader. The paper argues that PRISM turns a scalar
+> Write direct, precise prose for an informed research reader. The paper argues that PRISM turns a
 > progression score into an inspectable scan-level record; it is not a project chronology or a general-purpose LLM
 > paper. Use concrete subjects and verbs, and retain only details that advance the paragraph's claim. Do not add
 > jargon, hype, novelty claims, slogan-shaped contrasts, generic AI language, or unsupported clinical benefit.
