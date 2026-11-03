@@ -39,6 +39,9 @@ claim or the reasoning, remove it.
   direct sentence with a shorter but vaguer or different claim.
 - Keep the model’s scan-level assessment distinct from its study-level evaluation. Use ranking language when
   discussing AUC or discrimination results, not when explaining the purpose of the score in the Introduction.
+- State the general problem before introducing PRISM's particular response. Do not make image-derived measurements and
+  treatment context sound like the only possible source of an opaque assessment; introduce them as the sources PRISM
+  preserves in the next step of the argument.
 
 ## PRISM-specific language
 

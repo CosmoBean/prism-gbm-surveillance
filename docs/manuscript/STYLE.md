@@ -277,3 +277,6 @@ Add each reaction as a dated, one-line rule.
   shorter but vaguer or different claim, or refactor unrelated prose.
 - 2026-11-03 (author): keep the scan-level purpose of a model separate from study-level evaluation. Ranking language
   belongs with AUC/discrimination results, not with the Introduction's account of what a progression score is for.
+- 2026-11-03 (author): state the general problem before introducing PRISM's specific response. The problem is that a
+  score hides the information informing an assessment; image measurements and treatment context are PRISM's answer,
+  not the whole definition of the problem.
