@@ -267,3 +267,6 @@ Add each reaction as a dated, one-line rule.
 - 2026-11-03 (author): lead with the clinical reading situation, then explain what a score does before naming its
   limitation. Use natural endpoint language in narrative prose ("progression was recorded"), and give a result count
   its scope rather than letting it appear as an unexplained number.
+- 2026-11-03 (author): introduce a clinical term through the concrete problem it names before using its label; remove
+  clinical detail that does not recur in the argument. Name a prediction score and its task before discussing its
+  limitations; do not add qualifiers such as "automated" when they do not alter the point.

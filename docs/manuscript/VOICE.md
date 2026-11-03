@@ -19,6 +19,8 @@ claim or the reasoning, remove it.
 - Begin with the finding or claim, then give the evidence needed to believe it.
 - Open an abstract or section with the concrete clinical or research situation before introducing the system or its
   components. Explain what a score, model, or measurement does before describing its limitation.
+- Introduce a clinical term through the concrete situation it names, then give its label. Remove background details
+  that do not return in the paper's argument.
 - Use concrete subjects and verbs: scans, measurements, models, reports, cohorts, and clinicians do things. Avoid
   abstractions doing work for them.
 - Name the actual object when it matters: say what the report lists or what the model uses rather than that the

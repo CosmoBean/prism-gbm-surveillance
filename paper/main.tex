@@ -50,17 +50,17 @@ glioma surveillance; external validation; clinical decision support
 \section{Introduction}\label{sec:1}
 
 % Sources: OUTLINE.md (Introduction 1); refs taal2008, brandes2008, wen2023, shi2025.
-After surgery and chemoradiotherapy for glioblastoma and other aggressive gliomas, serial MRI is interpreted against
-earlier scans and the course of treatment. New or increasing enhancement soon after radiotherapy can represent
-treatment effect rather than tumour growth. Pseudoprogression is concentrated within 12 weeks of completing
-chemoradiotherapy \citep{wen2023} and is more common in MGMT promoter-methylated tumours \citep{taal2008,brandes2008};
-months later, radiation necrosis can create a similar uncertainty.
+After surgery and chemoradiotherapy for glioblastoma and other aggressive gliomas, serial MRI is read against earlier
+scans and the course of treatment. One early challenge is pseudoprogression: treatment can produce new or increasing
+enhancement that resembles tumour growth. Pseudoprogression is concentrated within 12 weeks of completing
+chemoradiotherapy \citep{wen2023} and is more common in MGMT promoter-methylated tumours \citep{taal2008,brandes2008}.
 
-Automated models can rank follow-up scans for progression, but the score alone does not say what produced its ranking:
-image-derived measurements, treatment context, or both. It does not show whether those sources agree or how much
-comparable evidence supports the scan. This matters when models move between cohorts, where treatment records, scan
-schedules, and progression labels can differ. In a recent review of automated response assessment, only 3 of 20
-studies included external testing \citep{shi2025}.
+Models intended to predict progression assign a score to each follow-up scan. The score ranks scans against the
+cohort's recorded progression outcome, but does not say whether that ranking reflects image-derived measurements,
+treatment context, or both. It does not show whether those sources agree or how much comparable evidence supports the
+assessment. This matters when models move between cohorts, where treatment records, scan schedules, and progression
+labels can differ. In a recent review of automated response assessment, only 3 of 20 studies included external
+testing \citep{shi2025}.
 
 PRISM is designed as an inspectable scan-level record that preserves this information. The name reflects its purpose:
 as a prism separates light, PRISM separates a progression score into image-derived measurements and treatment-context
