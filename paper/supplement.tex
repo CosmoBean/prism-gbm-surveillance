@@ -2364,6 +2364,63 @@ of their range encodes the difference between scans before and after RT. Deviati
 run on the real labels preceded the full run; the plan was not changed afterwards.
 
 \FloatBarrier
+\section{Report content against the BT-RADS follow up template}\label{sec:S24}
+
+Source: the BT-RADS follow up reporting template (sample v1.03, btrads.com) and category guide (version 1.01)
+\citep{weinberg2018}, and the report fields in \code{prism/report/facts\_v3.py} and \code{prism/report/sections\_v3.py}.
+No patient record was used for this comparison.
+
+\textbf{Why this template.} No public cohort releases clinician reports for glioma follow up MRI after treatment,
+including the three used here, so the report could not be compared with the reports written for the same scans. We
+compared its content instead with the structured follow up template of the Brain Tumor Reporting and Data System
+(BT-RADS) \citep{weinberg2018}. In surveys of referring clinicians at the centre that introduced it, reports
+written with the template were judged more consistent and less ambiguous than free prose \citep{gore2019}, and they
+recorded more treatment history and used fewer hedging words \citep{zhang2020}. In a 2018 survey of 220 European
+centres, 60\% issued qualitative follow up reports and 23\% used a template \citep{thust2018}.
+
+\begin{table}[H]
+\centering
+\small
+\renewcommand{\thetable}{S46}\renewcommand{\theHtable}{S46}
+\caption{\textbf{BT-RADS follow up template elements and the PRISM report.} Elements are those of the template's
+clinical indication, comparison, findings and impression. Mass effect and clinical status enter only the category
+criteria.}
+\label{tab:S46}
+\begin{tabularx}{\linewidth}{@{}R{3.6cm} L R{4.2cm}@{}}
+\toprule
+BT-RADS element & PRISM report & Reason for a difference \\
+\midrule
+Tumour type and mutations & IDH and MGMT status named as inputs of the timeline pathway; values not restated & -- \\
+Last surgery date & Surgery timing named as a timeline input; no date & -- \\
+Radiation completion date & Phase of care: before, during, within 12 weeks of the end of radiotherapy, or later &
+The boundary of 12 weeks is the one BT-RADS uses for category 3a, worsening that favours treatment effect \\
+Medications (bevacizumab, steroids) & Absent & Not recorded in the three cohorts \\
+Comparison study & Days since the previous scan & -- \\
+FLAIR: change in extent & FLAIR hyperintensity volume and its change since the previous scan (cc, \%) &
+Volumes from an automatic segmentation, labelled indicative, in place of a visual call \\
+Enhancement: change at the primary site & Enhancing volume and its change since the previous scan and since the
+smallest earlier volume (cc, \%) & As for FLAIR \\
+New FLAIR or enhancing sites & Absent & Volumes are not split by site \\
+Location, diffusion, perfusion, spectroscopy, additional findings & Absent & Not in the record; the report does not
+replace the radiologist's read \\
+Mass effect, clinical status & Absent & Not in the cohorts \\
+Impression: category 0--4 with a management recommendation & Image, timeline and combined scores; 80\% conformal
+set; pathway agreement; reliability card & PRISM ranks scans and gives no diagnosis or advice; the checker rejects
+both \\
+Legend explaining the categories & Fixed limitations paragraph and a statement of what a score is & -- \\
+Not in BT-RADS & Necrosis and resection cavity volumes; the evidence and confidence above & -- \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\textbf{Reading.} The report carries the template's history and comparison elements where the cohorts record them,
+and it gives the two findings BT-RADS asks of every follow up, the change in FLAIR and in enhancement, as measured
+volumes. It leaves out the impression, the element BT-RADS ties to management. Its phase of care uses the
+template's own boundary of 12 weeks after radiotherapy, the interval in which BT-RADS favours treatment effect over
+tumour for worsening imaging. This compares content, not quality. No clinician has read a PRISM report,
+and none was compared with a report written for the same scan.
+
+\FloatBarrier
 \section*{Supplementary figures}
 \addcontentsline{toc}{section}{Supplementary figures}
 
