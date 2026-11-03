@@ -32,9 +32,10 @@ claim or the reasoning, remove it.
 - Let the paper's structure create emphasis. Do not add emphasis words to announce it.
 - Give a count a reason to appear: attach its cohort, evaluation, or comparison rather than dropping it into a
   sentence without context.
-- Do not build a sentence around an unnecessary definition, contrast, or colon. State the action directly: “models
-  rank follow-up scans,” not “models reduce a scan to one number: a score.” Do not hedge a simple point into a
-  methodological aside.
+- Do not build a sentence around an unnecessary definition, contrast, or colon. State the action directly, without
+  packaging it as an elaborate definition or a methodological aside.
+- When the author approves a sentence or identifies one exact phrase as wrong, preserve the approved surrounding
+  wording. Make the smallest edit that resolves the named problem; do not recast the paragraph unless asked.
 
 ## PRISM-specific language
 
