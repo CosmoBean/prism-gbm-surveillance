@@ -23,7 +23,7 @@ import matplotlib.pyplot as plt  # noqa: E402
 from matplotlib.lines import Line2D  # noqa: E402
 from matplotlib.patches import FancyBboxPatch  # noqa: E402
 
-plt.rcParams.update({"font.family": "DejaVu Sans", "font.size": 7.5, "axes.titlesize": 8.5, "axes.labelsize": 7.5,
+plt.rcParams.update({"font.family": "Liberation Sans", "font.size": 7.5, "axes.titlesize": 8.5, "axes.labelsize": 7.5,
                      "xtick.labelsize": 7, "ytick.labelsize": 7, "legend.fontsize": 7, "axes.spines.top": False,
                      "axes.spines.right": False, "pdf.fonttype": 42, "axes.linewidth": 0.7,
                      "xtick.major.width": 0.7, "ytick.major.width": 0.7})
@@ -397,7 +397,7 @@ def schematic_slice(ax, et_scale: float, seed: int = 3) -> None:
     ax.plot(cx - 0.04 + 1.05 * rf * wob * np.cos(t), cy + 0.03 + rf * wob * np.sin(t), color="white", lw=0.8,
             ls=(0, (2.2, 1.6)))
     for s, (x, y) in {"R": (-0.9, 0), "L": (0.9, 0), "A": (0, -0.88), "P": (0, 0.88)}.items():
-        ax.text(x, y, s, color="white", fontsize=6.5, ha="center", va="center", family="DejaVu Sans")
+        ax.text(x, y, s, color="white", fontsize=6.5, ha="center", va="center")
     ax.set(xlim=(-1, 1), ylim=(1, -1)); ax.axis("off")
 
 

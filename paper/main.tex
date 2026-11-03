@@ -96,15 +96,15 @@ PRISM writes everything it computes for a scan, with the source of every value, 
 % Sources: OUTLINE.md (Fig 1); SYSTEM_PLAN.md section 1.
 \begin{figure}[!htbp]
 \centering
-\figslot{fig1_system.pdf}{0.62\textheight}{Drawn MRI slices, a treatment timeline and clinical data enter a prism that
-splits them into image, combined and timeline scores, followed by confidence icons and a locally written, checked
-report; below, MU development, locked models applied to LUMIERE and UCSF, and 406 checked reports.}
-\caption{\textbf{PRISM and how it was evaluated.} (A) As a prism splits light, PRISM splits a progression score into its evidence; coloured brackets mark which inputs each pathway keeps. Measurements of the segmented tumour and its change feed the image pathway; clinical data and the
+\figslot{fig1_system.pdf}{0.55\textheight}{Drawn MRI slices, a treatment timeline and clinical data enter a prism that
+splits them into image, combined and timeline scores, each followed by three confidence statements and a locally
+written, checked report; below, MU development, locked models applied to LUMIERE and UCSF, and 406 checked reports.}
+\caption{\textbf{PRISM and how it was evaluated.} (A) As a prism splits light, PRISM splits a progression score into its evidence. Measurements of the segmented tumour and its change feed the image pathway; clinical data and the
 position in treatment feed the timeline pathway; one model on both gives the combined score (values from the
 synthetic example of Figure~\ref{fig:5}). A three-part confidence is attached, every value enters one record with its
 source, and a local language model, given no images, writes the report, which a checker tests against the
 record. (B) Models were developed on MU by repeated cross-validation, then fitted once and applied unchanged at
-LUMIERE and UCSF under plans committed in advance.}
+LUMIERE and UCSF under rules fixed before any score was compared with an external label.}
 \label{fig:1}
 \end{figure}
 
