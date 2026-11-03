@@ -283,3 +283,7 @@ Add each reaction as a dated, one-line rule.
 - 2026-11-03 (author): PRISM is the system; the scan-level record is the system's artefact; the report is its
   readable output. The tagline is “PRISM is a system that makes progression scores inspectable.” Do not burden it
   with “surveillance support” or “clinical decision support” until clinical feasibility is evaluated.
+- 2026-11-03 (author): use hyphens only when they are part of a formal name, an abbreviation, a code or dataset
+  identifier, or a technical term that loses its meaning without one. Otherwise use ordinary words or rewrite the
+  phrase. Keep one construction consistent: for example, use “treatment context,” never alternate it with
+  “treatment-context information.”
