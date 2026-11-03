@@ -50,41 +50,42 @@ glioma surveillance; external validation; clinical decision support
 \section{Introduction}\label{sec:1}
 
 % Sources: OUTLINE.md (Introduction 1); refs taal2008, brandes2008, wen2023, shi2025.
-After surgery and chemoradiotherapy for glioblastoma and other aggressive gliomas, clinicians interpret serial
-MRI in the context of earlier scans and the treatment course. Newly increased enhancement soon after radiotherapy can reflect
+After surgery and chemoradiotherapy for glioblastoma and other aggressive gliomas, serial MRI is interpreted against
+earlier scans and the course of treatment. New or increasing enhancement soon after radiotherapy can represent
 treatment effect rather than tumour growth. Pseudoprogression is concentrated within 12 weeks of completing
 chemoradiotherapy \citep{wen2023} and is more common in MGMT promoter-methylated tumours \citep{taal2008,brandes2008};
 months later, radiation necrosis can create a similar uncertainty.
 
-An automated progression score can rank follow-up scans, but a score alone cannot show whether it reflects
-image-derived measurements, treatment context, or both. It cannot show whether those sources agree, or whether the
-system has been evaluated in situations like the scan at hand. These questions become more important when models move
-between cohorts, where treatment records, scan schedules, and progression labels can differ. In a recent review of
-automated response assessment, only 3 of 20 studies included external testing \citep{shi2025}.
+Automated models can rank follow-up scans for progression, but the score alone does not say what produced its ranking:
+image-derived measurements, treatment context, or both. It does not show whether those sources agree or how much
+comparable evidence supports the scan. This matters when models move between cohorts, where treatment records, scan
+schedules, and progression labels can differ. In a recent review of automated response assessment, only 3 of 20
+studies included external testing \citep{shi2025}.
 
-We designed PRISM to preserve this information in an inspectable scan-level record. The name reflects its purpose: as
-a prism separates light, PRISM separates a progression score into image-derived measurements and treatment-context
-information. It retains separate image and treatment-timeline scores beside a combined score, with provenance and
-evidence indicators for the situation represented by the scan. Earlier systems have generated brain-tumour reports
-from segmentation-derived structured features \citep{herasrivera2026,valerio2025}, and deterministic checks have been
-used to compare generated clinical text with source records \citep{zeba2026}. PRISM brings these ideas to post-treatment
-glioma surveillance: its language component does not interpret MRI or calculate a score; it writes the completed
-record, which an automatic checker compares with that record.
+PRISM is designed as an inspectable scan-level record that preserves this information. The name reflects its purpose:
+as a prism separates light, PRISM separates a progression score into image-derived measurements and treatment-context
+information. It presents separate image and treatment-timeline scores beside a combined score, identifies their
+agreement, and records the source and available support for the assessment. Earlier systems have generated
+brain-tumour reports from segmentation-derived structured features \citep{herasrivera2026,valerio2025}, and
+deterministic checks have compared generated clinical text with source records \citep{zeba2026}. PRISM applies these
+ideas to post-treatment glioma surveillance: its language component does not interpret MRI or calculate a score; it
+writes the completed record, which an automatic checker compares with that record.
 
 We evaluated PRISM on the public MU-Glioma-Post development cohort and on LUMIERE and UCSF-ALPTDG. The paper makes
 four contributions:
 \begin{enumerate}
 \item \textbf{An audit of what carries a score.} We examine score-associated information within phases of care and
-across cohorts, where timing was associated with scores at MU and enhancement at UCSF (Section~\ref{sec:3.3}).
-\item \textbf{A scan-level evidence record.} PRISM keeps image-derived measurements and treatment context distinct,
-shows their agreement with the combined score, and records provenance and evidence indicators for the scan
-(Section~\ref{sec:2.1}).
-\item \textbf{External evaluation of prespecified models.} Models fixed before testing reached their prespecified
-transfer targets at LUMIERE and UCSF-ALPTDG (Section~\ref{sec:3.1}).
+across cohorts, finding an association with treatment timing at MU and enhancing volume at UCSF
+(Section~\ref{sec:3.3}).
+\item \textbf{A scan-level evidence record.} PRISM retains image-derived measurements and treatment context as
+separate sources, shows their relationship to the combined score, and records their provenance and available support
+for each scan (Section~\ref{sec:2.1}).
+\item \textbf{External evaluation of prespecified models.} Models fixed before testing reached their transfer targets
+at LUMIERE and UCSF-ALPTDG (Section~\ref{sec:3.1}).
 \item \textbf{Checked report generation.} Across the three cohorts, all 406 reports passed the automatic consistency
 check against their structured records (Section~\ref{sec:3.5}).
 \end{enumerate}
-These evaluations establish model transport and report-record consistency; they do not evaluate clinical decisions.
+The study evaluates model transport and report-record consistency, not clinical interpretation.
 
 % =====================================================================================================
 \section{Methods}\label{sec:2}
