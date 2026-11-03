@@ -287,3 +287,6 @@ Add each reaction as a dated, one-line rule.
   identifier, or a technical term that loses its meaning without one. Otherwise use ordinary words or rewrite the
   phrase. Keep one construction consistent: for example, use “treatment context,” never alternate it with
   “treatment-context information.”
+- 2026-11-03 (author): do not rely on colons or semicolons to arrange prose. Prefer a full sentence, a comma, or a
+  parenthesis. Retain them only when they materially improve a compact table, mathematical expression, or an otherwise
+  ambiguous construction.
