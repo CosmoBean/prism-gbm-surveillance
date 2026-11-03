@@ -37,6 +37,8 @@ claim or the reasoning, remove it.
 - Treat the parts an author likes as evidence of the informational shape to preserve, not as a ban on rewriting.
   Rewrite the faulty passage when needed, but retain its useful actor, action, and object. Do not replace a precise,
   direct sentence with a shorter but vaguer or different claim.
+- Keep the model’s scan-level assessment distinct from its study-level evaluation. Use ranking language when
+  discussing AUC or discrimination results, not when explaining the purpose of the score in the Introduction.
 
 ## PRISM-specific language
 

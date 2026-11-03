@@ -275,3 +275,5 @@ Add each reaction as a dated, one-line rule.
 - 2026-11-03 (author): use the parts of a sentence the author likes to identify the informational shape that works.
   Rewrite the faulty passage when needed, but preserve its useful actor, action and object; do not substitute a
   shorter but vaguer or different claim, or refactor unrelated prose.
+- 2026-11-03 (author): keep the scan-level purpose of a model separate from study-level evaluation. Ranking language
+  belongs with AUC/discrimination results, not with the Introduction's account of what a progression score is for.
