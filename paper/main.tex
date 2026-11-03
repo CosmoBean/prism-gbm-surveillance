@@ -26,17 +26,19 @@
 \maketitle
 
 % Unstructured abstract, 100--150 words (journal instructions).
-% Finding-first abstract, 2026-11-01, after the supervisor asked for clear contributions (STYLE.md 10); replaces the
-% system-first proposal of 2026-10-26 and the abstract locked on 2026-10-24 (LOCKED.md), pending the author's approval.
-% 150 words. Sources: NUMBERS.md 3 (0.82; within-phase 0.68 vs 0.64), 4 (0.77), 5 (UCSF enhancement), 6 (disagreement), 7 (406/406).
+% Author-approved narrative abstract, 2026-11-03; replaces the earlier finding inventory.
+% 149 words. Sources: NUMBERS.md 3 (0.82), 4 (0.77), 5 (UCSF 0.80 and enhancement), 6 (timing), 7 (406/406).
 \begin{abstract}
-A progression score from surveillance MRI after glioma treatment can rank scans largely by when they were taken,
-without showing which evidence carried it. PRISM splits each score into image and
-treatment-timeline evidence, attaches a confidence to each, and has a local language model write reports. On MU-Glioma-Post, the public development cohort, the timeline reached an AUC of 0.82, and the locked combined
-score reached 0.77 at LUMIERE. In exploratory analyses, within a phase of care at MU images ranked scans as well as the timeline (0.68 against 0.64), and at UCSF-ALPTDG the scores followed the enhancement
-on which progression was called. Pathway disagreement marked less reliable scores at MU only. After one prompt
-revision, all 406 reports passed an automatic check against their records. In these cohorts, what carried the score depended
-on when patients were scanned and how progression was labelled. No clinician has used the reports yet.
+Following treatment for aggressive glioma, changes on serial MRI must be interpreted alongside the treatment course.
+An automated progression score can rank follow-up scans, but cannot show whether it reflects MRI-derived measurements
+or treatment context. We developed PRISM, a local multimodal decision-support system that combines radiomic
+measurements and treatment context in an inspectable report. On the public MU-Glioma-Post development cohort, PRISM
+distinguished follow-up scans at which progression was recorded from other scans (AUC 0.82). Prespecified PRISM
+models, applied without refitting, reached AUCs of 0.77 on LUMIERE and 0.80 on UCSF-ALPTDG. Across cohorts, the
+score was associated with different information: treatment timing at MU and enhancing volume at UCSF. PRISM presents
+the score with the measurements, treatment context, and provenance used to produce it. Across the three cohorts, an
+automatic consistency check found all 406 generated reports consistent with their structured records. Future work will
+evaluate the reports with clinicians.
 \end{abstract}
 
 % No more than 3 keywords (journal instructions).

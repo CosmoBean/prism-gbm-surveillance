@@ -48,21 +48,21 @@ prose contains only record-backed statements.
 
 | order | section / display | intended change | status |
 |---|---|---|---|
-| 1 | Abstract | Replace the finding-inventory abstract with one clinical-to-system narrative. State what a score cannot show, what PRISM makes visible, one internal and one result per external cohort, the cohort-dependent evidence finding, and the narrow report-check result. | in progress |
+| 1 | Abstract | Replace the finding-inventory abstract with one clinical-to-system narrative. State what a score cannot show, what PRISM makes visible, one internal and one result per external cohort, the cohort-dependent evidence finding, and the narrow report-check result. | verified |
 | 2 | Introduction | Establish the scan-level professional question, then define the system response and its four concise contributions. Make the audit the reason PRISM exists, not a competing paper. | proposed |
 | 3 | Figure 1 and report display | Add a score-alone versus PRISM evidence scenario using the existing synthetic example; simplify report-facing field-code/debug styling. | proposed |
 | 4 | Results | Reorder around: transport; what drives apparent discrimination; evidence indicators; bounded report check. Reduce lists and move model-ladder detail out of the main narrative. | proposed |
 | 5 | Discussion and conclusion | State the system's precise contribution and clinical boundary without defensive repetition. | proposed |
 | 6 | Figures, tables and supplement | Reconcile source mismatches, simplify dense captions, rebuild the stale supplement, and resolve submission placeholders. | proposed |
 
-## Abstract: approved premise, skeleton pending prose approval
+## Abstract: approved and implemented 2026-11-03
 
-**Premise.** After treatment for aggressive glioma, a single progression score cannot show whether it reflects MRI
-measurements, the treatment course, or a clinical situation with little comparable evidence.
+**Premise.** Following treatment for aggressive glioma, changes on serial MRI must be interpreted alongside the
+treatment course. A progression score cannot show whether it reflects MRI measurements or treatment context.
 
 **Five beats.**
 
-1. The clinical problem and the limitation of a scalar score.
+1. The clinical problem and the limitation of a progression score.
 2. PRISM as a local multimodal support system that produces an inspectable scan-level report.
 3. One internal result: the MU combined score, AUC 0.82 for the cohort-documented progression scan.
 4. One external result per cohort, stated with the correct cohort-compatible locked model: LUMIERE combined score,
@@ -98,3 +98,4 @@ comparison, and the full confidence taxonomy.
 |---|---|---|
 | 2026-11-02 | Treat `WORK_LOG.md` as evidence control, not the manuscript outline. | approved |
 | 2026-11-02 | Revise section by section, beginning with the abstract. | approved |
+| 2026-11-03 | Approve and insert the 149-word abstract; state external results compactly as prespecified PRISM models and contextualise the 406-report check across all three cohorts. | verified |

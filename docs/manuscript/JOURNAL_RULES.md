@@ -49,7 +49,7 @@ Figure legends.
 | Rule | Status |
 |---|---|
 | Article: no word limit | **done**: no length change needed |
-| Abstract: unstructured, 100–150 words | **done**: 148 words (2026-10-16) |
+| Abstract: unstructured, 100–150 words | **done**: 149 words (2026-11-03) |
 | Keywords: no more than 3 (the 2022 page; some T&F journals now allow 3–6) | **done**: 3 |
 | British spelling with -ise endings | **done**: recheck after edits |
 | Template: T&F Interact (Word or LaTeX); submit LaTeX source together with the PDF | **done**: `interact` class, `largeformat` |

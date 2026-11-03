@@ -264,3 +264,6 @@ Add each reaction as a dated, one-line rule.
 - 2026-11-03 (author): every technical label, adjective, and emphasis word must earn its place by changing a
   factual claim or advancing the argument. Prefer the concrete action and its supported consequence; do not use
   inflated jargon, generic AI language, or hype that adds neither.
+- 2026-11-03 (author): lead with the clinical reading situation, then explain what a score does before naming its
+  limitation. Use natural endpoint language in narrative prose ("progression was recorded"), and give a result count
+  its scope rather than letting it appear as an unexplained number.

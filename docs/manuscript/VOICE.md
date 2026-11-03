@@ -17,6 +17,8 @@ claim or the reasoning, remove it.
 ## The writing rules
 
 - Begin with the finding or claim, then give the evidence needed to believe it.
+- Open an abstract or section with the concrete clinical or research situation before introducing the system or its
+  components. Explain what a score, model, or measurement does before describing its limitation.
 - Use concrete subjects and verbs: scans, measurements, models, reports, cohorts, and clinicians do things. Avoid
   abstractions doing work for them.
 - Name the actual object when it matters: say what the report lists or what the model uses rather than that the
@@ -26,18 +28,23 @@ claim or the reasoning, remove it.
 - Prefer ordinary words unless a technical term makes the claim more exact. Technical vocabulary is useful when it
   identifies a method or a measurable property, not when it merely makes a sentence sound scientific.
 - Let the paper's structure create emphasis. Do not add emphasis words to announce it.
+- Give a count a reason to appear: attach its cohort, evaluation, or comparison rather than dropping it into a
+  sentence without context.
 
 ## PRISM-specific language
 
-- The central claim is that PRISM turns a scalar progression score into an inspectable scan-level record. It keeps
+- The central claim is that PRISM turns a progression score into an inspectable scan-level record. It keeps
   image-derived measurements and treatment context distinct, displays their agreement and available support, and
   generates a checked report from that record.
-- Call the endpoint the scan at which a cohort **documented progression**. Do not turn it into a diagnostic claim.
+- In narrative prose, say that progression was **recorded** at a scan. In Methods, define the cohort-specific endpoint
+  precisely; do not turn either form into a diagnostic claim.
 - A report check establishes agreement with the structured record; it does not establish clinical usefulness.
 - Describe PRISM as a local multimodal decision-support system only as its intended role. Do not imply that clinical
   decisions or outcomes improved without evidence.
 - When describing external evaluation, say that MU-trained cohort-compatible models were applied without refitting;
   do not imply that identical inputs or one invariant score were used at every site.
+- When external sites require different prespecified models, use a compact plural description in the abstract and
+  reserve the model-specific inputs for Methods and Results.
 - Prefer “measurements and treatment context used to produce the score” to “evidence behind the score.”
 
 ## Words and moves to avoid
@@ -79,8 +86,9 @@ Before accepting a paragraph, ask:
 > progression score into an inspectable scan-level record; it is not a project chronology or a general-purpose LLM
 > paper. Use concrete subjects and verbs, and retain only details that advance the paragraph's claim. Do not add
 > jargon, hype, novelty claims, slogan-shaped contrasts, generic AI language, or unsupported clinical benefit.
-> Name the exact cohort, endpoint, model, or measurement when that specificity is necessary. Call the endpoint the
-> scan at which the cohort documented progression. State a limitation plainly only where it changes the claim.
+> Name the exact cohort, endpoint, model, or measurement when that specificity is necessary. In narrative prose, say
+> that progression was recorded at a scan; define the exact cohort endpoint in Methods. State a limitation plainly
+> only where it changes the claim.
 >
 > **Passage:**
 > [Paste passage here]
