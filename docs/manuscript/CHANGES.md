@@ -49,7 +49,7 @@ prose contains only record-backed statements.
 | order | section / display | intended change | status |
 |---|---|---|---|
 | 1 | Abstract | Replace the finding-inventory abstract with one clinical-to-system narrative. State what a score cannot show, what PRISM makes visible, one internal and one result per external cohort, the cohort-dependent evidence finding, and the narrow report-check result. | verified |
-| 2 | Introduction | Establish the scan-level professional question, then define the system response and its four concise contributions. Make the audit the reason PRISM exists, not a competing paper. | proposed |
+| 2 | Introduction | Establish the scan-level professional question, then define the system response and its four concise contributions. Make the audit the reason PRISM exists, not a competing paper. | verified |
 | 3 | Figure 1 and report display | Add a score-alone versus PRISM evidence scenario using the existing synthetic example; simplify report-facing field-code/debug styling. | proposed |
 | 4 | Results | Reorder around: transport; what drives apparent discrimination; evidence indicators; bounded report check. Reduce lists and move model-ladder detail out of the main narrative. | proposed |
 | 5 | Discussion and conclusion | State the system's precise contribution and clinical boundary without defensive repetition. | proposed |
@@ -99,3 +99,4 @@ comparison, and the full confidence taxonomy.
 | 2026-11-02 | Treat `WORK_LOG.md` as evidence control, not the manuscript outline. | approved |
 | 2026-11-02 | Revise section by section, beginning with the abstract. | approved |
 | 2026-11-03 | Approve and insert the 149-word abstract; state external results compactly as prespecified PRISM models and contextualise the 406-report check across all three cohorts. | verified |
+| 2026-11-03 | Reframe the Introduction around PRISM as an evaluated scan-level evidence-record system; credit report-generation and deterministic-check precedents, then state the system's four bounded contributions. | verified |
