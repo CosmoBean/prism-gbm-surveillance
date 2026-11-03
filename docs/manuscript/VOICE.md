@@ -45,9 +45,9 @@ claim or the reasoning, remove it.
 
 ## PRISM-specific language
 
-- The central claim is that PRISM turns a progression score into an inspectable scan-level record. It keeps
-  image-derived measurements and treatment context distinct, displays their agreement and available support, and
-  generates a checked report from that record.
+- The central claim is: “PRISM is a system that makes progression scores inspectable.” For each scan, it keeps
+  image-derived measurements, treatment context, and separate model scores together in a checked record that is
+  written as a report.
 - In narrative prose, say that progression was **recorded** at a scan. In Methods, define the cohort-specific endpoint
   precisely; do not turn either form into a diagnostic claim.
 - A report check establishes agreement with the structured record; it does not establish clinical usefulness.

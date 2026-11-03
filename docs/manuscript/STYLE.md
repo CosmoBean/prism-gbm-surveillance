@@ -280,3 +280,6 @@ Add each reaction as a dated, one-line rule.
 - 2026-11-03 (author): state the general problem before introducing PRISM's specific response. The problem is that a
   score hides the information informing an assessment; image measurements and treatment context are PRISM's answer,
   not the whole definition of the problem.
+- 2026-11-03 (author): PRISM is the system; the scan-level record is the system's artefact; the report is its
+  readable output. The tagline is “PRISM is a system that makes progression scores inspectable.” Do not burden it
+  with “surveillance support” or “clinical decision support” until clinical feasibility is evaluated.
