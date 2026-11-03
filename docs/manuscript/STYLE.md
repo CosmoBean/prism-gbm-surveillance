@@ -4,6 +4,9 @@ The rules for writing and editing `paper/main.tex`. They come from the author's 
 four models of the craft. Read this before drafting, and again before committing any prose. When the author reacts
 to a passage, add the lesson to section 10 so it outlives the session.
 
+For a short, repeatable drafting prompt, use [VOICE.md](VOICE.md). It is the practical companion to this longer
+record of rules and reactions.
+
 **The one sentence to remember:** *elegance comes from the arrangement of ideas, not the sophistication of the
 vocabulary.*
 
@@ -258,3 +261,6 @@ Add each reaction as a dated, one-line rule.
   system name, no "language model" (docs/manuscript/council/titles_2026-11-01.md).
 - 2026-11-01 (author): "at the development centre" reads as if PRISM was built with the centre's dataset. MU-Glioma-Post
   is a public cohort we developed on: call it "the public development cohort", never "the development centre".
+- 2026-11-03 (author): every technical label, adjective, and emphasis word must earn its place by changing a
+  factual claim or advancing the argument. Prefer the concrete action and its supported consequence; do not use
+  inflated jargon, generic AI language, or hype that adds neither.
