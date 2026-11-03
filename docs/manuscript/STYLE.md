@@ -272,5 +272,6 @@ Add each reaction as a dated, one-line rule.
   limitations; do not add qualifiers such as "automated" when they do not alter the point.
 - 2026-11-03 (author): do not write as if defending every sentence. Avoid staged definitions, colon reveals, and
   formal qualifications when a plain active statement carries the point; name what the model does directly.
-- 2026-11-03 (author): when feedback identifies one phrase as wrong, retain the surrounding language the author has
-  accepted. Revise locally first; do not treat a narrow stylistic reaction as permission to rewrite the argument.
+- 2026-11-03 (author): use the parts of a sentence the author likes to identify the informational shape that works.
+  Rewrite the faulty passage when needed, but preserve its useful actor, action and object; do not substitute a
+  shorter but vaguer or different claim, or refactor unrelated prose.

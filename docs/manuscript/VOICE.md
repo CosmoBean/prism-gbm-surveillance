@@ -34,8 +34,9 @@ claim or the reasoning, remove it.
   sentence without context.
 - Do not build a sentence around an unnecessary definition, contrast, or colon. State the action directly, without
   packaging it as an elaborate definition or a methodological aside.
-- When the author approves a sentence or identifies one exact phrase as wrong, preserve the approved surrounding
-  wording. Make the smallest edit that resolves the named problem; do not recast the paragraph unless asked.
+- Treat the parts an author likes as evidence of the informational shape to preserve, not as a ban on rewriting.
+  Rewrite the faulty passage when needed, but retain its useful actor, action, and object. Do not replace a precise,
+  direct sentence with a shorter but vaguer or different claim.
 
 ## PRISM-specific language
 
