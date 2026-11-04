@@ -97,15 +97,19 @@ PRISM writes everything it computes for a scan, with the source of every value, 
 % Sources: OUTLINE.md (Fig 1); SYSTEM_PLAN.md section 1.
 \begin{figure}[!htbp]
 \centering
-\figslot{fig1_system.pdf}{0.55\textheight}{Drawn MRI slices, a treatment timeline and clinical data enter a prism that
-splits them into image, combined and timeline scores, each followed by three confidence statements and a locally
-written, checked report. Below are MU development, locked models applied to LUMIERE and UCSF, and 406 checked reports.}
-\caption{\textbf{PRISM and how it was evaluated.} (A) As a prism splits light, PRISM splits a progression score into its evidence. Measurements of the segmented tumour and its change feed the image pathway. Clinical data and the
-position in treatment feed the timeline pathway. One model on both gives the combined score (values from the
-synthetic example of Figure~\ref{fig:5}). A confidence statement with three parts is attached, every value enters one record with its
-source, and a local language model, given no images, writes the report, which a checker tests against the
-record. (B) Models were developed on MU by repeated cross validation, then fitted once and applied unchanged at
-LUMIERE and UCSF under rules fixed before any score was compared with an external label.}
+\figslot{fig1_system.pdf}{0.55\textheight}{A flowchart in five stages. Two drawn MRI slices and a treatment timeline with
+clinical data enter two separate lanes, segmentation and position in treatment, which give an image score, a timeline
+score and a combined score. A confidence box holds a conformal set, pathway agreement and a reliability card. A record
+passes to a local language model and a checker, ending in a synthetic report. Below, models developed on MU are locked,
+applied unchanged to LUMIERE and UCSF, and 406 reports are checked.}
+\caption{\textbf{PRISM and how it was evaluated.} (A) At each follow up MRI, PRISM keeps image and treatment evidence
+apart. The previous and current scans are segmented and the change in enhancing tumour and FLAIR abnormality is
+measured (image lane). The treatment dates and clinical record give the position in treatment (timeline lane). Each
+lane has its own score, and one model on both gives the combined score (values from the synthetic example of
+Figure~\ref{fig:5}). Three confidence statements are attached, every value enters one record with its source, and a
+local language model, given no images, writes the report, which a checker tests against the record. (B) Models were
+developed on MU by repeated cross validation, then fitted once and applied unchanged at LUMIERE and UCSF under rules
+fixed before any score was compared with an external label.}
 \label{fig:1}
 \end{figure}
 
