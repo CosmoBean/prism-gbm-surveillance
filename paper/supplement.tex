@@ -310,38 +310,6 @@ labels the cavity as necrosis (\code{FIX\_FEATURES.md} \S{}1).
 
 \FloatBarrier
 
-\begin{table}[H]
-\centering
-\small
-\renewcommand{\thetable}{S47}\renewcommand{\theHtable}{S47}
-\caption{\textbf{The 27 measurements of the imaging model.} Computed by \code{prism/features/measurements.py} and
-\code{prism/features/tabular.py} from the masks and images as released (no registration, resampling or intensity
-normalisation by PRISM). Normal-appearing brain is brain more than 10\,mm from the lesion and the resection cavity.
-Images from one scan use rows 1 to 19.}
-\label{tab:S47}
-\begin{tabularx}{\linewidth}{@{}R{0.6cm}R{4.6cm}L@{}}
-\toprule
- & Measurement & Definition \\
-\midrule
-1--6 & Log volumes & $\log(1+V)$ in cc of enhancing tumour, necrosis, FLAIR hyperintensity, resection cavity, tumour core (enhancing tumour and necrosis) and whole lesion \\
-7 & Enhancing fraction & Enhancing tumour volume over tumour core volume \\
-8 & FLAIR to core ratio & $\log(1+{}$FLAIR hyperintensity over tumour core$)$ \\
-9 & Cavity present & 1 if the mask has any resection cavity \\
-10 & Enhancing components & Number of connected enhancing components of at least 10 voxels \\
-11 & Largest component share & Largest enhancing component over all enhancing volume \\
-12 & Largest axial area & $\log(1+{}$largest single slice area of enhancing tumour in mm$^2)$ \\
-13 & Enhancement near the cavity & Share of enhancing voxels within 5 voxels (5\,mm at 1\,mm resolution) of the cavity \\
-14 & Distance to the cavity & $\log(1+{}$median distance of enhancing voxels to the cavity in mm$)$ \\
-15--16 & T1 contrast intensity of enhancing tumour & Median and 90th percentile over the median of normal-appearing brain \\
-17 & T1 contrast intensity of necrosis & Median over the median of normal-appearing brain \\
-18 & FLAIR intensity of FLAIR hyperintensity & Median over the median of normal-appearing brain \\
-19 & FLAIR intensity of necrosis & Median over the median of normal-appearing brain \\
-20--25 & Change since the previous scan & Log ratio of each of the six volumes to the previous scan's \\
-26--27 & Change since the smallest volume & Log ratio of enhancing tumour and of whole lesion volume to the smallest of each up to and including this scan \\
-\bottomrule
-\end{tabularx}
-\end{table}
-
 \section{Radiomics: extraction, configurations and outlier clipping}\label{sec:S5}
 
 Source: \code{docs/results/C3\_radiomics.md},
@@ -2452,6 +2420,40 @@ volumes. It leaves out the impression, the element BT-RADS ties to management. I
 template's own boundary of 12 weeks after radiotherapy, the interval in which BT-RADS favours treatment effect over
 tumour for worsening imaging. This compares content, not quality. No clinician has read a PRISM report,
 and none was compared with a report written for the same scan.
+
+
+\begin{table}[H]
+\centering
+\small
+\renewcommand{\thetable}{S47}\renewcommand{\theHtable}{S47}
+\caption{\textbf{The 27 measurements of the imaging model.} Computed by \code{prism/features/measurements.py} and
+\code{prism/features/tabular.py} from the masks and images as released (no registration or resampling by PRISM). Intensities are expressed relative to normal appearing brain, the brain more
+than 10\,mm from the lesion and the resection cavity. Distances and areas are in voxels, which are 1\,mm at the 1\,mm
+resolution of MU and UCSF.
+Images from one scan use rows 1 to 19.}
+\label{tab:S47}
+\begin{tabularx}{\linewidth}{@{}R{0.6cm}R{4.6cm}L@{}}
+\toprule
+ & Measurement & Definition \\
+\midrule
+1--6 & Log volumes & $\log(1+V)$ in cc of enhancing tumour, necrosis, FLAIR hyperintensity, resection cavity, tumour core (enhancing tumour and necrosis) and whole lesion \\
+7 & Enhancing fraction & Enhancing tumour volume over tumour core volume \\
+8 & FLAIR to core ratio & $\log(1+{}$FLAIR hyperintensity over tumour core$)$ \\
+9 & Cavity present & 1 if the mask has any resection cavity \\
+10 & Enhancing components & Number of connected enhancing components of at least 10 voxels \\
+11 & Largest component share & Largest enhancing component over all enhancing volume \\
+12 & Largest axial area & $\log(1+{}$largest single slice area of enhancing tumour in voxels$)$ \\
+13 & Enhancement near the cavity & Share of enhancing voxels within 5 voxels (5\,mm at 1\,mm resolution) of the cavity \\
+14 & Distance to the cavity & $\log(1+{}$median distance of enhancing voxels to the cavity in voxels$)$ \\
+15--16 & T1 contrast intensity of enhancing tumour & Median and 90th percentile over the median of normal-appearing brain \\
+17 & T1 contrast intensity of necrosis & Median over the median of normal-appearing brain \\
+18 & FLAIR intensity of FLAIR hyperintensity & Median over the median of normal-appearing brain \\
+19 & FLAIR intensity of necrosis & Median over the median of normal-appearing brain \\
+20--25 & Change since the previous scan & Log ratio of each of the six volumes to the previous scan's \\
+26--27 & Change since the smallest volume & Log ratio of enhancing tumour and of whole lesion volume to the smallest of each up to and including this scan \\
+\bottomrule
+\end{tabularx}
+\end{table}
 
 \FloatBarrier
 \section*{Supplementary figures}
