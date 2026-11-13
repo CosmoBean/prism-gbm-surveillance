@@ -60,21 +60,22 @@ relevant information is missing, or how the model has performed in comparable cl
 
 % Sources: STYLE.md section 10 (tagline, 2026-11-03); NOVELTY_SEARCH_2026-11-12.md.
 PRISM is a system that makes progression scores inspectable. For each scan, it keeps image measurements, treatment
-context, and separate model scores together in a record that is checked before it is written as a report. As a prism separates light, PRISM keeps image measurements and treatment context separate, hence its name. Earlier systems have generated
+context, and separate model scores together in a record that is checked before it is written as a report. The name comes from this separation. A prism splits light, and PRISM keeps image measurements and treatment context apart. Earlier systems have generated
 brain tumour reports from structured features extracted from segmentation \citep{herasrivera2026,valerio2025}, and
 deterministic checks have compared generated clinical text with source records \citep{zeba2026}. PRISM applies these
 ideas to glioma surveillance after treatment. Its language model writes the completed record as text, and an automatic checker compares the text with that record.
 
 % Sources: REVISION_2026-11-13.md (advisor's review A1--A3); NUMBERS.md 3--7.
 We developed PRISM on the public MU-Glioma-Post cohort and validated it, without refitting, in the LUMIERE and
-UCSF-ALPTDG cohorts. This paper makes four contributions. The first two are the methods we built, and the last two are what testing them
-showed.
+UCSF-ALPTDG cohorts. Testing it showed why a score should be inspectable, because the same kind of score rested on
+different information in different cohorts. This paper makes four contributions. The first two are the methods we
+built, and the last two are what testing them showed.
 \begin{enumerate}
 \item This paper introduces PRISM, a system that builds one record for each follow up scan. The record holds tumour
 volumes and their change measured from segmentation masks, three separately fitted scores (a clinical-history model, an
 imaging model and a combined model), and three statements of confidence (an 80\% conformal set, whether the
 clinical-history and imaging models agree, and how the models performed in comparable situations), each value with its
-source. The rules for agreement and for comparable situations were defined after the first results had been seen
+source. We defined the rules for agreement and for comparable situations after seeing the first results
 (Sections~\ref{sec:2.1}--\ref{sec:2.3}, validated in Sections~\ref{sec:4.in}--\ref{sec:4.2}).
 \item This paper presents a reporting workflow that runs entirely on local hardware. A language model writes the report
 from the record alone, citing for each sentence the record fields it uses, and a deterministic checker tests every number, flag and confidence statement in the report against the record
@@ -93,9 +94,8 @@ Section~\ref{sec:2} describes PRISM, from its inputs and measurements
 (Section~\ref{sec:2.1}) and its three models (Section~\ref{sec:2.2}) to its confidence statements
 (Section~\ref{sec:2.3}), its record and report (Section~\ref{sec:2.4}), and what it costs to run
 (Section~\ref{sec:2.5}). Section~\ref{sec:3} describes the three cohorts, the task, how each cohort was evaluated, which tests were fixed in
-advance, and the audits of what carries a score. Section~\ref{sec:4} reports the validations, of the inputs, the three models, the confidence
-statements and the reports on MU and, locked, in the two external cohorts, and finally of what information carries the
-scores.
+advance, and the audits of what carries a score. Section~\ref{sec:4} validates the inputs, the three models, the confidence statements and the reports on MU and, with
+the models locked, in the two external cohorts. It ends with the audits of what information carries the scores.
 Section~\ref{sec:5} discusses what the results mean for anyone who builds or evaluates such scores, and what remains
 untested, above all whether the reports help clinicians.
 
@@ -103,8 +103,8 @@ untested, above all whether the reports help clinicians.
 \section{PRISM}\label{sec:2}
 
 % Sources: OUTLINE.md (spine table); SYSTEM_PLAN.md section 1.
-PRISM turns one follow up scan and the patient's record into a structured record and a report, in five stages
-(Figure~\ref{fig:1}A). PRISM measures the tumour, scores the scan with three models, attaches three confidence statements,
+In five stages (Figure~\ref{fig:1}A), PRISM turns one follow up scan and the patient's clinical record into a
+structured record and a report. PRISM measures the tumour, scores the scan with three models, attaches three confidence statements,
 and writes every value into one record with its source. A local language model then writes the report from that record, and a
 checker compares the report with the record. Table~\ref{tab:models} lists every score used in the paper.
 
@@ -163,15 +163,12 @@ PRISM takes three inputs for a scan. The first is the segmentation of the curren
 the volumes of enhancing tumour, of FLAIR hyperintensity, and of necrosis and the resection cavity. We used the images and masks
 as released with each cohort \citep{mahmoud2025,suter2022,fields2024}, already registered to a common space by each
 provider, so every volume can be traced to a public file. PRISM does no registration, resampling or segmentation of its
-own. From the masks and images PRISM computes 27 measurements. Nineteen describe the current scan,
-namely the log volumes of the six compartments (enhancing tumour, necrosis, FLAIR hyperintensity, resection cavity, tumour
+own. From the masks and images PRISM computes 27 measurements. Nineteen describe the current scan. They are the log volumes of the six compartments (enhancing tumour, necrosis, FLAIR hyperintensity, resection cavity, tumour
 core and whole lesion) and 13 measures of shape and of T1 contrast and FLAIR intensity, the intensities divided by the median of normal
-appearing brain more than 10\,mm from the lesion and cavity (Supplementary Table~S47). The
-other eight describe change, namely the log ratios of the volumes to those of the previous scan and the enhancing and
-lesion volumes relative to the smallest the patient has had up to that scan (Table~\ref{tab:models}). The second input is the treatment context as of the scan day, meaning the days since
-diagnosis and surgery and the start, end and dose of radiotherapy and chemotherapy. From it PRISM places the scan in one of four phases of care, before the end of radiotherapy, early after it (up to 12
+appearing brain more than 10\,mm from the lesion and cavity (Supplementary Table~S47). The other eight describe change. They are the log ratios of the volumes to those of the previous scan and the enhancing and
+lesion volumes relative to the smallest the patient has had up to that scan (Table~\ref{tab:models}). The second input is the treatment context as of the scan day. It records the days since diagnosis and surgery and the start, end and dose of radiotherapy and chemotherapy. From it PRISM places the scan in one of four phases of care, before the end of radiotherapy, early after it (up to 12
 weeks after its end), later, or unknown when the dates are missing. The third input is the
-patient's age, sex, and IDH and MGMT status. Every input is taken as of the scan day, so no information from a later
+patient's age, sex, and IDH mutation and MGMT promoter methylation status, two tumour markers recorded at diagnosis. Every input is taken as of the scan day, so no information from a later
 visit enters a score, except IDH and MGMT status at 8 grade 4 scans taken before the diagnosis date
 (Supplementary Section~S4).
 
@@ -181,12 +178,10 @@ visit enters a score, except IDH and MGMT status at 8 grade 4 scans taken before
 % DETECTION_TASK.md (Plan, B1, Tbase); NUMBERS.md 2.1.
 PRISM scores each scan with three models. The clinical-history model uses the treatment context and the patient
 characteristics, the imaging model uses the 27 measurements and no dates or intervals, and the combined model uses both
-sets of inputs. Each is a logistic regression with an L2 (ridge) penalty, chosen because its coefficients can be read
-and because deep networks fine tuned on MU added nothing to the clinical-history model (Table~\ref{tab:2}). Missing values are imputed
+sets of inputs. Each is a logistic regression with an L2 (ridge) penalty. We chose it because its coefficients can be read and because deep networks fine tuned on MU added nothing to the clinical-history model (Table~\ref{tab:2}). Missing values are imputed
 with the median of the training scans and flagged with an indicator, unknown IDH or MGMT status is coded as the
 reference category, and the inputs are standardised. The penalty is chosen from six values of the inverse strength $C$ (0.01, 0.03, 0.1, 0.3, 1 and 3) by
-threefold cross validation grouped by patient within the training data, minimising the log loss. The output of each
-model is a score between 0 and 1 that ranks scans by how closely they resemble progression scans in the training data.
+threefold cross validation grouped by patient within the training data, minimising the log loss. Each model outputs a score between 0 and 1 that ranks scans by how closely they resemble progression scans in the training data.
 
 Where a cohort lacks treatment dates, PRISM uses a reduced clinical-history model with the inputs that cohort has
 (Table~\ref{tab:models}). The flag for the first weeks after radiotherapy is taken from the rater's note at LUMIERE and
@@ -209,20 +204,21 @@ calibration. Write $\hat p(1) = \hat p$ for a scan's score and $\hat p(0) = 1 - 
 $y_i$, the nonconformity score is $s_i = 1 - \hat p_i(y_i)$, the probability the model did not give to what happened. Because a patient contributes
 several scans that are not independent, each scan is weighted by one over the number of that patient's calibration
 scans, so that every patient carries the same weight. With $\alpha = 0.2$ and $n$ calibration patients, the threshold $\hat q$ is the smallest $s_i$ whose cumulative weight,
-with the scores sorted, reaches $(1-\alpha)(n+1)$, a total that counts the new patient with weight one. If no score reaches it, $\hat q$ is
+with the scores sorted, reaches $(1-\alpha)(n+1)$. The added one counts the new patient with weight one. If no score reaches it, $\hat q$ is
 infinite. A new scan with score $\hat p$ receives the set
 \begin{equation}
 C(\hat p) = \{\, y \in \{0, 1\} : 1 - \hat p(y) \le \hat q \,\}.
 \end{equation}
 The set holds one outcome when the score is clear, both when it is not, and in principle none when the threshold is
-very small. The set is computed from the model refitted on 70\% of the patients, not from the displayed combined score, and
-this costs some discrimination (at UCSF the refitted model's AUC was 0.08 below that of the displayed score). The record shows the combined model's set. We computed sets in the same way for the
-clinical-history and imaging models to test them. If a new patient is exchangeable with the calibration patients, the set contains the true outcome of about 80\% of
+very small. We computed the set from the model refitted on 70\% of the patients instead of the displayed combined score. This costs
+some discrimination (at UCSF the refitted model's AUC was 0.08 below that of the displayed score). The record shows the combined model's set. We computed sets in the same way for the
+clinical-history and imaging models to test them. If a new patient is exchangeable with the calibration patients, meaning drawn from the same population in no
+particular order, the set contains the true outcome of about 80\% of
 their scans on average, but not necessarily within each subgroup \citep{romano2020}. On MU the calibration split was made inside each training fold.
 Externally we used one model and one threshold from MU, unchanged.
 
 The second statement records whether the clinical-history and imaging models agree. The two models agree when both scores fall on the
-same side of their medians over the cohort's evaluation scans, a score equal to the median counting as below. This
+same side of their medians over the cohort's evaluation scans. A score equal to the median counts as below. This
 rule uses no outcome labels. Because a cohort median needs a batch of scans, we later also tested medians fixed on MU, which can be applied to a
 single scan\expl{} (a dagger marks an analysis not fixed in advance, Section~\ref{sec:3.3}).
 
@@ -244,16 +240,14 @@ Every value PRISM computes for a scan enters one structured record under a fixed
 language model (Qwen3.8-27B, run with greedy decoding) then writes the report from that record alone, so no patient data
 are sent to an outside service. The prompt is assembled from the fields present in the record, so the model is never asked
 about information the record lacks, and decoding is constrained to a JSON schema in which every sentence carries its
-section and the keys of the record fields it uses. The model sees no images and does no arithmetic, and every number it writes must match a field it cites, allowing
-only the rounding, sign and percentage forms the record already implies.
+section and the keys of the record fields it uses. The model sees no images and does no arithmetic, and every number it writes must match a field it cites, up to the rounding, sign and percentage forms the record already
+implies.
 
 A deterministic checker then accepts or rejects the whole report. The checker rejects a report whose output cannot be parsed, or in
 which a sentence cites a field that does not exist, states a number not found in a field it cites, or writes a number
 as a word. The checker also rejects a report in which a raised flag is not mentioned, an input is wrongly called out of range, or
 the conformal set or the agreement statement is missing or misstated, or the reliability tier is missing where the
-evidence is thin. The same applies to a
-report that leaves out
-any of the three scores or the enhancing volume, that quotes a performance figure absent from the reliability card, or
+evidence is thin. It also rejects a report that leaves out any of the three scores or the enhancing volume, that quotes a performance figure absent from the reliability card, or
 that offers a diagnosis, a response category, advice, certainty words such as ``rules out'' or a verbal probability such
 as ``likely''. A rejected report is not repaired. No rule ties a number to the label it is written next to or checks the direction of
 a change, and the checker cannot judge emphasis or what a clinician would infer (Supplementary Section~S19).
@@ -276,7 +270,7 @@ PRISM is written in Python 3.11 with scikit-learn 1.7.2 \citep{pedregosa2011}, a
 vLLM 0.31.0 \citep{kwon2023} in bfloat16 precision on one NVIDIA H100 GPU with 80\,GB of memory. The model weights take
 50.2\,GiB. On one core of an Intel Xeon Platinum 8481C processor, computing the 27 measurements from a scan's masks and
 images took about 2\,s (median of 20 MU scans). Fitting one of the three
-models with its penalty search on synthetic data of MU's shape (181 scans) took under 0.1\,s, scoring took about 2\,\textmu s per
+models with its penalty search on synthetic data of MU's shape (181 scans) took under 0.1\,s. Scoring took about 2\,\textmu s per
 scan when scans were scored together, and computing the conformal threshold took under 1\,ms. Writing reports took 1.08\,s per report when
 generated in a batch, after about two minutes to load the model. A scan therefore costs about 2\,s of processor time and
 1\,s of GPU time once segmented. These costs leave out segmentation, because we used the masks released with each cohort. A deployment would add the
@@ -290,8 +284,8 @@ time of an automatic segmentation model. Every stage is one command of a single 
 % Sources: TABLE1_COHORT.md; UCSF_DATA.md; UCSF_PLAN.md; DETECTION_TASK.md (Plan, Cohort, External test); INTENDED_USE.md.
 Grade 4 glioma is the primary population in all three cohorts (Table~\ref{tab:1}). The task is to decide whether each
 scan is the one at which the cohort documented progression. Predicting progression within 120 days of a scan is a
-secondary task. On MU the intended use is scans from the start of radiotherapy onwards, and MU results are for the
-intended use unless stated.
+secondary task. On MU the intended use covers scans from the start of radiotherapy onwards. MU results refer to the intended use unless
+stated otherwise.
 
 % Sources: NUMBERS.md 2.2 (TABLE1_COHORT.md; DETECTION_TASK.md Cohort and External test; UCSF_DATA.md; UCSF_RESULTS.md
 % Part A) and mismatch 7. Characteristics and detection counts describe different rows; the notes say which.
@@ -342,8 +336,7 @@ early after radiotherapy and two had no radiotherapy date.
 % Sources: DETECTION_TASK.md (Plan, External test); UCSF_PLAN.md (0e7c9fe); SYSTEM_PLAN.md (e7cba80);
 % REPORT_V3_1_PLAN.md (4f7e7b9); SPLIT_VARIANCE.md; Supplementary S8 and Figure S2; NUMBERS.md 2.3.
 Each cohort played one role (Table~\ref{tab:eval}). MU was the development cohort. On it we evaluated every model by five
-repeats of fivefold cross validation grouped by patient, so that no patient contributed to both fitting and testing, and
-report the mean pooled held out AUC. We used repeated splits because single splits are unstable in small cohorts \citep{an2021,varoquaux2018}
+repeats of fivefold cross validation grouped by patient, so that no patient contributed to both fitting and testing. We report the mean pooled held out AUC. We used repeated splits because single splits are unstable in small cohorts \citep{an2021,varoquaux2018}
 (Supplementary Section~S8). We then
 fitted each model once on all 181 grade 4 detection scans of MU, from every phase of care, locked it, and applied it
 unchanged to LUMIERE and UCSF under plans committed before any score was compared with an external label. The plans
@@ -372,7 +365,8 @@ Plan committed before the test & Detection plan (2b4c927); system plan (e7cba80)
 \end{tabularx}
 \end{table}
 
-Discrimination is the AUC for telling the scan at which progression was documented from scans without progression. Every
+Discrimination is measured by the AUC, the probability that a scan at which progression was documented scores higher than
+a scan without progression. Every
 AUC carries a 95\% confidence interval (CI) from 1,000 bootstrap samples of patients, and on MU these intervals resample
 held out predictions without the variance from refitting. Conformal sets are judged by coverage, the share of scans
 whose set contains the true outcome, against a planned threshold of 78\% at the 80\% level. The agreement statement is
@@ -388,8 +382,8 @@ and counted how many it rejected, under a plan written before the run.
 Each planned test answered its own question, so we made no correction for multiple tests. Table~\ref{tab:2} lists every
 part of the record, the test that checks it, the rule fixed in advance where there was one,
 and the outcome. Results of analyses not fixed in advance carry a dagger (\textdagger). The disagreement flag and its two
-tests were planned, but the median rule that defines disagreement was written down after the results had been seen, so
-every disagreement result carries a dagger.
+tests were planned, but we wrote down the median rule that defines disagreement after seeing the results. Every
+disagreement result therefore carries a dagger.
 
 % Sources: NUMBERS.md section 9 (DETECTION_TASK.md; UCSF_PLAN.md; SYSTEM_PLAN.md; REPORT_V3.md; REPORT_V3_1.md);
 % NUMBERS.md 6, 13, 14. Numbers already given in the Results are pointed to by section and not repeated.
@@ -454,7 +448,7 @@ which pools only pairs of a scan with progression and a scan without progression
 timing cannot separate them. The second is enhancing tumour volume alone, with no fitted model, as a reference for how
 far a label follows enhancement. The third builds the imaging model in three steps, from the current scan's measurements
 to change from earlier scans and then three schedule inputs, and compares the AUC across and within phases at each step.
-The fourth tests whether deep networks see more than the measurements. We fine tuned SwinUNETR segmentation networks to
+The fourth tests whether deep networks detect more in the images than the measurements capture. We fine tuned SwinUNETR segmentation networks to
 score scans directly and compared them with the same networks trained on permuted labels (Supplementary
 Section~S22). Only the fourth audit was fixed in advance.
 
@@ -466,12 +460,11 @@ Section~S22). Only the fourth audit was fixed in advance.
 
 % Sources: Supplementary S14 (RESEGMENTATION.md); DIAGNOSTICS_IMAGING.md; NUMBERS.md 15.
 The released MU volumes mostly agreed with a second automatic segmentation but changed considerably between scans taken
-close together. A second segmentation of all 594 MU scans (BraTS 2021 SwinUNETR) gave a median Dice coefficient of 0.80
-for enhancing tumour, with a quarter of scans below 0.49, and 0.85 for the whole lesion, and log volumes that correlated
-at 0.92 and 0.91. A ridge model on the volumes and their change detected progression no better with the new masks
+close together. A second segmentation of all 594 MU scans (BraTS 2021 SwinUNETR) gave a median Dice coefficient (overlap from 0 to 1) of 0.80
+for enhancing tumour, with a quarter of scans below 0.49, and 0.85 for the whole lesion. The log volumes correlated at 0.92 and 0.91. A ridge model on the volumes and their change detected progression no better with the new masks
 (difference $-$0.02, $-$0.06 to $+$0.03), so the planned test for a gain was not met. Between consecutive scans taken
 within 30 days of each other, the released enhancing volume changed by a median factor of 2.6, partly through a second
-resection, and one consistent segmenter reduced this only to 2.2. This is why the report calls the volumes indicative. No expert read
+resection, and one consistent segmenter reduced this only to 2.2. The report therefore calls the volumes indicative. No expert read
 the masks again, and the phase of care was taken from the recorded dates without a further check.
 
 \subsection{The scores ranked scans on MU and, without refitting, in two external cohorts}\label{sec:4.1}
@@ -483,7 +476,7 @@ CI 0.75--0.90) and the imaging model with 0.71 (0.63--0.78)\expl. Clinical data 
 Figure~\ref{fig:2}). The combined score also reached 0.82 (0.74--0.89)\expl, with no detectable gain over the clinical-history model
 ($-$0.001, $-$0.05 to $+$0.05). The planned primary model, which added image measurements and three schedule inputs to the clinical-history model, fell short of its
 target gain of 0.03 (Table~\ref{tab:2}). Within a phase of care, adding treatment context to clinical data and images gained nothing detectable\expl{} (Section~\ref{sec:4.4}).
-Counting every scan before progression as a negative, including scans shortly before it, the clinical-history model
+When every scan before progression counted as a negative, including scans shortly before it, the clinical-history model
 scored 0.81 (0.76--0.86). Forecasting progression within 120 days was harder, at 0.60
 (0.52--0.69) in the intended use (Supplementary Section~S23).
 
@@ -507,10 +500,9 @@ tumour). Points have 95\% CIs from bootstrap samples of patients on an axis from
 % Sources: DETECTION_TASK.md (External test); UCSF_RESULTS.md Part A, B, Q1--Q3, contrasts; NUMBERS.md 4 and 12C.
 The planned reduced form of the combined model, which scored 0.80 (0.73--0.89) on MU by cross validation, reached 0.77
 (0.68--0.86) at LUMIERE and met its planned transfer rule (Table~\ref{tab:2}). Its gain over the reduced clinical-history model\expl{} was 0.08 ($-$0.01 to $+$0.16). At UCSF both planned imaging
-models transferred, images from one scan reaching 0.80 (0.69--0.89) and the imaging model 0.73 (0.60--0.84). With coefficients fitted
-on MU, the imaging model scored 0.07 below images from one scan ($-$0.13 to $-$0.01), and
-retrained at UCSF it gained 0.14 (0.03--0.26) over its locked version. The reduced clinical-history model scored 0.56 (0.42--0.69) at UCSF, where its
-radiotherapy flag is approximated. The locked combined model reached 0.86 (0.76--0.93), but part of this reflects scan timing, because the interval between the
+models transferred. Images from one scan reached 0.80 (0.69--0.89) and the imaging model 0.73 (0.60--0.84). Locked, the imaging model scored 0.07 below images from one scan ($-$0.13 to $-$0.01). Refitted on UCSF, it gained 0.14
+(0.03--0.26) over its locked version. The reduced clinical-history model scored 0.56 (0.42--0.69) at UCSF, where its
+radiotherapy flag is approximated. The locked combined model reached 0.86 (0.76--0.93). Part of this reflects scan timing, because the interval between the
 two scans was shorter before progression\expl. 
 
 % Sources: NUMBERS.md 12D (operating point, EXPLORATORY) and 12F (calibration).
@@ -554,29 +546,47 @@ on MU, both were met at LUMIERE but not at UCSF (Figure~\ref{fig:4}B). A conform
 flag, met one of the two planned tests in each cohort (Table~\ref{tab:2}).
 
 % Sources: RELIABILITY_CARD.md (Reading, lookup table); SYSTEM_RESULTS.md S4; NUMBERS.md 6.
-Only four situations on the reliability card\expl{} reached the tested tier (Figure~\ref{fig:4}C), one at MU and three
-at LUMIERE, where only the rater's flag for the first three months is recorded, so situations differ by enhancement only. No scan in these sets was in
+Only four situations on the reliability card\expl{} reached the tested tier (Figure~\ref{fig:4}C), one at MU and three at LUMIERE. LUMIERE records only the rater's flag for the first three months, so its situations
+differ by enhancement only. No scan in these sets was in
 an untested situation. Every UCSF situation had few cases, and at MU no situation in the first 12 weeks after
 radiotherapy held more than three progression scans. In a descriptive comparison, tested situations had lower error than situations with few cases at LUMIERE (29\% against 42\% of scans misclassified at the cohort median) but not at MU (29\% against 24\%), where the scans with few cases are mostly clearly without progression early after
 radiotherapy.
 
 % Sources: NUMBERS.md 6 (S2/S3 flagged shares; reduced confidence design D2 error rates, EXPLORATORY; S4 tiers).
-Scans whose conformal set held both outcomes were misclassified more often than the rest. The conformal set held
-both outcomes for 25\% of scans at MU, 38\% at LUMIERE and 36\% at UCSF. The two models disagreed on 40\%, 57\% and
-55\% of scans\expl, and 63\%, 11\% and 100\% of scans fell in situations with few cases\expl. Where the set held both
-outcomes, the combined score misclassified 37\%, 48\% and 32\% of scans when every scan above the cohort's median score was called
-progression, against 22\%, 20\% and
-25\% of the other scans\expl.
+For a quarter to over a third of scans, the confidence statements flag something a score alone does not show
+(Table~\ref{tab:hides}), and the flagged scans were misclassified more often than the rest.
+
+% Sources: NUMBERS.md 6 (S2/S3 flagged shares; reduced confidence design D2 error rates, EXPLORATORY; S4 tiers).
+\begin{table}[!htbp]
+\centering
+\caption[What a score alone does not show]{\textbf{What a score alone does not show.} Share of scans in each cohort for
+which each confidence statement flags a doubt, and the combined score's error when every scan above the cohort's median
+score is called progression. \textdagger{} not fixed in advance.}
+\label{tab:hides}
+\footnotesize
+\begin{tabularx}{\linewidth}{@{}LR{2.0cm}R{2.0cm}R{2.0cm}@{}}
+\toprule
+ & MU & LUMIERE & UCSF \\
+\midrule
+Conformal set holds both outcomes & 25\% & 38\% & 36\% \\
+Clinical-history and imaging models disagree\expl & 40\% & 57\% & 55\% \\
+Situation with few cases on the reliability card\expl & 63\% & 11\% & 100\% \\
+\addlinespace
+Error where the set holds both outcomes\expl & 37\% & 48\% & 32\% \\
+Error on the other scans\expl & 22\% & 20\% & 25\% \\
+\bottomrule
+\end{tabularx}
+\end{table}
 
 \subsection{After one revision of the prompt, every report passed the checker}\label{sec:4.3}
 
 % Sources: REPORT_V3_1.md (S5--S7); REPORT_V3.md (S5 failure); NUMBERS.md 7.
 Every report written by Qwen3.8-27B for the scans of patients not used to revise the prompt passed the checker, 114 at MU, 162 at LUMIERE and 130
-at UCSF. Of six other local models given the same prompt, which had been revised for Qwen3.8-27B, only Gemma-4 31B
-also did (Figure~\ref{fig:5}B). All 220 reports in situations with few cases or untested situations said so
+at UCSF. We gave six other local models the same prompt, revised for Qwen3.8-27B, and only Gemma-4 31B also had every report
+pass (Figure~\ref{fig:5}B). All 220 reports in situations with few cases or untested situations said so
 (71 at MU, 19 at LUMIERE and 130 at UCSF). When one confidence or measurement field was changed in 30 records from the
 three cohorts, 28 reports followed the change, against a planned minimum of 27 (Table~\ref{tab:2}). Before the revision of the prompt\expl, every LUMIERE report failed because a fixed sentence quoted a
-number held in no field, so we corrected the prompt, left the checker unchanged and evaluated again on patients not
+number held in no field. We corrected the prompt, left the checker unchanged and evaluated again on patients not
 used for the revision.
 
 % Sources: CHECKER_MUTATION.md (plan 4f854cb); NUMBERS.md 14. Synthetic records only.
@@ -638,8 +648,8 @@ further 0.10 (0.05--0.15) across phases of care but not within them ($-$0.01, $-
 % Sources: UCSF_AUDIT.md sections 3--6 and Overall verdict; UCSF_RESULTS.md Part C (Q4); NUMBERS.md 5.
 At UCSF the progression labels coincided with a rated increase in enhancement\expl, so a model could score well there
 by tracking it. UCSF rated enhancement as increased at 27 of the 29 progression scans, and progression was dated a
-median of 7 days after the scan (Figure~\ref{fig:3}B). Enhancing volume alone reached 0.88 (0.79--0.95) there, above the point estimates of the
-locked imaging models, and above its AUC at MU and LUMIERE (Figure~\ref{fig:2}). Among the 37 scans rated as
+median of 7 days after the scan (Figure~\ref{fig:3}B). Enhancing volume alone reached 0.88 (0.79--0.95) there. This was above the point estimates of the locked imaging models
+and above its own AUC at MU and LUMIERE (Figure~\ref{fig:2}). Among the 37 scans rated as
 increased, images from one scan reached 0.65 (0.44--0.84), so this sample cannot show whether the measurements add
 to that rating. Deep networks tuned on UCSF scans beat the control with permuted labels (Table~\ref{tab:2}), and their
 scores tracked enhancing volume\expl.
@@ -650,7 +660,7 @@ scores tracked enhancing volume\expl.
 % Sources: OUTLINE.md (Discussion 1); NUMBERS.md 3--6.
 PRISM's combined and imaging models ranked scans at two other centres without refitting, but the information a score used depended on how
 each cohort was scanned and labelled. At MU, the score mostly followed the treatment schedule and at UCSF it followed the enhancement on which
-progression was called\expl. An AUC cannot show which evidence a model used. The audits of Section~\ref{sec:4.4} suggested it, and the report shows the clinical-history and imaging scores side by side, so a disagreement between them is visible at
+progression was called\expl. An AUC cannot show which evidence a model used. The audits of Section~\ref{sec:4.4} suggested which evidence each model used, and the report shows the clinical-history and imaging scores side by side, so a disagreement between them is visible at
 each scan. Process variables can carry much of the apparent skill of an image model
 \citep{badgeley2019}, and image models for glioblastoma surveillance have been benchmarked separately at the first and
 second scans after radiotherapy \citep{guo2025}. Outside oncology, clinical data were the strongest input in one Alzheimer's cohort and images in another
@@ -660,7 +670,7 @@ what carries a locked score differs between externally tested cohorts. The risk 
 on local scans.
 
 % Sources: OUTLINE.md (Discussion 2); SYSTEM_PLAN.md.
-Because its modules are separate, PRISM runs on what a cohort holds, given scans and masks. The imaging model needs
+Because its modules are separate, PRISM runs on whatever a cohort holds, provided it has scans and masks. The imaging model needs
 only those, which most public datasets have, and images from one scan serve where there is no earlier scan. The clinical-history model
 is added where dates exist. The reliability card is a lookup table, so a new cohort adds rows to it and a situation's
 tier can change as evidence accumulates.
@@ -686,8 +696,8 @@ model trained on MU was applied unchanged at UCSF to predict survival \citep{din
 predicted recurrence risk from preoperative and postoperative MRI across centres. None reports image and treatment context evidence separately at each scan, or tests a progression call for each scan locked
 at two external centres. For reports, an ECG system already combines a local language model, a verifier and a conformal set \citep{pham2026}, but it
 forbids numbers in the text rather than checking each against a typed record.
-PRISM therefore combines known parts, showing image and treatment context evidence at each scan with a confidence from
-measured performance, and tests the combination at two external centres under rules fixed in advance.
+PRISM therefore combines known parts. It shows image and treatment context evidence at each scan with a confidence from
+measured performance, and we tested the combination at two external centres under rules fixed in advance.
 
 % Sources: OUTLINE.md (Discussion 5); NUMBERS.md 10; UCSF_AUDIT.md; REPORT_V3_1.md Limits.
 PRISM was developed on one public cohort, and the two external tests are its only evidence that the ranking transfers. The
@@ -713,7 +723,7 @@ A reader study would show whether separate evidence and a stated confidence chan
 % Sources: OUTLINE.md (claim).
 PRISM keeps evidence from images and treatment context apart and shows the clinician both scores at every scan with how
 far each has been tested there. Its combined and imaging models ranked scans at two other centres without refitting. Audits showed that the scores
-followed the treatment schedule at MU and enhancement at UCSF, a difference an AUC alone does not reveal.
+followed the treatment schedule at MU and enhancement at UCSF. An AUC alone does not reveal this difference.
 
 % =====================================================================================================
 \section*{Acknowledgements}
