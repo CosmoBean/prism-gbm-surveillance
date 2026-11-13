@@ -107,19 +107,19 @@ def fig1(output: Path) -> None:
     # inputs
     at(0, 0, "Surveillance MRI", "+ masks, earlier scans")
     at(0, 1, "Clinical record", "age, sex, IDH, MGMT")
-    at(0, 2, "Treatment timeline", "dates of each therapy")
-    # measurements and pathways
+    at(0, 2, "Treatment history", "dates of each therapy")
+    # measurements and models
     at(1, 0, "Measurements", "volume, shape, change", face=tint(C["images"]))
-    at(2, 0, "Image pathway", "ridge model, no dates", face=tint(C["images"], 0.6))
+    at(2, 0, "Imaging model", "ridge model, no dates", face=tint(C["images"], 0.6))
     at(2, 1, "Combined score", "one model, both inputs", face=tint(C["combined"], 0.6))
-    at(2, 2, "Timeline pathway", "ridge, position in care", face=tint(C["timeline"], 0.6))
+    at(2, 2, "Clinical-history model", "ridge, position in care", face=tint(C["timeline"], 0.6))
     arrow(ax, (col[0] + w, row[0]), (col[1], row[0])); arrow(ax, (col[1] + w, row[0]), (col[2], row[0]))
     arrow(ax, (col[0] + w, row[1] - 0.04), (col[2], row[2] + 0.04)); arrow(ax, (col[0] + w, row[2]), (col[2], row[2]))
     arrow(ax, (mid[2], row[0] - h / 2), (mid[2], row[1] + h / 2)); arrow(ax, (mid[2], row[2] + h / 2), (mid[2], row[1] - h / 2))
     # confidence
     face = tint(C["thin"], 0.85)
     at(3, 0, "Conformal set (80%)", "one outcome or both", face=face)
-    at(3, 1, "Pathway agreement", "same side of median?", face=face)
+    at(3, 1, "Model agreement", "same side of median?", face=face)
     at(3, 2, "Reliability card", "tested scans like this", face=face)
     ax.text(mid[3], row[0] + h / 2 + 0.02, "Confidence", ha="center", va="bottom", fontsize=7.4, weight="bold",
             color=C["thin"])
@@ -136,7 +136,7 @@ def fig1(output: Path) -> None:
     box(ax, col[2], row[3] - h / 2, col[3] + w - col[2], h, "Report to the clinician",
         "figure, scores, confidence\nand what was not used", face=tint(C["combined"], 0.85))
     arrow(ax, (col[4], row[3]), (col[3] + w, row[3]))
-    ax.text(col[0], row[3], "Where a cohort lacks treatment dates,\nthe timeline is reduced; the image\npathway needs no dates at all.",
+    ax.text(col[0], row[3], "Where a cohort lacks treatment dates,\nthe clinical history is reduced; the\nimaging model needs no dates at all.",
             fontsize=6.8, color="#555555", ha="left", va="center", style="italic", linespacing=1.2)
 
     bx = fig.add_axes([0.045, 0.015, 0.945, 0.255]); bx.set_xlim(0, 1); bx.set_ylim(0, 1); bx.axis("off")
@@ -155,21 +155,21 @@ def fig1(output: Path) -> None:
 
 
 def fig2(output: Path) -> None:
-    """AUC by pathway and cohort. NUMBERS.md 3, 4, 11, 12C."""
+    """AUC by model and cohort. NUMBERS.md 3, 4, 11, 12C."""
     groups = ["MU-Glioma-Post", "LUMIERE", "UCSF-ALPTDG", "UCSF-ALPTDG\n(refitted there)"]
     badges = [("development (CV)", C["ink"], "white"), ("locked, external", "white", C["ink"]),
               ("locked, external", "white", C["ink"]), ("reference: trained there", "#f1f2f4", "0.35")]
     series = [  # label, colour, [(auc, lo, hi) or None per group], primary?, open reference marker?
         ("Clinical data alone", "#858585", [(0.530, 0.450, 0.606), (0.554, 0.458, 0.635), (0.502, 0.364, 0.630), (0.407, 0.314, 0.494)], False, False),
-        ("Timeline pathway", C["timeline"], [(0.822, 0.749, 0.902), (0.689, 0.600, 0.805), (0.561, 0.420, 0.687), (0.669, 0.549, 0.784)], False, False),
-        ("Image pathway", C["images"], [(0.709, 0.630, 0.781), (0.655, 0.565, 0.733), (0.726, 0.603, 0.835), (0.863, 0.772, 0.934)], False, False),
+        ("Clinical-history model", C["timeline"], [(0.822, 0.749, 0.902), (0.689, 0.600, 0.805), (0.561, 0.420, 0.687), (0.669, 0.549, 0.784)], False, False),
+        ("Imaging model", C["images"], [(0.709, 0.630, 0.781), (0.655, 0.565, 0.733), (0.726, 0.603, 0.835), (0.863, 0.772, 0.934)], False, False),
         ("Images, single scan", "#6cc2b5", [None, None, (0.795, 0.686, 0.887), (0.826, 0.729, 0.909)], False, False),
         ("Combined score", C["combined"], [(0.821, 0.744, 0.894), (0.773, 0.679, 0.857), (0.856, 0.758, 0.930), (0.871, 0.790, 0.938)], True, False),
         ("Enhancing volume alone†", C["et"], [(0.622, 0.530, 0.717), (0.662, 0.563, 0.751), (0.878, 0.793, 0.948), None], False, True),
     ]
     fig = plt.figure(figsize=(WIDTH, 3.25))
     ax = fig.add_axes([0.075, 0.11, 0.655, 0.72])
-    title(ax, "Locked combined and image models ranked scans at both external centres", pad=24)
+    title(ax, "Locked combined and imaging models ranked scans at both external centres", pad=24)
     ax.axvspan(2.5, 3.5, color="#f1f2f4", lw=0, zorder=0)
     ax.axvline(2.5, color="0.65", lw=0.7)
     for g, (text, face, ink) in enumerate(badges):    # what each cohort group is, above the axes
@@ -227,7 +227,7 @@ def fig3(output: Path) -> None:
     fig = plt.figure(figsize=(WIDTH, 4.7))
     ax_top = 0.885
     ax = fig.add_axes([0.06, 0.61, 0.36, ax_top - 0.61])
-    panel(fig, LETTER_X, ax, "A"); title(ax, "MU†: the timeline's gain appears\nacross phases, not within them")
+    panel(fig, LETTER_X, ax, "A"); title(ax, "MU†: the gain from treatment history\nappears across phases, not within them")
     forest(ax, [("Across phases of care", 0.114, 0.035, 0.196, C["timeline"], True),
                 ("Within a phase of care", -0.016, -0.134, 0.109, C["timeline"], False)], "AUC difference",
            xlim=(-0.45, 0.3))
@@ -235,7 +235,7 @@ def fig3(output: Path) -> None:
 
     bx = fig.add_axes([0.585, 0.61, 0.395, ax_top - 0.61])
     panel(fig, 0.51, bx, "B"); title(bx, "UCSF†: the progression call\nfollows enhancement")
-    labels = ["Enhancing\nvolume\nalone", "Single\nscan", "Image\npathway", "Single scan,\n'increased'\nscans only"]
+    labels = ["Enhancing\nvolume\nalone", "Single\nscan", "Imaging\nmodel", "Single scan,\n'increased'\nscans only"]
     vals = [(0.878, 0.793, 0.948), (0.795, 0.686, 0.887), (0.726, 0.603, 0.835), (0.652, 0.444, 0.836)]
     marks = [dict(fmt="D", ms=4.6, color=C["et"], mfc="white", mec=C["et"], mew=1.0),     # as in Figure 2
              dict(fmt="o", ms=5.0, color="#6cc2b5", mfc="#6cc2b5", mec="#6cc2b5"),
@@ -256,7 +256,7 @@ def fig3(output: Path) -> None:
 
     cx = fig.add_axes([0.085, 0.085, 0.895, 0.305])
     panel(fig, LETTER_X, cx, "C"); title(cx, "MU†: adding schedule inputs raises the AUC across phases, not within one")
-    steps = ["Current scan's\nmeasurements", "+ change from\nearlier scans\n(image pathway)", "+ three schedule\ninputs"]
+    steps = ["Current scan's\nmeasurements", "+ change from\nearlier scans\n(imaging model)", "+ three schedule\ninputs"]
     across = [(0.659, 0.567, 0.733), (0.709, 0.630, 0.781), (0.806, 0.747, 0.865)]
     within = [(0.680, None, None), (0.677, 0.580, 0.767), (0.664, 0.576, 0.750)]
     xs = [0, 1, 2]
@@ -269,10 +269,10 @@ def fig3(output: Path) -> None:
     cx.errorbar(wx, [w[0] for w in wv], yerr=[[w[0] - w[1] for w in wv], [w[2] - w[0] for w in wv]], fmt="none",
                 ecolor=C["images"], elinewidth=0.9, capsize=2)
     cx.axhline(0.822, color=C["timeline"], lw=0.9, ls="-")
-    cx.text(2.58, 0.826, "timeline pathway,\nacross phases 0.82", color=C["timeline"], va="bottom", ha="right",
+    cx.text(2.58, 0.826, "clinical-history model,\nacross phases 0.82", color=C["timeline"], va="bottom", ha="right",
             fontsize=6.6, linespacing=1.1)
     cx.axhline(0.640, color=C["timeline"], lw=0.9, ls="--")
-    cx.text(2.58, 0.644, "timeline pathway,\nwithin a phase 0.64", color=C["timeline"], va="bottom", ha="right",
+    cx.text(2.58, 0.644, "clinical-history model,\nwithin a phase 0.64", color=C["timeline"], va="bottom", ha="right",
             fontsize=6.6, linespacing=1.1)
     cx.set(xticks=xs, xlim=(-0.3, 2.6), ylim=(0.5, 0.95), ylabel="AUC"); cx.set_xticklabels(steps)
     cx.tick_params(axis="x", length=0)
@@ -287,10 +287,10 @@ def fig4(output: Path) -> None:
     ax_top = 0.875
     ax = fig.add_axes([0.085, 0.515, 0.37, ax_top - 0.515])
     panel(fig, LETTER_X, ax, "A"); title(ax, "80% sets: the combined score met the\n0.78 target on point estimates")
-    cov = {"Timeline": [(0.795, 0.731, 0.853), (0.798, 0.732, 0.868), (0.696, 0.594, 0.812)],
-           "Images": [(0.844, 0.797, 0.890), (0.708, 0.648, 0.759), (0.826, 0.739, 0.913)],
+    cov = {"Clinical history": [(0.795, 0.731, 0.853), (0.798, 0.732, 0.868), (0.696, 0.594, 0.812)],
+           "Imaging": [(0.844, 0.797, 0.890), (0.708, 0.648, 0.759), (0.826, 0.739, 0.913)],
            "Combined": [(0.823, 0.759, 0.883), (0.871, 0.807, 0.924), (0.783, 0.681, 0.870)]}
-    cols = {"Timeline": C["timeline"], "Images": C["images"], "Combined": C["combined"]}
+    cols = {"Clinical history": C["timeline"], "Imaging": C["images"], "Combined": C["combined"]}
     ax.axhline(0.80, color="0.6", lw=0.8, ls=":", label="nominal 0.80")
     ax.axhline(0.78, color="#333", ls="--", lw=0.8, label="planned threshold 0.78")
     for i, (k, vals) in enumerate(cov.items()):
@@ -344,20 +344,20 @@ def fig4(output: Path) -> None:
     save(fig, output, "fig4_confidence")
 
 
-# Synthetic report: the Discussion's scenario (eight weeks after radiotherapy, growing enhancement, pathways
+# Synthetic report: the Discussion's scenario (eight weeks after radiotherapy, growing enhancement, models
 # disagree). Volumes and the score are invented; the card row is MU's (NUMBERS.md 10; Discussion).
 REPORT = [
     ("Scan", "This scan was taken 8 weeks after the end of radiotherapy, early after radiotherapy.", "scan.phase"),
     ("Scan", "The automatic segmentation gives indicative volumes of 6.0 cc enhancing tumour and 31.0 cc FLAIR hyperintensity.", "meas.label, meas.enhancing_cc, …"),
     ("Scan", "Enhancing tumour is 2.0 cc larger than at the previous scan.", "meas.enhancing_change_…"),
-    ("Pathways", "The timeline pathway is based on clinical data and the position in treatment: timeline score 0.21, below the median of its scores in the MU-Glioma-Post evaluation scans (0.38).", "pathway.timeline.*"),
-    ("Pathways", "The image pathway is based on the segmented tumour and its change: image score 0.64, above the median of its scores in the MU-Glioma-Post evaluation scans (0.45).", "pathway.images.*"),
-    ("Pathways", "The two pathways disagree: the timeline score is below its median and the image score is above its median.", "pathways.agreement_statement"),
-    ("Combined", "The combined score, based on the inputs of both pathways, is 0.33.", "pathway.combined.*"),
+    ("Models", "The clinical-history model is based on clinical data and the position in treatment: clinical-history score 0.21, below the median of its scores in the MU-Glioma-Post evaluation scans (0.38).", "pathway.timeline.*"),
+    ("Models", "The imaging model is based on the segmented tumour and its change: imaging score 0.64, above the median of its scores in the MU-Glioma-Post evaluation scans (0.45).", "pathway.images.*"),
+    ("Models", "The two models disagree: the clinical-history score is below its median and the imaging score is above its median.", "pathways.agreement_statement"),
+    ("Combined", "The combined score, based on the inputs of both models, is 0.33.", "pathway.combined.*"),
     ("Combined", "Each score is a model output between 0 and 1 that ranks scans by how closely they resemble the progression scans of the training data; it is not a diagnosis and not a calibrated probability for this patient.", "pathways.score_meaning"),
     ("Combined", "The 80% conformal set holds both outcomes.", "conformal.combined.80.statement"),
     ("Trust", "This situation, early after radiotherapy with enhancing tumour increased, has few cases: 1 of 9 scans was progression.", "card.situation, card.tier_statement"),
-    ("Trust", "The pathways disagree flag is raised: the timeline score is below its median and the image score is above its median.", "flags.disagreement.*"),
+    ("Trust", "The models disagree flag is raised: the clinical-history score is below its median and the imaging score is above its median.", "flags.disagreement.*"),
 ]
 LIMITATIONS = ("Fixed limitations section (excerpt): the scores rank scans; they are not a diagnosis and the "
                "report gives no recommendation or decision. No clinician has evaluated this report.")

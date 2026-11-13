@@ -1,9 +1,9 @@
 """Figure 1: PRISM as a flowchart (A), and how it was evaluated (B).
 
 Drawn, not data: the MRI slices come from `schematic_slice` (no patient image), and every value is the synthetic
-example of Figure 5 (enhancing 4.0 -> 6.0 cc, FLAIR 31.0 cc, timeline 0.21, images 0.64, combined 0.33, few cases
+example of Figure 5 (enhancing 4.0 -> 6.0 cc, FLAIR 31.0 cc, clinical history 0.21, imaging 0.64, combined 0.33, few cases
 1 of 9). Panel B carries only cohort and report counts (NUMBERS.md 1, 7). Plain journal style: hairlines, square
-corners, one sans-serif face, colour only for the two pathways and the combined score.
+corners, one sans-serif face, colour only for the two models and the combined score.
 """
 from __future__ import annotations
 
@@ -47,12 +47,12 @@ def fig1(output: Path) -> None:
          va="baseline")
     panel_a = text(0.6, 113.0, "A", size=10, weight="bold", va="baseline")
 
-    # Stage tags, and the bracket that marks what PRISM adds: two pathways kept apart, reported side by side.
+    # Stage tags, and the bracket that marks what PRISM adds: two models kept apart, reported side by side.
     for x, s in [(1.0, "1  Inputs"), (44.0, "2  Measure"), (81.0, "3  Score"), (114.0, "4  Confidence"),
                  (151.0, "5  Report")]:
         text(x, 100.5, s, size=6.8, colour=grey, va="baseline")
     ax.plot([44, 44, 106, 106], [103.2, 104.6, 104.6, 103.2], color=ink, lw=0.6)
-    text(75.0, 106.0, "PRISM keeps image and timeline evidence apart and reports them side by side", size=6.6,
+    text(75.0, 106.0, "PRISM keeps image and clinical-history evidence apart and reports them side by side", size=6.6,
          ha="center", va="bottom", style="italic")
 
     # Lane 1, images: previous and current scan -> segmentation and measurement -> image score.
@@ -69,7 +69,7 @@ def fig1(output: Path) -> None:
     heading(46.5, 93.2, "Segmentation", "enhancing tumour\n4.0 → 6.0 cc\nFLAIR 31.0 cc")
     arrow((38.5, 86.5), (44, 86.5), C["images"])
 
-    # Lane 2, timeline: treatment dates and clinical record -> position in treatment -> timeline score.
+    # Lane 2, clinical history: treatment dates and clinical record -> position in treatment -> clinical-history score.
     ty = 55.0
     ax.plot([1.0, 38.0], [ty, ty], color=ink, lw=0.6)
     ax.add_patch(Rectangle((9.0, ty - 1.0), 8.0, 2.0, fc="#d9d9d9", ec="none"))
@@ -85,8 +85,8 @@ def fig1(output: Path) -> None:
     arrow((38.5, 51.0), (44, 51.0), C["timeline"])
 
     # Scores: three separately fitted models; the combined model sees both lanes.
-    scores = [("images", 86.5, "Image score", 0.64), ("combined", 68.5, "Combined score", 0.33),
-              ("timeline", 50.5, "Timeline score", 0.21)]
+    scores = [("images", 86.5, "Imaging", 0.64), ("combined", 68.5, "Combined", 0.33),
+              ("timeline", 50.5, "Clinical history", 0.21)]
     sx0, sx1 = 81.0, 106.0
     for key, y, name, value in scores:
         rect(sx0, y - 5.5, sx1, y + 5.5, accent=C[key])
@@ -109,7 +109,7 @@ def fig1(output: Path) -> None:
 
     rect(114, 42, 145, 95, face="#f6f6f6")
     conf = [(93.0, "80% conformal set", "{progression,\n no progression}", "both outcomes"),
-            (75.0, "Pathway agreement", "disagree", "image above, timeline below\ntheir cohort medians"),
+            (75.0, "Model agreement", "disagree", "imaging above, clinical\nhistory below their\ncohort medians"),
             (57.0, "Reliability card", "few cases", "1 of 9 such scans was\nprogression")]
     for y, name, value, detail in conf:
         text(116.0, y, name, size=6.8, weight="bold", va="top")
@@ -135,11 +135,11 @@ def fig1(output: Path) -> None:
     text(rx1 - 2.0, ry1 - 2.6, "SYNTHETIC EXAMPLE", size=6.5, colour=grey, ha="right", va="top")
     for i, (key, _, name, value) in enumerate(scores):
         y = ry1 - 9.6 - 3.4 * i
-        text(rx0 + 2.0, y, name.replace(" score", ""), size=6.5).set_family(serif)
-        ax.add_patch(Rectangle((rx0 + 15.0, y - 0.8), 20.0, 1.6, fc="#e6e6e6", ec="none", zorder=3))
-        ax.add_patch(Rectangle((rx0 + 15.0, y - 0.8), 20.0 * value, 1.6, fc=C[key], ec="none", zorder=3))
+        text(rx0 + 2.0, y, name, size=6.5).set_family(serif)
+        ax.add_patch(Rectangle((rx0 + 18.0, y - 0.8), 17.0, 1.6, fc="#e6e6e6", ec="none", zorder=3))
+        ax.add_patch(Rectangle((rx0 + 18.0, y - 0.8), 17.0 * value, 1.6, fc=C[key], ec="none", zorder=3))
         text(rx0 + 36.5, y, f"{value:.2f}", size=6.5).set_family(serif)
-    body = ("Enhancing tumour is 2.0 cc larger than at the previous scan. The two pathways disagree, and the 80% "
+    body = ("Enhancing tumour is 2.0 cc larger than at the previous scan. The two models disagree, and the 80% "
             "conformal set holds both outcomes. This situation has few cases (1 of 9 scans was progression).")
     text(rx0 + 2.0, ry1 - 21.0, "\n".join(textwrap.wrap(body, 60)), size=6.5, va="top").set_family(serif)
 
