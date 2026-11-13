@@ -53,7 +53,7 @@ def fig1(output: Path) -> None:
         text(x, 100.5, s, size=6.8, colour=grey, va="baseline")
     # What runs at each stage (the technology), one line under each stage tag.
     for x, s in [(1.0, "MRI, released masks, record"), (44.0, "27 measurements per scan"),
-                 (81.0, "3 ridge logistic models"), (114.0, "split conformal, 80% level"),
+                 (81.0, "3 ridge logistic models"), (114.0, "split conformal (70/30), lookup"),
                  (151.0, "Qwen3.8-27B on vLLM, local")]:
         text(x, 97.4, s, size=5.9, colour=grey, style="italic", va="baseline")
     ax.plot([44, 44, 106, 106], [103.2, 104.6, 104.6, 103.2], color=ink, lw=0.6)
@@ -103,7 +103,7 @@ def fig1(output: Path) -> None:
     arrow((74, 50.5), (sx0, 50.5), C["timeline"])
     arrow((74, 81.0), (sx0, 71.0), C["images"])
     arrow((74, 56.0), (sx0, 66.0), C["timeline"])
-    text(sx0, 38.6, "example values (Figure 5)", size=6.5, colour=grey, style="italic", va="top")
+    text(sx0, 38.6, "synthetic example values", size=6.5, colour=grey, style="italic", va="top")
 
     # All three scores feed one confidence statement.
     cx = 110.0
