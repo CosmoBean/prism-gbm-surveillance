@@ -639,3 +639,12 @@ Prose cautions:
 | Conformal threshold | 0.14 ms | same |
 | Re-segmentation agreement with MU masks | ET Dice median 0.80 (IQR 0.49-0.91) | Mismatch 6 above; Supplementary S14 |
 | MU positives scanned on the progression day | 48 of 64 | section 5 (UCSF_AUDIT.md section 3) |
+
+## 14. Checker mutation test (revision 2026-11-13; plan 4f854cb; CHECKER_MUTATION.md; synthetic records)
+
+| Quantity | Value |
+|---|---|
+| Synthetic records; correct reports wrongly rejected | 52; 0 of 52 |
+| Mutants with a targeted error rejected | 1,252 of 1,280 (97.8%) |
+| Misses | 28, all "tested" written for a few cases situation (wrong tier phrase operator 24 of 52 rejected) |
+| Blind spots (no rule) | direction word flipped 0 of 52 rejected; enhancing and FLAIR volumes swapped 0 of 52 rejected |
