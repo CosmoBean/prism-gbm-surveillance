@@ -258,14 +258,12 @@ a change, and the checker cannot judge emphasis or what a clinician would infer 
 
 % Sources: Supplementary S24; btrads.com follow up template v1.03 and category guide v1.01; refs weinberg2018,
 % gore2019, zhang2020.
-No public cohort releases the clinicians' reports for these scans, so we compared the report's content with an
-established standard instead, the follow up template of the Brain Tumor Reporting and Data System (BT-RADS)
-\citep{weinberg2018}. Referring clinicians found reports written with this template less ambiguous than free prose
-\citep{gore2019}, and the template reduced hedging \citep{zhang2020}. Like the template, the report gives the position
-in treatment, the comparison with the previous scan and the change in enhancing tumour and FLAIR abnormality, here as
-measured volumes. The report leaves out the template's category and management recommendation, because PRISM offers no
-diagnosis or advice, and it leaves out steroid and bevacizumab use, which the cohorts do not record (Supplementary
-Section~S24).
+No public cohort releases the clinicians' reports for these scans, so we compared the report's content with the follow
+up template of the Brain Tumor Reporting and Data System (BT-RADS) \citep{weinberg2018}, which clinicians found less
+ambiguous than free prose \citep{gore2019,zhang2020}. Like the template, the report gives the position in treatment and
+the change in enhancing tumour and FLAIR abnormality since the previous scan, here as measured volumes. The report leaves out
+the template's category and management advice, which PRISM does not give, and steroid and bevacizumab use, which the
+cohorts do not record (Supplementary Section~S24).
 
 \subsection{Implementation and computational cost}\label{sec:2.5}
 
@@ -343,9 +341,8 @@ early after radiotherapy and two had no radiotherapy date.
 % REPORT_V3_1_PLAN.md (4f7e7b9); SPLIT_VARIANCE.md; Supplementary S8 and Figure S2; NUMBERS.md 2.3.
 Each cohort played one role (Table~\ref{tab:eval}). MU was the development cohort. On it we evaluated every model by five
 repeats of fivefold cross validation grouped by patient, so that no patient contributed to both fitting and testing, and
-report the mean pooled held out AUC. We used repeated splits because single splits are unstable in small cohorts
-\citep{an2021,varoquaux2018}. An earlier radiomics model on MU, for example, reached 0.80 on one test split but averaged
-0.72 when selected and tested again over 500 splits of the same design (Supplementary Section~S8 and Figure~S2). We then
+report the mean pooled held out AUC. We used repeated splits because single splits are unstable in small cohorts \citep{an2021,varoquaux2018}
+(Supplementary Section~S8). We then
 fitted each model once on all 181 grade 4 detection scans of MU, from every phase of care, locked it, and applied it
 unchanged to LUMIERE and UCSF under plans committed before any score was compared with an external label. The plans
 named all 229 MU detection scans of gliomas of every grade. Fitting on those instead of the grade 4 scans changed the
@@ -655,9 +652,10 @@ each cohort was scanned and labelled. At MU, the score mostly followed the treat
 progression was called\expl. An AUC cannot show which evidence a model used. The audits of Section~\ref{sec:4.4} suggested it, and the report shows the clinical-history and imaging scores side by side, so a disagreement between them is visible at
 each scan. Process variables can carry much of the apparent skill of an image model
 \citep{badgeley2019}, and image models for glioblastoma surveillance have been benchmarked separately at the first and
-second scans after radiotherapy \citep{guo2025}. We found no earlier study that compared image and treatment context evidence
-within phases of care, or showed that what carries the same locked score differs between centres tested
-externally. The risk scale did not transfer to UCSF, so a new centre would recalibrate the score and set any threshold
+second scans after radiotherapy \citep{guo2025}. Outside oncology, clinical data were the strongest input in one Alzheimer's cohort and images in another
+\citep{brima2026}, and models with equal AUC can behave differently on new data \citep{damour2022}. We found no earlier
+study that compared image and treatment context evidence within phases of care in glioma surveillance, or showed that
+what carries a locked score differs between externally tested cohorts. The risk scale did not transfer to UCSF, so a new centre would recalibrate the score and set any threshold
 on local scans.
 
 % Sources: OUTLINE.md (Discussion 2); SYSTEM_PLAN.md.
@@ -674,13 +672,10 @@ and the clinician decides with information PRISM does not use, such as symptoms,
 plan.
 
 % Sources: SYSTEM_LANDSCAPE.md; PRIOR_ART_2026-11-01.md; COMPARABLE_RESULTS.md; RESERVE.md (Christodoulou).
-Each component of PRISM has been described before. They include longitudinal segmentation with measurement of change
-\citep{rudie2022}, late fusion of separately trained image and clinical models \citep{boehm2022}, fusion of clinical
-and imaging data to separate pseudoprogression from progression \citep{gomaa2025}, conformal prediction for glioma
-segmentation \citep{elyassirad2025} and for triage at a deployment site \citep{angelopoulos2024}, disagreement
-between modalities as uncertainty \citep{mahapatra2026}, reliability from performance on similar cases
-\citep{habas2007}, model cards
-\citep{mitchell2019}, and reports written by local language models from brain tumour measurements
+Each component of PRISM has been described before, from longitudinal measurement of change \citep{rudie2022} and late
+fusion of image and clinical models \citep{boehm2022,gomaa2025} to conformal prediction in neuro oncology imaging
+\citep{elyassirad2025,angelopoulos2024}, disagreement between modalities \citep{mahapatra2026}, reliability from similar
+cases \citep{habas2007,mitchell2019} and reports written by local language models from tumour measurements
 \citep{herasrivera2026,valerio2025}. The nearest systems combine some of these. One assigns a BT-RADS category at follow up from tumour volumes and treatment variables extracted by a language model, at one centre and without an
 uncertainty measure for each scan \citep{jabal2026}. Another keeps a ledger of evidence with a confidence for each claim in
 longitudinal neuro oncology, but works from reports rather than images and checks its evidence with a language model
@@ -688,10 +683,7 @@ longitudinal neuro oncology, but works from reports rather than images and check
 response categories from longitudinal MRI \citep{tikhonov2025}, and a
 model trained on MU was applied unchanged at UCSF to predict survival \citep{ding2026}. \citet{chen2026}
 predicted recurrence risk from preoperative and postoperative MRI across centres. None reports image and treatment context evidence separately at each scan, or tests a progression call for each scan locked
-at two external centres. Outside oncology, an Alzheimer's study found that clinical data were the strongest input in one
-cohort and images in another \citep{brima2026}, and models with equal AUC can behave differently on new data
-\citep{damour2022}. Our finding is the same kind of shift, shown for glioma surveillance with locked models. For reports,
-an ECG system already combines a local language model, a verifier and a conformal set \citep{pham2026}, but it
+at two external centres. For reports, an ECG system already combines a local language model, a verifier and a conformal set \citep{pham2026}, but it
 forbids numbers in the text rather than checking each against a typed record.
 PRISM therefore combines known parts, showing image and treatment context evidence at each scan with a confidence from
 measured performance, and tests the combination at two external centres under rules fixed in advance.
