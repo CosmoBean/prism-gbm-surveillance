@@ -51,6 +51,11 @@ def fig1(output: Path) -> None:
     for x, s in [(1.0, "1  Inputs"), (44.0, "2  Measure"), (81.0, "3  Score"), (114.0, "4  Confidence"),
                  (151.0, "5  Report")]:
         text(x, 100.5, s, size=6.8, colour=grey, va="baseline")
+    # What runs at each stage (the technology), one line under each stage tag.
+    for x, s in [(1.0, "MRI, released masks, record"), (44.0, "27 measurements per scan"),
+                 (81.0, "3 ridge logistic models"), (114.0, "split conformal, 80% level"),
+                 (151.0, "Qwen3.8-27B on vLLM, local")]:
+        text(x, 97.4, s, size=5.9, colour=grey, style="italic", va="baseline")
     ax.plot([44, 44, 106, 106], [103.2, 104.6, 104.6, 103.2], color=ink, lw=0.6)
     text(75.0, 106.0, "PRISM keeps image and clinical-history evidence apart and reports them side by side", size=6.6,
          ha="center", va="bottom", style="italic")
@@ -118,8 +123,8 @@ def fig1(output: Path) -> None:
 
     # Report chain: record -> local language model -> checker -> report.
     chain = [(84.5, 95.0, "Record for the scan", "every value with\nits source", "-"),
-             (65.0, 79.0, "Local language model", "writes the text, sees\nno images, does no\narithmetic", "--"),
-             (42.0, 59.0, "Checker", "every number and flag\nmust be in the record,\nor the text is rejected", "-")]
+             (65.0, 79.0, "Local language model", "one GPU on site; sees\nno images, does no\narithmetic", "--"),
+             (42.0, 59.0, "Deterministic checker", "every number and flag\nmust be in the record,\nor the text is rejected", "-")]
     for y0, y1, name, detail, ls in chain:
         rect(151, y0, 179.5, y1, edge=ink if ls == "--" else rule, ls=ls)
         heading(153.0, y1 - 1.8, name, detail)
@@ -147,7 +152,7 @@ def fig1(output: Path) -> None:
     text(0.6, 28.5, "B", size=10, weight="bold", va="baseline")
     text(4.5, 28.5, "How it was evaluated", size=8.5, weight="bold", va="baseline")
     blocks = [(1.0, 29.0, "MU-Glioma-Post", "public development\ncohort, 5 × 5 cross\nvalidation by patient"),
-              (35.0, 58.0, "Models locked", "fitted once\non MU"),
+              (35.0, 58.0, "Models locked", "fitted once on MU;\nplans committed"),
               (64.0, 91.0, "LUMIERE, UCSF", "applied\nunchanged"),
               (97.0, 108.0, "406", "reports\nchecked")]
     for i, (x0, x1, name, detail) in enumerate(blocks):
