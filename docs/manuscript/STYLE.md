@@ -290,3 +290,6 @@ Add each reaction as a dated, one-line rule.
 - 2026-11-03 (author): do not rely on colons or semicolons to arrange prose. Prefer a full sentence, a comma, or a
   parenthesis. Retain them only when they materially improve a compact table, mathematical expression, or an otherwise
   ambiguous construction.
+- 2026-11-13 (author): never call the clinical and treatment history model the "timeline pathway" or "timeline
+  score"; the author finds it confusing and misleading. Replacement name pending the author's choice; it must stay
+  distinct from "clinical data alone" (the same patient variables without treatment dates).
