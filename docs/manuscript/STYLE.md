@@ -291,5 +291,6 @@ Add each reaction as a dated, one-line rule.
   parenthesis. Retain them only when they materially improve a compact table, mathematical expression, or an otherwise
   ambiguous construction.
 - 2026-11-13 (author): never call the clinical and treatment history model the "timeline pathway" or "timeline
-  score"; the author finds it confusing and misleading. Replacement name pending the author's choice; it must stay
-  distinct from "clinical data alone" (the same patient variables without treatment dates).
+  score"; the author finds it confusing and misleading. Call it the "clinical-history model". Call the image pathway
+  the "imaging model", and say "model", not "pathway", for each. Keep "clinical data alone" for the baseline with the
+  same patient variables and no treatment dates.
