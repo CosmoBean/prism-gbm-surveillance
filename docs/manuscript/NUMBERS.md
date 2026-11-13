@@ -626,3 +626,16 @@ Prose cautions:
 - **"Each step raised AUC".** Mismatch 8 is now resolved: the middle step's CI includes 0, so do not write "each step
   raised AUC" with CI support.
 - **A threshold fixed on MU does not transfer.** At UCSF it calls 90% of scans positive.
+
+## 13. Implementation and computational cost (revision 2026-11-13, Section 2.5)
+
+| Quantity | Value | Source |
+|---|---|---|
+| Software | Python 3.11.14, scikit-learn 1.7.2, NumPy 2.2.6, pandas 2.3.3 | `.venv` on 2026-11-13 |
+| Language model serving | vLLM 0.31.0, bf16, one H100 80 GB, weights 50.2 GiB, model load about 2 min | REPORT_V3.md (Serving), REPORT_V3_1.md |
+| Report time | 1.08 s per report, batched | REPORT_V3_1.md |
+| Model fit with penalty search, data of MU's size (181 scans; 14, 27 and 41 inputs) | 0.03 to 0.07 s (under 0.1 s) | `outputs/scratch/timing2.py`, one core of Intel Xeon Platinum 8481C, stand-in data of the same shape |
+| Scoring | about 2 to 2.5 µs per scan, scored as a batch | same |
+| Conformal threshold | 0.14 ms | same |
+| Re-segmentation agreement with MU masks | ET Dice median 0.80 (IQR 0.49-0.91) | Mismatch 6 above; Supplementary S14 |
+| MU positives scanned on the progression day | 48 of 64 | section 5 (UCSF_AUDIT.md section 3) |
