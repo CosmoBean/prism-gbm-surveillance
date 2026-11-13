@@ -2456,6 +2456,74 @@ Images from one scan use rows 1 to 19.}
 \end{table}
 
 \FloatBarrier
+\section{Analyses rerun with the restored data}\label{sec:S25}
+
+% Sources: docs/results/REVISION_DATA_PLAN.md (0df79e9, before the run); REVISION_DATA.md; NUMBERS.md 16.
+These analyses answer three limits of the planned system, a conformal set taken from a refitted model, a reliability
+card that counts the scan it describes and the lack of a template baseline, and they regenerate the reports with the
+model names used in this paper. The rules were written before the run (plan 0df79e9). They are not part of the earlier
+registered plans and carry a dagger in the main text. The UCSF-ALPTDG images were not available for this rerun, so
+every result is for MU-Glioma-Post and LUMIERE. Before any new analysis, every registered score, AUC, coverage and
+error rate of these two cohorts was rebuilt from the raw data and matched the published values.
+
+\paragraph{Conformal sets from the displayed score.} The planned set refits the combined model on 70\% of the training
+patients. Here the calibration scores are held out predictions of the same model from fivefold cross validation
+grouped by patient, and the threshold is applied to the displayed score. This version has no finite sample guarantee.
+The rule fixed in advance was coverage of at least 0.78 at MU and 0.75 at LUMIERE for the combined score at the 80\% level.
+
+\begin{table}[!htbp]
+\renewcommand{\thetable}{S48}\renewcommand{\theHtable}{S48}
+\centering
+\caption{\textbf{Conformal sets of the combined score at the 80\% level, planned and from the displayed score.} MU
+grade 4 intended use (146 scans, averaged over five repeats) and LUMIERE (178 scans). Errors are those of the combined
+score with every scan above the cohort median called progression.}
+\label{tab:S25a}
+\footnotesize
+\begin{tabularx}{\linewidth}{@{}LR{1.3cm}R{1.5cm}R{1.5cm}R{1.4cm}R{1.6cm}@{}}
+\toprule
+ & Coverage & Progression covered & No progression covered & Both outcomes & Error, both and other \\
+\midrule
+MU, planned (refitted model) & 0.823 & 0.819 & 0.826 & 25\% & 37\%, 22\% \\
+MU, displayed score & 0.800 & 0.755 & 0.833 & 14\% & 40\%, 23\% \\
+LUMIERE, planned (refitted model) & 0.871 & 0.767 & 0.943 & 38\% & 48\%, 20\% \\
+LUMIERE, displayed score & 0.787 & 0.685 & 0.857 & 20\% & 43\%, 27\% \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+No set was empty. With sets from the displayed score, the clinical-history model covered 0.801 at MU and 0.758 at
+LUMIERE, and the imaging model 0.836 and 0.736.
+
+\paragraph{Reliability card without the described patient.} For each scan, the counts, tier and AUCs of its situation
+were computed again without any scan of its patient. One MU scan, the only one in its situation, moved from few cases
+to not tested. No scan at MU or LUMIERE moved between tested and few cases, so the share of scans in tested situations
+(37\% at MU, 89\% at LUMIERE) and every flag were unchanged.
+
+\paragraph{Reports with this paper's model names, and a template.} The record keys and the prompt were renamed
+(clinical-history model, imaging model) with no other change. A small adapter maps the new names back before the
+unchanged checker runs. Through the adapter, the checker mutation test of the main text (Section 4.3) gave the same result, mutant for mutant.
+The renamed prompt passed all 48 development reports at the first run and was frozen before the evaluation reports were
+generated. The fixed template writes one set sentence per line of the prompt from the record's values.
+
+\begin{table}[!htbp]
+\renewcommand{\thetable}{S49}\renewcommand{\theHtable}{S49}
+\centering
+\caption{\textbf{Reports on the evaluation records of MU (114) and LUMIERE (162).} Qwen3.8-27B, greedy decoding, one H100.
+Reading ease is the Flesch score, where higher is easier.}
+\label{tab:S25b}
+\footnotesize
+\begin{tabularx}{\linewidth}{@{}LR{1.6cm}R{1.6cm}R{1.6cm}R{1.4cm}R{1.4cm}@{}}
+\toprule
+ & Pass, MU & Pass, LUMIERE & Thin evidence stated & Median words & Reading ease \\
+\midrule
+Original version, generated again & 114 & 162 & 90 of 90 & 309 & 52.0 \\
+This paper's model names & 114 & 162 & 90 of 90 & 308 & 48.5 \\
+Fixed template & 114 & 162 & 90 of 90 & 413 & 39.4 \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\FloatBarrier
 \section*{Supplementary figures}
 \addcontentsline{toc}{section}{Supplementary figures}
 

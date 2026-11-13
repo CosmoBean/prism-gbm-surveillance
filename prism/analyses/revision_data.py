@@ -1,7 +1,8 @@
 """R1 conformal sets from the displayed model, R2 reliability card without the patient it describes
 (plan: docs/results/REVISION_DATA_PLAN.md, written before the run; results: docs/results/REVISION_DATA.md).
 
-R1 (cross-conformal). The displayed score is the one the system shows (on MU the out-of-fold fit on the outer
+R1 (cross-validated calibration; called cross-conformal in the plan, but the threshold from held-out scores is applied
+to the full fit, so unlike Vovk's cross-conformal predictor or CV+ it has no finite-sample guarantee). The displayed score is the one the system shows (on MU the out-of-fold fit on the outer
 training fold; externally the MU model fitted on all training rows). Calibration scores are out-of-fold predictions of
 the same model specification from fivefold cross validation grouped by patient over the same training rows (patients
 shuffled with seed 10 x repeat + fold on MU, seed 0 externally). Threshold: conformal.threshold (patient weights);

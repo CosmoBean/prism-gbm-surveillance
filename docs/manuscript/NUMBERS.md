@@ -661,5 +661,25 @@ Prose cautions:
 | Same pairs with one consistent segmenter (BraTS 2021 SwinUNETR) | median ET fold change 2.17 | Supplementary S14 ("2.57 -> 2.17") |
 | IDH / MGMT used at scans before the diagnosis date | 8 grade 4 scans (7 patients), 11 scans in all gliomas, 1-58 d before diagnosis | Supplementary S4; AUDIT_SYSTEM.md section 2 (supersedes "markers masked before diagnosis" in 2.1 for these scans) |
 
-Note (2026-11-13): Table 1 shows MU age 62.5 (council round 2, decision 16); TABLE1_COHORT.md shows 62 [53-70]. The
-author should confirm which is the exact median of the 126 grade 4 patients.
+Note (2026-11-13): Table 1 shows MU age 62.5 (council round 2, decision 16); TABLE1_COHORT.md shows 62 [53-70].
+Resolved after the data was restored: the median age at diagnosis of the 126 grade 4 patients in `mu_cohort.csv` is
+62.5 (IQR 53-69.75). Table 1 is correct.
+
+## 16. Analyses with the restored data (revision 2026-11-13; plan 0df79e9; REVISION_DATA.md; MU and LUMIERE only)
+
+| Quantity | MU | LUMIERE | Source |
+|---|---|---|---|
+| Registered numbers reproduce (system checks, card checks, conformal coverage, tab:hides errors) | yes | yes | REVISION_DATA.md R0 |
+| Combined 80% set, displayed score with cross-validated calibration: coverage | 0.800 | 0.787 | R1 |
+| same: coverage of progression / no progression scans | 0.755 / 0.833 | 0.685 / 0.857 | R1 |
+| same: set holds both outcomes | 14% | 20% | R1 (registered 25%, 38%) |
+| same: error where both / other scans (cohort median rule) | 40% / 23% | 43% / 27% | R1 (registered 37/22, 48/20) |
+| R1 adoption rule (MU >= 0.78, LUMIERE >= 0.75) | met | met | R1 |
+| Registered split sets: AUC of the refitted model vs displayed | 0.800 vs 0.821 | 0.776 vs 0.773 | R1 |
+| Card without the scan's patient: scans whose tier changed | 1 of 146 (few cases to not tested) | 0 of 178 | R2 |
+| Reports v3.2 (model names of the paper): pass | 114/114 | 162/162 | R4 |
+| Reports v3.2: tier stated where required; old names used | 71/71; 0 | 19/19; 0 | R4 |
+| Reports v3.1 regenerated: pass | 114/114 | 162/162 | R4 |
+| Template baseline: pass | 114/114 | 162/162 | R3 |
+| Median words, language model (v3.2) vs template | 308 vs 413 (both cohorts) | | R3 |
+| Flesch reading ease, v3.2 vs template | 48.5 vs 39.4 (both cohorts) | | R3 |

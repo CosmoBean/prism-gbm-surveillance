@@ -200,7 +200,7 @@ PRISM attaches three confidence statements to each score and keeps them separate
 own.
 
 The first is a conformal set at the 80\% level \citep{angelopoulos2023}, which names the outcomes the combined score
-cannot rule out. We refitted the combined model on 70\% of the MU training patients and used the other 30\% for
+cannot rule out. As planned, we refitted the combined model on 70\% of the MU training patients and used the other 30\% for
 calibration. Write $\hat p(1) = \hat p$ for a scan's score and $\hat p(0) = 1 - \hat p$. For each calibration scan $i$ with outcome
 $y_i$, the nonconformity score is $s_i = 1 - \hat p_i(y_i)$, the probability the model did not give to what happened. Because a patient contributes
 several scans that are not independent, each scan is weighted by one over the number of that patient's calibration
@@ -211,8 +211,13 @@ infinite. A new scan with score $\hat p$ receives the set
 C(\hat p) = \{\, y \in \{0, 1\} : 1 - \hat p(y) \le \hat q \,\}.
 \end{equation}
 The set holds one outcome when the score is clear, both when it is not, and in principle none when the threshold is
-very small. We computed the set from the model refitted on 70\% of the patients instead of the displayed combined score. This costs
-some discrimination (at UCSF the refitted model's AUC was 0.08 below that of the displayed score). The record shows the combined model's set. We computed sets in the same way for the
+very small. The refitted model is not the one whose score the clinician sees, and it costs some discrimination (at
+UCSF its AUC was 0.08 below that of the displayed score). We therefore also formed the sets from the displayed score
+itself\expl. The calibration scores are then the held out predictions of the same model from fivefold cross validation
+grouped by patient over the same training data, and the threshold is found in the same way. Because the displayed
+model was fitted on the calibration patients too, this version has no finite sample guarantee, unlike the split
+version and unlike variants that keep each fold's model \citep{vovk2015,barber2021}, so we judge it only by the coverage it
+reached. The reports evaluated here carry the planned sets. We computed sets in the same way for the
 clinical-history and imaging models to test them. If a new patient is exchangeable with the calibration patients, meaning drawn from the same population in no
 particular order, the set contains the true outcome of about 80\% of
 their scans on average, but not necessarily within each subgroup \citep{romano2020}. On MU the calibration split was made inside each training fold.
@@ -229,8 +234,9 @@ less than 0.1\,cc, unknown without a usable segmentation, without comparison whe
 when it grew by at least 1\,cc and 40\% from a measurable previous volume or by at least 1\,cc of new enhancement from
 none, and not increased otherwise. For each cohort the card counts the scans with and without progression in that situation among the cohort's
 held out results. With at least 10 of each it shows the AUC of all three models with 95\% confidence intervals (tested), with fewer it
-shows the counts only (few cases), and with none it says the situation was not tested. The card's counts include the scan
-being described, so it is optimistic. PRISM also flags a scan whose IDH or MGMT status is
+shows the counts only (few cases), and with none it says the situation was not tested. As run, the card's counts
+include the scan being described, which flatters it. We therefore also built each scan's card without any scan of its
+patient\expl{} (Section~\ref{sec:4.2}). PRISM also flags a scan whose IDH or MGMT status is
 unknown or whose inputs lie outside the 1st to 99th percentile of the training data.
 
 \subsection{Record and report}\label{sec:2.4}
@@ -419,18 +425,20 @@ Conformal set, coverage in each cohort & $\geq$ 0.78 at the 80\% level & \textbf
 Flagged scans ranked less well & AUC unflagged minus flagged, CI above 0 & Disagreement\expl{} \textbf{MU only}. Set holding both outcomes \textbf{MU and LUMIERE}\tnote{a} & \ref{sec:4.2} \\
 Setting flagged scans aside beats matched removal & Retained minus AUC after matched removal, CI above 0 & Disagreement\expl{} \textbf{MU only}. Set holding both outcomes \textbf{UCSF only}\tnote{a} & \ref{sec:4.2} \\
 Reliability card, share of scans in tested situations & None\textdagger & Four tested situations, none at UCSF & \ref{sec:4.2} \\
+Sets from the displayed score\expl & Coverage $\geq$ 0.78 at MU and $\geq$ 0.75 at LUMIERE & \textbf{Yes}. 0.800 and 0.787. Not rerun at UCSF & \ref{sec:4.2} \\
 \addlinespace
 \multicolumn{4}{@{}l}{\textit{Reports}} \\
 Reports pass the checker & $\geq$ 95\% in each cohort & First evaluation \textbf{No} (every LUMIERE report failed). After one revision \textbf{Yes} & \ref{sec:4.3} \\
 Thin evidence stated & 100\% & \textbf{Yes} & \ref{sec:4.3} \\
 Reports follow a changed record & $\geq$ 27 of 30 perturbed records & \textbf{Yes} & \ref{sec:4.3} \\
+Reports with this paper's model names, MU and LUMIERE\expl & $\geq$ 95\% in each cohort & \textbf{Yes}. 276 of 276 & \ref{sec:4.3} \\
 Checker rejects introduced errors (synthetic records) & All errors of the kinds its rules target & \textbf{No}. A wrong tier word was missed & \ref{sec:4.3} \\
 Usefulness to clinicians & Not tested & A reader study is designed (Supplementary Section~S21.1) & \ref{sec:5} \\
 \bottomrule
 \end{tabularx}
 \begin{tablenotes}\footnotesize
 \item The plans committed before each test were detection (2b4c927), UCSF-ALPTDG (0e7c9fe), the system (e7cba80), second report
-evaluation (4f7e7b9), checker mutation test (4f854cb). Matched removal keeps the mix of care phases in the removed scans
+evaluation (4f7e7b9), checker mutation test (4f854cb), and the analyses rerun with the restored data (0df79e9). Matched removal keeps the mix of care phases in the removed scans
 (random removal at LUMIERE, which has no phase). Over all scans of gliomas of all grades, a planned secondary population,
 the planned primary model gained $+$0.041 ($+$0.006 to $+$0.081) over the clinical-history model, which may reflect its schedule
 inputs (Section~\ref{sec:4.4}).
@@ -523,6 +531,13 @@ model's set at LUMIERE and the clinical-history model's set at UCSF fell below i
 and UCSF 97\% of progression and 65\% (51\% to 79\%) of scans without progression. Calibrating the sets separately
 for each outcome on MU did not fix this, and coverage for scans without progression fell to 73\% (63\% to 82\%) even on MU.
 
+% Sources: REVISION_DATA.md R1 (plan 0df79e9); NUMBERS.md 16.
+Sets formed from the displayed score\expl{} met the coverage rule fixed before that run, covering 80\% of scans at MU and
+79\% at LUMIERE. The UCSF images were not available for this rerun. These sets held both outcomes less often, for 14\%
+of scans at MU and 20\% at LUMIERE against 25\% and 38\% with the planned sets, and they covered progression scans at
+LUMIERE less often (69\%). Scans whose set held both outcomes were still misclassified more often than the rest (40\%
+against 23\% at MU, 43\% against 27\% at LUMIERE, Supplementary Section~S25).
+
 % Sources: NUMBERS.md section 11 (Fig 4).
 \begin{figure}[!htbp]
 \centering
@@ -550,7 +565,8 @@ flag, met one of the two planned tests in each cohort (Table~\ref{tab:2}).
 Only four situations on the reliability card\expl{} reached the tested tier (Figure~\ref{fig:4}C), one at MU and three at LUMIERE. LUMIERE records only the rater's flag for the first three months, so its situations
 differ by enhancement only. No scan in these sets was in
 an untested situation. Every UCSF situation had few cases, and at MU no situation in the first 12 weeks after
-radiotherapy held more than three progression scans. In a descriptive comparison, tested situations had lower error than situations with few cases at LUMIERE (29\% against 42\% of scans misclassified at the cohort median) but not at MU (29\% against 24\%), where the scans with few cases are mostly clearly without progression early after
+radiotherapy held more than three progression scans. Built without any scan of the described patient\expl, the card
+changed the tier of one scan at MU, from few cases to not tested, and of none at LUMIERE. In a descriptive comparison, tested situations had lower error than situations with few cases at LUMIERE (29\% against 42\% of scans misclassified at the cohort median) but not at MU (29\% against 24\%), where the scans with few cases are mostly clearly without progression early after
 radiotherapy.
 
 % Sources: NUMBERS.md 6 (S2/S3 flagged shares; reduced confidence design D2 error rates, EXPLORATORY; S4 tiers).
@@ -571,11 +587,13 @@ score is called progression. \textdagger{} not fixed in advance.}
  & MU & LUMIERE & UCSF \\
 \midrule
 Conformal set holds both outcomes & 25\% & 38\% & 36\% \\
+Same, sets from the displayed score\expl & 14\% & 20\% & not rerun \\
 Clinical-history and imaging models disagree\expl & 40\% & 57\% & 55\% \\
 Situation with few cases on the reliability card\expl & 63\% & 11\% & 100\% \\
 \addlinespace
 Error where the set holds both outcomes\expl & 37\% & 48\% & 32\% \\
 Error on the other scans\expl & 22\% & 20\% & 25\% \\
+Same two errors, sets from the displayed score\expl & 40\%, 23\% & 43\%, 27\% & not rerun \\
 \bottomrule
 \end{tabularx}
 \end{table}
@@ -598,6 +616,16 @@ reports and rejected most reports with an error. All 28 misses wrote ``tested'' 
 the tier sentence of a situation with few cases. Because no rule covers them, the checker also
 accepted every report in which a direction word was flipped or the enhancing and FLAIR volumes were swapped between
 their labels. The checker cannot tell whether the segmentation itself is right.
+
+% Sources: REVISION_DATA.md R3 and R4 (plan 0df79e9); NUMBERS.md 16.
+Reports that use this paper's names for the models also all passed, and a fixed template did as well. The reports
+above were written with earlier internal names for the clinical-history and imaging models. We renamed the models in
+the record and the prompt, changed nothing else, and generated the reports again for MU and LUMIERE\expl. A small
+adapter maps the new names back, so the checker ran unchanged. All 276 reports passed, as did the original version
+generated again from the same records (114 at MU and 162 at LUMIERE in both). A fixed template that copies each field
+into a set sentence also passed every time, as it must. The language model's reports were a quarter shorter (median 308
+against 413 words) and easier to read by a standard formula (Flesch reading ease 48.5 against 39.4, where higher is
+easier, Supplementary Section~S25). Whether either version helps a clinician more has not been tested.
 
 % Sources: NUMBERS.md section 11 (Fig 5); REPORT_V3_1.md.
 \begin{figure}[!htbp]
@@ -707,11 +735,12 @@ label is progression as each centre documented it. No scan was read again, and a
 rated as showing increased enhancement. Of the confidence measures, only the combined score's average coverage met its planned threshold at all three centres, and only on point
 estimates. Disagreement\expl{} marked scans the combined score ranked less well at MU alone. That rule needs a batch of a
 cohort's scans, and its single scan form (MU medians) was defined after the results had been seen. No UCSF scan fell in a
-tested situation. The conformal set comes from a refitted copy of the combined model, and the card counts the scan it
-describes. Calibrating the displayed model itself and building the card without the scan are the next fixes, and both
-need the external cohorts' scores again. The checker misses a wrong tier word, a flipped direction word and numbers swapped between labels, and no person has checked a sample of the real
-reports for such errors. A fixed template could state the same fields, and we have not tested whether the language
-model's wording helps a reader more than a template does. Subgroups are small, the analyses marked
+tested situation. The planned conformal set comes from a refitted copy of the combined model. Sets from the displayed
+score kept their coverage at MU and LUMIERE, but they carry no finite sample guarantee and were not rerun at UCSF.
+Building the card without the described patient changed one tier, so counting the scan did not change what the card
+reported. The checker misses a wrong tier word, a flipped direction word and numbers swapped between labels, and no person has checked a sample of the real
+reports for such errors. A fixed template states the same fields and passes the same checks. The language model's
+reports are shorter and read more easily by formula, but we have not tested whether they help a reader more. Subgroups are small, the analyses marked
 \textdagger{} need testing on new data, and no clinician has yet read the reports. PRISM forecast progression within 120 days less well than it
 detected progression at the scan (AUC 0.60 in the intended use).
 
