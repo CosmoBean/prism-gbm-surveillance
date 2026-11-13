@@ -53,7 +53,7 @@ def fig1(output: Path) -> None:
         text(x, 100.5, s, size=6.8, colour=grey, va="baseline")
     # What runs at each stage (the technology), one line under each stage tag.
     for x, s in [(1.0, "MRI, released masks, record"), (44.0, "27 measurements per scan"),
-                 (81.0, "3 ridge logistic models"), (114.0, "split conformal (70/30), lookup"),
+                 (81.0, "3 ridge logistic models"), (114.0, "conformal, median rule, lookup"),
                  (151.0, "Qwen3.8-27B on vLLM, local")]:
         text(x, 97.4, s, size=5.9, colour=grey, style="italic", va="baseline")
     ax.plot([44, 44, 106, 106], [103.2, 104.6, 104.6, 103.2], color=ink, lw=0.6)
@@ -71,7 +71,7 @@ def fig1(output: Path) -> None:
     text(1.0, 70.0, "T1-contrast and FLAIR MRI", size=6.5, colour=grey, style="italic", va="top")
 
     rect(44, 78, 74, 95, accent=C["images"])
-    heading(46.5, 93.2, "Segmentation", "enhancing tumour\n4.0 → 6.0 cc\nFLAIR 31.0 cc")
+    heading(46.5, 93.2, "Released masks", "6 volumes, 13 shape and\nintensity, 8 change\nenhancing 4.0 → 6.0 cc")
     arrow((38.5, 86.5), (44, 86.5), C["images"])
 
     # Lane 2, clinical history: treatment dates and clinical record -> position in treatment -> clinical-history score.
@@ -86,7 +86,7 @@ def fig1(output: Path) -> None:
     text(1.0, 40.5, "treatment dates, clinical record", size=6.5, colour=grey, style="italic", va="top")
 
     rect(44, 42, 74, 59, accent=C["timeline"])
-    heading(46.5, 57.2, "Position in treatment", "8 weeks after the end\nof radiotherapy,\nwith the clinical record")
+    heading(46.5, 57.2, "Phase of care", "before RT end, early\n(≤ 12 weeks), later\nhere: early, 8 weeks")
     arrow((38.5, 51.0), (44, 51.0), C["timeline"])
 
     # Scores: three separately fitted models; the combined model sees both lanes.
@@ -132,6 +132,7 @@ def fig1(output: Path) -> None:
     arrow((165.5, 84.5), (165.5, 79.0))
     arrow((165.5, 65.0), (165.5, 59.0))
     arrow((165.5, 42.0), (165.5, 36.0))
+    text(164.5, 39.0, "rejected: no report", size=5.9, colour=grey, style="italic", ha="right")
 
     # The output a clinician reads: a synthetic report card.
     rx0, rx1, ry0, ry1 = 114.0, 179.5, 3.0, 36.0
@@ -160,5 +161,6 @@ def fig1(output: Path) -> None:
         heading(x0 + 1.5, 21.0, name, detail)
         if i:
             arrow((blocks[i - 1][1], 14.5), (x0, 14.5))
+    text(1.0, 2.2, "Python 3.11 · scikit-learn 1.7.2 · vLLM 0.31.0 · one NVIDIA H100", size=5.9, colour=grey, style="italic")
     del panel_a
     save(fig, output, "fig1_system")

@@ -649,3 +649,12 @@ Prose cautions:
 | Mutants with a targeted error rejected | 1,252 of 1,280 (97.8%) |
 | Misses | 28, all "tested" written for a few cases situation (wrong tier phrase operator 24 of 52 rejected) |
 | Blind spots (no rule) | direction word flipped 0 of 52 rejected; enhancing and FLAIR volumes swapped 0 of 52 rejected |
+
+## 15. Inputs: segmentation agreement and short-gap change (Section 4.1 of the revision)
+
+| Quantity | Value | Source |
+|---|---|---|
+| Re-segmentation of 594 MU scans (BraTS 2021 SwinUNETR) vs released masks | Dice ET median 0.80 [0.49-0.91], WT 0.85 [0.74-0.93]; Pearson log volume ET 0.92, WT 0.91 | Supplementary S14; RESEGMENTATION.md |
+| Detection with new masks (planned rule: gain >= 0.05, CI > 0) | 0.681 -> 0.665, difference -0.016 (-0.057 to +0.025); not met | same |
+| Consecutive MU scans <= 30 d apart (54 pairs), released masks | median ET fold change 2.57 | Supplementary S14; RESEGMENTATION.md; DIAGNOSTICS_IMAGING.md (re-resection) |
+| Secondary negatives (all scans before progression), clinical-history model, intended use | 0.807 (0.759-0.858), 62 / 173 | NUMBERS.md 3 line "Secondary negatives"; DETECTION_TASK.md |
