@@ -25,6 +25,8 @@ LEGACY_FEATURES_DIR = DATA / "mu-reference-processed" / "postoperative_progressi
 
 OUTPUTS = Path(os.environ.get("PRISM_OUTPUTS", REPO / "outputs"))
 WORKERS = int(os.environ.get("PRISM_WORKERS", os.cpu_count() or 1))
+# PRISM_SKIP_UCSF=1: run the card and system stages on MU and LUMIERE only (UCSF-ALPTDG not on disk; 2026-11-13)
+SKIP_UCSF = os.environ.get("PRISM_SKIP_UCSF") == "1"
 
 # Stage outputs (one file per artifact; later stages only read these).
 MU_INDEX = OUTPUTS / "data" / "mu_index.csv"

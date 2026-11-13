@@ -239,7 +239,8 @@ def frames() -> list[pd.DataFrame]:
     if not p.exists():
         OUT.mkdir(parents=True, exist_ok=True)
         mu_scores().to_csv(p, index=False)
-    return [mu_frame(pd.read_csv(p)), lumiere_frame(), *ucsf_frames()]
+    from prism.config import SKIP_UCSF
+    return [mu_frame(pd.read_csv(p)), lumiere_frame(), *([] if SKIP_UCSF else ucsf_frames())]
 
 
 def table_step(n_boot=R.N_BOOT):
