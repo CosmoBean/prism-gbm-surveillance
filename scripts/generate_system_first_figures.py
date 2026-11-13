@@ -350,14 +350,14 @@ REPORT = [
     ("Scan", "This scan was taken 8 weeks after the end of radiotherapy, early after radiotherapy.", "scan.phase"),
     ("Scan", "The automatic segmentation gives indicative volumes of 6.0 cc enhancing tumour and 31.0 cc FLAIR hyperintensity.", "meas.label, meas.enhancing_cc, …"),
     ("Scan", "Enhancing tumour is 2.0 cc larger than at the previous scan.", "meas.enhancing_change_…"),
-    ("Models", "The clinical-history model is based on clinical data and the position in treatment: clinical-history score 0.21, below the median of its scores in the MU-Glioma-Post evaluation scans (0.38).", "pathway.timeline.*"),
-    ("Models", "The imaging model is based on the segmented tumour and its change: imaging score 0.64, above the median of its scores in the MU-Glioma-Post evaluation scans (0.45).", "pathway.images.*"),
-    ("Models", "The two models disagree: the clinical-history score is below its median and the imaging score is above its median.", "pathways.agreement_statement"),
-    ("Combined", "The combined score, based on the inputs of both models, is 0.33.", "pathway.combined.*"),
-    ("Combined", "Each score is a model output between 0 and 1 that ranks scans by how closely they resemble the progression scans of the training data; it is not a diagnosis and not a calibrated probability for this patient.", "pathways.score_meaning"),
+    ("Models", "The clinical-history model is based on clinical data and the position in treatment: clinical-history score 0.21, below the median of its scores in the MU-Glioma-Post evaluation scans (0.38).", "model.clinical_history.*"),
+    ("Models", "The imaging model is based on the segmented tumour and its change: imaging score 0.64, above the median of its scores in the MU-Glioma-Post evaluation scans (0.45).", "model.imaging.*"),
+    ("Models", "The two models disagree: the clinical-history score is below its median and the imaging score is above its median.", "models.agreement_statement"),
+    ("Combined", "The combined score, based on the inputs of both models, is 0.33.", "model.combined.*"),
+    ("Combined", "Each score is a model output between 0 and 1 that ranks scans by how closely they resemble the progression scans of the training data; it is not a diagnosis and not a calibrated probability for this patient.", "models.score_meaning"),
     ("Combined", "The 80% conformal set holds both outcomes.", "conformal.combined.80.statement"),
     ("Trust", "This situation, early after radiotherapy with enhancing tumour increased, has few cases: 1 of 9 scans was progression.", "card.situation, card.tier_statement"),
-    ("Trust", "The models disagree flag is raised: the clinical-history score is below its median and the imaging score is above its median.", "flags.disagreement.*"),
+    ("Trust", "The models disagree flag is raised: the clinical-history score is below its median and the imaging score is above its median.", "flags.models_disagree.*"),
 ]
 LIMITATIONS = ("Fixed limitations section (excerpt): the scores rank scans; they are not a diagnosis and the "
                "report gives no recommendation or decision. No clinician has evaluated this report.")

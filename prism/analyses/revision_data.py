@@ -119,9 +119,12 @@ def lumiere_r1():
     return P, sets, {k: {str(a): float(v) for a, v in d_.items()} for k, d_ in q.items()}
 
 
-def coverage_rows(cohort, method, y, P_ref, sets, m):
+def coverage_rows(cohort, method, y, P_ref, sets, m, P_disp):
+    """P_disp: the displayed combined score, for the error at the cohort median (as Table tab:hides)."""
     out = []
     y = y[m].astype(int)
+    Pd = P_disp[:, m]
+    err = ((Pd > np.median(Pd, axis=1, keepdims=True)).astype(int) != y)
     for p in S.PW:
         for a in S.ALPHAS:
             h0, h1 = sets[(p, a, 0)][:, m], sets[(p, a, 1)][:, m]
@@ -131,6 +134,8 @@ def coverage_rows(cohort, method, y, P_ref, sets, m):
                         "coverage_no_progression": float(hit[:, y == 0].mean()),
                         "both_share": float((h0 & h1).mean()), "empty_share": float((~h0 & ~h1).mean()),
                         "single_share": float((h0 ^ h1).mean()),
+                        "error_where_both": float(err[h0 & h1].mean()) if (h0 & h1).any() else np.nan,
+                        "error_other": float(err[~(h0 & h1)].mean()),
                         "auc_of_score_used": S.auc_m(y, P_ref[p][:, m], np.ones_like(P_ref[p][:, m], bool))})
     return out
 
@@ -199,22 +204,25 @@ def main(argv=None):
     m = c["eval"]["intended_use"]
     regP = {p: c["S"][f"pc_{p}"] for p in S.PW}
     reg = {(p, al, k): c["sets"][("std", p, al, k)] for p in S.PW for al in S.ALPHAS for k in (0, 1)}
-    rows += coverage_rows("mu", "registered (split, refitted model)", c["y"], regP, reg, m)
+    rows += coverage_rows("mu", "registered (split, refitted model)", c["y"], regP, reg, m,
+                          c["S"]["p_combined"])
     P, sets = mu_r1(a.workers)
     dev = max(float(np.nanmax(np.abs(P[p] - c["S"][f"p_{p}"]))) for p in S.PW)
     print(f"MU displayed-score check: max deviation {dev:.2e}", flush=True)
     assert dev < 1e-9
-    rows += coverage_rows("mu", "cross-conformal (displayed model)", c["y"], P, sets, m)
+    rows += coverage_rows("mu", "cross-conformal (displayed model)", c["y"], P, sets, m, c["S"]["p_combined"])
     L = cohorts[("lumiere", "grade4")]
     m = L["eval"]["all"]
     regP = {p: L["S"][f"pc_{p}"] for p in S.PW}
     reg = {(p, al, k): L["sets"][("std", p, al, k)] for p in S.PW for al in S.ALPHAS for k in (0, 1)}
-    rows += coverage_rows("lumiere", "registered (split, refitted model)", L["y"], regP, reg, m)
+    rows += coverage_rows("lumiere", "registered (split, refitted model)", L["y"], regP, reg, m,
+                          L["S"]["p_combined"])
     P, sets, q = lumiere_r1()
     dev = max(float(np.nanmax(np.abs(P[p] - L["S"][f"p_{p}"]))) for p in S.PW)
     print(f"LUMIERE displayed-score check: max deviation {dev:.2e}", flush=True)
     assert dev < 1e-9
-    rows += coverage_rows("lumiere", "cross-conformal (displayed model)", L["y"], P, sets, m)
+    rows += coverage_rows("lumiere", "cross-conformal (displayed model)", L["y"], P, sets, m,
+                          L["S"]["p_combined"])
     r1 = pd.DataFrame(rows)
     r1.to_csv(OUT / "r1_conformal.csv", index=False)
     mu_cov = r1.query("cohort == 'mu' and method.str.startswith('cross') and model == 'combined' and alpha == 0.2",

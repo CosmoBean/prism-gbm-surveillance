@@ -116,12 +116,60 @@ def flesch(text: str) -> float:
     return 206.835 - 1.015 * len(words) / sents - 84.6 * syl / len(words)
 
 
+def _num(v):
+    return f"{v:.2f}" if isinstance(v, float) and "." in repr(v) and len(repr(v).split(".")[1]) > 1 else str(v)
+
+
 def template_claims(rec):
-    """R3: the deterministic template (unit-test good_claims with the v3.1 volume label; LUMIERE rater sentence)."""
-    from prism.analyses.checker_mutation import correct
-    from prism.report.facts_v3_1 import facts_v3_1
-    F = facts_v3_1(rec)
-    return correct(F, rec["cohort"] == "lumiere")
+    """R3: a deterministic template in the v3.2 vocabulary, one fixed sentence per line a-j of the prompt, filled
+    from the facts view (values copied unchanged). Checked through check_v3_2 like the v3.2 reports."""
+    from prism.report.facts_v3_2 import facts_v3_2
+    F = facts_v3_2(rec)
+    C = [{"text": f"The scan was taken {F['scan.phase']}.", "fields": ["scan.phase"]}]
+    if "scan.rater_statement" in F:
+        C.append({"text": F["scan.rater_statement"], "fields": ["scan.rater_statement"]})
+    if F.get("meas.available") == "yes":
+        parts = [(f"{_num(F['meas.enhancing_cc'])} cc of enhancing tumour", "meas.enhancing_cc"),
+                 (f"{_num(F['meas.flair_hyperintensity_cc'])} cc of FLAIR hyperintensity", "meas.flair_hyperintensity_cc")]
+        for k, name in (("meas.necrosis_cc", "necrosis"), ("meas.cavity_cc", "resection cavity"),
+                        ("meas.necrosis_and_cavity_cc", "necrosis with cavity")):
+            if k in F:
+                parts.append((f"{_num(F[k])} cc of {name}", k))
+        C.append({"text": "Indicative volumes from the automatic segmentation are " +
+                  ", ".join(p for p, _ in parts[:-1]) + " and " + parts[-1][0] + ".",
+                  "fields": ["meas.label"] + [k for _, k in parts]})
+    else:
+        C.append({"text": "No segmentation volumes are available for this scan.", "fields": ["meas.available"]})
+    if F.get("scan.previous_available") == "yes":
+        ch = [k for k in ("meas.enhancing_change_since_previous_statement",
+                          "meas.flair_hyperintensity_change_since_previous_statement",
+                          "meas.enhancing_change_since_earlier_minimum_statement") if k in F]
+        C += [{"text": "The " + F[k] + ".", "fields": [k]} for k in ch] or \
+             [{"text": "The previous scan has no volumes to compare with.", "fields": ["scan.previous_available"]}]
+    else:
+        C.append({"text": "There is no previous scan to compare with.", "fields": ["scan.previous_available"]})
+    for p, name in (("clinical_history", "clinical-history"), ("imaging", "imaging")):
+        C.append({"text": f"The {name} model uses {F[f'model.{p}.based_on']}; " + F[f"model.{p}.statement"] + ".",
+                  "fields": [f"model.{p}.based_on", f"model.{p}.statement"]})
+    C.append({"text": "In short, " + F["models.agreement_statement"] + ".", "fields": ["models.agreement_statement"]})
+    C.append({"text": "The " + F["model.combined.statement"] + ", from " + F["model.combined.based_on"] + ".",
+              "fields": ["model.combined.statement", "model.combined.based_on"]})
+    C.append({"text": F["models.score_meaning"][0].upper() + F["models.score_meaning"][1:] + ".",
+              "fields": ["models.score_meaning"]})
+    C.append({"text": F["conformal.combined.80.statement"][0].upper() + F["conformal.combined.80.statement"][1:] + ".",
+              "fields": ["conformal.combined.80.statement"]})
+    C.append({"text": f"The situation is {F['card.situation']}, and the card says {F['card.tier_statement']}.",
+              "fields": ["card.situation", "card.tier_statement", "card.tier"]})
+    if "card.agreement_statement" in F:
+        C.append({"text": F["card.agreement_statement"][0].upper() + F["card.agreement_statement"][1:] + ".",
+                  "fields": ["card.agreement_statement"]})
+    act = [f for f in ("models_disagree", "out_of_range", "card_tier", "conformal_both") if F[f"flags.{f}.active"] is True]
+    for f in act:
+        C.append({"text": f"The {F[f'flags.{f}.name']} flag is raised: {F[f'flags.{f}.reason']}.",
+                  "fields": [f"flags.{f}.name", f"flags.{f}.reason", f"flags.{f}.active"]})
+    if not act:
+        C.append({"text": F["flags.statement"][0].upper() + F["flags.statement"][1:] + ".", "fields": ["flags.statement"]})
+    return C
 
 
 def row(sid, rec, claims, r, version, out=None):
@@ -145,13 +193,13 @@ def evaluate_step(a):
     rows, fails = [], {}
     for s in a.sets:
         recs = load_set(s)
-        for v in a.versions + (["template"] if s == "eval" else []):
+        for v in a.versions + ["template"]:
             outs = {} if v == "template" else {o["id"]: o for o in map(json.loads, open(OUT / "llm" / f"outputs_{s}_{v}.jsonl"))}
             for sid, rec in recs.items():
                 o = outs.get(f"{s}|{sid}")
                 if v == "template":
                     claims = template_claims(rec)
-                    r = checker.check(claims, facts_v3_1(rec), card=True)
+                    r = check_v3_2(claims, rec)
                 else:
                     claims = checker.parse_structured(o["text"]) if o else None
                     r = check_v3_2(claims, rec) if v == "v3_2" else checker.check(claims, facts_v3_1(rec), card=True)
