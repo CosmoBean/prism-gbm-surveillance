@@ -1,5 +1,15 @@
 # Outline: the argument of the PRISM paper (layer 1)
 
+## Revision proposal 2026-11-13 (branch `revision-overnight-2026-11-13`, PENDING AUTHOR)
+
+Made overnight in answer to the advisor's review; log in [REVISION_2026-11-13.md](REVISION_2026-11-13.md). Not merged.
+Title "PRISM: making glioma progression scores inspectable on MRI after treatment". Contributions in the advisor's order
+(2,4,1,3): the system, the local checked report, what a score rests on differs between cohorts, external tests.
+Sections: 2 PRISM (inputs, three models, confidence statements, record and report, implementation and cost), 3
+Evaluation design (cohorts, how each cohort was evaluated, one table of tests and outcomes, audits), 4 Validation
+(inputs, models, confidence, reports, what carries a score), 5 Discussion. New evidence: checker mutation test
+(synthetic), measured extraction cost, the input validation subsection from existing re-segmentation results.
+
 ## Contributions and framing (2026-11-01, after the supervisor's review)
 
 Finding first, system as the response. The Introduction ends with four numbered contributions: (1) the finding: what
