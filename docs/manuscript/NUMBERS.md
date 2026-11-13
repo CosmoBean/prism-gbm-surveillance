@@ -658,3 +658,8 @@ Prose cautions:
 | Detection with new masks (planned rule: gain >= 0.05, CI > 0) | 0.681 -> 0.665, difference -0.016 (-0.057 to +0.025); not met | same |
 | Consecutive MU scans <= 30 d apart (54 pairs), released masks | median ET fold change 2.57 | Supplementary S14; RESEGMENTATION.md; DIAGNOSTICS_IMAGING.md (re-resection) |
 | Secondary negatives (all scans before progression), clinical-history model, intended use | 0.807 (0.759-0.858), 62 / 173 | NUMBERS.md 3 line "Secondary negatives"; DETECTION_TASK.md |
+| Same pairs with one consistent segmenter (BraTS 2021 SwinUNETR) | median ET fold change 2.17 | Supplementary S14 ("2.57 -> 2.17") |
+| IDH / MGMT used at scans before the diagnosis date | 8 grade 4 scans (7 patients), 11 scans in all gliomas, 1-58 d before diagnosis | Supplementary S4; AUDIT_SYSTEM.md section 2 (supersedes "markers masked before diagnosis" in 2.1 for these scans) |
+
+Note (2026-11-13): Table 1 shows MU age 62.5 (council round 2, decision 16); TABLE1_COHORT.md shows 62 [53-70]. The
+author should confirm which is the exact median of the 126 grade 4 patients.
