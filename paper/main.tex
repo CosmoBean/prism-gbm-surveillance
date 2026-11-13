@@ -377,7 +377,8 @@ whose set contains the true outcome, against a planned threshold of 78\% at the 
 judged by whether the combined score ranks scans less well where the two models disagree, and by whether setting those
 scans aside helps more than removing as many scans matched for phase of care. Reports are judged by the share that pass
 the checker, by whether every report in a thin situation says so, and by whether reports follow a deliberately changed
-record.
+record. To test the checker itself, we introduced one error at a time into correct reports written for synthetic records
+and counted how many it rejected, under a plan written before the run.
 
 % Sources: REVISION_2026-11-13.md (A11); NUMBERS.md 3--7; Supplementary S21.1.
 \begin{table}[!htbp]
@@ -397,6 +398,7 @@ Conformal set & Coverage overall and by outcome in each cohort & \ref{sec:4.2} \
 Agreement of the two models & AUC of the combined score where the models agree and where they disagree; removal matched for phase of care & \ref{sec:4.2} \\
 Reliability card & Share of scans in tested situations; error by tier & \ref{sec:4.2} \\
 Report & Checker pass rate in each cohort; thin situations stated; reports following a changed record; seven local models & \ref{sec:4.3} \\
+Checker & Errors introduced one at a time into correct reports for synthetic records & \ref{sec:4.3} \\
 Usefulness to clinicians & Not tested; a reader study is designed (Supplementary Section~S21.1) & \ref{sec:5} \\
 \bottomrule
 \end{tabularx}
@@ -573,7 +575,16 @@ also did (Figure~\ref{fig:5}B). All 220 reports in situations with few cases or 
 three cohorts, 28 reports followed the change, against a planned minimum of 27 (Table~\ref{tab:2}). These results
 followed one revision of the prompt\expl. Before it, every LUMIERE report failed because a fixed sentence quoted a
 number held in no field, so we corrected the prompt, left the checker unchanged and evaluated again on patients not
-used for the revision. Whether the segmentation itself is right lies outside what the checker can see.
+used for the revision.
+
+% Sources: CHECKER_MUTATION.md (plan 4f854cb); NUMBERS.md 14. Synthetic records only.
+The checker caught almost every error its rules target. Across 52 synthetic records it rejected none of the correct
+reports and 1,252 of 1,280 reports with one introduced error, such as a changed or uncited number, a missing or invented
+flag, a misstated confidence statement, or a diagnosis, advice or probability word. All 28 misses wrote ``tested'' into
+the tier sentence of a situation with few cases while the sentence still gave the small counts. The checker also
+accepted every report in which a direction word was flipped or the enhancing and FLAIR volumes were swapped between
+their labels, because no rule ties a number to its label or checks the direction of a change. Whether the segmentation
+itself is right lies outside what the checker can see.
 
 % Sources: NUMBERS.md section 11 (Fig 5); REPORT_V3_1.md.
 \begin{figure}[!htbp]
