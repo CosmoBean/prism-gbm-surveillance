@@ -35,3 +35,9 @@ statements and forbidden wording. It accepts a wrong tier word when the same sen
 cannot tell which label a cited number belongs to or whether a direction word is right. The checker was not changed
 (frozen for the evaluated reports); a rule tying the tier word to the record's tier and a check of the direction word
 are straightforward additions for a next version.
+
+## Through the v3.2 adapter (REVISION_DATA_PLAN.md R4, 2026-11-13)
+`python -m prism.analyses.checker_mutation --v3-2` writes every correct report and mutant in the v3.2 vocabulary
+(clinical-history model, imaging model, `model.*` keys) and checks it through `facts_v3_2.check_v3_2`, which maps it back
+and calls the frozen checker. Result: per operator, the same mutant and rejection counts as above (summary files
+identical); 0/52 correct reports rejected. The adapter neither adds nor removes a rule.

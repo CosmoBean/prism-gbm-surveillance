@@ -3,8 +3,12 @@
 Builds correct reports for 52 synthetic records, introduces one error per mutant, and counts how often the frozen
 checker (check(..., card=True), the report v3.1 rule) rejects them. No patient data is read.
 
-    PYTHONPATH=. .venv/bin/python -m prism.analyses.checker_mutation
+    PYTHONPATH=. .venv/bin/python -m prism.analyses.checker_mutation [--v3-2]
     -> outputs/results/analyses/checker_mutation/{mutants.jsonl,summary.csv}
+
+--v3-2 (REVISION_DATA_PLAN.md R4): every correct report and mutant is first written in the v3.2 vocabulary
+(facts_v3_2.new_key on the cited keys, rename_value on the text) and checked through facts_v3_2.check_v3_2, the adapter
+to the frozen checker. The counts must equal the v3.1 run. Output files get the suffix _v3_2.
 """
 
 from __future__ import annotations
@@ -13,6 +17,7 @@ import copy
 import itertools
 import json
 import re
+import sys
 
 import pandas as pd
 
@@ -140,26 +145,35 @@ def mutants(C, F):
             yield "B2", D
 
 
-def main():
+def to_v3_2(C):
+    from prism.report.facts_v3_2 import new_key, rename_value
+    return [{**c, "text": rename_value(c["text"]), "fields": [new_key(k) for k in c["fields"]]} for c in C]
+
+
+def main(v32: bool = False):
+    from prism.report.facts_v3_2 import check_v3_2
     OUT.mkdir(parents=True, exist_ok=True)
+    sfx = "_v3_2" if v32 else ""
+    chk = (lambda C, F, rec: check_v3_2(to_v3_2(C), rec)) if v32 else (lambda C, F, rec: checker.check(C, F, card=True))
     rows, false_rej = [], []
-    with open(OUT / "mutants.jsonl", "w") as fh:
+    with open(OUT / f"mutants{sfx}.jsonl", "w") as fh:
         for rid, rec, is_lum in records():
             F = facts_v3_1(rec)
             C = correct(F, is_lum)
-            if not checker.check(C, F, card=True)["pass"]:
+            if not chk(C, F, rec)["pass"]:
                 false_rej.append(rid)
                 continue
             for op, D in mutants(C, F):
-                rej = not checker.check(D, F, card=True)["pass"]
+                rej = not chk(D, F, rec)["pass"]
                 rows.append({"record": rid, "op": op, "rejected": rej})
-                fh.write(json.dumps({"record": rid, "op": op, "rejected": rej, "claims": D}) + "\n")
+                fh.write(json.dumps({"record": rid, "op": op, "rejected": rej,
+                                     "claims": to_v3_2(D) if v32 else D}) + "\n")
     df = pd.DataFrame(rows)
     s = df.groupby("op").rejected.agg(["size", "sum"]).rename(columns={"size": "mutants", "sum": "rejected"})
     s["rate"] = s.rejected / s.mutants
     s["expected"] = ["blind spot" if o in BLIND else "caught" for o in s.index]
     s = s.loc[[o for o in CAUGHT + BLIND if o in s.index]]
-    s.to_csv(OUT / "summary.csv")
+    s.to_csv(OUT / f"summary{sfx}.csv")
     print(f"records {len(records())}, correct reports rejected {len(false_rej)} {false_rej}")
     print(s.to_string())
     caught = df[df.op.isin(CAUGHT)]
@@ -169,4 +183,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    main("--v3-2" in sys.argv)
