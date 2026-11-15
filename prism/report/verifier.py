@@ -9,7 +9,10 @@ reports through facts_v3_2.back_claims) and on the clause: the text between , ; 
      lower) must agree with every cited direction source for the clause's entity (or all cited sources when the
      clause names none): a field whose text holds direction words of one kind, or a numeric change field by its sign.
      A direction word in a clause naming a volume entity with no cited direction source is unsupported.
-Terms and windows were fixed before the evaluation reports were checked.
+Terms and windows were fixed before the evaluation reports were checked (v1.0, commit 3d5e710). v1.0 bound a number only
+to fields whose key names the entity and rejected every real report; v1.1 (bound_facts) also binds numbers and
+direction words inside a cited text field to the entity named in their clause. v1.1 was developed on the synthetic
+records and the development reports only (counts), then applied once to the evaluation reports.
 """
 
 from __future__ import annotations
@@ -63,18 +66,45 @@ def direction_of(v, key: str) -> str | None:
     return "up" if u and not d else "down" if d and not u else None
 
 
+def bound_facts(cited: list[str], F: dict) -> tuple[set, dict]:
+    """What the cited fields say about each entity: {(entity, number)} and {entity: {directions}}.
+    A field whose key names an entity binds all its numbers and its direction to it; inside a text field, each number
+    and direction word is also bound to the nearest entity named in its clause (v1.1)."""
+    nums, dirs = set(), {}
+    for k in cited:
+        v = F[k]
+        for e, (_, toks) in ENTITIES.items():
+            if any(t in k for t in toks):
+                nums |= {(e, x) for x in checker._field_numbers(v)}
+                d = direction_of(v, k)
+                if d:
+                    dirs.setdefault(e, set()).add(d)
+        if isinstance(v, str):
+            for cl in clauses(v):
+                for m in checker.NUM.finditer(cl):
+                    e = entity_at(cl, m.start())
+                    if e:
+                        nums.add((e, float(m.group(0).replace("\u2212", "-"))))
+                for m in re.finditer(f"{UP}|{DOWN}", cl, re.I):
+                    e = entity_at(cl, m.start())
+                    if e:
+                        dirs.setdefault(e, set()).add("up" if re.fullmatch(UP, m.group(0), re.I) else "down")
+    return nums, dirs
+
+
 def bind_claim(claim: dict, F: dict) -> list[str]:
     cited = [k for k in claim.get("fields", []) if k in F]
+    nums, dirs = bound_facts(cited, F)
+    alld = {k: d for k in cited if (d := direction_of(F[k], k))}
     out = []
     for cl in clauses(claim.get("text", "")):
-        t = checker.STRUCTURAL.sub(" ", cl.replace("−", "-"))
+        t = checker.STRUCTURAL.sub(" ", cl.replace("\u2212", "-"))
         # V1
         for m in checker.NUM.finditer(t):
             e = entity_at(t, m.start())
             if e is None:
                 continue
-            keys = _keys_for(e, cited)
-            vals = [x for k in keys for x in checker._field_numbers(F[k])]
+            vals = [x for (e2, x) in nums if e2 == e]
             pc = re.match(r"\s*(%|percent)", t[m.end():]) is not None
             if not checker.matches(m.group(0), vals, pc):
                 out.append(f"V1 {m.group(0)} not a value of a cited {e} field")
@@ -82,11 +112,9 @@ def bind_claim(claim: dict, F: dict) -> list[str]:
         for m in re.finditer(f"{UP}|{DOWN}", t, re.I):
             w = "up" if re.fullmatch(UP, m.group(0), re.I) else "down"
             e = entity_at(t, m.start())
-            keys = _keys_for(e, cited) if e else cited
-            src = {k: direction_of(F[k], k) for k in keys}
-            src = {k: v for k, v in src.items() if v}
-            if any(v != w for v in src.values()):
-                out.append(f"V2 '{m.group(0)}' disagrees with {sorted(k for k, v in src.items() if v != w)}")
+            src = dirs.get(e, set()) if e else set(alld.values())
+            if any(v != w for v in src):
+                out.append(f"V2 '{m.group(0)}' disagrees with a cited {e or 'any'} direction")
             elif not src and e in VOLUME:
                 out.append(f"V2 '{m.group(0)}' for {e} with no cited direction source")
     return out
