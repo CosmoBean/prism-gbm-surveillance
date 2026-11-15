@@ -1,5 +1,35 @@
 # Outline: the argument of the PRISM paper (layer 1)
 
+## Methods rewrite 2026-11-15 (branch `methods-rewrite-2026-11-15`; supersedes every framing below)
+
+Author's direction (2026-11-15): bottom line up front; a methods / medical AI paper whose contributions are technical
+objects with measured properties; everything else supports them. No "phase of care" (say time after radiotherapy);
+no LIME or SHAP (the models are linear and attribution cannot separate signal from schedule).
+
+Bottom line. A progression score can transfer between centres while drawing its discrimination from different
+evidence. PRISM gives each follow up scan a record that shows where its scores' discrimination comes from and how far
+to trust them, and a report verified against that record. Fitted once on the public development cohort and applied
+unchanged at two centres.
+
+Contributions (each with its measurement; prior art in docs/literature/PRIOR_ART_2026-11-15_METHODS.md):
+- C1 A context audit of discrimination. The exact split of the AUC into pairs within one time window and across
+  windows (identity of Kallus and Zhou 2019), with the change in each part when an input block is added, for every
+  model at each centre. Measured: A_W, A_B and increments with patient bootstrap CIs (MU, LUMIERE).
+- C2 Group-conditional conformal sets over time after radiotherapy and enhancement state, with a fixed fallback to
+  coarser groups; the calibration level is part of the record. Measured: within-group coverage, worst-group gap,
+  two-outcome and empty sets, against the planned marginal sets.
+- C3 A verifier that binds every number and direction word of a generated report to the record entity it refers to.
+  Measured: planted-error rejection per error class (synthetic and real reports), false rejections, language model
+  and template as two writers.
+Supporting: locked external tests (AUCs), the UCSF enhancement result, the system and its cost, disagreement (one
+exploratory paragraph), the card as a descriptive lookup.
+
+Sections: 1 Introduction (problem, prior art, contributions, bottom line). 2 PRISM (inputs, models, record and
+report; Fig 1, Table models). 3 Methods (3.1 context split, 3.2 group-conditional sets, 3.3 bound verifier). 4
+Evaluation design (cohorts, roles, planned vs exploratory, statistics; Tables 1, eval, tests). 5 Results (5.1 locked
+transfer, Fig 2; 5.2 context split, Fig 3; 5.3 confidence, Fig 4; 5.4 reports, Fig 5 and verifier table). 6
+Discussion.
+
 ## Revision proposal 2026-11-13 (branch `revision-overnight-2026-11-13`, PENDING AUTHOR)
 
 Made overnight in answer to the advisor's review; log in [REVISION_2026-11-13.md](REVISION_2026-11-13.md). Not merged.

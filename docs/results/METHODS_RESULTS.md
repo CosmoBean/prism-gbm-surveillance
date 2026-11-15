@@ -18,7 +18,7 @@ progression; flagged 1 / 27, other 72 / 78). Share of pairs within one context w
 
 | cohort | score | AUC | within context A_W | across contexts A_B | A_B - A_W |
 |---|---|---|---|---|---|
-| MU | clinical-history | 0.82 (0.75-0.90) | 0.64 (0.51-0.78) | 0.94 (0.88-0.97) | 0.30 (0.16-0.43) |
+| MU | clinical-history | 0.82 (0.75-0.89) | 0.64 (0.51-0.78) | 0.93 (0.88-0.97) | 0.29 (0.16-0.43) |
 | MU | imaging | 0.71 (0.63-0.78) | 0.68 (0.58-0.77) | 0.73 (0.64-0.81) | 0.05 (-0.04 to 0.14) |
 | MU | combined | 0.82 (0.75-0.89) | 0.65 (0.52-0.78) | 0.92 (0.88-0.96) | 0.27 (0.15-0.40) |
 | MU | context only | 0.70 (0.60-0.80) | 0.34 * | 0.93 (0.86-0.98) | |
@@ -27,7 +27,7 @@ progression; flagged 1 / 27, other 72 / 78). Share of pairs within one context w
 | LUMIERE | imaging | 0.65 (0.57-0.73) | 0.71 (0.60-0.80) | 0.51 (0.39-0.63) | -0.20 (-0.34 to -0.04) |
 | LUMIERE | combined | 0.77 (0.68-0.86) | 0.72 (0.60-0.82) | 0.93 (0.86-0.99) | 0.22 (0.12-0.34) |
 | LUMIERE | context only | 0.62 (0.57-0.70) | 0.50 | 0.96 (0.88-1.00) | |
-| LUMIERE | enhancing volume | 0.56 (0.43-0.68) | 0.61 (0.46-0.75) | 0.41 (0.30-0.53) | -0.21 (-0.36 to -0.04) |
+| LUMIERE | enhancing volume | 0.56 (0.43-0.68) | 0.61 (0.46-0.75) | 0.41 (0.29-0.53) | -0.21 (-0.36 to -0.04) |
 
 \* Deviation from the plan, which said the context-only A_W is 0.5 by construction. At MU the stratum rates are
 recomputed in each training fold, so scans of one stratum in different folds get slightly different rates, and a
