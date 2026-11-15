@@ -90,7 +90,7 @@ and by how many reports that passed the earlier checker it rejects, for a langua
 
 % Sources: METHODS_RESULTS.md M1--M3.
 On MU the clinical-history and combined models drew most of their discrimination from pairs in different windows,
-which the window alone ranked as well, while the imaging model ranked scans about as well within a window as across
+which the window alone ranked as well, while the imaging model ranked scans at least as well within a window as across
 windows. The marginal conformal sets covered the hardest group of scans least, and calibrating within groups did not
 cover it better than enlarging the sets. The verifier caught every wrong label but only the direction words on its
 list.
@@ -212,7 +212,7 @@ $A_W$ and $A_B$ the same average over $W$ and over $B$, and $w = |W| / (|P|\,|N|
 holds exactly \citep{kallus2019}. $A_W$ is the discrimination with the window held fixed, the pooled within stratum AUC
 of covariate adjusted ROC analysis \citep{janes2009}. $A_B$ mixes what the window and the score each contribute. To
 show how much of $A_B$ the window alone could supply, we score every scan by the progression rate of its window in the
-training data (the context only score), which ties all pairs in $W$ and ranks pairs in $B$ by window alone. A model
+training data (the context only score). Computed once, it ties all pairs in $W$ and ranks pairs in $B$ by window alone. A model
 whose 95\% CI for $A_B - A_W$ lies above zero draws part of its discrimination from the context. To see where a block of inputs adds discrimination, we report the change in $A_W$ and $A_B$ when it is added,
 here clinical history added to images and images added to clinical history.
 
@@ -347,7 +347,8 @@ before radiotherapy started. Reports were evaluated on scans of patients not use
 % Sources: DETECTION_TASK.md; UCSF_PLAN.md (0e7c9fe); SYSTEM_PLAN.md (e7cba80); METHODS_PLAN.md (1363773).
 Each cohort played one role (Table~\ref{tab:eval}). On MU we evaluated every model by five repeats of fivefold cross
 validation grouped by patient and report the mean pooled held out AUC, because single splits are unstable in small
-cohorts \citep{varoquaux2018}. We then fitted each model once on all 181 grade 4 detection scans of MU, locked it, and
+cohorts \citep{varoquaux2018}. We then fitted each model once on all 181 grade 4 detection scans of MU, including the 35 taken before radiotherapy,
+locked it, and
 applied it unchanged to LUMIERE and UCSF under plans committed before any score was compared with an external label.
 AUCs carry 95\% confidence intervals (CIs) from bootstrap samples of patients. The three audits of
 Section~\ref{sec:3} were run under a further plan written before they were coded. UCSF-ALPTDG was no longer on our
@@ -423,7 +424,7 @@ The three models ranked scans on MU, and the combined and imaging models kept ra
 centres (Figure~\ref{fig:2}). On MU the clinical-history model detected the progression scan with an AUC of 0.82 (95\%
 CI 0.75--0.90), the imaging model with 0.71 (0.63--0.78) and clinical data alone with 0.53 (0.45--0.61). The combined
 score also reached 0.82, with no gain over the clinical-history model. Locked, the reduced combined model reached 0.77
-(0.68--0.86) at LUMIERE. At UCSF images from one scan reached 0.80 (0.69--0.89) and the locked combined model 0.86
+(0.68--0.86) at LUMIERE and the imaging model 0.65 (0.57--0.73). At UCSF images from one scan reached 0.80 (0.69--0.89) and the locked combined model 0.86
 (0.76--0.93), while the reduced clinical-history model, whose radiotherapy flag is approximated there, scored 0.56
 (0.42--0.69). Neither a second segmentation of MU nor deep networks tuned on MU improved detection
 (Table~\ref{tab:2}). The released volumes are noisy, since between consecutive MU scans within 30 days of each other
@@ -459,7 +460,7 @@ clinical-history model ranked 0.93 (0.88--0.97) of the pairs across windows corr
 pairs within one, a difference of 0.29 (0.16--0.43). Ranking scans by their window's progression rate alone, with no
 other input, also ranked 0.93 of the pairs across windows correctly, so the window could supply all of the
 clinical-history model's advantage there. The imaging model ranked 0.68 (0.58--0.77) within a window and 0.73 across,
-a difference whose interval includes zero. Nine in ten pairs within a window come from the later window (56 scans
+a difference whose interval includes zero, and the combined model ranked 0.65 within and 0.92 across. Nine in ten pairs within a window come from the later window (56 scans
 with progression and 32 without), so the within window AUC is close to the AUC of scans taken later than 12 weeks
 after radiotherapy (exploratory, Supplementary Section~S26). LUMIERE gives a weaker test, because only 1 of the 28
 scans its rater flagged as within three months of radiotherapy had progression, and the reduced clinical-history
@@ -506,7 +507,8 @@ and lowered it in scans within 12 weeks of radiotherapy without a previous scan 
 with increased enhancement coverage rose to 72\% (59\% to 85\%), and in the smallest later group, without
 enhancement (9 scans), it stayed at 67\%. The group-conditional sets held both outcomes more often (31\% of MU scans
 against 25\%, 42\% at LUMIERE against 38\%), and 4\% of MU sets were empty. A marginal set enlarged to the same share
-of two outcome sets (exploratory, $\alpha = 0.175$) covered the two worst groups at 69\% and 74\%, at least as well,
+of two outcome sets (exploratory, $\alpha = 0.175$) covered the later group without enhancement at 69\% and the increased enhancement group at 74\%, against 67\% and
+72\% with group calibration,
 and a set calibrated separately for each outcome covered the increased enhancement group at 64\%. The gain in the worst
 group therefore came from larger sets, not from calibration within groups. At MU 29\% of scans were calibrated in
 their own group, 45\% in their enhancement state and 26\% over all scans. For the imaging model at LUMIERE the largest
@@ -540,7 +542,7 @@ evidence, not as warnings.
 All 406 reports written by Qwen3.8-27B for patients not used to develop the prompt passed the planned checker (114 at
 MU, 162 at LUMIERE and 130 at UCSF), after one revision of the prompt made because every LUMIERE report first failed.
 All 220 reports in situations with few cases or none said so. When one field was changed in 30 records, 28 reports
-followed the change, against a planned minimum of 27. Of six other local models given the same prompt, only Gemma-4 31B also had every report pass (Figure~\ref{fig:5}B). The reports were generated again with this paper's model names,
+followed the change, against a planned minimum of 27. Of six other local models given the same prompt, only Gemma-4 31B also had every report pass (Figure~\ref{fig:5}B). The reports were generated again with the model names used in this paper in place of earlier internal names,
 and these 276 MU and LUMIERE reports, which the verifier was tested on, also all passed (Supplementary Section~S25).
 
 % Sources: NUMBERS.md section 11 (Fig 5); REPORT_V3_1.md.
@@ -621,7 +623,7 @@ Reports that passed the checker, rejected by the verifier & 0 of 52 & 1 of 276 &
 % Sources: METHODS_RESULTS.md M1, E1; NUMBERS.md 3--5.
 The locked models of PRISM ranked scans at two other centres, but the split of their AUC shows that on MU the
 clinical-history and combined models did so mostly by comparing scans from different time windows after
-radiotherapy, which the window alone ranked as well. The imaging model and enhancing volume ranked scans about as
+radiotherapy, which the window alone ranked as well. The imaging model and enhancing volume ranked scans at least as
 well within a window as across windows. A pooled AUC cannot make this distinction, and models with equal AUC can
 behave differently on new data \citep{damour2022}. The split is a published identity \citep{kallus2019}, covariate
 adjusted ROC analysis made the same point for pooled ROC curves \citep{janes2009}, and a study of mammography found
