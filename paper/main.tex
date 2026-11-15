@@ -25,17 +25,17 @@
 \maketitle
 
 % Unstructured abstract, 100--150 words (journal instructions).
-% Sources: METHODS_RESULTS.md M1 (0.82, 0.94, 0.64), M2, M3 (1 of 552); NUMBERS.md 3, 4.
+% Sources: METHODS_RESULTS.md M1 (0.82, 0.93, 0.64), E2, E3; NUMBERS.md 3, 4.
 \begin{abstract}
 A score that ranks follow up MRI scans after glioma treatment can do well because of when scans were taken.
-PRISM, a system running on local hardware, gives each scan three scores, statements of how far to trust them and a
-report checked against its record. PRISM rests on three methods. An exact split of the AUC
-separates comparisons within and across time windows after radiotherapy, conformal sets are calibrated within groups
-of comparable scans, and a verifier binds every number and direction word of a report to the record. On the public
-MU-Glioma-Post cohort, the clinical-history model's AUC of 0.82 combined 0.93 across windows with 0.64 within one,
-and the pattern held at LUMIERE with the models applied unchanged. Group calibration narrowed the worst
-subgroup's coverage shortfall. The verifier caught every planted direction error and rejected 1 of 552 correct
-reports. No clinician has read the reports.
+PRISM, a local system, gives each scan three scores, statements of how far to trust them and a
+report checked against its record. It runs three audits adapted from known techniques. An
+exact split of the AUC separates comparisons within and across time windows after radiotherapy, conformal coverage is
+measured within groups of comparable scans, and a verifier binds every number and direction word of a report to the
+record. On the public MU-Glioma-Post cohort, the clinical-history model's AUC of 0.82 combined 0.93 across windows
+with 0.64 within one. Calibrating sets within groups helped no more than enlarging them. The verifier rejected every
+value placed under the wrong label, including independently written errors, but only a third of
+direction errors in new wording. No clinician has read the reports.
 \end{abstract}
 
 % No more than 3 keywords (journal instructions).
@@ -70,28 +70,30 @@ PRISM is a system that makes progression scores inspectable. For each follow up 
 tumour volumes measured from segmentation masks, three separately fitted scores, statements of confidence and the
 source of every value, and a local language model writes a report from that record alone. We developed PRISM on the
 public MU-Glioma-Post cohort, fitted its models once, and applied them unchanged in the LUMIERE and UCSF-ALPTDG cohorts.
-This paper contributes three methods that PRISM implements, each with a defined object and a measured property.
+This paper adapts three known techniques into audits that PRISM runs at each centre where it is tested, and measures
+what each shows.
 \begin{enumerate}
-\item A context audit of discrimination (Section~\ref{sec:3.1}). We apply the exact split of the AUC into pairs of
-scans from the same time window after radiotherapy and pairs from different windows to every model at each centre,
-together with the change in each part when a block of inputs is added. It measures how much of a score's
-discrimination the time window alone could supply.
-\item Conformal sets calibrated within groups of comparable scans (Section~\ref{sec:3.2}). Groups are defined by the
-time after radiotherapy and the state of the enhancing tumour, with a fixed rule that falls back to coarser groups when
-a group has too few calibration patients. The level used is part of the record. It is measured by coverage within each
-group and by how often a set is uninformative.
+\item A context audit of discrimination (Section~\ref{sec:3.1}). The AUC splits exactly into pairs of scans from the
+same time window after radiotherapy and pairs from different windows \citep{kallus2019}. We report both parts for every
+model at each centre, with the change in each part when a block of inputs is added and the part that the time window
+alone could supply.
+\item A coverage audit by group (Section~\ref{sec:3.2}). We measure the coverage of conformal sets within groups of
+comparable scans, defined by the time after radiotherapy and the state of the enhancing tumour, and test group
+calibration with a fixed fallback to coarser groups \citep{vovk2022book,ding2023} against marginal sets enlarged to
+the same size.
 \item A verifier that binds each claim of a generated report to the record entity it refers to
-(Section~\ref{sec:3.3}). Every number and direction word must agree with a cited field about the same tumour region or
-score. It is measured by the share of planted errors it rejects in each error class and by how many correct reports it
-rejects, for a language model and a fixed template as two writers.
+(Section~\ref{sec:3.3}), extending deterministic checks of generated clinical text \citep{zeba2026,pham2026}. Every
+number and direction word must agree with a cited field about the same tumour region or score. It is measured by the
+share of planted errors it rejects in each class, including errors written by someone who had not seen its rules,
+and by how many reports that passed the earlier checker it rejects, for a language model and a fixed template.
 \end{enumerate}
 
 % Sources: METHODS_RESULTS.md M1--M3.
-At both centres where the time window was recorded, the clinical-history and combined models drew most of their
-discrimination from pairs in different windows, while the imaging model ranked scans as well within a window as
-across windows. Calibrating the conformal sets within groups narrowed the largest coverage shortfall at MU, at the cost
-of more sets that hold both outcomes. The verifier closed the two known blind spots of an earlier checker and rejected
-one correct report of 552.
+On MU the clinical-history and combined models drew most of their discrimination from pairs in different windows,
+which the window alone ranked as well, while the imaging model ranked scans about as well within a window as across
+windows. The marginal conformal sets covered the hardest group of scans least, and calibrating within groups did not
+cover it better than enlarging the sets. The verifier caught every wrong label but only the direction words on its
+list.
 
 % =====================================================================================================
 \section{PRISM}\label{sec:2}
@@ -167,15 +169,15 @@ information from a later visit enters a score.
 PRISM scores each scan with three models and shows all three. The clinical-history model uses the treatment context
 and the patient characteristics, the imaging model uses the 27 measurements and no dates, and the combined model uses
 both. Keeping the first two apart is what lets the record show which kind of evidence a score follows. Each is a
-logistic regression with an L2 penalty, because its coefficients can be read and because deep networks tuned on MU
-added nothing to it (Table~\ref{tab:2}). The inputs are standardised, and the penalty is chosen from six values of the
+logistic regression with an L2 penalty, chosen because its coefficients can be read, and deep networks tuned on MU
+did not improve on it (Table~\ref{tab:2}). The inputs are standardised, and the penalty is chosen from six values of the
 inverse strength $C$ (0.01 to 3) by threefold cross validation grouped by patient, minimising the log loss. Where a
 cohort lacks treatment dates, PRISM uses a reduced clinical-history model with the inputs that cohort has. LUMIERE's
 masks have three compartments, so for LUMIERE we fitted an imaging model on MU with only those three volumes and their
 change. Because the imaging model needs only scans and masks, PRISM gives an imaging score in a cohort with no
 treatment dates.
 
-\subsection{Record and report}\label{sec:2.4}
+\subsection{Record and report}\label{sec:2.3}
 
 % Sources: prism/report/facts_v3_1.py; prism/report/prompts_v3_1.py; REPORT_V3_1.md; Supplementary S19, S24.
 Every value PRISM computes for a scan enters one structured record under a fixed key, with its source. A local language
@@ -185,7 +187,8 @@ record fields it uses, and the model sees no images and does no arithmetic. The 
 statements. One says whether the clinical-history and imaging scores fall on the same side of their cohort medians. The
 other is a reliability card \citep{mitchell2019} that gives, for the scan's situation (time window and state of the
 enhancing tumour), how many scans with and without progression the models were tested on and, with at least 10 of
-each, their AUCs. The card is built without any scan of the patient it describes. The report follows the content of
+each (the tested tier), their AUCs, and otherwise only the counts (few cases). The card is built without any scan of
+the patient it describes. The report follows the content of
 the BT-RADS follow up template \citep{weinberg2018} without its category or advice, which PRISM does not give
 (Supplementary Section~S24).
 
@@ -210,8 +213,7 @@ holds exactly \citep{kallus2019}. $A_W$ is the discrimination with the window he
 of covariate adjusted ROC analysis \citep{janes2009}. $A_B$ mixes what the window and the score each contribute. To
 show how much of $A_B$ the window alone could supply, we score every scan by the progression rate of its window in the
 training data (the context only score), which ties all pairs in $W$ and ranks pairs in $B$ by window alone. A model
-whose $A_B$ exceeds its $A_W$ by more than the interval of the difference draws part of its discrimination from the
-context. To see where a block of inputs adds discrimination, we report the change in $A_W$ and $A_B$ when it is added,
+whose 95\% CI for $A_B - A_W$ lies above zero draws part of its discrimination from the context. To see where a block of inputs adds discrimination, we report the change in $A_W$ and $A_B$ when it is added,
 here clinical history added to images and images added to clinical history.
 
 At MU the window comes from the treatment dates (during radiotherapy, within 12 weeks after its end, and later, since scans
@@ -220,7 +222,7 @@ of radiotherapy, which gives two windows, and for the context only score a flagg
 12 weeks and any other scan MU's rate over the other windows. Intervals come from 2,000 bootstrap samples of patients,
 and at MU each sample averages over the five repeats of cross validation. The identity was checked on every sample.
 
-\subsection{Conformal sets calibrated within groups}\label{sec:3.2}
+\subsection{Conformal coverage within groups}\label{sec:3.2}
 
 % Sources: prism/audit/conformal.py; METHODS_PLAN.md M2; refs angelopoulos2023, vovk2022book, romano2020, ding2023,
 % barber2021limits, mehrtens2025.
@@ -236,7 +238,7 @@ C(\hat p) = \{\, y \in \{0, 1\} : 1 - \hat p(y) \le \hat q \,\}.
 As planned, the combined model was refitted on 70\% of the training patients and calibrated on the other 30\%, inside
 each training fold on MU and once on all MU training patients for the external cohorts. If a new patient is
 exchangeable with the calibration patients, about 80\% of their sets contain the true outcome on average, but not
-necessarily within a subgroup \citep{romano2020,barber2021limits}.
+necessarily within a subgroup, and because scans are weighted by patient the guarantee is approximate \citep{romano2020,barber2021limits}.
 
 Group-conditional (Mondrian) sets \citep{vovk2022book} compute $\hat q$ separately within each group $g$, so the
 guarantee holds within the group under exchangeability there. Our groups are the situations of the reliability card,
@@ -247,7 +249,10 @@ enhancement state over all windows, then all calibration scans, which gives the 
 window is unknown in an external cohort starts at the second level. The level used is written into the record, so a
 reader sees whether the set was calibrated on comparable scans. Merging small groups into coarser ones follows
 clustered conformal prediction \citep{ding2023}. No guarantee carries over to an external cohort unless its scans are
-exchangeable with MU's, which a different centre need not satisfy \citep{mehrtens2025}.
+exchangeable with MU's, which a different centre need not satisfy \citep{mehrtens2025}. Group calibration can raise
+coverage in a group simply by making sets larger, so after the planned run we also compared it with marginal sets at
+the $\alpha$ that gives the same share of sets holding both outcomes, and with sets calibrated separately for each
+outcome (exploratory).
 
 \subsection{Binding report claims to the record}\label{sec:3.3}
 
@@ -273,17 +278,22 @@ with every cited direction of its entity, read from a direction word or from the
 direction word about a tumour region with no cited direction is unsupported. The verifier passes a report only if the
 frozen checker and both rules pass.
 
-We fixed the rules before checking any report, and fixed in the same plan the planted errors that would test them. The
-first version bound a number only to fields whose key names the entity, and it rejected every real report because
-statement fields name the entity in their text. We report that failure, revised the rule on synthetic records and
-the 48 development reports only, froze it, and applied it once to the evaluation reports. To measure the verifier we
+We fixed the rules, and the planted errors that would test them, in a plan written before any report was checked.
+The rules as first written failed. They looked for the entity only in the name of a cited field, but most fields are
+sentences such as ``enhancing tumour 3.5\,cc larger than at the previous scan'' whose entity is named in the text, so
+every real report was rejected. We then let the rules read the entity from the text of a cited field as well, tested
+this change only on the synthetic records and the 48 reports used to develop the prompt, froze it, and applied it once
+to the evaluation reports. To measure the verifier we
 introduced one error at a time into correct reports, with 24 kinds of error in seven classes (numbers, citations,
 flags, conformal and agreement statements, the card's tier, forbidden wording, and binding), following error
 injection used to evaluate factuality checks \citep{kryscinski2020,gabriel2021,rao2025rexerr}. Three binding errors
 were held out, defined in the plan but not used when the rules were written. Errors were planted in correct reports for
 52 synthetic records and, wherever the pattern occurs, in the 276 evaluation reports written by the language model and
 in the same records written by a fixed template that copies each field into a set sentence. A rule closes a blind spot
-if it rejects at least 95\% of the synthetic errors of that kind.
+if it rejects at least 95\% of the synthetic errors of that kind. Because we wrote both the rules and these errors,
+we afterwards had a separate agent, which had not seen the rules, write further errors into the synthetic reports in
+its own words (wrong directions, values under the wrong entity, scores on the wrong side of their median) together
+with correct paraphrases as controls (exploratory).
 
 % =====================================================================================================
 \section{Evaluation design}\label{sec:4}
@@ -293,8 +303,8 @@ if it rejects at least 95\% of the synthetic errors of that kind.
 % Sources: TABLE1_COHORT.md; UCSF_DATA.md; UCSF_PLAN.md; DETECTION_TASK.md; INTENDED_USE.md; NUMBERS.md 2.2.
 Grade 4 glioma is the primary population in all three cohorts (Table~\ref{tab:1}). The task is to tell the scan at
 which a cohort documented progression from scans followed by at least 120 days without it. Each cohort defines
-progression in its own way (Table~\ref{tab:eval}), so AUCs are compared between models within a cohort. On MU, 48 of
-the 64 grade 4 progression scans were taken on the day progression was documented, which is why the time window can
+progression in its own way (Table~\ref{tab:eval}), so AUCs are compared between models within a cohort. Over all grade 4
+scans of MU, 48 of the 64 progression scans (62 in the intended use) were taken on the day progression was documented, which is why the time window can
 separate so many pairs. On MU the intended use covers scans from the start of radiotherapy onwards, and MU results
 refer to it.
 
@@ -339,7 +349,7 @@ Each cohort played one role (Table~\ref{tab:eval}). On MU we evaluated every mod
 validation grouped by patient and report the mean pooled held out AUC, because single splits are unstable in small
 cohorts \citep{varoquaux2018}. We then fitted each model once on all 181 grade 4 detection scans of MU, locked it, and
 applied it unchanged to LUMIERE and UCSF under plans committed before any score was compared with an external label.
-AUCs carry 95\% confidence intervals (CIs) from bootstrap samples of patients. The three methods of
+AUCs carry 95\% confidence intervals (CIs) from bootstrap samples of patients. The three audits of
 Section~\ref{sec:3} were run under a further plan written before they were coded. UCSF-ALPTDG was no longer on our
 hardware when they ran, so they were evaluated on MU and LUMIERE, and the UCSF results below come from the planned
 analyses.
@@ -359,7 +369,7 @@ Role & Development & External test & External test \\
 How models were applied & Five repeats of fivefold cross validation grouped by patient, then fitted once and locked & Locked MU models, applied once & Locked MU models, applied once \\
 Scan with progression & First scan on or after the documented progression date & First scan rated as progressive disease & Second scan of the pair, with progression dated within 30 days \\
 Scan without progression & Followed by at least 120 days without progression & Earlier scan rated stable or responding & Second scan followed by at least 120 days without progression \\
-Methods of Section~\ref{sec:3} & All three & All three & Not run (data not on hand) \\
+Audits of Section~\ref{sec:3} & All three & All three & Not run (data not on hand) \\
 \bottomrule
 \end{tabularx}
 \end{table}
@@ -368,7 +378,7 @@ Methods of Section~\ref{sec:3} & All three & All three & Not run (data not on ha
 
 % Sources: NUMBERS.md sections 6, 9, 13, 14; METHODS_PLAN.md.
 Table~\ref{tab:2} lists each planned test, the rule fixed in advance and the outcome. Each test answered its own
-question, so we made no correction for multiple tests. The three methods have no pass rule other than the verifier's
+question, so we made no correction for multiple tests. The three audits have no pass rule other than the verifier's
 95\% criterion and are reported as estimates with intervals. Results of analyses that were not fixed in advance are
 called exploratory where they appear.
 
@@ -396,7 +406,8 @@ Usefulness to clinicians & Not tested & A reader study is designed (Supplementar
 \bottomrule
 \end{tabularx}
 \begin{tablenotes}\footnotesize
-\item Plans committed before each test are listed with their commits in Supplementary Section~S16. The conformal sets
+\item Plans and their commits: detection (2b4c927), UCSF-ALPTDG (0e7c9fe), the system (e7cba80), the report evaluation
+(4f7e7b9), the checker test (4f854cb), the rerun with restored data (0df79e9) and the three audits (1363773). The conformal sets
 of the imaging model at LUMIERE (0.71) and the clinical-history model at UCSF (0.70) did not meet the coverage rule.
 \end{tablenotes}
 \end{threeparttable}
@@ -441,16 +452,20 @@ recorded, and the next section asks how much of the models' discrimination it ca
 
 \subsection{Most of the clinical-history discrimination came from comparing time windows}\label{sec:5.2}
 
-% Sources: METHODS_RESULTS.md M1.
-At both centres the clinical-history model ranked pairs from different time windows far better than pairs from the
-same window, and the imaging model did not (Figure~\ref{fig:3}). At MU 38\% of pairs fell within one window. The
+% Sources: METHODS_RESULTS.md M1 and E1.
+On MU the clinical-history model ranked pairs from different time windows far better than pairs from the same
+window, and the imaging model did not (Figure~\ref{fig:3}). At MU 38\% of pairs fell within one window. The
 clinical-history model ranked 0.93 (0.88--0.97) of the pairs across windows correctly and 0.64 (0.51--0.78) of the
 pairs within one, a difference of 0.29 (0.16--0.43). Ranking scans by their window's progression rate alone, with no
 other input, also ranked 0.93 of the pairs across windows correctly, so the window could supply all of the
 clinical-history model's advantage there. The imaging model ranked 0.68 (0.58--0.77) within a window and 0.73 across,
-a difference whose interval includes zero. At LUMIERE, with the rater's flag as the window, the pattern was the same.
-The reduced clinical-history model ranked 0.96 across windows and 0.59 within one, and the imaging model 0.71 within one and
-0.51 across. Enhancing volume behaved like the imaging model at both centres.
+a difference whose interval includes zero. Nine in ten pairs within a window come from the later window (56 scans
+with progression and 32 without), so the within window AUC is close to the AUC of scans taken later than 12 weeks
+after radiotherapy (exploratory, Supplementary Section~S26). LUMIERE gives a weaker test, because only 1 of the 28
+scans its rater flagged as within three months of radiotherapy had progression, and the reduced clinical-history
+model takes the flag as an input. Its across window AUC of 0.96 against 0.59 within one therefore shows mainly how
+much the flag carries. The imaging model at LUMIERE ranked scans better within a window (0.71) than across (0.51), and
+enhancing volume behaved like the imaging model at both centres.
 
 % Sources: scripts/generate_methods_figures.py; METHODS_RESULTS.md M1.
 \begin{figure}[!htbp]
@@ -461,8 +476,9 @@ across time windows with 95\% CIs, and the overall AUC.}
 window after radiotherapy (filled circles), over pairs from different windows (open squares) and over all pairs
 (ticks), at MU-Glioma-Post (time window from the treatment dates) and LUMIERE (the rater's flag for the first three
 months). The overall AUC is the weighted mean of the other two. The time window only score ranks scans by the
-progression rate of their window. Its within window value is omitted because it ties all such pairs. 95\% CIs from
-2,000 bootstrap samples of patients.}
+progression rate of their window in the training data. Its within window value is omitted, because at LUMIERE it ties
+all such pairs and at MU it reflects only how the rates vary between training folds. 95\% CIs from 2,000 bootstrap
+samples of patients.}
 \label{fig:3}
 \end{figure}
 
@@ -470,11 +486,11 @@ progression rate of their window. Its within window value is omitted because it 
 The split also shows where each block of inputs adds discrimination. Adding clinical history to images raised the
 AUC by 0.11 (0.03--0.19) at MU and 0.12 (0.04--0.21) at LUMIERE, and at both centres the whole gain lay in pairs
 across windows (within one window $-$0.02 and $+$0.01, with intervals that include zero). Adding images to clinical
-history gained nothing at MU, but at LUMIERE it raised the within window AUC by 0.12 (0.00--0.23), the only place in
-this study where the images added discrimination that the time window could not supply. A pooled AUC reports these
-gains as one number, so the same score can look equally good at two centres while resting on different comparisons.
+history gained nothing at MU. At LUMIERE it raised the within window AUC by 0.12 (0.00--0.23), an interval that reaches
+zero, and the overall AUC by 0.08 ($-$0.01 to $+$0.16). A pooled AUC reports these gains as one number, so the same
+score can look equally good at two centres while resting on different comparisons.
 
-\subsection{Calibrating within groups narrowed the worst coverage shortfall}\label{sec:5.3}
+\subsection{The marginal sets covered the hardest group least, and group calibration did not fix it}\label{sec:5.3}
 
 % Sources: NUMBERS.md 6 and 12B; SYSTEM_RESULTS.md S1.
 The planned marginal sets of the combined score met the coverage rule on point estimates at all three centres,
@@ -483,15 +499,18 @@ progression scans and 65\% (51\% to 79\%) of scans without progression. At MU th
 after radiotherapy with increased enhancement, where progression and its mimics are hardest to tell apart, was covered
 at 68\% (55\% to 81\%).
 
-% Sources: METHODS_RESULTS.md M2; Supplementary Section S26.
-Group-conditional sets raised coverage in the worst MU group to 73\% (59\% to 85\%) and in the later group without
-increased enhancement from 78\% to 87\%, so the largest shortfall below the nominal 80\% fell from 0.12 to 0.08
-(Figure~\ref{fig:4}). Coverage of progression scans rose from 82\% to 86\% at MU and from 77\% to 80\% at LUMIERE.
-The price was informativeness. Sets holding both outcomes rose from 25\% to 31\% of scans at MU and from 38\% to 42\%
-at LUMIERE, and 4\% of MU sets were empty, which the marginal sets almost never were. At MU 29\% of scans were
-calibrated in their own group, 45\% in their enhancement state and 26\% over all scans, and at LUMIERE, where the
-window is unknown, 60\% in their enhancement state. With groups this small the method mainly shows the reader which
-scans the set was calibrated on.
+% Sources: METHODS_RESULTS.md M2 and E2; Supplementary Section S26.
+Calibrating within groups changed which groups were covered more than how well the worst ones were
+(Figure~\ref{fig:4}). At MU it raised coverage in the later group without increased enhancement from 78\% to 87\%
+and lowered it in scans within 12 weeks of radiotherapy without a previous scan from 99\% to 84\%. In the later group
+with increased enhancement coverage rose to 72\% (59\% to 85\%), and in the smallest later group, without
+enhancement (9 scans), it stayed at 67\%. The group-conditional sets held both outcomes more often (31\% of MU scans
+against 25\%, 42\% at LUMIERE against 38\%), and 4\% of MU sets were empty. A marginal set enlarged to the same share
+of two outcome sets (exploratory, $\alpha = 0.175$) covered the two worst groups at 69\% and 74\%, at least as well,
+and a set calibrated separately for each outcome covered the increased enhancement group at 64\%. The gain in the worst
+group therefore came from larger sets, not from calibration within groups. At MU 29\% of scans were calibrated in
+their own group, 45\% in their enhancement state and 26\% over all scans. For the imaging model at LUMIERE the largest
+shortfall grew, from 16 to 18 percentage points (Supplementary Section~S26).
 
 % Sources: scripts/generate_methods_figures.py; METHODS_RESULTS.md M2.
 \begin{figure}[!htbp]
@@ -500,7 +519,8 @@ scans the set was calibrated on.
 and group-conditional, MU and LUMIERE.}
 \caption{\textbf{Coverage within groups of comparable scans.} Coverage of the combined score's 80\% conformal sets,
 overall, by outcome and in each group of time window and enhancement state with at least 9 scans, for the planned
-marginal sets and for sets calibrated within groups. The dashed line marks the nominal 80\%. At LUMIERE the time window
+marginal sets and for sets calibrated within groups. The size matched marginal sets are in Supplementary
+Section~S26. The dashed line marks the nominal 80\%. At LUMIERE the time window
 is unknown, so groups differ by enhancement only. 95\% CIs from 2,000 bootstrap samples of patients.}
 \label{fig:4}
 \end{figure}
@@ -512,9 +532,9 @@ where its AUC was 0.31 (0.18--0.43) higher where the models agreed, but not at L
 tested tier for 37\% of MU scans, 89\% at LUMIERE and none at UCSF, and no situation in the first 12 weeks after
 radiotherapy at MU held more than three progression scans. Taken together, at least one flag of the record was raised
 for 91\% of MU scans and 93\% at LUMIERE. We therefore present the agreement and the card as descriptions of the
-evidence, and the group-conditional set as the statement of confidence.
+evidence, not as warnings.
 
-\subsection{The verifier closed two blind spots of the checker}\label{sec:5.4}
+\subsection{The verifier caught every wrong label but only the direction words on its list}\label{sec:5.4}
 
 % Sources: REPORT_V3_1.md (S5--S7); REPORT_V3.md; NUMBERS.md 7.
 All 406 reports written by Qwen3.8-27B for patients not used to develop the prompt passed the planned checker (114 at
@@ -537,96 +557,116 @@ bars show models for which at least 95\% passed in every cohort, and the model w
 \label{fig:5}
 \end{figure}
 
-% Sources: METHODS_RESULTS.md M3; Supplementary Section S26.
-The verifier rejected every planted direction error and every swap of the enhancing and FLAIR volumes, which the
-checker had accepted, and it passed 551 of 552 correct evaluation reports (Table~\ref{tab:verifier}). Its rejection
-of the held out direction error, a change sentence rewritten in the writer's own words with the opposite direction,
-was also complete. The other two held out errors, a score or a volume given under the wrong label while citing both
-fields, were already caught by the checker, because the wrong value is absent from the field of the sentence it
-appears in. The one rejected correct report, written by the language model at MU, failed the direction rule and was
-not inspected, because the reports are not read outside the local hardware. Two blind spots remain. Removing the
-conformal statement went undetected in 40\% of real reports, because the planned rule requires it only through a
-flag, and replacing the tier word with ``tested'' went undetected in a third to a half of them. The template and the
-language model were caught equally on every kind of error, so the verifier's guarantee does not depend on the writer.
+% Sources: METHODS_RESULTS.md M3, its diagnostics and E3; Supplementary Section S26.
+The binding rules rejected every planted error of the planned set that they target, including the held out ones
+(Table~\ref{tab:verifier}). The checker had accepted every flipped direction word, every change rewritten with the
+opposite direction and every swap of the enhancing and FLAIR volumes. It rejected the two held out errors that give a
+score or a volume under the wrong label only because the rewritten sentence no longer stated content the checker
+requires. Because the same authors wrote these errors and the rules, a separate agent that had not seen the rules
+wrote 572 more variants of the synthetic reports. The verifier rejected all 156 values placed under the wrong entity,
+against 12\% for the checker, and none of 104 correct paraphrases. It rejected only 32\% of 208 direction errors phrased
+in words outside its list (such as regressed, receded or a reduction), and neither the verifier nor the checker caught
+more than 14\% of 104 scores placed on the wrong side of their median in new wording. We did not widen the word list,
+since tuning it on these errors would spend them as a test. One planned blind spot also remains. A tier word changed to
+``tested'' where the card has few cases matches no rule, and 33\% to 45\% of such real reports passed.
+
+Of the 276 MU and LUMIERE reports of each writer that had passed the checker, the verifier rejected one written by the
+language model at MU (1 of 114 there) and none written by the template. That report failed the direction rule and was
+not inspected, because the reports are not read outside the local hardware, so we cannot say whether it was wrong.
 The language model's reports were a quarter shorter (median 308 against 413 words) and scored higher on a readability
 formula (Flesch reading ease 48.5 against 39.4), and whether either reads better to a clinician is not known.
 
-% Sources: METHODS_RESULTS.md M3 (verifier_mutation.csv).
+% Sources: METHODS_RESULTS.md M3 (verifier_mutation mutants.csv).
 \begin{table}[!htbp]
 \centering
-\caption[Planted errors]{\textbf{Planted errors rejected by the checker and the verifier.} Share of reports with one
-planted error that were rejected, with the number of reports in brackets. Real reports are the MU and LUMIERE
-evaluation reports, written by the language model or by the fixed template, where the error's pattern occurs. Full
-results for all 24 kinds of error are in Supplementary Section~S26.}
+\caption[Planted errors]{\textbf{Planted errors rejected by the checker and the verifier.} Each cell gives the share of
+reports with one planted error that the planned checker rejected, then the share the verifier rejected, with the
+number of reports in brackets. Real reports are the 276 MU and LUMIERE evaluation reports of each writer, where the
+error's pattern occurs (absent where it never does). The checker rejected the two wrong label errors through its
+required content rule. Removing the conformal sentence is not shown, because every report that passed without it
+still stated the set in another sentence. The language model column holds 275 reports, because the verifier rejected
+one before any error was planted. All 24 kinds of error are in Supplementary Section~S26.}
 \label{tab:verifier}
 \footnotesize
-\begin{tabularx}{\linewidth}{@{}LR{2.3cm}R{2.3cm}R{2.3cm}@{}}
+\begin{tabularx}{\linewidth}{@{}LR{2.4cm}R{2.4cm}R{2.4cm}@{}}
 \toprule
 Planted error & Synthetic, 52 records & Language model & Template \\
 \midrule
-Direction word flipped in the change sentence & 0 $\to$ 1.00 (52) & 0 $\to$ 1.00 (194) & 0 $\to$ 1.00 (194) \\
-Change rewritten with the opposite direction (held out) & 0 $\to$ 1.00 (52) & 0 $\to$ 1.00 (194) & 0 $\to$ 1.00 (194) \\
-Enhancing and FLAIR volumes swapped & 0 $\to$ 1.00 (52) & absent & absent \\
-FLAIR volume given as enhancing (held out) & 1.00 $\to$ 1.00 (52) & 1.00 $\to$ 1.00 (260) & 1.00 $\to$ 1.00 (261) \\
-A number changed & 1.00 $\to$ 1.00 (420) & 0.999 (3261) & 0.999 (3264) \\
-Conformal statement removed & 1.00 (52) & 0.60 (275) & 0.60 (276) \\
-Tier word swapped & 0.46 (52) & 0.55 (275) & 0.67 (276) \\
-Forbidden diagnosis, advice or certainty added & 1.00 (260) & 1.00 (1375) & 1.00 (1380) \\
+Direction word flipped in the change sentence & 0, 1.00 (52) & 0, 1.00 (194) & 0, 1.00 (194) \\
+Change rewritten with the opposite direction\textsuperscript{*} & 0, 1.00 (52) & 0, 1.00 (194) & 0, 1.00 (194) \\
+Enhancing and FLAIR volumes swapped & 0, 1.00 (52) & absent & absent \\
+Imaging score given as the clinical-history score\textsuperscript{*} & 1.00, 1.00 (52) & absent & absent \\
+FLAIR volume given as enhancing\textsuperscript{*} & 1.00, 1.00 (52) & 1.00, 1.00 (260) & 1.00, 1.00 (261) \\
+A number changed & 1.00, 1.00 (420) & 0.999, 0.999 (3261) & 0.999, 0.999 (3264) \\
+Tier word swapped & 0.46, 0.46 (52) & 0.55, 0.55 (275) & 0.67, 0.67 (276) \\
+Diagnosis, advice or certainty added & 1.00, 1.00 (260) & 1.00, 1.00 (1375) & 1.00, 1.00 (1380) \\
 \addlinespace
-Correct reports rejected & 0 of 52 & 1 of 276 & 0 of 276 \\
+\addlinespace
+\multicolumn{4}{@{}l}{\textit{Written by an agent that had not seen the rules (synthetic records only)}} \\
+Direction stated wrongly in other words & 0, 0.32 (208) & & \\
+A value under the wrong entity & 0.12, 1.00 (156) & & \\
+A score on the wrong side of its median & 0.14, 0.14 (104) & & \\
+Correct paraphrase (control) & 0, 0 (104) & & \\
+\addlinespace
+Reports that passed the checker, rejected by the verifier & 0 of 52 & 1 of 276 & 0 of 276 \\
 \bottomrule
 \end{tabularx}
+
+\smallskip{\footnotesize * Held out, defined in the plan but not used when the rules were written.}
 \end{table}
 
 % =====================================================================================================
 \section{Discussion}\label{sec:6}
 
-% Sources: METHODS_RESULTS.md M1; NUMBERS.md 3--5.
-The locked models of PRISM ranked scans at two other centres, but the split of their AUC shows that the
-clinical-history and combined models did so mostly by comparing scans from different time windows after radiotherapy.
-The imaging model and enhancing volume ranked scans as well within a window as across windows, and only at LUMIERE did
-adding images to clinical history improve the comparison within a window. A pooled AUC cannot make this distinction,
-and models with equal AUC can behave differently on new data \citep{damour2022}. The split is a published identity
-\citep{kallus2019}, and covariate adjusted ROC analysis made the same point for pooled ROC curves \citep{janes2009},
-and a study of mammography found pooled AUC misleading in the same way \citep{tsue2023}. What this paper adds is its
-use as a routine audit of a surveillance score at each centre where it is tested, with the change in each part when a
-block of inputs is added. Anyone who reports a glioma progression model could report $A_W$ and $A_B$ next to the AUC
-at no cost, using whatever context their cohort records.
+% Sources: METHODS_RESULTS.md M1, E1; NUMBERS.md 3--5.
+The locked models of PRISM ranked scans at two other centres, but the split of their AUC shows that on MU the
+clinical-history and combined models did so mostly by comparing scans from different time windows after
+radiotherapy, which the window alone ranked as well. The imaging model and enhancing volume ranked scans about as
+well within a window as across windows. A pooled AUC cannot make this distinction, and models with equal AUC can
+behave differently on new data \citep{damour2022}. The split is a published identity \citep{kallus2019}, covariate
+adjusted ROC analysis made the same point for pooled ROC curves \citep{janes2009}, and a study of mammography found
+pooled AUC misleading in the same way \citep{tsue2023}. What this paper adds is its use as a routine audit of a
+surveillance score at each centre where it is tested, with the part the context alone supplies and the change in each
+part when a block of inputs is added. Anyone who reports a glioma progression model could report $A_W$ and $A_B$ next
+to the AUC at no cost, using whatever context their cohort records. The audit is only as good as the recorded context,
+and at LUMIERE a single rater's flag with one progression scan inside it gave a weak test.
 
-% Sources: METHODS_RESULTS.md M2; NUMBERS.md 6.
-A coverage target met on average can hide groups in which the sets are wrong more often, and in this study the worst
-MU group was the clinically hardest one. Calibrating within groups narrowed that shortfall, and the fixed fallback
-made the level of calibration a visible part of the record. The cohorts are small, so most scans were calibrated on
-coarser groups, sets were less informative and some were empty. Group calibration does not repair a difference
-between centres either, since the UCSF shortfall in scans without progression arose from the centre's labels, not
-from the groups. A centre adopting PRISM would calibrate on its own scans.
+% Sources: METHODS_RESULTS.md M2, E2; NUMBERS.md 6.
+A coverage target met on average can hide groups in which the sets are wrong more often, and in this study the
+marginal sets covered the later scans with increased enhancement, where progression is hardest to tell from its
+mimics, least. Calibrating within groups did not cover that group better than enlarging the sets, so in cohorts this
+small its main effect was to move coverage from groups that were over covered to others, and the gain we first saw
+came from larger sets. What group calibration still offers is that the record states which scans a set was calibrated
+on. Larger cohorts, or pooled calibration across centres, would be needed for a guarantee within the groups that
+matter, and a centre adopting PRISM would calibrate on its own scans.
 
-% Sources: METHODS_RESULTS.md M3; refs pham2026, mansour2026, nam2026.
-A verifier for generated reports is only as good as the errors it has been tested on. Binding each number and
-direction word to the entity it describes closed the two blind spots we knew of, including a held out rewording, at
-the cost of one false rejection in 552 reports. Other deterministic gates for clinical text forbid numbers altogether
-\citep{pham2026} or trace numbers to a measurement file without measuring the check \citep{mansour2026}, and
-planted errors have been used to evaluate gates of this kind \citep{nam2026}. The template passed every check
-too, so the verifier, and not the language model, is what makes a report safe to read, and a language model adds only
-shorter text. The verifier cannot see errors outside the classes we planted, such as a misleading emphasis, and it
-cannot tell whether the segmentation is right.
+% Sources: METHODS_RESULTS.md M3, E3; refs pham2026, mansour2026, nam2026.
+A verifier for generated reports is only as good as the errors it has been tested on. Binding each number to the
+entity it describes caught every wrong label, including labels written by someone who had not seen the rules, without
+rejecting correct paraphrases. Binding direction words caught only the words on its list, which is the weakness of any
+fixed vocabulary, and a wider list would need a fresh set of independent errors to test it. Other deterministic gates
+for clinical text forbid numbers altogether \citep{pham2026} or trace numbers to a measurement file without measuring
+the check \citep{mansour2026}, and planted errors have been used to evaluate gates of this kind \citep{nam2026}. The
+template passed every check too, so the guarantees come from the verifier, and the language model adds only shorter
+text. The verifier cannot see errors outside the classes tested, such as a misleading emphasis, and it cannot tell
+whether the segmentation is right.
 
 % Sources: OUTLINE.md (Discussion 5); NUMBERS.md 10; UCSF_AUDIT.md.
 PRISM was developed on one public cohort, and the two external tests are its only evidence that the ranking
-transfers. The label is progression as each centre documented it, and no scan was read again. The three methods ran on
-MU and LUMIERE only, and LUMIERE records the time window as one rater's flag. In the first 12 weeks after radiotherapy,
-when progression and treatment effects are hardest to tell apart, MU holds too few progression scans to test any score,
+transfers. The label is progression as each centre documented it, and no scan was read again. The three audits ran on
+MU and LUMIERE only, because UCSF-ALPTDG was no longer on our hardware. In the first 12 weeks after radiotherapy, when
+progression and treatment effects are hardest to tell apart, MU holds too few progression scans to test any score,
 and the report says so. No clinician has read the reports, so whether the record changes a reading is untested. The
-next steps are to pool the rare situations across cohorts, including the Burdenko and UCSD-PTGBM datasets, to run the
-three methods on UCSF-ALPTDG, and to run the reader study we have designed.
+next steps are to run the three audits on UCSF-ALPTDG, to pool the rare situations across cohorts, including the
+Burdenko and UCSD-PTGBM datasets, and to run the reader study we have designed.
 
 \subsection*{Conclusion}
 
 % Sources: OUTLINE.md (Methods rewrite 2026-11-15).
 PRISM gives each follow up scan after glioma treatment a record that shows where its scores' discrimination comes
-from, a conformal set calibrated on comparable scans where there are enough of them, and a report whose numbers and
-direction words are bound to the record. At the two centres where the time window was recorded, most of the
-clinical-history model's discrimination came from comparing scans taken at different times after radiotherapy.
+from, how its conformal set was calibrated and a report whose numbers are bound to the record. On the public
+development cohort most of the clinical-history model's discrimination came from comparing scans taken at different
+times after radiotherapy, which a pooled AUC does not show.
 
 % =====================================================================================================
 \section*{Acknowledgements}
@@ -652,7 +692,7 @@ No funding was obtained for this work.
 \todo{PENDING AUTHOR DECISION: secondary analysis of datasets with identifiers removed (MU-Glioma-Post and LUMIERE, public;
 UCSF-ALPTDG under a data use agreement); state the institutional determination or waiver and cite the source
 datasets' approvals.} No registered protocol. Analysis plans were committed to the repository before each external
-test and before the three methods were run (Supplementary Section~S16). There was no patient or public involvement.
+test and before the three audits were run (Table~\ref{tab:2}). There was no patient or public involvement.
 
 \section*{Data availability statement}
 \todo{PENDING AUTHOR DECISION: MU-Glioma-Post (TCIA, doi:10.7937/\allowbreak 7K9K-3C83) and LUMIERE (figshare;

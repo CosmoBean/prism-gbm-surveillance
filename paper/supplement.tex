@@ -2588,6 +2588,41 @@ again in each training fold, so scans of one stratum in different folds received
 whose test part held more progression scans had a lower training rate. The value says nothing about the context, and
 the quantity of interest for this score is $A_B$.
 
+Two exploratory checks, not in the plan, followed from the internal review (Table S54). With the stratum rates
+computed once on all labelled MU scans, the context only score has $A_W$ of 0.50, as every pair within a window is a
+tie, $A_B$ of 0.94 and an AUC of 0.77. The time window alone thus ranks pairs across windows as well as the
+clinical-history model does. Within each window the three models differ most early after radiotherapy, where the
+imaging and combined models rank well, but this window holds only 4 progression scans. The later window holds 1,792
+of the 1,998 pairs within a window (90\%), so $A_W$ is close to the AUC of the later window.
+
+\begin{table}[!htbp]
+\renewcommand{\thetable}{S54}\renewcommand{\theHtable}{S54}
+\centering
+\caption{\textbf{Exploratory. Context only score with rates computed once, and the AUC within each time window at
+MU.} The upper panel gives the context only score with the progression rate of each window computed once on all
+labelled MU scans, instead of in each training fold as in Table S50. The lower panel gives the AUC within each window,
+the mean over the five repeats of cross validation. Early means up to 12 weeks after the end of radiotherapy.}
+\label{tab:S26e}
+\footnotesize
+\begin{tabularx}{\linewidth}{@{}LR{1.6cm}R{1.6cm}R{2.0cm}R{1.4cm}R{1.6cm}@{}}
+\toprule
+\multicolumn{6}{@{}l}{\textit{Context only score, rates computed once}} \\
+ & & & AUC & $A_W$ & $A_B$ \\
+\midrule
+Context only score & & & 0.77 & 0.50 & 0.94 \\
+\midrule
+\multicolumn{6}{@{}l}{\textit{AUC within each time window}} \\
+Time window & Progression & No progression & Clinical-history & Imaging & Combined \\
+\midrule
+Later after radiotherapy & 56 & 32 & 0.64 & 0.65 & 0.62 \\
+Early after radiotherapy & 4 & 51 & 0.66 & 0.92 & 0.93 \\
+During radiotherapy & 2 & 1 & -- & -- & -- \\
+\bottomrule
+\end{tabularx}
+
+\raggedright\scriptsize Dashes mark the window during radiotherapy, which has too few scans for an AUC to be read.
+\end{table}
+
 \subsection{Group-conditional conformal sets}\label{sec:S26.2}
 
 We calibrated the conformal sets within groups defined by the time window after radiotherapy and the enhancement
@@ -2658,6 +2693,41 @@ Enhancement state unknown & 15 & 5 & 0.80 [0.57, 1.00] & 0.80 [0.57, 1.00] \\
 \end{tabularx}
 \end{table}
 
+An exploratory check, not in the plan, compared the sets with two further baselines for the combined model at MU
+(Table S55). The first is a marginal set at a level of 82.5\% ($\alpha$ = 0.175), chosen so that its share of sets
+holding both outcomes matches that of the group-conditional set. The second is calibrated within each outcome. In the
+four groups below, coverage with the marginal, group-conditional and size matched sets was 0.99, 0.84 and
+1.00 early after radiotherapy without a previous scan (32 scans), 0.78, 0.87 and 0.83 later with enhancement not
+increased (54), 0.68, 0.72 and 0.74 later with enhancement increased (24), and 0.67, 0.67 and 0.69 later without
+enhancement (9). A marginal set enlarged to the same share of two outcome sets covers the worst groups at least as
+well as the group-conditional set. The gain of the group-conditional set in the worst group therefore comes from
+larger sets, not from calibration within groups. What calibration within groups does differently is move coverage
+from a group that is covered beyond the nominal level (early, no previous scan, 0.99 to 0.84) to the largest later
+group (0.78 to 0.87). The worst group gap of Table S51 used groups with at least 10 evaluation scans. With 9, the
+threshold of Table S52, the worst group is later after radiotherapy without enhancement, and its coverage is 0.67 with
+both sets.
+
+\begin{table}[!htbp]
+\renewcommand{\thetable}{S55}\renewcommand{\theHtable}{S55}
+\centering
+\caption{\textbf{Exploratory. Conformal sets of the combined model at MU against two further baselines.} Nominal
+level 80\% ($\alpha$ = 0.2) except for the size matched marginal set ($\alpha$ = 0.175). The last two columns give the
+lowest coverage among groups with at least 9 and at least 10 evaluation scans, with the group and its number of scans.
+Later means more than 12 weeks after the end of radiotherapy.}
+\label{tab:S26f}
+\scriptsize
+\begin{tabularx}{\linewidth}{@{}LR{1.1cm}R{1.4cm}R{1.4cm}R{1.0cm}R{0.8cm}R{2.4cm}R{2.4cm}@{}}
+\toprule
+Set & Coverage & Progression covered & No progression covered & Both outcomes & Empty & Worst group, at least 9 scans & Worst group, at least 10 scans \\
+\midrule
+Marginal (planned) & 0.82 & 0.82 & 0.83 & 25\% & 0.1\% & 0.67 (later, no enhancement, 9) & 0.68 (later, increased, 24) \\
+Group-conditional & 0.83 & 0.85 & 0.81 & 31\% & 4.1\% & 0.67 (same group) & 0.72 (same group) \\
+Marginal, size matched & 0.86 & 0.86 & 0.86 & 32\% & 0.1\% & 0.69 (same group) & 0.74 (same group) \\
+Outcome-conditional & 0.79 & 0.87 & 0.73 & 16\% & 0.7\% & 0.64 (later, increased) & 0.64 (same group) \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
 \subsection{Bound verifier}\label{sec:S26.3}
 
 We added two rules to the frozen checker, which itself was not edited (plan 1363773). The first binds each number
@@ -2700,7 +2770,7 @@ B3 & Change sentence rewritten with the opposite direction & 0.00, 1.00 (52) & 0
 B4 & Imaging score value given in the clinical-history score sentence & 1.00, 1.00 (52) & pattern absent & pattern absent \\
 B5 & FLAIR volume given as the enhancing volume & 1.00, 1.00 (52) & 1.00, 1.00 (260) & 1.00, 1.00 (261) \\
 C1 & Conformal set phrase changed & 1.00, 1.00 (52) & 1.00, 1.00 (275) & 1.00, 1.00 (276) \\
-C2 & Conformal set statement removed & 1.00, 1.00 (52) & 0.60, 0.60 (275) & 0.60, 0.60 (276) \\
+C2 & Conformal set statement removed$^{a}$ & 1.00, 1.00 (52) & 0.60, 0.60 (275) & 0.60, 0.60 (276) \\
 D1 & Diagnosis appended (findings consistent with progression) & 1.00, 1.00 (52) & 1.00, 1.00 (275) & 1.00, 1.00 (276) \\
 D2 & Advice appended (a biopsy should be considered) & 1.00, 1.00 (52) & 1.00, 1.00 (275) & 1.00, 1.00 (276) \\
 D3 & Likelihood appended (progression is likely) & 1.00, 1.00 (52) & 1.00, 1.00 (275) & 1.00, 1.00 (276) \\
@@ -2718,14 +2788,51 @@ T1 & Card tier statement removed where required & 1.00, 1.00 (28) & 0.90, 0.90 (
 T2 & Card tier word swapped & 0.46, 0.46 (52) & 0.55, 0.55 (275) & 0.67, 0.67 (276) \\
 \bottomrule
 \end{tabularx}
+
+\raggedright\scriptsize $^{a}$ The C2 mutants that pass are correct reports, because another sentence still states the
+combined 80\% set. See the text below the table.
 \end{table}
 
-The verifier closes the two blind spots known before (B1 and B2) and the held out rewrite of the direction (B3). The
-frozen checker already caught B4 and B5, because the wrong value is not in the cited sentence's own field. Two blind
-spots remain, and the verifier does not change them. A report without its conformal set statement passes in 40\% of
-real reports, because the frozen rule does not require the statement as such and catches its removal only when a
-required flag goes with it. A swapped tier word passes in 33\% to 45\% of real mutants, because a swap to ``tested''
-leaves no pattern to catch. The template and the language model were caught at the same rate on every operator.
+The verifier closes the two blind spots known before (B1 and B2) and the held out rewrite of the direction (B3).
+Diagnostics added after the run, which are exploratory, qualify the other rows. The frozen checker caught B4 and B5
+only through its rule on required content, because each mutant replaces the sentence that stated the score or the
+volume, and not through any binding of the number. The two binding rules alone reject every B1 to B5 mutant in every
+set (52 of 52 synthetic mutants for each operator, 194 of 194 real B1 and B3 mutants for each writer, and 260 of 260
+and 261 of 261 real B5 mutants for the language model and the template). C2 is not a blind spot. The operator removes
+only the sentences that cite the statement field of the conformal set. In the 111 real reports per writer whose C2
+mutant passes, another sentence still states the combined 80\% set by citing its fields or its flag, so the mutant is
+a correct report, and in the other 165 the mutant is rejected. One blind spot remains, a tier word swapped to
+``tested'' where the card has few cases (T2), which passes in 33\% to 45\% of real mutants because no rule names that
+word. The template and the language model were caught at the same rate on every operator.
+
+The planted errors above were written by us alongside the verifier. As an exploratory check, not in the plan, a
+separate agent that had not seen the code of the checker or the verifier wrote new errors on the 52 synthetic records
+(Table S56). Binding a value to its quantity generalised to these errors, with every value placed under the wrong
+quantity rejected and no correct paraphrase rejected. Binding the direction catches only the direction words on its
+list, so two thirds of the direction errors written in other words passed. Neither rule covers the side of a score
+beyond the above or below pattern of the checker. We did not widen the word list, because doing so on this set would
+spend it as a test. All 52 synthetic records share the same volumes and an increase in every change, so every
+direction error in this set states a false decrease.
+
+\begin{table}[!htbp]
+\renewcommand{\thetable}{S56}\renewcommand{\theHtable}{S56}
+\centering
+\caption{\textbf{Exploratory. Independently written errors rejected by the frozen checker, the verifier and its
+binding rules alone.} The errors were written on the 52 synthetic records by an agent that had not seen the code of
+the checker or the verifier. Each cell gives the share of mutants rejected.}
+\label{tab:S26g}
+\footnotesize
+\begin{tabularx}{\linewidth}{@{}R{0.4cm}LR{1.2cm}R{1.2cm}R{1.2cm}R{1.4cm}@{}}
+\toprule
+ & Error & Mutants & Checker & Verifier & Binding rules alone \\
+\midrule
+D & Direction stated wrongly in new words (regressed, receded, less, a reduction) & 208 & 0 & 0.32 & 0.32 \\
+L & A correct value under the wrong quantity, citing both fields & 156 & 0.12 & 1.00 & 1.00 \\
+S & A score on the wrong side of its median, in new words (exceeds, under) & 104 & 0.14 & 0.14 & 0 \\
+& Control, a correct paraphrase & 104 & 0 & 0 & 0 \\
+\bottomrule
+\end{tabularx}
+\end{table}
 
 \FloatBarrier
 \section*{Supplementary figures}
