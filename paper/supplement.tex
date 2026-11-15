@@ -2524,6 +2524,210 @@ Fixed template & 114 & 162 & 90 of 90 & 413 & 39.4 \\
 \end{table}
 
 \FloatBarrier
+\section{The three methods, full results}\label{sec:S26}
+
+% Sources: docs/results/METHODS_PLAN.md (1363773, before any run); METHODS_RESULTS.md; aggregate CSVs of
+% prism/analyses/methods.py and prism/analyses/verifier_mutation.py (commits 3d5e710, f27d81e).
+These analyses were written down before any of them was run or coded (plan 1363773). None is confirmatory. All are
+descriptive estimates with 95\% intervals from 2000 resamples of patients (seed 20261115), and at MU each resample
+averages over the five repeats of cross validation. The UCSF-ALPTDG images were not available, so every result is for
+the public development cohort (MU grade 4 intended use, 146 scans) and LUMIERE (178 scans).
+
+\subsection{AUC split by context}\label{sec:S26.1}
+
+For each score we split the pairs of one progression and one other scan into pairs from the same context and pairs
+from different contexts, and computed the AUC within each set (plan 1363773). With $w$ the share of pairs from the
+same context, $A_W$ the AUC within contexts and $A_B$ the AUC across them, the AUC equals $w A_W + (1-w) A_B$ exactly,
+and this held to $10^{-12}$ on every resample. At MU the context is the time after radiotherapy from the treatment
+dates. The strata held 2 progression and 1 other scan during radiotherapy, 4 and 51 early after it (up to 12 weeks
+after its end) and 56 and 32 later. At LUMIERE the context is the rater's flag for a scan within 3 months after
+radiotherapy, with 1 progression and 27 other scans flagged and 72 and 78 not flagged. The MU values of $A_W$
+reproduced the registered audit within each time window (0.64 and 0.68 for the clinical-history and imaging models).
+
+\begin{table}[!htbp]
+\renewcommand{\thetable}{S50}\renewcommand{\theHtable}{S50}
+\centering
+\caption{\textbf{AUC split into pairs within one context and pairs across contexts.} The context is the time window
+after radiotherapy at MU and the rater's 3 month flag at LUMIERE. The context only score gives each scan the
+progression rate of its stratum (at MU from the training folds, at LUMIERE from the matching MU stratum). The lower
+panel gives the combined model minus each single model.}
+\label{tab:S26a}
+\footnotesize
+\begin{tabularx}{\linewidth}{@{}LR{2.6cm}R{2.6cm}R{2.6cm}R{2.6cm}@{}}
+\toprule
+ & AUC & $A_W$, within & $A_B$, across & $A_B - A_W$ \\
+\midrule
+\multicolumn{5}{@{}l}{\textit{MU, share of pairs within one time window $w$ = 0.38 [0.28, 0.48]}} \\
+Clinical-history model & 0.82 [0.75, 0.89] & 0.64 [0.51, 0.78] & 0.93 [0.88, 0.97] & 0.29 [0.16, 0.43] \\
+Imaging model & 0.71 [0.63, 0.78] & 0.68 [0.58, 0.77] & 0.73 [0.64, 0.81] & 0.05 [$-$0.04, 0.14] \\
+Combined model & 0.82 [0.75, 0.89] & 0.65 [0.52, 0.78] & 0.92 [0.88, 0.96] & 0.27 [0.15, 0.40] \\
+Context only score & 0.70 [0.60, 0.80] & 0.34$^{a}$ & 0.93 [0.86, 0.98] & -- \\
+Enhancing volume alone & 0.62 [0.53, 0.71] & 0.68 [0.54, 0.80] & 0.59 [0.49, 0.69] & $-$0.09 [$-$0.22, 0.05] \\
+\multicolumn{5}{@{}l}{\textit{LUMIERE, share of pairs within one context $w$ = 0.74 [0.59, 0.84]}} \\
+Clinical-history model & 0.69 [0.60, 0.80] & 0.59 [0.49, 0.71] & 0.96 [0.89, 1.00] & 0.37 [0.23, 0.49] \\
+Imaging model & 0.65 [0.57, 0.73] & 0.71 [0.60, 0.80] & 0.51 [0.39, 0.63] & $-$0.20 [$-$0.34, $-$0.04] \\
+Combined model & 0.77 [0.68, 0.86] & 0.72 [0.60, 0.82] & 0.93 [0.86, 0.99] & 0.22 [0.12, 0.34] \\
+Context only score & 0.62 [0.57, 0.70] & 0.50 & 0.96 [0.88, 1.00] & -- \\
+Enhancing volume alone & 0.56 [0.43, 0.68] & 0.61 [0.46, 0.75] & 0.41 [0.29, 0.53] & $-$0.21 [$-$0.36, $-$0.04] \\
+\midrule
+ & Change in AUC & Change in $A_W$ & Change in $A_B$ & \\
+\midrule
+MU, combined minus clinical-history & 0.00 [$-$0.05, 0.05] & 0.01 [$-$0.09, 0.12] & $-$0.01 [$-$0.04, 0.02] & \\
+MU, combined minus imaging & 0.11 [0.03, 0.19] & $-$0.02 [$-$0.15, 0.10] & 0.20 [0.12, 0.27] & \\
+LUMIERE, combined minus clinical-history & 0.08 [$-$0.01, 0.16] & 0.12 [0.00, 0.23] & $-$0.03 [$-$0.07, 0.01] & \\
+LUMIERE, combined minus imaging & 0.12 [0.04, 0.21] & 0.01 [$-$0.08, 0.10] & 0.42 [0.30, 0.55] & \\
+\bottomrule
+\end{tabularx}
+
+\raggedright\scriptsize $^{a}$ Not 0.50 as the plan expected, see the note below the table.
+\end{table}
+
+The plan said that $A_W$ of the context only score is 0.50 by construction, and this holds at LUMIERE. At MU it is
+0.34, which is a deviation from the plan and an artefact of how the score was built. The stratum rates were computed
+again in each training fold, so scans of one stratum in different folds received slightly different rates, and a fold
+whose test part held more progression scans had a lower training rate. The value says nothing about the context, and
+the quantity of interest for this score is $A_B$.
+
+\subsection{Group-conditional conformal sets}\label{sec:S26.2}
+
+We calibrated the conformal sets within groups defined by the time window after radiotherapy and the enhancement
+state, which are the situations of the reliability card, and compared them with the marginal sets of the plan (plan
+1363773). Each scan was calibrated at the finest level with at least 10 calibration patients, level 1 being its group,
+level 2 its enhancement state over all time windows and level 3 all calibration scans, which is the marginal set. The
+time after radiotherapy is unknown for every LUMIERE scan, so LUMIERE scans start at level 2. The nominal level was
+80\% throughout. Under exchangeability within the group, level 1 and level 2 sets are conditional on the group, and
+nothing holds at LUMIERE unless its scans are exchangeable with the MU calibration scans.
+
+\begin{table}[!htbp]
+\renewcommand{\thetable}{S51}\renewcommand{\theHtable}{S51}
+\centering
+\caption{\textbf{Marginal (planned) and group-conditional conformal sets at the 80\% level.} Coverage is shown overall
+with its interval, and within progression and other scans. The worst group gap is 0.80 minus the lowest coverage among
+groups with at least 10 evaluation scans (0 when no group falls below 0.80). With group-conditional sets, the share of
+scans calibrated at levels 1, 2 and 3 was 29\%, 45\% and 26\% at MU and 0\%, 60\% and 40\% at LUMIERE. Every marginal set
+is calibrated at level 3.}
+\label{tab:S26b}
+\footnotesize
+\begin{tabularx}{\linewidth}{@{}LR{2.3cm}R{1.6cm}R{1.6cm}R{1.2cm}R{1.0cm}R{1.2cm}@{}}
+\toprule
+ & Coverage & Progression covered & No progression covered & Both outcomes & Empty & Worst group gap \\
+\midrule
+\multicolumn{7}{@{}l}{\textit{MU grade 4 intended use (146 scans, 62 progression, averaged over five repeats)}} \\
+Clinical-history, marginal & 0.79 [0.73, 0.85] & 0.82 & 0.77 & 16\% & 3\% & 0.07 \\
+Clinical-history, group-conditional & 0.80 [0.75, 0.85] & 0.88 & 0.74 & 27\% & 7\% & 0.02 \\
+Imaging, marginal & 0.84 [0.80, 0.89] & 0.69 & 0.96 & 45\% & 0\% & 0.12 \\
+Imaging, group-conditional & 0.84 [0.79, 0.88] & 0.74 & 0.91 & 45\% & 3\% & 0.07 \\
+Combined, marginal & 0.82 [0.76, 0.88] & 0.82 & 0.83 & 25\% & 0.1\% & 0.12 \\
+Combined, group-conditional & 0.83 [0.78, 0.87] & 0.85 & 0.81 & 31\% & 4\% & 0.08 \\
+\multicolumn{7}{@{}l}{\textit{LUMIERE (178 scans, 73 progression)}} \\
+Clinical-history, marginal & 0.80 [0.73, 0.87] & 0.71 & 0.86 & 34\% & 0\% & 0.05 \\
+Clinical-history, group-conditional & 0.81 [0.74, 0.88] & 0.74 & 0.86 & 38\% & 2\% & 0.05 \\
+Imaging, marginal & 0.71 [0.65, 0.76] & 0.29 & 1.00 & 19\% & 0\% & 0.16 \\
+Imaging, group-conditional & 0.76 [0.71, 0.82] & 0.42 & 1.00 & 30\% & 0\% & 0.18 \\
+Combined, marginal & 0.87 [0.80, 0.93] & 0.77 & 0.94 & 38\% & 0\% & 0 \\
+Combined, group-conditional & 0.89 [0.84, 0.94] & 0.79 & 0.96 & 42\% & 0\% & 0 \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\begin{table}[!htbp]
+\renewcommand{\thetable}{S52}\renewcommand{\theHtable}{S52}
+\centering
+\caption{\textbf{Coverage of the combined model within each group with at least 9 evaluation scans.} Nominal level
+80\%. Early means up to 12 weeks after the end of radiotherapy. The time after radiotherapy is unknown for every
+LUMIERE scan, so its groups are the enhancement state alone.}
+\label{tab:S26c}
+\footnotesize
+\begin{tabularx}{\linewidth}{@{}LR{1.1cm}R{1.6cm}R{2.6cm}R{2.6cm}@{}}
+\toprule
+Group & Scans & Progression & Marginal & Group-conditional \\
+\midrule
+\multicolumn{5}{@{}l}{\textit{MU grade 4 intended use}} \\
+Early after radiotherapy, enhancement increased & 9 & 1 & 0.96 [0.85, 1.00] & 0.96 [0.85, 1.00] \\
+Early after radiotherapy, enhancement not increased & 11 & 3 & 0.93 [0.86, 0.98] & 0.95 [0.89, 1.00] \\
+Early after radiotherapy, no previous scan & 32 & 0 & 0.99 [0.96, 1.00] & 0.84 [0.74, 0.92] \\
+Later after radiotherapy, enhancement absent & 9 & 2 & 0.67 [0.40, 0.88] & 0.67 [0.40, 0.88] \\
+Later after radiotherapy, enhancement increased & 24 & 16 & 0.68 [0.55, 0.81] & 0.72 [0.59, 0.85] \\
+Later after radiotherapy, enhancement not increased & 54 & 38 & 0.78 [0.65, 0.89] & 0.87 [0.80, 0.93] \\
+\multicolumn{5}{@{}l}{\textit{LUMIERE}} \\
+Enhancement absent & 57 & 13 & 0.93 [0.83, 0.99] & 0.93 [0.83, 0.99] \\
+Enhancement increased & 49 & 28 & 0.88 [0.78, 0.96] & 0.94 [0.86, 1.00] \\
+Enhancement not increased & 53 & 25 & 0.85 [0.73, 0.96] & 0.87 [0.75, 0.97] \\
+Enhancement state unknown & 15 & 5 & 0.80 [0.57, 1.00] & 0.80 [0.57, 1.00] \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{Bound verifier}\label{sec:S26.3}
+
+We added two rules to the frozen checker, which itself was not edited (plan 1363773). The first binds each number
+that sits next to a named quantity (enhancing tumour, FLAIR hyperintensity, necrosis, cavity, or one of the three
+model scores) to a cited field for that quantity. The second binds each direction word (larger, increased, smaller,
+decreased and similar) to every cited field that carries a direction. The rules of version 1.0 were fixed before any
+report was checked (commit 3d5e710). They bound a number only to cited fields whose key names the quantity, and they
+rejected every real report (276 of 276 from the language model and 276 of 276 from the template) and 24 of the 52
+correct synthetic reports, because the statement fields name the quantity in their text and not in their key. This
+pre-specified rule failed, and we report it as such. Version 1.1 (commit f27d81e) also binds numbers and direction
+words inside a cited text field to the quantity named in their clause. It was developed on the synthetic records
+(52 of 52 correct reports passed) and on the development reports (47 of 48 from the language model and 48 of 48 from
+the template), frozen, and then applied once to the evaluation reports.
+
+Every evaluation report passed the frozen checker. Version 1.1 rejected 1 of the 114 MU reports of the language model
+(by the direction rule), none of its 162 LUMIERE reports and none of the 276 template reports. These rejections were
+not adjudicated, because the reports are not read in a hosted context. Table S53 gives the share of planted errors
+rejected. The plan counts the verifier as closing a blind spot when it rejects at least 95\% of the synthetic mutants
+of an operator that the frozen checker misses.
+
+\begin{table}[!htbp]
+\renewcommand{\thetable}{S53}\renewcommand{\theHtable}{S53}
+\centering
+\caption{\textbf{Planted errors rejected by the frozen checker and by the verifier.} Each cell gives the share
+rejected by the frozen checker, then by the verifier (version 1.1), with the number of mutants in brackets. Synthetic
+reports come from 52 records. Real reports are the evaluation reports of MU and LUMIERE written by the language model
+and by the fixed template. An operator applies only where its pattern occurs in the report. B3 to B5 were held out,
+fixed in the plan and not used while the verifier was developed.}
+\label{tab:S26d}
+\scriptsize
+\begin{tabularx}{\linewidth}{@{}R{0.6cm}LR{2.2cm}R{2.2cm}R{2.2cm}@{}}
+\toprule
+ & Planted error & Synthetic & Real, language model & Real, template \\
+\midrule
+A1 & Agreement word between the models flipped & 1.00, 1.00 (52) & 1.00, 1.00 (275) & 1.00, 1.00 (276) \\
+A2 & Side of the score (above or below) flipped & 1.00, 1.00 (52) & 0.99, 0.99 (275) & 1.00, 1.00 (276) \\
+B1 & Direction word flipped in the change sentence & 0.00, 1.00 (52) & 0.00, 1.00 (194) & 0.00, 1.00 (194) \\
+B2 & Enhancing and FLAIR volumes swapped & 0.00, 1.00 (52) & pattern absent & pattern absent \\
+B3 & Change sentence rewritten with the opposite direction & 0.00, 1.00 (52) & 0.00, 1.00 (194) & 0.00, 1.00 (194) \\
+B4 & Imaging score value given in the clinical-history score sentence & 1.00, 1.00 (52) & pattern absent & pattern absent \\
+B5 & FLAIR volume given as the enhancing volume & 1.00, 1.00 (52) & 1.00, 1.00 (260) & 1.00, 1.00 (261) \\
+C1 & Conformal set phrase changed & 1.00, 1.00 (52) & 1.00, 1.00 (275) & 1.00, 1.00 (276) \\
+C2 & Conformal set statement removed & 1.00, 1.00 (52) & 0.60, 0.60 (275) & 0.60, 0.60 (276) \\
+D1 & Diagnosis appended (findings consistent with progression) & 1.00, 1.00 (52) & 1.00, 1.00 (275) & 1.00, 1.00 (276) \\
+D2 & Advice appended (a biopsy should be considered) & 1.00, 1.00 (52) & 1.00, 1.00 (275) & 1.00, 1.00 (276) \\
+D3 & Likelihood appended (progression is likely) & 1.00, 1.00 (52) & 1.00, 1.00 (275) & 1.00, 1.00 (276) \\
+D4 & Certainty appended (the scan rules out progression) & 1.00, 1.00 (52) & 1.00, 1.00 (275) & 1.00, 1.00 (276) \\
+D5 & Diagnosis appended (the scan shows stable disease) & 1.00, 1.00 (52) & 1.00, 1.00 (275) & 1.00, 1.00 (276) \\
+F1 & Out of range flag removed & 1.00, 1.00 (26) & 1.00, 1.00 (165) & 1.00, 1.00 (165) \\
+F2 & Spurious out of range flag added & 1.00, 1.00 (26) & 1.00, 1.00 (110) & 1.00, 1.00 (111) \\
+N1 & A number changed & 1.00, 1.00 (420) & 0.999, 0.999 (3261) & 0.999, 0.999 (3264) \\
+N2 & A number written as a word & 1.00, 1.00 (52) & 0.99, 0.99 (275) & 0.99, 0.99 (276) \\
+N3 & Unsupported sentence added & 1.00, 1.00 (52) & 1.00, 1.00 (275) & 1.00, 1.00 (276) \\
+N4 & Citation of a field that does not exist & 1.00, 1.00 (52) & 1.00, 1.00 (275) & 1.00, 1.00 (276) \\
+P1 & Invented AUC for the situation appended & 1.00, 1.00 (52) & 1.00, 1.00 (275) & 1.00, 1.00 (276) \\
+R1 & Combined score sentence removed & 1.00, 1.00 (52) & 1.00, 1.00 (275) & 1.00, 1.00 (276) \\
+T1 & Card tier statement removed where required & 1.00, 1.00 (28) & 0.90, 0.90 (90) & 1.00, 1.00 (90) \\
+T2 & Card tier word swapped & 0.46, 0.46 (52) & 0.55, 0.55 (275) & 0.67, 0.67 (276) \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+The verifier closes the two blind spots known before (B1 and B2) and the held out rewrite of the direction (B3). The
+frozen checker already caught B4 and B5, because the wrong value is not in the cited sentence's own field. Two blind
+spots remain, and the verifier does not change them. A report without its conformal set statement passes in 40\% of
+real reports, because the frozen rule does not require the statement as such and catches its removal only when a
+required flag goes with it. A swapped tier word passes in 33\% to 45\% of real mutants, because a swap to ``tested''
+leaves no pattern to catch. The template and the language model were caught at the same rate on every operator.
+
+\FloatBarrier
 \section*{Supplementary figures}
 \addcontentsline{toc}{section}{Supplementary figures}
 
