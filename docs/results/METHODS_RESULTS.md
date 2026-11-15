@@ -95,8 +95,59 @@ Planted errors, share rejected (frozen checker -> verifier):
 | all other operators (A1, A2, C1, D1-D5, F1, F2, N2-N4, P1, R1) | 1.00 | 0.99-1.00 | 0.99-1.00 |
 
 Reading (rule of the plan: closes a blind spot if at least 95% of synthetic mutants are rejected): the verifier
-closes the two known blind spots (B1, B2) and the held-out direction rewrite (B3). B4 and B5 were already caught by
-the frozen checker (the wrong value is not in the cited sentence's own field). Remaining blind spots, unchanged by
-the verifier: removing the conformal statement (40% of real reports pass without it; the frozen v3.1 rule does not
-require the statement as such, and its removal is caught only when it also removes a required flag mention) and swapping the card's tier word (33% to 45% of real mutants
-pass; a swap to "tested" has no pattern to catch). The template and the language model are caught equally on every operator.
+closes the two known blind spots (B1, B2) and the held-out direction rewrite (B3). One blind spot remains: a tier word
+swapped to "tested" where the card has few cases (T2; 33% to 45% of real mutants pass), because no rule names the
+word "tested".
+
+Diagnostics added after the run (2026-11-15, exploratory; counts only):
+- B4 and B5 were rejected by the frozen checker only through its required-content rule (the mutant replaces the
+  sentence that stated the score or volume), not through the binding of the number. The binding rules V1 and V2
+  alone reject every B1-B5 mutant in every set (synthetic 52 / 52 for each; real B1 and B3 194 / 194 per writer, B5
+  260 / 260 language model, 261 / 261 template).
+- C2 is not a blind spot. In the 111 real reports per writer whose C2 mutant passes, another sentence still states
+  the combined 80% set (it cites `conformal.combined.80.*` or the flag), so the mutant is a correct report; in the
+  other 165 the mutant is rejected. The operator removes only the sentences citing the `.statement` field.
+
+## Exploratory checks asked for by the internal referee (2026-11-15, not in the plan)
+`prism/analyses/methods_extra.py`; MU, combined model unless stated.
+
+E1. Context-only score with the window rates computed once on all labelled MU scans: A_W 0.50 (ties), A_B 0.94, AUC
+0.77. The window alone ranks pairs across windows as well as the clinical-history model (0.93). AUC within each window
+(mean over repeats; progression / no progression): later than 12 weeks (56 / 32) clinical-history 0.64, imaging 0.65,
+combined 0.62; within 12 weeks (4 / 51) 0.66, 0.92, 0.93; during radiotherapy (2 / 1) not interpretable. The later
+window holds 1,792 of the 1,998 within-window pairs (90%), so A_W is close to the later window's AUC.
+
+E2. Baselines for the group-conditional sets (alpha 0.2 unless stated):
+
+| set | coverage | progression | no progression | both outcomes | empty | worst group, >= 9 scans | worst group, >= 10 scans |
+|---|---|---|---|---|---|---|---|
+| marginal (planned) | 0.82 | 0.82 | 0.83 | 25% | 0.1% | 0.67 (later, no enhancement, 9) | 0.68 (later, increased, 24) |
+| group-conditional | 0.83 | 0.85 | 0.81 | 31% | 4.1% | 0.67 (same) | 0.72 (same) |
+| marginal, alpha 0.175 (size-matched) | 0.86 | 0.86 | 0.86 | 32% | 0.1% | 0.69 (same) | 0.74 (same) |
+| outcome-conditional | 0.79 | 0.87 | 0.73 | 16% | 0.7% | 0.64 (later, increased) | 0.64 (same) |
+
+Per group (marginal / group-conditional / size-matched): within 12 weeks without previous scan (32 scans) 0.99 / 0.84 /
+1.00; later with enhancement not increased (54) 0.78 / 0.87 / 0.83; later with increased enhancement (24) 0.68 / 0.72
+/ 0.74; later without enhancement (9) 0.67 / 0.67 / 0.69.
+Reading: a marginal set enlarged to the same share of two-outcome sets covers the worst groups at least as well as
+the group-conditional set. The gain of M2 in the worst group comes from larger sets, not from calibration within
+groups. What group calibration does differently is move coverage from over-covered groups (within 12 weeks, no
+previous scan, 0.99 to 0.84) to the largest later group (0.78 to 0.87). With the figure's threshold of 9 scans the
+worst group is unchanged (0.67 with both sets); the worst-group gap of M2 above used 10.
+
+E3. Independent planted errors (`prism/analyses/verifier_independent.py`; errors in
+`independent_mutants_2026-11-15.json`, written by a separate agent that had not seen the checker or verifier code,
+on the 52 synthetic records). Share rejected, checker / verifier (binding rules alone):
+
+| class | n | checker | verifier | binding rules |
+|---|---|---|---|---|
+| D direction stated wrongly in new wording (regressed, receded, less, a reduction, ...) | 208 | 0 | 0.32 | 0.32 |
+| L a correct value under the wrong entity, citing both | 156 | 0.12 | 1.00 | 1.00 |
+| S a score on the wrong side of its median, new wording (exceeds, under, ...) | 104 | 0.14 | 0.14 | 0 |
+| CONTROL correct paraphrase | 104 | 0 | 0 | 0 |
+
+Reading: entity binding (V1) generalises to independently written label errors with no false rejection of
+paraphrases. Direction binding (V2) catches only the direction words on its list, so two thirds of direction errors in
+other wording pass; the side of a score is not covered by either rule beyond the checker's above / below pattern.
+The word list was not widened, because doing so on this set would spend it as a test. Limits: all 52 synthetic
+records share the same volumes and an increase in every change, so the D errors are all false decreases.
