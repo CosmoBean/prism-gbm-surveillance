@@ -294,3 +294,11 @@ Add each reaction as a dated, one-line rule.
   score"; the author finds it confusing and misleading. Call it the "clinical-history model". Call the image pathway
   the "imaging model", and say "model", not "pathway", for each. Keep "clinical data alone" for the baseline with the
   same patient variables and no treatment dates.
+- 2026-11-15 (author): do not mention "phase of care"; it takes away. Say "time after radiotherapy" or "time window"
+  where the idea is needed.
+- 2026-11-15 (author): no LIME or SHAP. Interpretability methods are a black box of their own; the paper says
+  "inspectable" (every value has a source and is checked), never "interpretable" or "explainable".
+- 2026-11-15 (author): bottom line up front. Decide what the paper is about first, then the contributions, each a
+  technical object with how it is measured; everything else supports them. Venue: methods / medical AI, technically
+  oriented, not simplistic.
+- 2026-11-15 (author): a 27B parameter model runs on a laptop; do not present local model size as a deployment barrier.
