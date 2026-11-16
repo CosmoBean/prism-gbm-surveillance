@@ -7,6 +7,8 @@ Every path can be overridden with an environment variable, so the pipeline runs 
     PRISM_LUMIERE   LUMIERE figshare download        (default: $PRISM_DATA/lumiere)
     PRISM_OUTPUTS   everything the pipeline writes   (default: <repo>/outputs)
     PRISM_WORKERS   processes for image stages       (default: all CPUs)
+    PRISM_MEASUREMENTS  MU measurement table the models read (default: $PRISM_OUTPUTS/features/measurements.csv;
+                        set only for sensitivity runs, e.g. the re-segmented masks of prism.analyses.mask_sensitivity)
 """
 
 from __future__ import annotations
@@ -34,7 +36,7 @@ MU_COHORT = OUTPUTS / "data" / "mu_cohort.csv"
 MU_FLOW = OUTPUTS / "data" / "mu_flow.csv"
 FOLDS = OUTPUTS / "data" / "folds.csv"
 LUMIERE_COHORT = OUTPUTS / "data" / "lumiere_cohort.csv"
-MEASUREMENTS = OUTPUTS / "features" / "measurements.csv"
+MEASUREMENTS = Path(os.environ.get("PRISM_MEASUREMENTS", OUTPUTS / "features" / "measurements.csv"))
 RADIOMICS = OUTPUTS / "features" / "radiomics.csv"
 RADIOMICS_ERODED = OUTPUTS / "features" / "radiomics_eroded.csv"
 RESULTS = OUTPUTS / "results"
