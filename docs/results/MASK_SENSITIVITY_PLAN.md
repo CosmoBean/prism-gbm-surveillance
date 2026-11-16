@@ -32,3 +32,17 @@ change when every mask comes from that one segmenter.
 ## Code
 `prism/analyses/mask_sensitivity.py`, reusing `prism/analyses/clinician_baseline.py`. Output goes to
 `outputs/results/analyses/mask_sensitivity/`.
+
+## Deviations recorded before results
+Written 2026-11-16, after the plan and before any AUC with the new masks was computed or seen.
+- **1 GPU instead of 2.** The allocation now gives one GPU, so `prism.features.reseg --model brats21 --gpus 1`. The
+  code is unchanged; only the sharding differs (runtime, not output).
+- **Weights re-downloaded.** The storage reset removed `data/weights/`. The BraTS21 SwinUNETR fold 1 checkpoint was
+  downloaded again from the public `Project-MONAI/MONAI-extra-test-data` 0.8.1 release to
+  `data/weights/brats21_swinunetr_fold1_f48/model.pt`, sha256
+  `62b649ecf98b05c73d7a36a7e290e85ad90a9b5d0dab442f296342406feb57ba`.
+- **Measurement file.** The new table is written by `prism.analyses.reseg_eval.build_table("brats21")` (the
+  `measurements.py` logic on the new label maps, cavity from the released mask where the new map is background) to
+  `outputs/results/analyses/reseg/measurements_brats21.csv`. `outputs/features/measurements.csv` is not touched.
+  The models read it through a new `PRISM_MEASUREMENTS` override in `prism/config.py` (default unchanged), in a
+  separate process. The scans and patients evaluated must be identical under both mask sets (checked in code).
