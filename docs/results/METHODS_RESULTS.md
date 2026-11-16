@@ -151,3 +151,39 @@ paraphrases. Direction binding (V2) catches only the direction words on its list
 other wording pass; the side of a score is not covered by either rule beyond the checker's above / below pattern.
 The word list was not widened, because doing so on this set would spend it as a test. Limits: all 52 synthetic
 records share the same volumes and an increase in every change, so the D errors are all false decreases.
+
+## E4. What each PRISM score adds beyond the reader baseline (planned in CLINICIAN_BASELINE_PLAN.md, e8014a8)
+
+The reader baseline B is ridge logistic regression on the time window plus log enhancing volume and its log ratio
+to the previous scan. MU: 5x5 grouped CV, intended use (146 scans); LUMIERE: B locked on MU, 178 scans. Intervals
+come from 2,000 bootstrap samples of patients (seed 20261115), without refitting. The PRISM AUCs reproduce M1
+(asserted in code). Output: `outputs/results/analyses/clinician_baseline/e4_reader_baseline.csv`.
+
+| cohort | score | AUC | A_W (within) | A_B (across) |
+|---|---|---|---|---|
+| MU | reader baseline | 0.80 (0.71-0.88) | 0.57 (0.43-0.71) | 0.94 (0.87-0.98) |
+| MU | clinical-history | 0.82 | 0.64 | 0.94 |
+| MU | imaging | 0.71 | 0.68 | 0.73 |
+| MU | combined | 0.82 | 0.65 | 0.92 |
+| LUMIERE | reader baseline | 0.73 (0.64-0.81) | 0.67 (0.56-0.75) | 0.92 (0.82-0.99) |
+| LUMIERE | clinical-history (reduced) | 0.69 | 0.59 | 0.96 |
+| LUMIERE | imaging | 0.65 | 0.71 | 0.51 |
+| LUMIERE | combined (reduced) | 0.77 | 0.72 | 0.93 |
+
+Gains over B (score - B):
+
+| cohort | score | dAUC | dA_W | dA_B |
+|---|---|---|---|---|
+| MU | combined (primary) | +0.02 (-0.03 to +0.08) | +0.08 (-0.04 to +0.18) | -0.01 (-0.06 to +0.05) |
+| MU | imaging | -0.09 (-0.19 to +0.02) | +0.10 (-0.04 to +0.26) | -0.21 (-0.31 to -0.10) |
+| MU | clinical-history | +0.02 (-0.05 to +0.10) | +0.07 (-0.11 to +0.23) | -0.00 (-0.04 to +0.05) |
+| LUMIERE | combined (primary) | +0.04 (-0.01 to +0.10) | +0.05 (-0.02 to +0.13) | +0.02 (-0.01 to +0.06) |
+| LUMIERE | imaging | -0.08 (-0.16 to -0.00) | +0.04 (-0.03 to +0.12) | -0.41 (-0.55 to -0.27) |
+| LUMIERE | clinical-history | -0.05 (-0.15 to +0.07) | -0.08 (-0.23 to +0.09) | +0.05 (+0.01 to +0.09) |
+
+Reading, by the rules fixed in the plan:
+- No PRISM score showed a clear gain over the reader baseline at either centre. Every dAUC interval includes zero,
+  except the imaging model, which is lower overall because it does not see the window.
+- No score showed a clear gain within a time window. All the dA_W point estimates are positive at MU (+0.07 to
+  +0.10), and their intervals include zero.
+- Timing plus enhancement alone reached 0.80 at MU and 0.73 at LUMIERE.
