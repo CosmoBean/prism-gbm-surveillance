@@ -287,3 +287,52 @@ Test sets: 86 (GBM) and 88 (as coded) scans on average, 74 and 56 positive.
   were kept unchanged; their LoG/wavelet features on one "core" ROI, L1-consensus ranking, `class_weight="balanced"`
   and 400 trials were not reproduced. Clinical and follow-up arms are untuned L2 logistic regressions (C = 1,
   standardised; no age is missing). Nothing was installed.
+
+## Faithful run (2026-11-16)
+
+Plan: [CHRISTODOULOU_FAITHFUL_PLAN.md](CHRISTODOULOU_FAITHFUL_PLAN.md) (b1ce85b, before any code); deviations recorded
+there before results (e636073). Code: `prism/analyses/christodoulou_faithful.py` with the authors' extraction, ranking
+and LightGBM functions vendored verbatim in `prism/analyses/_christodoulou_vendor.py` (BSD 3-Clause, commit 643c888;
+only paths, data plumbing and thread counts differ). Outputs (git-ignored):
+`outputs/features/radiomics_christodoulou.csv`, `outputs/results/analyses/christodoulou_faithful/` (auc.csv,
+contrasts.csv, within_phase.csv, brier.csv, fold_info.csv, top_features.json, oof_grade4.csv.gz, extraction_info.json,
+fit_info.json, eval_info.json, PLAN_snapshot.md).
+
+**Set-up.** Their extraction on all 594 MU scans with four sequences and a mask (none failed): N4 in the mask, 1 mm
+BSpline, z-score in the mask, one region (`tumorMask > 0`), Original + LoG (σ 0.5-3) + Wavelet, 4,892 features per scan.
+Per outer fold (5 × 5, `D.fold_ids`, grade 4, 132-155 training rows): their L1 logistic consensus ranking → top 256
+(256 in every fold; 486-533 features ranked, 75-110 with a non-zero median coefficient; permutation importance never
+ran, see deviations) → their LightGBM pipeline (`class_weight="balanced"`, tuned Spearman filter, 221-256 features
+reach the booster) with Optuna 400 trials on their pooled out-of-fold AUC of a 5-fold StratifiedGroupKFold by
+patient (seed 42) → Platt on the out-of-fold probabilities → refit on all training rows → held-out fold. Mean best
+inner AUC 0.70 (0.59-0.80). B1, I_scan and I_pure refitted on the same folds (`christodoulou_replication.ridge_oofs`);
+checks before reporting: B1 equals the detection run's saved predictions (max deviation < 1e-9), B1 0.822 and I_pure
+0.709 in the intended use. 1,000-draw patient bootstrap (seed 20261021).
+
+**Runtime.** Extraction 2 h 36 min wall on 20 CPUs (median 282 s per scan); fits 14 min wall (25 folds, 3.6 CPU-hours;
+4-14 min per fold); evaluation < 2 min.
+
+| grade 4 | pos/neg/patients | **CHF (faithful)** | B1 (clinical history) | I_scan | I_pure (imaging) |
+|---|---|---|---|---|---|
+| **intended use** | 62/84/80 | **0.580 (0.502–0.662)** | 0.822 (0.749–0.902) | 0.659 (0.567–0.733) | 0.709 (0.630–0.781) |
+| all detection scans | 64/117/92 | **0.594 (0.528–0.663)** | 0.845 (0.781–0.906) | 0.657 (0.580–0.731) | 0.712 (0.640–0.781) |
+
+| paired difference | intended use | all scans |
+|---|---|---|
+| **CHF − I_pure** | **−0.129 (−0.231 to −0.022)** | −0.118 (−0.202 to −0.034) |
+| CHF − B1 | −0.242 (−0.341 to −0.145) | −0.251 (−0.334 to −0.174) |
+| CHF − I_scan | −0.079 (−0.169 to +0.020) | −0.063 (−0.144 to +0.022) |
+| CHF − I_pure, phase-stratified | −0.119 (−0.253 to +0.017) | −0.113 (−0.243 to +0.016) |
+| CHF − B1, phase-stratified | −0.082 (−0.244 to +0.070) | −0.074 (−0.226 to +0.079) |
+
+Repeat-to-repeat SD of CHF: 0.02. Brier (mean over repeats), intended use: raw 0.287 → Platt 0.248 (reference p(1 − p)
+0.244); all scans 0.266 → 0.225 (reference 0.229).
+
+**Reading (rule fixed in the plan).**
+- The published pipeline run with the authors' own code and settings reaches **0.580 (0.502–0.662)** in the intended
+  use, the same as the first re-implementation (0.579). LoG and wavelet features, their ranking, class weights and 400
+  trials do not change the result; the inner tuning AUC (0.70) does not carry to the held-out folds.
+- It is below the imaging model, −0.129 (−0.231 to −0.022), and below the clinical-history model, −0.242. The paper's
+  claim that the imaging model ranks scans better than the radiomics pipeline stands; it is not withdrawn.
+- Per the plan, this faithful run replaces the first re-implementation as the paper's comparison, and the first
+  re-implementation moves to the supplement as a sensitivity analysis. (Paper not edited here.)
