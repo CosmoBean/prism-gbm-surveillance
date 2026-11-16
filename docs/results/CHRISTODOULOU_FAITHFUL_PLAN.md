@@ -66,3 +66,31 @@ task.
   attribution, into `prism/analyses/_christodoulou_vendor.py`.
 - Feature table: `outputs/features/radiomics_christodoulou.csv`.
 - Results: `outputs/results/analyses/christodoulou_faithful/`.
+
+## Deviations recorded before results (2026-11-16)
+
+Written after the extraction and a one-fold smoke test (10 trials, no held-out prediction scored), before any
+held-out AUC was computed.
+
+- **Extraction: none forced.** 596 MU timepoints, 594 with all four sequences and a non-empty `tumorMask`; their
+  extraction ran on all 594 without a warning or error (4,892 features per scan, no missing or infinite value, no
+  constant column). All 181 grade-4 detection scans (and all 313 grade-4 scans of the detection frame) have features.
+  Wall time 2 h 36 min on 20 CPUs (median 282 s per scan, single-threaded).
+- **Ranking: their permutation importance never runs on our data.** `compute_importance_traincv` computes it only on
+  inner test folds with at least 30 rows (`MIN_TEST_SIZE_FOR_PI = 30`). Our outer training sets have 132-155 rows, so
+  the 10 inner folds have 13-16 rows and their code sets every permutation importance to 0. The consensus rank then
+  reduces to the median |coefficient| rank. In the smoke-test fold, 88 of the 495 ranked features had a non-zero
+  median coefficient; the remaining 168 places of the top 256 are ties that their sort leaves in column-name order.
+  This is their code's behaviour on a training set of this size; it is kept unchanged and reported.
+- **Objective (clarification, not a change).** Their `train_lgbm` maximises the pooled out-of-fold AUC of the 5-fold
+  StratifiedGroupKFold (`oof_auc`), not the mean of the fold AUCs written above; their code is used. Their Platt
+  calibrator is fitted on the out-of-fold probabilities (not logits) of the best parameters, refitted with the same
+  folds, as in their code.
+- **Threads (compute only).** Their code runs Optuna and LightGBM with `n_jobs=-1`. To stay within 20 CPUs, the 25
+  outer folds run in 20 parallel processes, each with Optuna `n_jobs=1` and LightGBM `n_jobs=1`. Sequential trials
+  make the TPE search deterministic (seed 42); their threaded search is not. Nothing else in the search changes.
+- **Seeds.** Their constants are kept: the ranking's StratifiedKFold, the inner StratifiedGroupKFold, the TPE sampler
+  and LightGBM all use 42 in every outer fold (not the repeat index used by the first re-implementation).
+- **Plumbing.** Their patient-level label column is filled with PRISM's detection label (non-missing = positive, as
+  their code reads it); rows are the training rows (positives and primary negatives) of each outer fold; the model
+  predicts every grade-4 scan of the held-out fold.
