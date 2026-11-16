@@ -45,3 +45,44 @@ deviations e636073; code a1cd1d7):
 ## Code
 `prism/analyses/christodoulou_faithful.py` with a mask-source option (default unchanged) and separate output paths:
 `outputs/features/radiomics_christodoulou_brats21.csv`, `outputs/results/analyses/christodoulou_faithful_brats21/`.
+
+## Deviations recorded before results (2026-11-16)
+
+Written after the mask check, the extraction and a one-fold smoke test (10 trials, no held-out prediction scored),
+before any AUC was computed. Code: f857e7a (`christodoulou_faithful.py --masks brats21`; default unchanged).
+
+- **Cavity (checked, as the plan requires).** The released masks' `> 0` region contains the resection cavity
+  (label 4) in 520 of 594 scans; where present it is a median 10% (IQR 2-25%) of that region. The BraTS21 map has
+  no cavity label (label 4 occurs in no map). It does not leave the cavity out, though: a median 81% of the released
+  cavity voxels lie inside the BraTS21 `> 0` region, labelled as tumour or oedema. The two `> 0` regions agree with
+  median Dice 0.90 (IQR 0.78-0.95; 0.85 against the released region without the cavity); median volume ratio
+  BraTS21 / released 0.98. All 594 maps are on the released masks' grid. The authors' region (`> 0` of the map) is
+  kept unchanged; the region therefore differs from the released one by the segmenter, not by a rule about the
+  cavity.
+- **Failed extractions: 14, all empty BraTS21 maps.** 14 of 594 BraTS21 maps contain no voxel (in one of them the
+  released mask is cavity only). Their code stops on these ("No labels found in this mask"); the other 580 extracted
+  without a warning or error (4,892 features, no missing or infinite value, no constant column). The 14 failures are
+  exactly the 14 empty maps (scan ids in the git-ignored `extraction_info.json`).
+- **Evaluation set kept identical; 5 of its scans have no features.** Of the 14, six are grade-4 detection-frame
+  scans, five are training rows and five are in both evaluation sets (intended use and all scans; one progression).
+  They are not dropped: the evaluation set is the faithful run's (asserted). Their features are missing, and the
+  median imputation that opens both the authors' ranking and LightGBM pipelines fills them, so in each fold they
+  receive the prediction of a median-feature scan. This is the authors' pipeline's own handling of missing values;
+  no other choice keeps the set identical. The imaging model (BraTS21 table, E5) scores these scans from their
+  measured zero volumes.
+- **Ranking, as in the faithful run.** Permutation importance again never runs (0 of 10 inner folds reach 30 rows);
+  in the smoke-test fold 474 features were ranked, 131 with a non-zero median coefficient; 256 kept; all 256 pass the
+  tuned correlation filter in that fold.
+- **Bootstrap.** As the plan states: one 2,000-sample patient bootstrap, seed 20261115, per evaluation set, shared by
+  all arms (the faithful run used 1,000 draws, seed 20261021). The released-mask predictions and comparators are
+  re-scored under this bootstrap, so their point estimates are the faithful run's and their CIs may differ in the
+  third decimal.
+- **Comparators.** B1 is mask-free and is taken once (asserted identical under both tables and equal to the detection
+  run). I_pure and I_scan on the BraTS21 masks are refitted in a separate process with `PRISM_MEASUREMENTS` set to the
+  E5 table (whose cavity column, as in E5, comes from the released masks); the frame, labels, intended-use flags and
+  folds are asserted identical. The E5 reference (0.627) is checked against this I_pure, not E5's own process.
+  Reported in addition to the plan's three outcomes: CHF (BraTS21) − I_scan (BraTS21), CHF (released) − I_pure
+  (released), and I_pure BraTS21 − released.
+- **Compute.** Extraction ran in two parts (the first `srun` step was stopped by a 2 h client time limit after 472
+  scans; the cached per-scan results were kept and the remaining 122 run in a second step): about 2 h 26 min wall on
+  20 CPUs, median 214 s per scan. Fits as in the faithful run (25 folds in 20 processes, one thread each).
