@@ -1,5 +1,32 @@
 # Outline: the argument of the PRISM paper (layer 1)
 
+## System-first submission version 2026-11-15 (PENDING AUTHOR reaction; supersedes the methods rewrite below)
+
+Author's direction (2026-11-15, after the review in REVIEW_2026-11-15.md):
+- The paper is the system, not three separate analyses.
+- Cross-site validation is featured.
+- The within/across-window split goes inside the audit trail, never in the abstract.
+- "What would the clinician miss without the model" is answered with measured proxies. The reader study is the
+  next step.
+
+Argument. After glioma treatment a follow up MRI is read against the treatment course, and a progression score alone
+does not show what it rests on. PRISM scores each scan with separate imaging, clinical-history and combined models,
+locked on MU and applied unchanged at two external centres. Each score comes with an audit trail: how much of its
+ranking timing alone supplies, how its conformal set was calibrated, and a local report whose numbers are checked
+against the record. The trail shows what a score adds beyond what the reader already has (timing and visible
+enhancement). No clinician has read the reports.
+
+Sections:
+1. Introduction.
+2. PRISM.
+3. Methods: evaluation and the audit trail.
+4. Results:
+   - 4.1 Cross-site transfer (headline).
+   - 4.2 What each score adds beyond timing and enhancement (new planned analysis E4; the split folds in here).
+   - 4.3 Conformal sets by group (null).
+   - 4.4 Report and verifier.
+5. Discussion.
+
 ## Methods rewrite 2026-11-15 (branch `methods-rewrite-2026-11-15`; supersedes every framing below)
 
 Author's direction (2026-11-15): bottom line up front; a methods / medical AI paper whose contributions are technical

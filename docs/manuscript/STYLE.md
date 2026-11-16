@@ -302,3 +302,8 @@ Add each reaction as a dated, one-line rule.
   technical object with how it is measured; everything else supports them. Venue: methods / medical AI, technically
   oriented, not simplistic.
 - 2026-11-15 (author): a 27B parameter model runs on a laptop; do not present local model size as a deployment barrier.
+- 2026-11-15 (author, later): the paper is the system, told as one argument, not an analysis report or three
+  separate techniques. Feature the cross-site validation (models locked, then applied unchanged). Keep the within- and
+  across-window split inside the audit trail and out of the abstract. Answer "what would the clinician miss without
+  the model" with measured proxies, never as a claim of clinical benefit. Pareto: cover enough, and do it right and
+  reproducibly.
