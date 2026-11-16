@@ -75,7 +75,8 @@ cohorts. This paper establishes four things about it.
 \begin{enumerate}
 \item On identical folds and labels, a model of the treatment course, and also an imaging model of 27 tumour
 measurements, ranked scans better than the published radiomics pipeline run with its authors' code
-(Section~\ref{sec:4.1}). The imaging model's margin depends on the segmentation masks; on MU the combined model and the reader baseline do not.
+(Section~\ref{sec:4.1}). Both margins held with masks from a second segmenter, although the imaging model's own AUC
+depends on the masks.
 \item The locked models kept ranking scans at two external centres (Section~\ref{sec:4.2}).
 \item Most of that ranking rests on evidence a reader already weighs, the time after radiotherapy and the enhancing
 tumour. We show this with a baseline built from that evidence alone and with an exact split of the AUC into pairs of
@@ -400,7 +401,8 @@ Test & Rule fixed in advance & Outcome & Section \\
 \midrule
 Published radiomics approach against the clinical-history model on MU folds & Estimate only & $-$0.24 ($-$0.34 to $-$0.15) & \ref{sec:4.1} \\
 Published radiomics approach below the imaging model on MU folds & Otherwise the comparison is withdrawn & \textbf{Yes}. $-$0.13 ($-$0.23 to $-$0.02) & \ref{sec:4.1} \\
-MU results unchanged with masks from another segmenter & Every paired CI includes 0, reader baseline reading unchanged & \textbf{No} for the imaging model, $-$0.08 ($-$0.16 to $-$0.01). \textbf{Yes} for the combined model, the reader baseline and the reading & \ref{sec:4.1} \\
+MU results unchanged with masks from another segmenter & Every paired CI includes 0, reader baseline reading unchanged & \textbf{No} for the imaging model's AUC. \textbf{Yes} for the combined model, the reader baseline and the reading & \ref{sec:4.1} \\
+Published radiomics approach below the imaging model on the second masks & Otherwise the claim is limited to the released masks & \textbf{Yes} & \ref{sec:4.1} \\
 A new MU segmentation improves detection & Gain $\geq$ 0.05, CI above 0 & \textbf{No}. Median enhancing tumour Dice 0.80, no gain & \ref{sec:4.1} \\
 Image measurements and schedule inputs add to the clinical-history model on MU & Gain $\geq$ 0.03, CI above 0 & \textbf{No}. $+$0.015 ($-$0.032 to $+$0.063) & \ref{sec:4.1} \\
 Deep networks tuned on MU add to that model & Gain $\geq$ 0.03, CI above 0 & \textbf{No}. No network gained & \ref{sec:4.1} \\
@@ -416,8 +418,8 @@ Usefulness to clinicians & Not tested & A reader study is designed (Supplementar
 \begin{tablenotes}\footnotesize
 \item Plans and their commits: detection (2b4c927), UCSF-ALPTDG (0e7c9fe), the system (e7cba80), the report evaluation
 (4f7e7b9), the checker test (4f854cb), the rerun with restored data (0df79e9), the analyses of Sections 3.3 and 3.4
-(1363773), the reader baseline (e8014a8), and the run of the published approach and the mask sensitivity analysis
-(b1ce85b). The conformal sets of the imaging model at LUMIERE (0.71) and the clinical-history
+(1363773), the reader baseline (e8014a8), the run of the published approach and the mask sensitivity analysis
+(b1ce85b), and the run of the published approach on the second masks (cab32b3). The conformal sets of the imaging model at LUMIERE (0.71) and the clinical-history
 model at UCSF (0.70) did not meet the coverage rule.
 \end{tablenotes}
 \end{threeparttable}
@@ -429,7 +431,7 @@ model at UCSF (0.70) did not meet the coverage rule.
 \subsection{Models of the treatment course and of tumour measurements beat image-only radiomics}\label{sec:4.1}
 
 % Sources: CHRISTODOULOU_REPLICATION.md (faithful run; first re-implementation: Reading, 100 splits); DETECTION_TASK.md;
-% NUMBERS.md 3, 8; METHODS_RESULTS.md E5.
+% NUMBERS.md 3, 8; METHODS_RESULTS.md E5; CHRISTODOULOU_REPLICATION.md (faithful run on the BraTS21 masks).
 On the same MU scans, masks, label and folds, the published radiomics pipeline run with its authors' code reached an
 AUC of 0.58 (0.50--0.66), and PRISM's clinical-history model 0.82 (0.75--0.90), a difference of 0.24 (0.15--0.34).
 The pipeline also ranked scans below PRISM's imaging model, which reached 0.71 (0.63--0.78) from 27 measurements, by
@@ -441,11 +443,15 @@ sets vary widely at this size. Over 100 random held out sets of 18 of our 92 gra
 ranged from 0.32 to 0.88 on the intended use scans (mean 0.63), so the published estimate, from one set of 30
 patients and a different label, cannot be compared with ours.
 
-The imaging model's margin depends on the masks. With every MU mask taken from the BraTS 2021 segmenter, whose
-enhancing volumes changed less between close scans (median factor 2.2 against 2.6), the imaging model reached 0.63
-(0.55--0.70), 0.08 (0.01--0.16) below its AUC on the released masks, and the loss lay mostly within time windows. We
-did not run the radiomics pipeline on those masks. The combined model (0.80) and the reader baseline (0.78) each moved
-by 0.02, with CIs including zero. Clinical data alone, without dates, reached 0.53
+The imaging model's AUC depends on the masks, but its margin over the radiomics pipeline does not. With every MU
+mask taken from the BraTS 2021 segmenter, whose enhancing volumes changed less between close scans (median factor 2.2
+against 2.6), the imaging model reached 0.63 (0.55--0.70), 0.08 (0.01--0.16) below its AUC on the released masks,
+and the loss lay mostly within time windows. On the same masks the radiomics pipeline, run again with its authors'
+code, fell to 0.53 and still ranked below the imaging model, by 0.10 (0.01--0.19). Within one time window, on either
+mask set, the margin's CI included zero. The combined model (0.80) and the reader baseline (0.78) each moved by 0.02,
+with CIs including zero.
+
+Clinical data alone, without dates, reached 0.53
 (0.45--0.61), and neither a second segmentation of MU nor deep networks tuned on MU improved detection
 (Table~\ref{tab:2}). The clinical-history model's lead over the images came from the treatment course, which
 Section~\ref{sec:4.3} takes apart, while the imaging model's lead over the radiomics pipeline is a comparison of
@@ -656,8 +662,7 @@ Why would a clinician need PRISM? Not because it ranks scans better than the rea
 cohorts it did not clearly do so. The case rests on three results. First, the models a clinician is likely to be
 offered are image-only and tested on one split \citep{booth2022,shi2025}, and on identical data the published
 pipeline for this cohort, run with its authors' code, ranked scans 0.13 below PRISM's imaging model and 0.24 below its
-clinical-history model. The first margin rests on the released masks, since with another segmenter's masks the imaging
-model lost 0.08, while the combined model and the reader baseline did not change. Second, PRISM's models were fitted
+clinical-history model, and both margins held with a second segmenter's masks. Second, PRISM's models were fitted
 once and kept ranking scans at two other centres. Third, PRISM shows what each score rests on, and here that is mostly
 the timing and the enhancement a reader already weighs. The reader baseline is a model of that evidence, not a
 clinician, and whether a clinician combines the same evidence as consistently, from volumes estimated by eye and a
