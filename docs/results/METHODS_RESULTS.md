@@ -187,3 +187,52 @@ Reading, by the rules fixed in the plan:
 - No score showed a clear gain within a time window. All the dA_W point estimates are positive at MU (+0.07 to
   +0.10), and their intervals include zero.
 - Timing plus enhancement alone reached 0.80 at MU and 0.73 at LUMIERE.
+
+## E5. Mask sensitivity (planned in MASK_SENSITIVITY_PLAN.md, b1ce85b; deviations c235649)
+
+Every released MU mask was replaced by the BraTS21 SwinUNETR label map (`prism.features.reseg`, 1 GPU, 981 s for
+594 scans). Agreement with the released masks matches RESEGMENTATION.md: median Dice ET 0.80 [0.49, 0.91], TC 0.62,
+WT 0.85 [0.74, 0.93]. The measurement table was rebuilt from the new maps with the `measurements.py` logic. The
+cavity comes from the released mask. The table has the same 591 scans and columns
+(`outputs/results/analyses/reseg/measurements_brats21.csv`). The E4 models were refitted on each table in the same
+5x5 folds. MU intended use: 146 scans, 80 patients, 62 progressions; identical under both mask sets (asserted). One
+set of 2,000 patient bootstrap samples (seed 20261115) covers both mask sets, so the differences are paired. On the
+released masks the models reproduce M1 and E4 (asserted). Output: `outputs/results/analyses/mask_sensitivity/`.
+
+| score | AUC, released | AUC, BraTS21 | paired difference | A_W difference | A_B difference |
+|---|---|---|---|---|---|
+| imaging | 0.71 (0.63-0.78) | 0.63 (0.55-0.70) | **-0.08 (-0.16 to -0.01)** | -0.11 (-0.20 to -0.03) | -0.07 (-0.15 to +0.02) |
+| combined | 0.82 (0.75-0.89) | 0.80 (0.73-0.88) | -0.02 (-0.05 to +0.02) | -0.02 (-0.08 to +0.05) | -0.02 (-0.05 to +0.01) |
+| reader baseline | 0.80 (0.71-0.88) | 0.78 (0.69-0.87) | -0.02 (-0.06 to +0.01) | -0.05 (-0.14 to +0.03) | -0.00 (-0.01 to +0.00) |
+| clinical-history (check) | 0.82 | 0.82 | 0.00 | 0.00 | 0.00 |
+
+The clinical-history model uses no mask and is unchanged, as it should be.
+
+E4 gains (score - reader baseline) under each mask set:
+
+| gain | masks | dAUC | dA_W | dA_B |
+|---|---|---|---|---|
+| combined - reader | released | +0.02 (-0.03 to +0.08) | +0.08 (-0.04 to +0.18) | -0.01 (-0.06 to +0.05) |
+| combined - reader | BraTS21 | +0.03 (-0.04 to +0.09) | +0.11 (-0.02 to +0.23) | -0.03 (-0.08 to +0.03) |
+| imaging - reader | released | -0.09 (-0.19 to +0.02) | +0.10 (-0.04 to +0.26) | -0.21 (-0.31 to -0.10) |
+| imaging - reader | BraTS21 | -0.15 (-0.25 to -0.05) | +0.04 (-0.07 to +0.15) | -0.27 (-0.36 to -0.15) |
+
+Change in the gain (BraTS21 - released): combined - reader +0.00 (-0.04 to +0.05); imaging - reader -0.06
+(-0.14 to +0.01).
+
+Mask noise. Median fold change of the enhancing volume between consecutive scans <= 30 days apart (54 pairs, 46
+patients): 2.57 with the released masks, 2.17 with BraTS21 (difference in median |log ratio| -0.17, -0.47 to -0.02).
+TC: 2.76 -> 2.02. WT: 1.62 -> 1.60. This is the RESEGMENTATION.md result, reproduced.
+
+Reading, by the rule fixed in the plan:
+- **Not every result is robust.** The imaging model's paired difference excludes zero. With the BraTS21 masks its AUC
+  falls from 0.71 to 0.63. The loss lies mostly within a time window (A_W -0.11). The imaging AUC therefore depends
+  on the masks, and the paper must say so.
+- **The combined model and the reader baseline do not depend on the masks.** Both paired differences include zero
+  (-0.02 each).
+- **The E4 reading is unchanged.** Under both mask sets, the combined model shows no clear gain over the reader
+  baseline, overall or within a window. Neither does the imaging model. With the BraTS21 masks the imaging model is
+  clearly below the reader baseline (-0.15, -0.25 to -0.05), where on the released masks the interval reached
+  +0.02.
+- **The less noisy segmenter does not help.** It reduces the short-gap ET noise (2.57 -> 2.17), but it does not
+  improve any model. The imaging model gets worse.
