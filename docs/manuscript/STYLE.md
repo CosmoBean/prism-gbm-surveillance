@@ -307,3 +307,7 @@ Add each reaction as a dated, one-line rule.
   across-window split inside the audit trail and out of the abstract. Answer "what would the clinician miss without
   the model" with measured proxies, never as a claim of clinical benefit. Pareto: cover enough, and do it right and
   reproducibly.
+- 2026-11-17: "clinical decision support" is allowed only as intended use ("a system intended for clinical decision
+  support"); it supersedes the 2026-11-03 ban. Never "faithful" for the reports; say what the checks catch and miss.
+  A pass rate measured after a revision prompted by evaluation failures is called exploratory. Evidence the reader
+  baseline models is "available to any reader", never "a reader already weighs" (the baseline is not a clinician).
