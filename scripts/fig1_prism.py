@@ -43,7 +43,7 @@ def fig1(output: Path) -> None:
             text(x, y - 3.6, lines, size=6.5, colour=grey, va="top")
 
     # ---------------------------------------------------------------- Panel A
-    text(4.5, 113.0, "At each follow up MRI after treatment, has the tumour progressed?", size=8.5, weight="bold",
+    text(4.5, 113.0, "At each follow-up MRI after treatment, has the tumour progressed?", size=8.5, weight="bold",
          va="baseline")
     panel_a = text(0.6, 113.0, "A", size=10, weight="bold", va="baseline")
 

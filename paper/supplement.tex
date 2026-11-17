@@ -1285,6 +1285,14 @@ locally and not redistributed. Unit tests cover label rules, as-of-scan treatmen
 the repeated-CV estimator. Commands for each analysis are listed at the end of the corresponding result
 document in \code{docs/results/}. \flag{[PENDING: public code release and tag.]}
 
+\paragraph{Analysis plans.} Each plan was committed to the repository before the analysis it describes was run.
+Plans, commits and dates: detection at the scan (2b4c927, 2026-10-21); UCSF-ALPTDG (0e7c9fe, 2026-10-25); the
+system (e7cba80, 2026-10-25); the report evaluation (4f7e7b9, 2026-10-25); the checker test (4f854cb, 2026-11-13);
+the rerun with restored data (0df79e9, 2026-11-13); the AUC split, the group-conditional sets and the verifier
+(1363773, 2026-11-15); the reader baseline (e8014a8, 2026-11-15); the run of the published approach and the mask
+sensitivity analysis (b1ce85b, 2026-11-16); the run of the published approach on the second masks (cab32b3,
+2026-11-16); and the calibration, spectrum and marker-coding analyses (161b353, 2026-11-17).
+
 \FloatBarrier
 \section[Reporting checklists (TRIPOD+AI, CLEAR) cross-referenced to the manuscript]{Reporting checklists
 cross-referenced to the manuscript}\label{sec:S17}
@@ -2365,25 +2373,25 @@ of their range encodes the difference between scans before and after RT. Deviati
 run on the real labels preceded the full run; the plan was not changed afterwards.
 
 \FloatBarrier
-\section{Report content against the BT-RADS follow up template}\label{sec:S24}
+\section{Report content against the BT-RADS follow-up template}\label{sec:S24}
 
-Source: the BT-RADS follow up reporting template (sample v1.03, btrads.com) and category guide (version 1.01)
+Source: the BT-RADS follow-up reporting template (sample v1.03, btrads.com) and category guide (version 1.01)
 \citep{weinberg2018}, and the report fields in \code{prism/report/facts\_v3.py} and \code{prism/report/sections\_v3.py}.
 No patient record was used for this comparison.
 
-\textbf{Why this template.} No public cohort releases clinician reports for glioma follow up MRI after treatment,
+\textbf{Why this template.} No public cohort releases clinician reports for glioma follow-up MRI after treatment,
 including the three used here, so the report could not be compared with the reports written for the same scans. We
-compared its content instead with the structured follow up template of the Brain Tumor Reporting and Data System
+compared its content instead with the structured follow-up template of the Brain Tumor Reporting and Data System
 (BT-RADS) \citep{weinberg2018}. In surveys of referring clinicians at the centre that introduced it, reports
 written with the template were judged more consistent and less ambiguous than free prose \citep{gore2019}, and they
 recorded more treatment history and used fewer hedging words \citep{zhang2020}. In a 2018 survey of 220 European
-centres, 60\% issued qualitative follow up reports and 23\% used a template \citep{thust2018}.
+centres, 60\% issued qualitative follow-up reports and 23\% used a template \citep{thust2018}.
 
 \begin{table}[H]
 \centering
 \small
 \renewcommand{\thetable}{S46}\renewcommand{\theHtable}{S46}
-\caption{\textbf{BT-RADS follow up template elements and the PRISM report.} Elements are those of the template's
+\caption{\textbf{BT-RADS follow-up template elements and the PRISM report.} Elements are those of the template's
 clinical indication, comparison, findings and impression. Mass effect and clinical status enter only the category
 criteria.}
 \label{tab:S46}
@@ -2415,7 +2423,7 @@ Not in BT-RADS & Necrosis and resection cavity volumes; the evidence and confide
 \end{table}
 
 \textbf{Reading.} The report carries the template's history and comparison elements where the cohorts record them,
-and it gives the two findings BT-RADS asks of every follow up, the change in FLAIR and in enhancement, as measured
+and it gives the two findings BT-RADS asks of every follow-up, the change in FLAIR and in enhancement, as measured
 volumes. It leaves out the impression, the element BT-RADS ties to management. Its phase of care uses the
 template's own boundary of 12 weeks after radiotherapy, the interval in which BT-RADS favours treatment effect over
 tumour for worsening imaging. This compares content, not quality. No clinician has read a PRISM report,

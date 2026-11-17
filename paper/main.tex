@@ -29,7 +29,7 @@
 % Sources: CHRISTODOULOU_REPLICATION.md (faithful run, 0.58); NUMBERS.md 3, 4 (0.82, 0.77, 0.86); METHODS_RESULTS.md E4 (0.80);
 % NUMBERS.md 7 (406).
 \begin{abstract}
-After treatment for aggressive glioma, each follow up MRI is read against the treatment course, yet most
+After treatment for aggressive glioma, each follow-up MRI is read against the treatment course, yet most
 published models give one image score that hides its basis. PRISM, an auditable local system
 intended for clinical decision support, scores each scan with separate imaging, clinical-history and combined
 models, and a local language model writes a report checked against the record. On identical folds of
@@ -49,7 +49,7 @@ glioma surveillance, clinical decision support, external validation
 \section{Introduction}\label{sec:1}
 
 % Sources: refs wen2023, taal2008.
-After surgery and chemoradiotherapy for glioblastoma and other aggressive gliomas, each follow up MRI is read against
+After surgery and chemoradiotherapy for glioblastoma and other aggressive gliomas, each follow-up MRI is read against
 earlier scans and the course of treatment. Enhancement can grow because the tumour grows or because of treatment, and
 the second is frequent in the first 12 weeks after radiotherapy \citep{wen2023,taal2008}. The time of a scan is
 therefore part of the evidence a clinician uses to read it.
@@ -60,13 +60,13 @@ meta-analysis of machine learning studies of treatment response, a third had an 
 and a systematic review of automated response assessment found clinical information in 3 of 20 tools and external test
 data in 3 of 20, and judged none ready for the clinic \citep{shi2025}. In one study that compared them on an external test set, clinical inputs matched images, and time since the end of
 treatment was the strongest input \citep{gomaa2025}. A score can also
-rank scans well by recognising when they were taken, because follow up schedules tie the time of a scan to its label
+rank scans well by recognising when they were taken, because follow-up schedules tie the time of a scan to its label
 \citep{badgeley2019}, so what a model adds beyond the evidence a reader already holds is the quantity to measure
 \citep{beaulieujones2021}. On the public MU-Glioma-Post cohort, the one published progression model reported an AUC
 of 0.80 from radiomics on a single held out set of 30 patients \citep{christodoulou2026}.
 
 % Sources: OUTLINE.md (system-first 2026-11-15); NUMBERS.md 3--7; METHODS_RESULTS.md E4.
-PRISM is a system intended for clinical decision support that makes progression scores inspectable. For each follow up scan it
+PRISM is a system intended for clinical decision support that makes progression scores inspectable. For each follow-up scan it
 builds one record that holds tumour volumes measured from segmentation masks, the treatment course, three separately
 fitted scores and the source of every value, and a local language model writes a report from that record alone. We
 developed PRISM on MU-Glioma-Post, fitted its models once, and applied them unchanged in the LUMIERE and UCSF-ALPTDG
@@ -89,7 +89,7 @@ A reader study is designed to test whether PRISM changes a clinician's reading.
 \section{PRISM}\label{sec:2}
 
 % Sources: SYSTEM_PLAN.md section 1.
-PRISM turns one follow up scan and the patient's clinical record into a structured record and a report in five stages
+PRISM turns one follow-up scan and the patient's clinical record into a structured record and a report in five stages
 (Figure~\ref{fig:1}). It measures the tumour, scores the scan with three models, attaches the confidence statements,
 writes every value into one record with its source, and has a local language model write the report, which is then
 checked against the record. Table~\ref{tab:models} lists every score in the paper.
@@ -102,7 +102,7 @@ clinical data enter two separate lanes, segmentation and position in treatment, 
 clinical-history score and a combined score. A confidence box holds a conformal set, model agreement and a reliability card. A record
 passes to a local language model and a checker, ending in a synthetic report. Below, models developed on MU are locked,
 applied unchanged to LUMIERE and UCSF, and 406 reports are checked.}
-\caption{\textbf{PRISM and how it was evaluated.} (A) At each follow up MRI, the masks released with the cohort give
+\caption{\textbf{PRISM and how it was evaluated.} (A) At each follow-up MRI, the masks released with the cohort give
 the volumes of the previous and current scans and 27 measurements of the tumour and its change, which feed the
 imaging model. The treatment dates and clinical record feed the clinical-history model, and a third model on both
 inputs gives the combined score. All three are ridge logistic regressions (values from the synthetic example of
@@ -186,7 +186,7 @@ medians. The other is a reliability card, after model cards \citep{mitchell2019}
 (time window and state of the enhancing tumour) how many scans with and without progression the models were tested
 on and, with at least 10 of each (the tested tier), their AUCs, and otherwise only the counts (few cases). The card counts the
 cohort's tested scans; recomputed without the patient's own scans, it changed the tier of one MU scan. Because the released volumes are noisy (Section~\ref{sec:3.3}),
-the report calls them indicative. The report follows the content of the BT-RADS follow up template
+the report calls them indicative. The report follows the content of the BT-RADS follow-up template
 \citep{weinberg2018} without its category or advice, which PRISM does not give (Supplementary Section~S24).
 
 % =====================================================================================================
@@ -198,7 +198,7 @@ the report calls them indicative. The report follows the content of the BT-RADS 
 Grade 4 glioma is the primary population in all three cohorts (Table~\ref{tab:1}). The task is to tell the scan at
 which a cohort documented progression from scans without progression. At MU and UCSF-ALPTDG such a scan must be
 followed by at least 120 days without progression, and at LUMIERE it is a scan rated stable or responding
-(Table~\ref{tab:eval}). The 120-day rule drops scans with shorter follow up, so on MU we also evaluated every score
+(Table~\ref{tab:eval}). The 120-day rule drops scans with shorter follow-up, so on MU we also evaluated every score
 with all scans before progression as negatives, as the detection plan specified. Each cohort defines
 progression in its own way (Table~\ref{tab:eval}), so AUCs are compared between models within a cohort. The design
 ties time to the label. On MU most progression scans were taken later than 12 weeks after radiotherapy and most scans
@@ -250,7 +250,7 @@ cohorts \citep{varoquaux2018}. We then fitted each model once on all 181 grade 4
 model was planned before any score was compared with the label; at LUMIERE the combined model was planned and the
 other scores are exploratory. AUCs carry 95\% confidence intervals (CIs) from 1,000 bootstrap samples of
 patients (2,000 for the reader baseline, the AUC split, the group-conditional sets, the mask sensitivity
-analyses, the published approach on the second masks and the analyses asked for in review), which resample the held out predictions without refitting the models. The reader baseline, the AUC split and group calibration were run under
+analyses, the published approach on the second masks, and the calibration, spectrum and marker-coding analyses), which resample the held out predictions without refitting the models. The reader baseline, the AUC split and group calibration were run under
 further plans written before they were coded. UCSF-ALPTDG was no longer on our hardware when they ran, so they were
 evaluated on MU and LUMIERE only.
 
@@ -422,10 +422,7 @@ Usefulness to clinicians & Not tested & A reader study is designed (Supplementar
 \bottomrule
 \end{tabularx}
 \begin{tablenotes}\footnotesize
-\item Plans and their commits: detection (2b4c927), UCSF-ALPTDG (0e7c9fe), the system (e7cba80), the report evaluation
-(4f7e7b9), the checker test (4f854cb), the rerun with restored data (0df79e9), the AUC split, the group-conditional sets and the verifier
-(1363773), the reader baseline (e8014a8), the run of the published approach and the mask sensitivity analysis
-(b1ce85b), the run of the published approach on the second masks (cab32b3), and the analyses asked for in review (161b353). The conformal sets of the imaging model at LUMIERE (0.71) and the clinical-history
+\item Each plan and the date it was committed are listed in Supplementary Section~S16. The conformal sets of the imaging model at LUMIERE (0.71) and the clinical-history
 model at UCSF (0.70) did not meet the coverage rule.
 \end{tablenotes}
 \end{threeparttable}
@@ -481,7 +478,7 @@ read as probabilities (calibration intercept of the imaging score at LUMIERE 0.4
 detecting the scan at which progression was documented. MU used repeated cross validation in the intended use.
 LUMIERE and UCSF used models fitted once on MU and applied unchanged, with the reduced clinical-history inputs. The
 UCSF refit is a reference. At UCSF the images are shown for images from one scan and for the imaging model. The open
-diamond is log enhancing tumour volume alone (exploratory). Points have 95\% CIs from bootstrap samples of patients.
+diamond is log enhancing tumour volume alone (exploratory; at LUMIERE on the 163 scans with a recorded volume). Points have 95\% CIs from bootstrap samples of patients.
 The dotted line marks chance.}
 \label{fig:2}
 \end{figure}
@@ -525,7 +522,8 @@ window after radiotherapy (filled circles), over pairs from different windows (o
 (ticks), at MU-Glioma-Post (time window from the treatment dates) and LUMIERE (the rater's flag for the first three
 months). The overall AUC is the weighted mean of the other two. The time window only score ranks scans by the
 progression rate of their window in the training folds. Its within window value is omitted, because at LUMIERE it ties
-all such pairs and at MU it reflects only how the rates vary between training folds. 95\% CIs from 2,000 bootstrap
+all such pairs and at MU it reflects only how the rates vary between training folds. At LUMIERE enhancing volume alone
+is evaluated on the 163 of 178 scans with a recorded enhancing volume. 95\% CIs from 2,000 bootstrap
 samples of patients.}
 \label{fig:3}
 \end{figure}
@@ -697,7 +695,7 @@ we have designed, which is the test of whether PRISM supports clinical decisions
 \subsection*{Conclusion}
 
 % Sources: Sections 4.1--4.5.
-On public glioma follow up data, simple models of the treatment course and of tumour measurements ranked scans better
+On public glioma follow-up data, simple models of the treatment course and of tumour measurements ranked scans better
 than the published image-only pipeline run with its authors' code, and the locked combined and imaging models kept
 ranking them at two other centres. By keeping the
 treatment-course evidence apart from the image evidence at every scan, PRISM shows what each score rests on, and it
@@ -729,7 +727,7 @@ No funding was obtained for this work.
 \todo{PENDING AUTHOR DECISION: secondary analysis of datasets with identifiers removed (MU-Glioma-Post and LUMIERE, public;
 UCSF-ALPTDG under a data use agreement); state the institutional determination or waiver and cite the source
 datasets' approvals.} No registered protocol. Each test in Table~\ref{tab:2} had its analysis plan committed to the repository before it was
-run, with the commits listed there; analyses not fixed in advance are marked as exploratory. There was no
+run (Supplementary Section~S16); analyses not fixed in advance are marked as exploratory. There was no
 patient or public involvement.
 
 \section*{Data availability statement}
