@@ -70,18 +70,27 @@ PRISM is a system intended for clinical decision support that makes progression 
 builds one record that holds tumour volumes measured from segmentation masks, the treatment course, three separately
 fitted scores and the source of every value, and a local language model writes a report from that record alone. We
 developed PRISM on MU-Glioma-Post, fitted its models once, and applied them unchanged in the LUMIERE and UCSF-ALPTDG
-cohorts. We report four results.
+cohorts. The paper contributes three methods and four results. The methods:
 \begin{enumerate}
+\item A system that scores each scan three times, with separately fitted imaging, clinical-history and combined
+models, from one record in which every value carries its source, and attaches to each score a statement of the
+evidence behind it (Sections~\ref{sec:2} and~\ref{sec:3.4}).
+\item Two measures of what a score rests on: a reader baseline, a model built from the time after radiotherapy and
+the enhancing tumour alone, and an exact split of the AUC into pairs of scans within and across time windows
+\citep{kallus2019} (Section~\ref{sec:3.3}).
+\item A report written by a local language model from the record alone, with a checker and a verifier that binds
+each number to the region or score it describes (Sections~\ref{sec:2.3} and~\ref{sec:3.5}).
+\end{enumerate}
+The results:
+\begin{enumerate}
+\setcounter{enumi}{3}
 \item On identical folds and labels, a model of the treatment course, and also an imaging model of 27 tumour
 measurements, ranked scans better than the published radiomics pipeline run with its authors' code
 (Section~\ref{sec:4.1}). Both margins held with masks from a second segmenter.
 \item The locked combined and imaging models kept ranking scans at two external centres (Section~\ref{sec:4.2}).
-\item Because PRISM keeps the two kinds of evidence as separate scores, it shows what the ranking rests on: mostly
-the time after radiotherapy and the enhancing tumour. We measure this with a reader baseline, a model built from that
-evidence alone, and with an exact split of the AUC into pairs of scans within and across time windows
-\citep{kallus2019} (Section~\ref{sec:4.3}).
-\item Each score carries a statement of the evidence behind it. Every report passed the planned checker, and a
-verifier binds each number to the region or score it describes (Sections~\ref{sec:4.4} and~\ref{sec:4.5}).
+\item The separate scores show what the ranking rests on: mostly the time after radiotherapy and the enhancing
+tumour (Section~\ref{sec:4.3}).
+\item Every report passed the planned checker (Section~\ref{sec:4.5}).
 \end{enumerate}
 A reader study is designed to test whether PRISM changes a clinician's reading.
 
