@@ -50,30 +50,36 @@ glioma surveillance, clinical decision support, external validation
 
 % Sources: refs wen2023, taal2008.
 After surgery and chemoradiotherapy for glioblastoma and other aggressive gliomas, each follow-up MRI is read against
-earlier scans and the course of treatment. Enhancement can grow because the tumour grows or because of treatment, and
-treatment-related enhancement is frequent in the first 12 weeks after radiotherapy \citep{wen2023,taal2008}. The time of a scan is
-therefore part of the evidence a clinician uses to read it.
+earlier scans and the course of treatment. Enhancement may grow because the tumour has progressed or because of
+treatment, and treatment-related enhancement is common in the first 12 weeks after radiotherapy
+\citep{wen2023,taal2008}. The timing of a scan is therefore part of the evidence a clinician uses to read it.
 
 % Sources: refs booth2022, shi2025, gomaa2025, badgeley2019, beaulieujones2021, christodoulou2026; COMPARABLE_RESULTS.md.
-Most models proposed for this setting score the image alone and are tested on a single split of one cohort. In a
-meta-analysis of machine learning studies of treatment response, a third had an external test set \citep{booth2022},
-and a systematic review of automated response assessment found that 3 of 20 studies explicitly considered clinical
-characteristics and 5 of 20 used external test data, and judged no tool ready for clinical use \citep{shi2025}. In one study that compared them on an external test set, clinical inputs matched images, and time since the end of
-treatment was the strongest input \citep{gomaa2025}. A score can also
-rank scans well by recognising when they were taken, because follow-up schedules tie the time of a scan to its label
-\citep{badgeley2019}, so what a model adds beyond the evidence a reader already holds is the quantity to measure
+Most models proposed for this setting nonetheless score the image alone and are tested on a single split of one
+cohort. In a meta-analysis of machine learning studies of treatment response, a third had an external test set
+\citep{booth2022}; a systematic review of automated response assessment found that 3 of 20 studies explicitly
+considered clinical characteristics, 5 of 20 used external test data, and no tool was ready for clinical use
+\citep{shi2025}. In a study that compared the two on an external test set, clinical inputs matched images, and time
+since the end of treatment was the strongest input \citep{gomaa2025}. Because follow-up schedules tie the timing of a
+scan to its label, a score can rank scans well simply by recognising when they were taken \citep{badgeley2019}; what
+a model adds beyond the evidence a clinician already holds is therefore the quantity worth measuring
 \citep{beaulieujones2021}. On the public MU-Glioma-Post cohort, the one published progression model reported an AUC
 of 0.80 from radiomics on a single held out set of 30 patients \citep{christodoulou2026}.
 
 % Sources: OUTLINE.md (system-first 2026-11-15); NUMBERS.md 3--7; METHODS_RESULTS.md E4.
-PRISM is a system that makes progression scores inspectable. Our
-contribution is twofold. The first is the system itself. For each follow-up scan, PRISM keeps the imaging and the
-treatment-course evidence as separate scores, states the evidence behind each, and has a local language model write
-a report whose numbers are checked against the scan's record. The second is its evaluation. We developed PRISM on
-MU-Glioma-Post, fitted its models once and applied them unchanged at LUMIERE and UCSF-ALPTDG. Both separate models
-ranked scans better than the published radiomics pipeline on identical data, the locked models held at both external
-centres, and the separate scores showed that the time since radiotherapy and the enhancing tumour account for much
-of the ranking.
+We present PRISM, a system that makes progression scores inspectable. Our contributions are:
+\begin{itemize}
+\item \textbf{Separate scores.} For each follow-up scan, PRISM scores the imaging and the treatment-course evidence
+separately and in combination, and states the evidence behind each score.
+\item \textbf{A checked local report.} A local language model writes a report from the scan's record, and the
+report's numbers are checked against that record.
+\item \textbf{Locked external evaluation.} The models were developed on MU-Glioma-Post, fitted once and applied
+unchanged at LUMIERE and UCSF-ALPTDG, where they continued to rank scans.
+\item \textbf{Comparison with published work.} On identical data, both separate models ranked scans better than
+the published radiomics pipeline run with its authors' code.
+\item \textbf{The basis of the ranking.} The separate scores showed that the time since radiotherapy and the
+enhancing tumour account for much of the ranking.
+\end{itemize}
 
 % =====================================================================================================
 \section{PRISM}\label{sec:2}
