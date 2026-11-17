@@ -48,8 +48,7 @@ def fig1(output: Path) -> None:
             text(x0 + 1.8, y - 0.6, mono, size=5.6, colour=st.MUTED, family=MONO)
 
     # ================================================================ (a) the pipeline at one scan
-    st.letter(fig, 0.004, 0.995, "a")
-    text(5.0, H - 1.2, "PRISM at one follow-up scan", size=7, weight="bold")
+    st.panel_header(fig, 0.995, "a", "PRISM at one follow-up scan")
 
     cols = [(2.0, 28.0), (32.0, 68.0), (72.0, 103.0), (107.0, 140.0), (144.0, 179.0)]
     stages = ["Inputs", "Features", "Models", "Evidence statements", "Record and report"]
@@ -184,8 +183,7 @@ def fig1(output: Path) -> None:
 
     # ================================================================ (b) evaluation protocol
     by1 = eb - 7.0
-    st.letter(fig, 0.004, (by1 + 2.4) / H, "b")
-    text(5.0, by1 + 2.0, "Evaluation", size=7, weight="bold")
+    st.panel_header(fig, (by1 + 2.4) / H, "b", "Evaluation")
     bt, bb = by1 - 4.0, 7.5
     mid = (bt + bb) / 2
     card(2.0, bb, 50.0, bt, "Development: MU-Glioma-Post", st.NAVY,

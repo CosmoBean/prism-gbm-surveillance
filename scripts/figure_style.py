@@ -64,9 +64,20 @@ def letter(fig, x: float, y: float, text: str) -> None:
     fig.text(x, y, text, fontsize=9, weight="bold", ha="left", va="top", color=INK)
 
 
-def heading(ax, text: str, pad: float = 3) -> None:
-    """A short panel heading, left-aligned above the axes, in secondary weight (not a title)."""
-    ax.set_title(text, loc="left", fontsize=7, weight="bold", color=INK, pad=pad)
+def panel_header(fig, y: float, letter_text: str, heading_text: str = "", x: float = 0.004) -> None:
+    """Panel letter and a short descriptive heading on one line, as in Figure 1 (figure coordinates, top anchor)."""
+    letter(fig, x, y, letter_text)
+    if heading_text:
+        fig.text(x + 0.024, y - 0.002, heading_text, fontsize=7, weight="bold", ha="left", va="top", color=INK)
+
+
+def section_label(ax, x0: float, x1: float, text: str, y: float = 1.035, transform=None) -> None:
+    """Navy label over a thin grey rule spanning [x0, x1], as Figure 1 heads its stages.
+    x in data units, y in axes units unless a transform is given."""
+    transform = transform or ax.get_xaxis_transform()
+    ax.plot([x0, x1], [y, y], transform=transform, color=RULE, lw=0.6, clip_on=False, solid_capstyle="butt")
+    ax.text(x0, y + 0.015, text, transform=transform, ha="left", va="bottom", fontsize=6.6, weight="bold",
+            color=NAVY, clip_on=False)
 
 
 def save(fig, output: Path, name: str) -> None:

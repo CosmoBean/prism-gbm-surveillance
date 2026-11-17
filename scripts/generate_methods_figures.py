@@ -37,7 +37,8 @@ def save(fig, name: str) -> None:
 
 
 def cohort_label(ax, text):
-    ax.text(0.0, 1.03, text, transform=ax.transAxes, ha="left", va="bottom", fontsize=7, weight="bold")
+    lo, hi = ax.get_xlim()
+    st.section_label(ax, lo, hi, text, y=1.03)
 
 
 def errorbar(ax, x, y, lo, hi, colour, filled, marker, ms):

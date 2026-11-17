@@ -15,6 +15,7 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.lines import Line2D
+from matplotlib.patches import FancyBboxPatch
 
 import figure_style as st
 
@@ -40,14 +41,10 @@ def fig2(output: Path) -> None:
     ax = fig.add_axes([0.075, 0.12, 0.66, 0.76])
     ax.axvspan(2.5, 3.5, color=st.PANEL, lw=0, zorder=0)
     ax.axhline(0.5, color=st.MUTED, lw=0.6, ls=(0, (3, 2)), zorder=1)
-    # What each group is: a bracket above the axes (development | locked external | reference).
-    for x0, x1, text in [(-0.42, 0.42, "Development (cross validation)"), (0.58, 2.42, "Locked MU models, external"),
-                         (2.58, 3.42, "Refitted at UCSF (reference)")]:
-        y = 1.04
-        ax.plot([x0, x0, x1, x1], [y - 0.015, y, y, y - 0.015], transform=ax.get_xaxis_transform(), color=st.MUTED,
-                lw=0.6, clip_on=False)
-        ax.text((x0 + x1) / 2, y + 0.02, text, transform=ax.get_xaxis_transform(), ha="center", va="bottom",
-                fontsize=6.5, color=st.MUTED)
+    # What each group is, headed as Figure 1 heads its stages (development | locked external | reference).
+    for x0, x1, text in [(-0.45, 0.45, "Development (CV)"), (0.55, 2.45, "Locked MU models, applied externally"),
+                         (2.55, 3.45, "Refitted at UCSF (reference)")]:
+        st.section_label(ax, x0, x1, text)
     step = 0.8 / 6
     for g in range(len(groups)):
         present = [s for s in series if s[4][g] is not None]
@@ -126,12 +123,12 @@ def fig5(output: Path) -> None:
     """Report anatomy (synthetic example) and the automatic evaluation. NUMBERS.md 7."""
     height = 7.0
     fig = plt.figure(figsize=(WIDTH, height))
-    left, width, bottom, ax_h = 0.035, 0.625, 0.012, 0.945
+    left, width, bottom, ax_h = 0.012, 0.648, 0.006, 0.952
     ax = fig.add_axes([left, bottom, width, ax_h]); ax.set_xlim(0, 1); ax.set_ylim(0, 1); ax.axis("off")
-    st.letter(fig, 0.008, 0.995, "a")
+    st.panel_header(fig, 0.995, "a", "A report PRISM writes (synthetic example)")
     pt = 1 / (height * 72 * ax_h)                     # one point in axes-y units
-    ax.add_patch(plt.Rectangle((0, 0), 1, 1, facecolor="white", edgecolor=st.RULE, lw=0.6))
-    ax.add_patch(plt.Rectangle((0, 1 - 3 * pt), 1, 3 * pt, facecolor=st.NAVY, edgecolor="none"))
+    ax.add_patch(FancyBboxPatch((0, 0), 1, 1, boxstyle="round,pad=0,rounding_size=0.012", facecolor="white",
+                                edgecolor=st.NAVY, lw=0.7, mutation_aspect=width * WIDTH / (ax_h * height)))
     x0, x1 = 0.035, 0.965
     y = 1 - 12 * pt
     ax.text(x0, y, "PRISM surveillance report", fontsize=9, weight="bold", va="top", color=st.NAVY)
@@ -190,8 +187,8 @@ def fig5(output: Path) -> None:
             color=st.MUTED, style="italic", linespacing=1.3)
 
     # Model-size ladder (NUMBERS.md 7: v3.1, frozen prompt, no per-model tuning; descriptive).
-    bx = fig.add_axes([0.73, 0.50, 0.25, 0.44])
-    st.letter(fig, 0.69, 0.995, "b")
+    bx = fig.add_axes([0.73, 0.50, 0.25, 0.43])
+    st.panel_header(fig, 0.995, "b", "Reports passing the checker", x=0.69)
     ladder = [("Qwen 2B", 3.6, 21, False), ("Qwen 4B", 8.0, 306, False), ("Gemma E4B", 14.5, 117, False),
               ("Qwen 9B", 16.8, 368, False), ("Qwen 27B (used)", 50.2, 406, True),
               ("Gemma 31B", 57.9, 406, True), ("Qwen 35B-A3B", 64.7, 389, False)]
