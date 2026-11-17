@@ -106,21 +106,20 @@ checked against the record. Table~\ref{tab:models} lists every score in the pape
 % Sources: OUTLINE.md (Fig 1); SYSTEM_PLAN.md section 1.
 \begin{figure}[!htbp]
 \centering
-\figslot{fig1_system.pdf}{0.55\textheight}{A flowchart in five stages. Two drawn MRI slices and the treatment dates with
-clinical data enter two separate lanes, segmentation and position in treatment, which give an imaging score, a
-clinical-history score and a combined score. A confidence box holds a conformal set, model agreement and a reliability card. A record
-passes to a local language model and a checker, ending in a synthetic report. Below, models developed on MU are locked,
-applied unchanged to LUMIERE and UCSF, and 406 reports are checked.}
-\caption{\textbf{PRISM and how it was evaluated.} (A) At each follow-up MRI, the masks released with the cohort give
-the volumes of the previous and current scans and 27 measurements of the tumour and its change, which feed the
-imaging model. The treatment dates and clinical record feed the clinical-history model, and a third model on both
-inputs gives the combined score. All three are ridge logistic regressions (values from the synthetic example of
-Figure~\ref{fig:5}). The confidence statements are a conformal set at the 80\% level, the agreement of the two models
-and a lookup of past results in the same situation. Every value enters one record with its source, a local language
-model writes the report from the record without seeing images, and the report is checked against the record. (B)
-Models were developed on MU by repeated cross validation, then fitted once and applied unchanged at LUMIERE and UCSF
-under rules fixed before any score was compared with an external label, except the LUMIERE imaging and reduced
-clinical-history scores, added afterwards (Table~\ref{tab:models}).}
+\figslot{fig1_system.pdf}{0.55\textheight}{A methods schematic in five stages: inputs, features, models, evidence
+statements, and record and report, with the formula or rule each stage computes. Below, the evaluation protocol:
+development on MU, locking, two external cohorts and what was measured.}
+\caption{\textbf{The method.} (a) What PRISM computes at one follow-up scan. The masks released with the cohort give
+27 measurements of the tumour and its change ($\mathbf{x}_{\mathrm{img}}$); the treatment course as of the scan day
+and the patient's characteristics give the clinical-history inputs ($\mathbf{x}_{\mathrm{hist}}$). Three ridge
+logistic regressions score the scan on each input set and on both. The evidence statements are the split-conformal
+set of the combined score, the agreement of the imaging and clinical-history scores, and the reliability card. Every
+value enters one record under a fixed key; a local language model writes the report from the record alone, and a
+deterministic checker accepts it or rejects it without repair. Colours mark the models as in every figure; the MRI
+slices are drawn, not taken from a patient. (b) Models were developed on MU by repeated cross validation grouped by
+patient, then fitted once and applied unchanged at LUMIERE and UCSF, under rules fixed before any score was compared
+with an external label, except the LUMIERE imaging and reduced clinical-history scores, added afterwards
+(Table~\ref{tab:models}).}
 \label{fig:1}
 \end{figure}
 
@@ -589,7 +588,7 @@ MU, 162 at LUMIERE and 130 at UCSF) after one revision of the prompt, made becau
 (exploratory).
 All 220 reports in situations with few cases or none said so. When one field was changed in 30 records, 28 reports
 followed the change, against a planned minimum of 27. Of six other local models given the same prompt, only Gemma-4
-31B also had every report pass (Figure~\ref{fig:5}B). The reports for the 276 MU and LUMIERE records were then generated again with the record fields and prompt renamed to
+31B also had every report pass (Figure~\ref{fig:5}b). The reports for the 276 MU and LUMIERE records were then generated again with the record fields and prompt renamed to
 this paper's model names and no other change; all passed the checker, and the verifier was tested on these reports
 (Supplementary Section~S25).
 
@@ -598,12 +597,12 @@ this paper's model names and no other change; all passed the checker, and the ve
 \centering
 \figslot{fig5_report.pdf}{0.72\textheight}{One rendered report (segmentation figure, model scores, combined score,
 confidence) and reports passing the check for seven local models.}
-\caption{\textbf{The report PRISM writes, and the check.} (A) A report for a synthetic scan eight weeks after
+\caption{\textbf{The report PRISM writes, and the check.} (a) A report for a synthetic scan eight weeks after
 radiotherapy with growing enhancement. The segmentation figure is drawn rather than taken from a patient, the volumes
-and scores are invented, and the card row is MU's. Each sentence lists, in grey, the record fields it cites. (B)
+and scores are invented, and the card row is MU's. Each sentence lists, in grey, the record fields it cites. (b)
 Reports passing the planned checker, of 406, for seven local language models given the same prompt (Qwen3.5 2B, 4B
 and 9B, Gemma-4 E4B and 31B, Qwen3.8-27B used in PRISM, and Qwen3.5-35B-A3B) after one revision of the prompt. Dark
-bars show models for which at least 95\% passed in every cohort, and the model weight size is in brackets.}
+bars show models for which at least 95\% passed in every cohort, and the model weight size is at the right.}
 \label{fig:5}
 \end{figure}
 
