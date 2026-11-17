@@ -37,7 +37,7 @@ public MU-Glioma-Post, the clinical-history and imaging models reached AUCs of 0
 the published radiomics pipeline run with its authors' code. Locked and applied unchanged, the reduced combined model
 reached 0.77 at LUMIERE and 0.86 at UCSF-ALPTDG. The separate scores show that most of the ranking rests on the time
 after radiotherapy and the enhancing tumour, which together reached 0.80 on MU. After one prompt revision, all 406
-reports passed the planned checks. A reader study of its clinical use is planned.
+reports passed the planned checks. A reader study is left to future work.
 \end{abstract}
 
 % No more than 3 keywords (journal instructions).
@@ -66,19 +66,14 @@ rank scans well by recognising when they were taken, because follow-up schedules
 of 0.80 from radiomics on a single held out set of 30 patients \citep{christodoulou2026}.
 
 % Sources: OUTLINE.md (system-first 2026-11-15); NUMBERS.md 3--7; METHODS_RESULTS.md E4.
-PRISM is a system intended for clinical decision support that makes progression scores inspectable. For each follow-up scan it
-builds one record that holds tumour volumes measured from segmentation masks, the treatment course, three separately
-fitted scores and the source of every value, and a local language model writes a report from that record alone. We
-developed PRISM on MU-Glioma-Post, fitted its models once, and applied them unchanged in the LUMIERE and UCSF-ALPTDG
-cohorts. Our contributions are:
-\begin{enumerate}
-\item Methods: separate imaging, clinical-history and combined scores, each with a statement of its evidence
-(Section~\ref{sec:2}); two measures of the evidence behind a score's ranking (Section~\ref{sec:3.3}); and a local report whose
-numbers are checked against the record (Section~\ref{sec:3.5}).
-\item Results: both separate models ranked scans better than the published radiomics pipeline (Section~\ref{sec:4.1}),
-the locked models transferred to two external centres (Section~\ref{sec:4.2}), the ranking rested mostly on the
-time after radiotherapy and the enhancing tumour (Section~\ref{sec:4.3}), and every report passed the planned checker (Section~\ref{sec:4.5}).
-\end{enumerate}
+PRISM is a system intended for clinical decision support that makes progression scores inspectable. Our
+contribution is twofold. The first is the system itself. For each follow-up scan, PRISM keeps the imaging and the
+treatment-course evidence as separate scores, states the evidence behind each, and has a local language model write
+a report whose numbers are checked against the scan's record. The second is its evaluation. We developed PRISM on
+MU-Glioma-Post, fitted its models once and applied them unchanged at LUMIERE and UCSF-ALPTDG. Both separate models
+ranked scans better than the published radiomics pipeline on identical data, the locked models held at both external
+centres, and the separate scores revealed that the ranking rests largely on the time since radiotherapy and the
+enhancing tumour.
 
 % =====================================================================================================
 \section{PRISM}\label{sec:2}
@@ -412,7 +407,7 @@ Combined model over the reader baseline & CI above 0 & \textbf{No clear gain} at
 Marginal conformal sets, combined model & Coverage $\geq$ 0.78 in each cohort & \textbf{Yes} on point estimates & \ref{sec:4.4} \\
 Reports pass the checker & $\geq$ 95\% in each cohort & \textbf{No} as planned (every LUMIERE report failed). \textbf{Yes} after one revision of the record fields and the prompt & \ref{sec:4.5} \\
 Verifier closes a blind spot & $\geq$ 95\% of synthetic errors of that kind rejected & After one revision of the rules, \textbf{Yes} for direction and swapped volumes, \textbf{No} for a swapped tier word & \ref{sec:4.5} \\
-Usefulness to clinicians & Not tested & Reader study protocol prepared (Supplementary Section~S21.1) & \ref{sec:5} \\
+Usefulness to clinicians & Not tested & Future work & \ref{sec:5} \\
 \bottomrule
 \end{tabularx}
 \begin{tablenotes}\footnotesize
@@ -677,8 +672,8 @@ documented it, and at LUMIERE and UCSF it partly reflects the images the scores 
 split, the group calibration and the verifier were evaluated on MU and LUMIERE, and the published-pipeline comparison
 on MU. In the first 12 weeks after radiotherapy MU holds few progression scans, and the report marks such scans as
 having few comparable cases. Extending these analyses to UCSF-ALPTDG and pooling rare situations across further
-cohorts, such as Burdenko and UCSD-PTGBM, would sharpen these estimates. The test of PRISM's clinical value is a
-reader study, for which a protocol has been prepared (Supplementary Section~S21.1).
+cohorts, such as Burdenko and UCSD-PTGBM, would sharpen these estimates. A reader study of PRISM's
+clinical value is left to future work.
 
 \subsection*{Conclusion}
 
