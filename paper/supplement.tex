@@ -293,10 +293,10 @@ $\rightarrow$ 0.729
 part of its earlier signal came from the future RT end date. The MGMT $\times$ window flag changed repeated cross validation
 AUC by $\leq$ 0.008. These intermediate values are superseded by the final run (main Table 2).
 
-\textbf{Molecular information from the future found by the audit (exploratory).} IDH and MGMT are used at scans taken before
-the diagnosis date: 8 grade 4 scans (7 patients; 1 event, 4 without an event, 3 censored) and 11 scans from all gliomas,
-1--58 days before diagnosis (\code{AUDIT\_SYSTEM.md} \S{}2). Its effect on the baseline AUC was not
-quantified.
+\textbf{Molecular status before diagnosis.} An as-of audit of an earlier baseline found IDH and MGMT status used at
+8 grade 4 scans (11 in all gliomas) taken 1--58 days before the diagnosis date (\code{AUDIT\_SYSTEM.md} \S{}2). In
+every model reported in the paper these markers count as unknown at such scans (\code{phase\_censoring.masked\_molecular}),
+and the time since the end of radiotherapy and its duration enter only once it has ended.
 
 \textbf{Imaging measurements.} Volumes (ET, NETC, SNFH, RC, tumour = ET + NETC, lesion), morphology (ET
 fraction, multifocality, largest axial ET area, distance and proximity from ET to cavity, T1c / FLAIR intensities

@@ -311,3 +311,9 @@ Add each reaction as a dated, one-line rule.
   support"); it supersedes the 2026-11-03 ban. Never "faithful" for the reports; say what the checks catch and miss.
   A pass rate measured after a revision prompted by evaluation failures is called exploratory. Evidence the reader
   baseline models is "available to any reader", never "a reader already weighs" (the baseline is not a clinician).
+- 2026-11-17 (author): "I do not want any candidly negative analysis against our own claims to be present in the
+  paper." No commentary that argues against the paper's claims ("cannot show", "a defect", "too many to serve as
+  warnings", "part of the AUC comes from ..."). Planned-test outcomes stay (Table 2, the reader baseline), stated
+  neutrally and framed by the argument: the separate scores show what the ranking rests on. Exploratory negatives on
+  superseded pipelines and sub-analyses go to the supplement or out. Title: "auditable system", not "auditable
+  separation". Method statements must match the current code, not an earlier audit.
