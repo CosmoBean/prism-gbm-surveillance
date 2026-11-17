@@ -122,7 +122,7 @@ under rules fixed before any score was compared with an external label.}
 \centering
 \caption[The scores in this paper]{\textbf{The scores in this paper.} Every fitted score except the published
 radiomics approach is a ridge logistic regression fitted within the training data, with unknown IDH or MGMT status coded
-with wildtype and unmethylated, and missing measurements imputed with the training median and an indicator. Status says whether
+with wildtype and unmethylated (coding it as its own category changed no AUC clearly), and missing measurements imputed with the training median and an indicator. Status says whether
 a score's own AUC was planned before the analysis or exploratory; the comparisons in Table~\ref{tab:2} were planned
 even where a score's AUC on MU was exploratory.}
 \label{tab:models}
@@ -197,7 +197,9 @@ the report calls them indicative. The report follows the content of the BT-RADS 
 
 % Sources: TABLE1_COHORT.md; UCSF_DATA.md; UCSF_PLAN.md; DETECTION_TASK.md; INTENDED_USE.md; NUMBERS.md 2.2.
 Grade 4 glioma is the primary population in all three cohorts (Table~\ref{tab:1}). The task is to tell the scan at
-which a cohort documented progression from scans followed by at least 120 days without it. Each cohort defines
+which a cohort documented progression from scans followed by at least 120 days without it. This drops scans with
+shorter follow up, among them scans shortly before progression, so on MU we also evaluated every score with all
+scans before progression as negatives, as the detection plan specified. Each cohort defines
 progression in its own way (Table~\ref{tab:eval}), so AUCs are compared between models within a cohort. The design
 ties time to the label. On MU most progression scans were taken later than 12 weeks after radiotherapy and most scans
 without progression within 12 weeks (Table~\ref{tab:1}), so the time window alone separates many pairs. On MU the
@@ -407,6 +409,8 @@ MU results unchanged with masks from another segmenter & Every paired CI include
 Published radiomics approach below the imaging model on the second masks & Otherwise the claim is limited to the released masks & \textbf{Yes} & \ref{sec:4.1} \\
 Imaging detection improves with the BraTS 2021 segmenter's masks (earlier plan) & Gain $\geq$ 0.05, CI above 0 & \textbf{No}. Median enhancing tumour Dice 0.80, no gain & \ref{sec:4.1} \\
 Image measurements and schedule inputs add to the clinical-history model on MU & Gain $\geq$ 0.03, CI above 0 & \textbf{No}. $+$0.02 ($-$0.03 to $+$0.06) & \ref{sec:4.1} \\
+MU AUCs unchanged with all scans before progression as negatives & Each changes by $<$ 0.05, reader baseline reading unchanged & \textbf{No} for the imaging model, $-$0.054. \textbf{Yes} for the others and the reading & \ref{sec:4.1} \\
+Unknown IDH and MGMT status as its own category & Every paired CI includes 0 & \textbf{Yes} & \ref{sec:2.2} \\
 Deep networks tuned on MU add to the clinical-history model with image measurements & Gain $\geq$ 0.03, CI above 0 & \textbf{No}. No network gained & \ref{sec:4.1} \\
 Combined model at LUMIERE & AUC $\geq$ 0.65 & \textbf{Yes} & \ref{sec:4.2} \\
 Imaging model at UCSF & AUC $\geq$ 0.65, lower bound $>$ 0.5 & \textbf{Yes} & \ref{sec:4.2} \\
@@ -421,7 +425,7 @@ Usefulness to clinicians & Not tested & A reader study is designed (Supplementar
 \item Plans and their commits: detection (2b4c927), UCSF-ALPTDG (0e7c9fe), the system (e7cba80), the report evaluation
 (4f7e7b9), the checker test (4f854cb), the rerun with restored data (0df79e9), the analyses of Sections 3.3 and 3.4
 (1363773), the reader baseline (e8014a8), the run of the published approach and the mask sensitivity analysis
-(b1ce85b), and the run of the published approach on the second masks (cab32b3). The conformal sets of the imaging model at LUMIERE (0.71) and the clinical-history
+(b1ce85b), the run of the published approach on the second masks (cab32b3), and the analyses asked for in review (161b353). The conformal sets of the imaging model at LUMIERE (0.71) and the clinical-history
 model at UCSF (0.70) did not meet the coverage rule.
 \end{tablenotes}
 \end{threeparttable}
@@ -452,6 +456,11 @@ model, by 0.30 (0.19--0.40). Within one time window, on either mask set, the mar
 including zero. On these masks the combined model reached 0.80 and the reader baseline 0.78, each 0.02 below its
 value on the released masks, with CIs including zero.
 
+With all MU scans before progression as negatives, adding 89 scans, the imaging model fell to 0.66, by 0.054
+(0.018--0.089), beyond the planned limit of 0.05, while the clinical-history model (0.81) and the combined
+model (0.78) changed less. Part of the imaging model's AUC therefore comes from leaving out the scans shortly before
+progression.
+
 Clinical data alone, without dates, reached 0.53
 (0.45--0.61), and neither a second segmentation of MU nor deep networks tuned on MU improved detection
 (Table~\ref{tab:2}). The clinical-history model's lead over the images came from the treatment course, which
@@ -466,7 +475,11 @@ Fitted once on MU and applied unchanged, the combined and imaging models kept ra
 model 0.65 (0.56--0.73, exploratory). At UCSF the imaging model reached 0.73 (0.60--0.84), images from one scan 0.80
 (0.69--0.89) and the locked combined model 0.86 (0.76--0.93),
 while the reduced clinical-history model, whose radiotherapy flag is approximated there, scored 0.56 (0.42--0.69). On
-MU the combined model reached 0.82, no more than the clinical-history model.
+MU the combined model reached 0.82, no more than the clinical-history model, and its reduced form 0.80. The scores
+rank scans at a new centre but are not risks there. On MU the calibration slopes were about 0.75, with CIs including
+1, but at LUMIERE the imaging score under-predicted progression (calibration intercept 0.41, 0.15--0.70), and at
+UCSF the combined model's slope was 3.3, so its predictions were too compressed. A centre would recalibrate the
+scores on its own scans before reading them as probabilities.
 
 % Sources: NUMBERS.md section 11 (Fig 2).
 \begin{figure}[!htbp]
@@ -498,7 +511,8 @@ A baseline built from the time window and the enhancing tumour alone ranked scan
 0.80 (0.71--0.88) on MU and, locked, 0.73 (0.64--0.81) at LUMIERE. The combined model ranked scans better than it by
 0.02 ($-$0.03 to $+$0.08) on MU and 0.04 ($-$0.01 to $+$0.10) at LUMIERE, so neither centre showed a clear gain. Within one time window the largest gain over the baseline was the imaging model's, 0.10 ($-$0.04 to $+$0.26) on MU, also with no
 clear gain. With the BraTS 2021 masks the reading was the same (combined model $+$0.03, $-$0.04 to $+$0.09), and the
-imaging model fell below the baseline, by 0.15 (0.05--0.25).
+imaging model fell below the baseline, by 0.15 (0.05--0.25). With all scans before progression as negatives the
+reading was also the same (combined model $+$0.01, $-$0.03 to $+$0.06).
 
 % Sources: METHODS_RESULTS.md M1 and E1.
 The split of the AUC shows where each score's ranking lies (Figure~\ref{fig:3}). At MU 38\% of pairs fell within one
@@ -693,7 +707,8 @@ and the record inherits the noise of the released masks.
 
 % Sources: OUTLINE.md; NUMBERS.md 10; UCSF_AUDIT.md.
 PRISM was developed on one public cohort, and the two external tests are its only evidence that the ranking transfers.
-The label is progression as each centre documented it, no scan was read again, and at LUMIERE and UCSF the label is
+The label is progression as each centre documented it, scans shortly before progression are left out of the
+primary analysis, no scan was read again, and at LUMIERE and UCSF the label is
 partly read from the images the scores use. The reader baseline, the AUC split and group calibration ran on MU and
 LUMIERE only, because UCSF-ALPTDG was no longer on our hardware, and at LUMIERE the time window is a single rater's
 flag. In the first 12 weeks after radiotherapy, when
