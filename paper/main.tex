@@ -1,7 +1,7 @@
 % main.tex -- manuscript. SOURCE OF TRUTH from 2026-10-15 (docs/manuscript/DRAFT.md is a frozen snapshot).
 % Build: ./build.sh (tectonic). Figures are read from ../docs/manuscript/figures/ (see macros.tex).
 % LAYER: SYSTEM-FIRST SUBMISSION VERSION (2026-11-16), outline in docs/manuscript/OUTLINE.md (top section); review
-% that led to it in docs/manuscript/REVIEW_2026-11-15.md. The methods-first text is in git history (commit 582d269).
+% that led to it in docs/manuscript/REVIEW_2026-11-15.md. The methods-first text is in git history.
 % Numbers: docs/manuscript/NUMBERS.md, docs/results/METHODS_RESULTS.md (M1--M3, E1--E4) and
 % docs/results/CHRISTODOULOU_REPLICATION.md; each paragraph names its sources in a one line comment.
 \documentclass[largeformat]{interact} % Taylor & Francis template (CMBBE: Imaging & Visualization)
@@ -178,7 +178,7 @@ treatment dates.
 
 % Sources: prism/report/facts_v3_1.py; prism/report/prompts_v3_1.py; REPORT_V3_1.md; Supplementary S19, S24.
 Every value PRISM computes for a scan enters one structured record under a fixed key, with its source. A local language
-model (Qwen3.8-27B, revision 1d4bf0f2, greedy decoding) writes the report from that record alone, so the record never leaves the computer
+model (Qwen3.8-27B, greedy decoding) writes the report from that record alone, so the record never leaves the computer
 that runs PRISM. Decoding is constrained to a JSON schema in which every sentence carries its section and the keys of
 the record fields it uses, and the model sees no images and does no arithmetic. The record also carries two
 descriptive statements. One says whether the clinical-history and imaging scores fall on the same side of their cohort
@@ -242,7 +242,7 @@ documented start of radiotherapy by the scan day (24 of them from 9 patients wit
 
 \subsection{How each cohort was evaluated}\label{sec:3.2}
 
-% Sources: DETECTION_TASK.md; UCSF_PLAN.md (0e7c9fe); SYSTEM_PLAN.md (e7cba80); METHODS_PLAN.md (1363773).
+% Sources: DETECTION_TASK.md; UCSF_PLAN.md; SYSTEM_PLAN.md; METHODS_PLAN.md.
 Each cohort played one role (Table~\ref{tab:eval}). On MU we evaluated every model by five repeats of fivefold cross
 validation grouped by patient and report the mean pooled held out AUC, because single splits are unstable in small
 cohorts \citep{varoquaux2018}. We then fitted each model once on all 181 grade 4 detection scans of MU, including the
@@ -276,7 +276,7 @@ Reader baseline, AUC split, group calibration & Run & Run & Not run (data not on
 
 \subsection{What the scores rest on}\label{sec:3.3}
 
-% Sources: CHRISTODOULOU_FAITHFUL_PLAN.md (b1ce85b, deviations e636073); CHRISTODOULOU_REPLICATION.md (faithful run);
+% Sources: CHRISTODOULOU_FAITHFUL_PLAN.md (with deviations); CHRISTODOULOU_REPLICATION.md (faithful run);
 % ref christodoulou2026.
 \paragraph{The published approach.} We ran the published MU radiomics pipeline \citep{christodoulou2026} with the
 authors' public code and settings, on the same patients, masks, label and folds as PRISM. It extracts 4,892 radiomic
@@ -289,7 +289,7 @@ progressed the label of progression. We kept PRISM's label, one scan per documen
 of approaches on one task rather than a replication of the published estimate. The plan, committed before the run,
 stated that the comparison with PRISM's imaging model would be withdrawn if the pipeline did not rank below it.
 
-% Sources: MASK_SENSITIVITY_PLAN.md (b1ce85b, deviations c235649); METHODS_RESULTS.md E5; ref hatamizadeh2022.
+% Sources: MASK_SENSITIVITY_PLAN.md (with deviations); METHODS_RESULTS.md E5; ref hatamizadeh2022.
 \paragraph{Mask sensitivity.} The masks released with MU are noisy: between scans at most 30 days apart the enhancing
 volume changes by a median factor of 2.6. To test whether the MU results depend on them, we replaced every MU mask
 with the label map of one public segmenter, a Swin UNETR trained on BraTS 2021 \citep{hatamizadeh2022}, kept the
@@ -297,7 +297,7 @@ resection cavity from the released mask, recomputed the 27 measurements, and ref
 and the reader baseline in the same folds. The plan called the results robust if every paired difference had a CI
 including zero and the reading against the reader baseline did not change.
 
-% Sources: CLINICIAN_BASELINE_PLAN.md (e8014a8); METHODS_RESULTS.md E4; ref beaulieujones2021.
+% Sources: CLINICIAN_BASELINE_PLAN.md; METHODS_RESULTS.md E4; ref beaulieujones2021.
 \paragraph{The reader baseline.} To measure what a score adds to evidence available to the reader
 \citep{beaulieujones2021}, we fitted a ridge logistic regression on the time window after radiotherapy, log enhancing
 volume and its change since the previous scan, with the same pipeline, folds and locking as PRISM's models. At LUMIERE the window is
@@ -356,7 +356,7 @@ outcomes (exploratory).
 
 \subsection{Checking the reports}\label{sec:3.5}
 
-% Sources: prism/report/checker.py; prism/report/verifier.py (v1.1, blob d4b93db5); METHODS_PLAN.md M3; refs zeba2026,
+% Sources: prism/report/checker.py; prism/report/verifier.py (v1.1); METHODS_PLAN.md M3; refs zeba2026,
 % wiseman2017, kryscinski2020, gabriel2021, rao2025rexerr.
 The report is a list of claims, each a sentence with the record fields it cites. The planned checker of PRISM, frozen
 before any evaluation report was generated, rejects a report that cannot be parsed, cites a field that does not exist,

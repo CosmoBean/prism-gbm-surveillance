@@ -1286,12 +1286,12 @@ the repeated-CV estimator. Commands for each analysis are listed at the end of t
 document in \code{docs/results/}. \flag{[PENDING: public code release and tag.]}
 
 \paragraph{Analysis plans.} Each plan was committed to the repository before the analysis it describes was run.
-Plans, commits and dates: detection at the scan (2b4c927, 2026-10-21); UCSF-ALPTDG (0e7c9fe, 2026-10-25); the
-system (e7cba80, 2026-10-25); the report evaluation (4f7e7b9, 2026-10-25); the checker test (4f854cb, 2026-11-13);
-the rerun with restored data (0df79e9, 2026-11-13); the AUC split, the group-conditional sets and the verifier
-(1363773, 2026-11-15); the reader baseline (e8014a8, 2026-11-15); the run of the published approach and the mask
-sensitivity analysis (b1ce85b, 2026-11-16); the run of the published approach on the second masks (cab32b3,
-2026-11-16); and the calibration, spectrum and marker-coding analyses (161b353, 2026-11-17).
+Plans and the dates they were committed: detection at the scan (2026-10-21); UCSF-ALPTDG (2026-10-25); the system
+(2026-10-25); the report evaluation (2026-10-25); the checker test (2026-11-13); the rerun with restored data
+(2026-11-13); the AUC split, the group-conditional sets and the verifier (2026-11-15); the reader baseline
+(2026-11-15); the run of the published approach and the mask sensitivity analysis (2026-11-16); the run of the
+published approach on the second masks (2026-11-16); and the calibration, spectrum and marker-coding analyses
+(2026-11-17).
 
 \FloatBarrier
 \section[Reporting checklists (TRIPOD+AI, CLEAR) cross-referenced to the manuscript]{Reporting checklists
@@ -1665,7 +1665,7 @@ with information from after the scan. This is a third lookahead, next to the sho
 molecular lookahead (S15). The audit's as-of check did not flag it, because that check reads raw values, not the
 missingness indicators that the imputer adds.
 
-\textbf{Plan (prespecified).} The plan was written and committed (\code{c98febe}) before any model of this analysis
+\textbf{Plan (prespecified).} The plan was written and committed before any model of this analysis
 was fitted or scored on the real labels. The first real run saved it to \code{PLAN\_snapshot.md}, and it was not
 changed afterwards. Anything added after the results were seen is labelled EXPLORATORY. Grade 4 is the primary
 population and all gliomas the secondary one. Folds, pipeline (\code{c3.BASE\_PRE} + ridge, inner choice of C) and
@@ -2012,7 +2012,7 @@ with different fold fits, so risks, intervals, tiers, conformal sets and flags d
 patients. No v2 text was produced or read on any grade 4 record before the run. Stress set: 30 perturbed evaluation
 records (seed 0; 10 risks moved to another tier, 10 flags switched on, 10 switched off), with the S19 pass rule.
 LUMIERE could not be used, because the core model needs treatment and RT date fields that LUMIERE lacks. The plan was
-written on 2026-10-15 before any evaluation or stress report was generated, committed and pushed as \code{de9c487}, and
+written on 2026-10-15 before any evaluation or stress report was generated, committed and pushed, and
 saved with a timestamp (2026-10-16T02:59:19Z) and the sha256 of every code file. After the plan only a figure step was
 added; no prompt, fact, checker, criterion or rule changed.
 
@@ -2205,7 +2205,7 @@ applicable CLAIM and TRIPOD+AI items, and the protocol is preregistered before t
 \FloatBarrier
 \section{SwinUNETR encoder tuned on the task}\label{sec:S22}
 
-\textbf{Plan.} Written into \code{docs/results/FINETUNE\_DEEP.md} and committed (9aaa8d3) before any network saw a
+\textbf{Plan.} Written into \code{docs/results/FINETUNE\_DEEP.md} and committed before any network saw a
 real label; a dated copy (\code{PLAN\_snapshot.md}) was saved at 22:06 on 2026-10-15, and the first real-label job
 finished at 22:08. Code: \code{prism/analyses/finetune\_deep.py} (stage \code{finetune}).
 
@@ -2305,7 +2305,7 @@ from the previous scan did not alter the verdict.
 \FloatBarrier
 \section{Intended use and censoring sensitivity}\label{sec:S23}
 
-\textbf{Plan.} Written into \code{docs/results/INTENDED\_USE.md} and committed (74eaaf5) before any of these results
+\textbf{Plan.} Written into \code{docs/results/INTENDED\_USE.md} and committed before any of these results
 was computed. Code: \code{prism/analyses/intended\_use.py} (stage \code{intendeduse}); outputs in
 \code{outputs/results/analyses/intended\_use/}. No model was retrained: stored predictions from held out data were rescored,
 and every published AUC reproduced within 0.0006 (\code{checks.csv}).
@@ -2466,10 +2466,10 @@ Images from one scan use rows 1 to 19.}
 \FloatBarrier
 \section{Analyses rerun with the restored data}\label{sec:S25}
 
-% Sources: docs/results/REVISION_DATA_PLAN.md (0df79e9, before the run); REVISION_DATA.md; NUMBERS.md 16.
+% Sources: docs/results/REVISION_DATA_PLAN.md (before the run); REVISION_DATA.md; NUMBERS.md 16.
 These analyses answer three limits of the planned system, a conformal set taken from a refitted model, a reliability
 card that counts the scan it describes and the lack of a template baseline, and they regenerate the reports with the
-model names used in this paper. The rules were written before the run (plan 0df79e9). They are not part of the earlier
+model names used in this paper. The rules were written before the run. They are not part of the earlier
 registered plans and carry a dagger in the main text. The UCSF-ALPTDG images were not available for this rerun, so
 every result is for MU-Glioma-Post and LUMIERE. Before any new analysis, every registered score, AUC, coverage and
 error rate of these two cohorts was rebuilt from the raw data and matched the published values.
@@ -2534,9 +2534,9 @@ Fixed template & 114 & 162 & 90 of 90 & 413 & 39.4 \\
 \FloatBarrier
 \section{The three methods, full results}\label{sec:S26}
 
-% Sources: docs/results/METHODS_PLAN.md (1363773, before any run); METHODS_RESULTS.md; aggregate CSVs of
-% prism/analyses/methods.py and prism/analyses/verifier_mutation.py (commits 3d5e710, f27d81e).
-These analyses were written down before any of them was run or coded (plan 1363773). None is confirmatory. All are
+% Sources: docs/results/METHODS_PLAN.md (before any run); METHODS_RESULTS.md; aggregate CSVs of
+% prism/analyses/methods.py and prism/analyses/verifier_mutation.py.
+These analyses were written down before any of them was run or coded. None is confirmatory. All are
 descriptive estimates with 95\% intervals from 2000 resamples of patients (seed 20261115), and at MU each resample
 averages over the five repeats of cross validation. The UCSF-ALPTDG images were not available, so every result is for
 the public development cohort (MU grade 4 intended use, 146 scans) and LUMIERE (178 scans).
@@ -2544,7 +2544,7 @@ the public development cohort (MU grade 4 intended use, 146 scans) and LUMIERE (
 \subsection{AUC split by context}\label{sec:S26.1}
 
 For each score we split the pairs of one progression and one other scan into pairs from the same context and pairs
-from different contexts, and computed the AUC within each set (plan 1363773). With $w$ the share of pairs from the
+from different contexts, and computed the AUC within each set. With $w$ the share of pairs from the
 same context, $A_W$ the AUC within contexts and $A_B$ the AUC across them, the AUC equals $w A_W + (1-w) A_B$ exactly,
 and this held to $10^{-12}$ on every resample. At MU the context is the time after radiotherapy from the treatment
 dates. The strata held 2 progression and 1 other scan during radiotherapy, 4 and 51 early after it (up to 12 weeks
@@ -2634,8 +2634,7 @@ During radiotherapy & 2 & 1 & -- & -- & -- \\
 \subsection{Group-conditional conformal sets}\label{sec:S26.2}
 
 We calibrated the conformal sets within groups defined by the time window after radiotherapy and the enhancement
-state, which are the situations of the reliability card, and compared them with the marginal sets of the plan (plan
-1363773). Each scan was calibrated at the finest level with at least 10 calibration patients, level 1 being its group,
+state, which are the situations of the reliability card, and compared them with the marginal sets of the plan. Each scan was calibrated at the finest level with at least 10 calibration patients, level 1 being its group,
 level 2 its enhancement state over all time windows and level 3 all calibration scans, which is the marginal set. The
 time after radiotherapy is unknown for every LUMIERE scan, so LUMIERE scans start at level 2. The nominal level was
 80\% throughout. Under exchangeability within the group, level 1 and level 2 sets are conditional on the group, and
@@ -2738,14 +2737,14 @@ Outcome-conditional & 0.79 & 0.87 & 0.73 & 16\% & 0.7\% & 0.64 (later, increased
 
 \subsection{Bound verifier}\label{sec:S26.3}
 
-We added two rules to the frozen checker, which itself was not edited (plan 1363773). The first binds each number
+We added two rules to the frozen checker, which itself was not edited. The first binds each number
 that sits next to a named quantity (enhancing tumour, FLAIR hyperintensity, necrosis, cavity, or one of the three
 model scores) to a cited field for that quantity. The second binds each direction word (larger, increased, smaller,
 decreased and similar) to every cited field that carries a direction. The rules of version 1.0 were fixed before any
-report was checked (commit 3d5e710). They bound a number only to cited fields whose key names the quantity, and they
+report was checked. They bound a number only to cited fields whose key names the quantity, and they
 rejected every real report (276 of 276 from the language model and 276 of 276 from the template) and 24 of the 52
 correct synthetic reports, because the statement fields name the quantity in their text and not in their key. This
-pre-specified rule failed, and we report it as such. Version 1.1 (commit f27d81e) also binds numbers and direction
+pre-specified rule failed, and we report it as such. Version 1.1 also binds numbers and direction
 words inside a cited text field to the quantity named in their clause. It was developed on the synthetic records
 (52 of 52 correct reports passed) and on the development reports (47 of 48 from the language model and 48 of 48 from
 the template), frozen, and then applied once to the evaluation reports.
