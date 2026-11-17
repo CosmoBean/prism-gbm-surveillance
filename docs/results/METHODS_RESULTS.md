@@ -236,3 +236,109 @@ Reading, by the rule fixed in the plan:
   +0.02.
 - **The less noisy segmenter does not help.** It reduces the short-gap ET noise (2.57 -> 2.17), but it does not
   improve any model. The imaging model gets worse.
+
+## E6. Analyses asked for by the second review round (planned in REVIEW_ANALYSES_PLAN.md, 161b353; deviations 6474aad)
+
+Code: `prism/analyses/review_analyses.py` (c2fc7f3). Output: `outputs/results/analyses/review_analyses/
+e6_review_analyses.csv`. MU: the paper's three scores and the reader baseline, 5x5 grouped CV, intended use (146
+scans, 62 progressions, 80 patients). LUMIERE: the locked models (178 scans, 73 progressions, 79 patients). One set of
+2,000 patient bootstrap samples per cohort (seed 20261117), no refit; at MU each sample averages over the five
+repeats and is drawn over the 88 patients of the widest set (secondary negatives). Checks before reading (asserted,
+all passed): MU 0.822 / 0.709 / 0.821, reader 0.797; LUMIERE combined 0.773; the LUMIERE refit code reproduces the
+locked clinical-history and combined scores exactly. Run time 7 s on 20 CPUs.
+
+### E6a. Calibration (descriptive, no rule)
+
+Intercept: calibration-in-the-large (slope fixed at 1; > 0 means the score under-predicts). Slope: < 1 means the
+predictions are too spread out, > 1 too compressed. Prevalence reference: the Brier score of always predicting the
+prevalence (MU 0.244, LUMIERE 0.242).
+
+| cohort | score | intercept | slope | Brier |
+|---|---|---|---|---|
+| MU | clinical-history | -0.06 (-0.53 to +0.45) | 0.78 (0.37-1.61) | 0.170 (0.136-0.209) |
+| MU | imaging | +0.24 (-0.10 to +0.62) | 0.75 (0.45-1.21) | 0.213 (0.185-0.244) |
+| MU | combined | -0.05 (-0.51 to +0.41) | 0.75 (0.27-1.64) | 0.175 (0.142-0.213) |
+| MU | reader baseline | +0.00 (-0.45 to +0.47) | 0.94 (0.63-1.43) | 0.177 (0.141-0.216) |
+| LUMIERE | clinical-history (reduced) | -0.14 (-0.55 to +0.32) | 1.03 (0.60-1.89) | 0.214 (0.190-0.240) |
+| LUMIERE | imaging | +0.41 (+0.15 to +0.70) | 1.91 (0.81-3.20) | 0.239 (0.215-0.266) |
+| LUMIERE | combined (reduced) | -0.07 (-0.37 to +0.30) | 1.45 (0.85-2.57) | 0.195 (0.173-0.221) |
+| LUMIERE | reader baseline | +0.07 (-0.23 to +0.47) | 0.74 (0.37-1.43) | 0.202 (0.179-0.228) |
+
+UCSF-ALPTDG (not on hand; quoted from UCSF_RESULTS.md, locked models, grade 4, scan 2): calibration slope
+clinical-history (A-Tbase) 0.37 (-0.39 to 1.28), imaging (A-Ipure) 0.85 (0.44-1.43), combined (A-T) 3.29
+(1.96-6.28); O/E 0.67 (0.50-0.88), 1.24 (0.93-1.58), 0.72 (0.55-0.91).
+
+Reading (descriptive):
+- At MU the intercepts are near zero and every interval includes zero. The slopes of the three PRISM scores are about
+  0.75-0.78: cross-validated predictions are somewhat too spread out. Every interval includes 1.
+- At LUMIERE the reduced clinical-history and combined models are calibrated in the large (intercepts include zero).
+  The imaging score under-predicts (intercept +0.41, interval above zero) and its predictions are compressed
+  (slope 1.91); so are the combined model's (1.45). Both slope intervals include 1.
+- At UCSF the combined model is strongly compressed (slope 3.3) and over-predicts (O/E 0.72), as reported there.
+- Every score beats the prevalence reference on Brier at MU and LUMIERE except the LUMIERE imaging score (0.239
+  against 0.242). The scores rank better than they are calibrated across sites, so a probability shown to a reader
+  would need local recalibration.
+
+### E6b. Scans shortly before progression (MU, intended use)
+
+Models trained as now (primary negatives); evaluated with the secondary negatives (every index scan before
+progression, whatever the follow up): 62 progressions against 173 negatives (88 patients). That adds 89 negative
+scans (67 patients) that the primary label drops.
+
+| score | AUC, primary negatives | AUC, secondary negatives | change | AUC, added scans only vs progression |
+|---|---|---|---|---|
+| clinical-history | 0.822 (0.746-0.897) | 0.807 (0.758-0.854) | -0.015 (-0.062 to +0.030) | 0.792 (0.739-0.847) |
+| imaging | 0.709 (0.631-0.785) | 0.655 (0.590-0.720) | **-0.054 (-0.089 to -0.018)** | 0.604 (0.539-0.674) |
+| combined | 0.821 (0.745-0.888) | 0.780 (0.730-0.826) | -0.041 (-0.084 to +0.004) | 0.742 (0.682-0.801) |
+| reader baseline | 0.797 (0.705-0.882) | 0.769 (0.709-0.827) | -0.028 (-0.080 to +0.028) | 0.743 (0.671-0.811) |
+
+Gains over the reader baseline (score - reader):
+
+| score | primary negatives | secondary negatives |
+|---|---|---|
+| combined (planned outcome) | +0.023 (-0.039 to +0.082) | +0.010 (-0.034 to +0.057) |
+| clinical-history | +0.025 (-0.043 to +0.097) | +0.037 (-0.009 to +0.087) |
+| imaging | -0.088 (-0.195 to +0.022) | -0.115 (-0.192 to -0.035) |
+
+Reading, by the rule fixed in the plan:
+- **Not robust for the imaging model.** Its AUC falls by 0.054 (0.709 to 0.655), which is not less than 0.05; the
+  paper must state this change. The clinical-history (-0.015) and combined (-0.041) changes are below 0.05. The
+  reader baseline changes by -0.028.
+- **The reader-baseline reading is unchanged.** No PRISM score has a gain whose interval lies above zero; combined -
+  reader is +0.010 (-0.034 to +0.057). With the secondary negatives the imaging model is clearly below the reader
+  baseline (-0.115, -0.192 to -0.035), where with the primary negatives its interval reached +0.022.
+- The dropped scans are the harder negatives: against the progression scans every score separates them less well
+  than the primary negatives, most of all the imaging score (0.60).
+
+### E6c. Unknown IDH and MGMT status as its own category
+
+An indicator per marker (status not available at the scan: unknown, or scan before diagnosis) was added to the
+clinical-history and combined models at MU (refitted in the same folds) and to the locked reduced models at
+LUMIERE (refitted once on MU). Unknown in the MU primary set: IDH 6, MGMT 20 scans; at LUMIERE: IDH 68, MGMT 16
+scans.
+
+| cohort | score | AUC, current coding | AUC, indicator coding | paired difference |
+|---|---|---|---|---|
+| MU | clinical-history | 0.822 | 0.829 (0.754-0.906) | +0.007 (-0.000 to +0.016) |
+| MU | combined | 0.821 | 0.821 (0.745-0.889) | +0.001 (-0.005 to +0.008) |
+| LUMIERE | clinical-history (reduced) | 0.689 (0.604-0.795) | 0.685 (0.615-0.765) | -0.004 (-0.087 to +0.082) |
+| LUMIERE | combined (reduced) | 0.773 (0.683-0.859) | 0.737 (0.674-0.807) | -0.035 (-0.100 to +0.035) |
+
+Reading, by the rule fixed in the plan:
+- **Robust.** Every paired interval includes zero. At MU the clinical-history interval only just does (lower bound
+  -0.0002). At LUMIERE, where IDH is unknown in 68 of 178 scans, the locked combined model loses 0.035 with the
+  indicator, and the interval is wide.
+
+### E6d. The reduced combined model on MU (descriptive)
+
+The reduced combined model (design T, the model locked and applied externally), cross-validated on MU in the same
+folds, intended use:
+
+| model | AUC |
+|---|---|
+| full combined (B1 + I_pure) | 0.821 (0.745-0.888) |
+| reduced combined (T) | 0.804 (0.732-0.879) |
+| reduced - full | -0.017 (-0.071 to +0.036) |
+
+Reading (descriptive): the reduced model that was applied at LUMIERE and UCSF reaches 0.80 on MU, 0.02 below the
+full combined model, with an interval that includes zero.
