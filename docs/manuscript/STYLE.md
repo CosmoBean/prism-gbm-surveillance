@@ -317,3 +317,6 @@ Add each reaction as a dated, one-line rule.
   neutrally and framed by the argument: the separate scores show what the ranking rests on. Exploratory negatives on
   superseded pipelines and sub-analyses go to the supplement or out. Title: "auditable system", not "auditable
   separation". Method statements must match the current code, not an earlier audit.
+- 2026-11-17: Figures share one house style (`scripts/figure_style.py`; colour follows the score; Figure 1 is a
+  methods schematic with no results). "Remove any stale entries that do not add to the paper": the supplement keeps
+  only content the current paper rests on; earlier-study analyses stay in `docs/results/` and git history.
