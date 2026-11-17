@@ -42,7 +42,9 @@ WITHIN_REF = {"timeline": 0.64, "images": 0.68}      # registered MU within-phas
 
 # ---------------------------------------------------------------- M1 statistics
 def split_auc(y, s, c):
-    """(AUC, w, A_W, A_B) with ties 1/2."""
+    """(AUC, w, A_W, A_B) with ties 1/2, on the scans with a score (missing scores are dropped, not ranked)."""
+    k = ~np.isnan(s)
+    y, s, c = y[k], s[k], c[k]
     pos, neg = y == 1, y == 0
     a, b = s[pos][:, None], s[neg][None, :]
     M = (a > b) + 0.5 * (a == b)

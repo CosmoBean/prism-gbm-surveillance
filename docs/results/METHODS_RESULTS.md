@@ -27,7 +27,16 @@ progression; flagged 1 / 27, other 72 / 78). Share of pairs within one context w
 | LUMIERE | imaging | 0.65 (0.57-0.73) | 0.71 (0.60-0.80) | 0.51 (0.39-0.63) | -0.20 (-0.34 to -0.04) |
 | LUMIERE | combined | 0.77 (0.68-0.86) | 0.72 (0.60-0.82) | 0.93 (0.86-0.99) | 0.22 (0.12-0.34) |
 | LUMIERE | context only | 0.62 (0.57-0.70) | 0.50 | 0.96 (0.88-1.00) | |
-| LUMIERE | enhancing volume | 0.56 (0.43-0.68) | 0.61 (0.46-0.75) | 0.41 (0.29-0.53) | -0.21 (-0.36 to -0.04) |
+| LUMIERE | enhancing volume † | 0.66 (0.56-0.75) | 0.74 (0.63-0.84) | 0.45 (0.35-0.58) | -0.29 (-0.42 to -0.13) |
+
+† Correction 2026-11-17. LUMIERE has no enhancing volume for 15 of the 178 scans (5 progression). The first run
+scored them as missing values that lose every comparison, which pulled the row down: AUC 0.56 (0.43-0.68), A_W 0.61
+(0.46-0.75), A_B 0.41 (0.29-0.53), A_B - A_W -0.21 (-0.36 to -0.04), w 0.74 (0.59-0.84). The reference is now
+evaluated on the 163 scans with a recorded volume (68 progression / 95 no progression), as in Figure 2 (AUC 0.662):
+AUC 0.66 (0.56-0.75), A_W 0.74 (0.63-0.84), A_B 0.45 (0.35-0.58), A_B - A_W -0.29 (-0.42 to -0.13), w 0.72
+(0.56-0.84). Same 2000 patient resamples and seed; within each resample the scans without a volume are dropped for this
+score only. Every other row of m1_auc_split.csv and the M2 outputs are unchanged to the last digit. The interval
+differs slightly from Figure 2's (0.563-0.751), which comes from that figure's own resampling.
 
 \* Deviation from the plan, which said the context-only A_W is 0.5 by construction. At MU the stratum rates are
 recomputed in each training fold, so scans of one stratum in different folds get slightly different rates, and a
