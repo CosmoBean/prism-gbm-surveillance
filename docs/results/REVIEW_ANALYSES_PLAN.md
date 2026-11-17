@@ -41,3 +41,32 @@ Report its MU cross-validated AUC in the intended use, same folds and bootstrap,
 ## Code
 `prism/analyses/review_analyses.py`, reusing `methods.py`, `clinician_baseline.py`, `system.py` and `detection.py`.
 Output: `outputs/results/analyses/review_analyses/` (aggregate CSV only).
+
+## Deviations recorded before results (2026-11-17, before any E6 outcome was computed)
+Operational choices the plan left open, fixed here before the run.
+1. **E6c, what "unknown" means.** The current code sets `idh_mutant` / `mgmt_methylated` to 0 in two cases: marker
+   unknown, and scan before the diagnosis date (`phase_censoring.masked_molecular`). Both are "status not available
+   at the scan", so the indicator `idh_unknown` (`mgmt_unknown`) is 1 in either case; `idh_mutant` /
+   `mgmt_methylated` and the `early_post_rt x mgmt_methylated` term stay as they are. The indicators are added as
+   two more columns to B1 (clinical-history), B1 + I_pure (combined) and, for LUMIERE, to the locked reduced
+   designs Tbase and T (fitted with `system._fit` on all MU grade-4 detection training rows, as locked). LUMIERE
+   unknown follows the system's coding (`system.lumiere_cohort`): IDH "wt" wildtype, containing "mut" mutant,
+   anything else unknown (this includes "na" and "idh1 neg, sequencing required"); MGMT "methylated" /
+   "not methylated", anything else unknown. The imaging model uses no marker and is not refitted.
+2. **E6b, how the secondary negatives enter.** No refit. In the MU 5x5 CV every row of a held-out fold already gets
+   a held-out prediction (training uses labelled rows only), so the scans that are secondary but not primary
+   negatives are scored by the same fitted models. Evaluation set: intended use and (progression scan or
+   `neg_secondary`). E6b is MU only: LUMIERE negatives are every earlier study rated SD/PR/CR, with no follow-up
+   requirement, so no scan is dropped there.
+3. **Bootstrap.** One set of 2,000 patient resamples per cohort (seed 20261117). At MU it is drawn over the patients
+   of the widest evaluation set (intended use, secondary negatives), and each analysis uses the rows of its own
+   evaluation set within each resample; LUMIERE over its 79 patients. Percentile 95% intervals.
+4. **E6a details.** Unpenalised maximum likelihood (Newton). Intercept: logistic model with offset logit(p) and slope
+   fixed at 1. Slope: logistic regression of the outcome on logit(p). p clipped to [1e-6, 1 - 1e-6]. Prevalence
+   reference = Brier score of always predicting the evaluation-set prevalence, p(1 - p). The reader baseline is
+   reported as a fourth score, for reference. Bootstrap intervals are descriptive (no rule).
+5. **E6d.** The paired difference (reduced − full combined) is reported too, descriptively. The reduced model is
+   fitted with the same CV pipeline as the other MU scores (`c3.fit_predict`, BASELINES[0], seed = repeat).
+6. **E6b reading.** "Each score" = the three PRISM scores (the reader's change is reported beside them). "Reader-
+   baseline reading unchanged" = as in E4: no PRISM score has a gain over the reader baseline whose interval lies
+   above zero. The gains of all three scores are computed for this; combined − reader is the planned outcome.
