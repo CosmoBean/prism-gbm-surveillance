@@ -275,8 +275,8 @@ Reading (descriptive):
   The imaging score under-predicts (intercept +0.41, interval above zero) and its predictions are compressed
   (slope 1.91); so are the combined model's (1.45). Both slope intervals include 1.
 - At UCSF the combined model is strongly compressed (slope 3.3) and over-predicts (O/E 0.72), as reported there.
-- Every score beats the prevalence reference on Brier at MU and LUMIERE except the LUMIERE imaging score (0.239
-  against 0.242). The scores rank better than they are calibrated across sites, so a probability shown to a reader
+- Every score has a lower Brier score than the prevalence reference at MU and LUMIERE; the LUMIERE imaging score
+  only barely (0.239 against 0.242). The scores rank better than they are calibrated across sites, so a probability shown to a reader
   would need local recalibration.
 
 ### E6b. Scans shortly before progression (MU, intended use)
