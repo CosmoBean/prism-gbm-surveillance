@@ -37,7 +37,7 @@ public MU-Glioma-Post, the clinical-history and imaging models reached AUCs of 0
 the published radiomics pipeline run with its authors' code. Locked and applied unchanged, the reduced combined model
 reached 0.77 at LUMIERE and 0.86 at UCSF-ALPTDG. The separate scores show that most of the ranking rests on the time
 after radiotherapy and the enhancing tumour, which together reached 0.80 on MU. After one prompt revision, all 406
-reports passed the planned checks. A reader study will test whether PRISM changes decisions.
+reports passed the planned checks. A reader study of its clinical use is planned.
 \end{abstract}
 
 % No more than 3 keywords (journal instructions).
@@ -73,13 +73,12 @@ developed PRISM on MU-Glioma-Post, fitted its models once, and applied them unch
 cohorts. Our contributions are:
 \begin{enumerate}
 \item Methods: separate imaging, clinical-history and combined scores, each with a statement of its evidence
-(Section~\ref{sec:2}); two measures of what a score rests on (Section~\ref{sec:3.3}); and a local report whose
+(Section~\ref{sec:2}); two measures of the evidence behind a score's ranking (Section~\ref{sec:3.3}); and a local report whose
 numbers are checked against the record (Section~\ref{sec:3.5}).
 \item Results: both separate models ranked scans better than the published radiomics pipeline (Section~\ref{sec:4.1}),
 the locked models transferred to two external centres (Section~\ref{sec:4.2}), the ranking rested mostly on the
 time after radiotherapy and the enhancing tumour (Section~\ref{sec:4.3}), and every report passed the planned checker (Section~\ref{sec:4.5}).
 \end{enumerate}
-A reader study is designed to test whether PRISM changes a clinician's reading.
 
 % =====================================================================================================
 \section{PRISM}\label{sec:2}
@@ -204,7 +203,7 @@ patients, out of 181 detection scans of 92 patients among the cohort's 126 grade
 % Sources: NUMBERS.md 2.2 and mismatch 7.
 \begin{table}[!htbp]
 \centering
-\caption[The three cohorts]{\textbf{The three cohorts.} What each cohort records, and the scans in the detection task.}
+\caption[The three cohorts]{\textbf{The three cohorts.} Recorded data and scans in the detection task.}
 \label{tab:1}
 \begin{threeparttable}
 \begin{tabularx}{\linewidth}{@{}R{3.3cm}LLL@{}}
@@ -235,7 +234,7 @@ documented start of radiotherapy by the scan day (24 of them from 9 patients wit
 \end{threeparttable}
 \end{table}
 
-\subsection{How each cohort was evaluated}\label{sec:3.2}
+\subsection{Evaluation design}\label{sec:3.2}
 
 % Sources: DETECTION_TASK.md; UCSF_PLAN.md; SYSTEM_PLAN.md; METHODS_PLAN.md.
 Each cohort played one role (Table~\ref{tab:eval}). On MU we evaluated every model by five repeats of fivefold cross
@@ -252,7 +251,7 @@ evaluated on MU and LUMIERE only.
 % Sources: DETECTION_TASK.md; UCSF_PLAN.md; NUMBERS.md 2.2 and 9.
 \begin{table}[!htbp]
 \centering
-\caption[How each cohort was evaluated]{\textbf{How each cohort was evaluated.} Definitions of the label and the
+\caption[Evaluation design]{\textbf{Evaluation design by cohort.} Definitions of the label and the
 procedure in each cohort. Scan counts are in Table~\ref{tab:1}.}
 \label{tab:eval}
 \footnotesize
@@ -269,7 +268,7 @@ Reader baseline, AUC split, group calibration & Run & Run & Not run (data not on
 \end{tabularx}
 \end{table}
 
-\subsection{What the scores rest on}\label{sec:3.3}
+\subsection{Reader baseline and AUC split}\label{sec:3.3}
 
 % Sources: CHRISTODOULOU_FAITHFUL_PLAN.md (with deviations); CHRISTODOULOU_REPLICATION.md (faithful run);
 % ref christodoulou2026.
@@ -378,7 +377,7 @@ factuality checks \citep{gabriel2021,rao2025rexerr}. Three binding errors were h
 wrote both the rules and these errors, a separate language model agent that had not seen the rules then wrote further
 errors in its own words, with correct paraphrases as controls (exploratory).
 
-\subsection{What was planned}\label{sec:3.6}
+\subsection{Planned tests}\label{sec:3.6}
 
 % Sources: NUMBERS.md sections 6, 9, 13, 14; METHODS_PLAN.md; CLINICIAN_BASELINE_PLAN.md.
 Table~\ref{tab:2} lists each planned test, the rule fixed in advance and the outcome, including the two tests that
@@ -389,7 +388,7 @@ multiple tests. Results of analyses that were not fixed in advance are called ex
 % Sources: NUMBERS.md section 9; METHODS_RESULTS.md; CHRISTODOULOU_REPLICATION.md.
 \begin{table}[!htbp]
 \centering
-\caption[What was planned]{\textbf{Planned tests and their outcome.} Each test, the rule committed to the repository
+\caption[Planned tests]{\textbf{Planned tests and their outcome.} Each test, the rule committed to the repository
 before it, and the outcome. AUC differences with 95\% CIs.}
 \label{tab:2}
 \begin{threeparttable}
@@ -413,7 +412,7 @@ Combined model over the reader baseline & CI above 0 & \textbf{No clear gain} at
 Marginal conformal sets, combined model & Coverage $\geq$ 0.78 in each cohort & \textbf{Yes} on point estimates & \ref{sec:4.4} \\
 Reports pass the checker & $\geq$ 95\% in each cohort & \textbf{No} as planned (every LUMIERE report failed). \textbf{Yes} after one revision of the record fields and the prompt & \ref{sec:4.5} \\
 Verifier closes a blind spot & $\geq$ 95\% of synthetic errors of that kind rejected & After one revision of the rules, \textbf{Yes} for direction and swapped volumes, \textbf{No} for a swapped tier word & \ref{sec:4.5} \\
-Usefulness to clinicians & Not tested & A reader study is designed (Supplementary Section~S21.1) & \ref{sec:5} \\
+Usefulness to clinicians & Not tested & Reader study protocol prepared (Supplementary Section~S21.1) & \ref{sec:5} \\
 \bottomrule
 \end{tabularx}
 \begin{tablenotes}\footnotesize
@@ -449,7 +448,7 @@ scans, the clinical-history, imaging and combined models reached 0.81, 0.65 and 
 Clinical data alone, without dates, reached 0.53
 (0.45--0.61), and deep networks tuned on MU did not improve on the clinical-history model with image measurements
 (Table~\ref{tab:2}). The imaging model's lead over the radiomics pipeline is a comparison of image evidence alone,
-and Section~\ref{sec:4.3} shows what the clinical-history model's lead rests on.
+and Section~\ref{sec:4.3} traces the source of the clinical-history model's lead.
 
 \subsection{The locked models ranked scans at two external centres}\label{sec:4.2}
 
@@ -484,10 +483,10 @@ label follows enhancement: UCSF rated enhancement as increased at 27 of the 29 p
 a median of 7 days after the scan (exploratory). Accordingly, enhancing volume alone reached 0.88 (0.79--0.95) at
 UCSF.
 
-\subsection{The separate scores show what the ranking rests on}\label{sec:4.3}
+\subsection{The ranking rests mostly on timing and the enhancing tumour}\label{sec:4.3}
 
 % Sources: METHODS_RESULTS.md E4.
-Most of the ranking rests on the time window and the enhancing tumour. A reader baseline built from these alone
+A reader baseline built from the time window and the enhancing tumour alone
 reached 0.80 (0.71--0.88) on MU and, locked, 0.73 (0.64--0.81) at LUMIERE. The combined model ranked scans above it by
 0.02 ($-$0.03 to $+$0.08) on MU and 0.04 ($-$0.01 to $+$0.10) at LUMIERE, gains whose CIs include zero, and the
 reading was the same with the second masks and with all scans before progression as negatives. Within one time window
@@ -525,8 +524,8 @@ samples of patients.}
 
 % Sources: METHODS_RESULTS.md E4, M1.
 On MU the clinical-history score draws mainly on when the scan was taken, while the imaging score ranked pairs within
-and across windows about equally. A single combined score would hide this. PRISM shows the two scores side by side at
-every scan, so a reader can see what each rests on and whether the two kinds of evidence agree.
+and across windows about equally. PRISM shows the two scores side by side at every scan, so a reader sees the basis of each and whether the two kinds
+of evidence agree.
 
 \subsection{The confidence statements describe the evidence behind each score}\label{sec:4.4}
 
@@ -649,54 +648,45 @@ Reports that passed the checker, rejected by the verifier & 0 of 52 & 1 of 276 &
 \section{Discussion}\label{sec:5}
 
 % Sources: Sections 4.1--4.3; refs shi2025, booth2022.
-PRISM separates imaging and treatment-course evidence, and in these cohorts the separation mattered: the separate
-scores showed that most of the ranking rests on the timing and the enhancing tumour, which a single combined score
-would have hidden. The models a clinician is likely to be offered are image-only and tested on one split
-\citep{booth2022,shi2025}. On identical data the published pipeline for this cohort ranked scans below both of PRISM's
-separate models, on two sets of masks, and PRISM's locked combined and imaging models kept ranking scans at two other centres. A clinician
-weighs the same timing and enhancement from volumes estimated by eye and a treatment history gathered from the chart.
-PRISM does it the same way at every scan, from volumes measured on the masks, and states in a local report how many
-comparable scans the models were tested on. Whether this changes a clinician's reading is the question of the reader
-study.
+PRISM keeps imaging and treatment-course evidence as separate scores, and in these cohorts the separation showed
+that most of the ranking rests on the time after radiotherapy and the enhancing tumour. Most models offered for this
+setting are image-only and tested on one split \citep{booth2022,shi2025}. On identical data the published pipeline
+for this cohort ranked scans below both of PRISM's separate models, on two sets of masks, and PRISM's locked combined
+and imaging models kept ranking scans at two other centres. PRISM measures timing and enhancement the same way at
+every scan, from volumes measured on the masks, and its local report states how many comparable scans the models were
+tested on.
 
-% Sources: METHODS_RESULTS.md M1, E4; refs kallus2019, janes2008, beaulieujones2021, damour2022.
-Any group reporting a glioma progression model could report two numbers next to its AUC: its gain over a baseline
-of timing and enhancement, and the split of its AUC into pairs within and across time windows \citep{kallus2019},
-a pair weighted analogue of the covariate adjusted AUC \citep{janes2008}. Neither needs new images, only the time of
-each scan relative to treatment, which most public glioma cohorts record only in part.
+Studies of glioma progression models could report two quantities beside the AUC: the gain over a baseline of timing
+and enhancement, and the split of the AUC into pairs within and across time windows \citep{kallus2019}, a pair
+weighted analogue of the covariate adjusted AUC \citep{janes2008}. Neither needs new images, only the time of each
+scan relative to treatment, which most public glioma cohorts record only in part.
 
-% Sources: METHODS_RESULTS.md M2, E2; NUMBERS.md 6.
-In cohorts this small, calibrating within groups mainly moved coverage between groups. Larger cohorts, or
-calibration pooled across centres, would give coverage within the smallest groups, and a centre adopting PRISM would
-calibrate on its own scans.
+In cohorts of this size, calibration within groups mainly redistributed coverage between groups. Calibration pooled
+across centres would extend coverage to the smallest groups, and a centre adopting PRISM would calibrate on its own
+scans.
 
-% Sources: METHODS_RESULTS.md M3, E3; refs pham2026, mansour2026.
 The verifier rejected every planted value placed under the wrong region or score, including those written by an
 agent that had not seen the rules, and no correct paraphrase. Direction words are bound through a fixed list, which
-a wider list and a fresh set of independent errors would extend. Other rule based gates for
-clinical text forbid numbers altogether \citep{pham2026} or trace numbers to a measurement file without measuring the
-check \citep{mansour2026}. The checks show, for the errors they test, that a report states what its record holds, not that the record is right,
-and the record inherits the noise of the released masks.
+a wider list and a fresh set of independent errors would extend. Other rule based gates for clinical text forbid
+numbers altogether \citep{pham2026} or trace numbers to a measurement file without measuring the check
+\citep{mansour2026}. The checks establish that a report states what its record holds; the record itself depends on the
+measurements, including the released masks.
 
-% Sources: OUTLINE.md; NUMBERS.md 10; UCSF_AUDIT.md.
 PRISM was developed on one public cohort and tested at two external centres. The label is progression as each centre
-documented it, and at LUMIERE and UCSF it is partly read from the images the scores use. The analyses added after the
-external tests (the reader baseline, the AUC split, group calibration, the sensitivity analyses and the verifier) ran
-on MU and LUMIERE, and the published-pipeline comparison on MU, because UCSF-ALPTDG was no longer on our hardware. In the first 12
-weeks after radiotherapy MU holds few progression scans, and the report says so. The next steps are to run the same analyses on UCSF-ALPTDG, to
-pool the rare situations across cohorts, including the Burdenko and UCSD-PTGBM datasets, and to run the reader study
-we have designed, which is the test of whether PRISM supports clinical decisions.
+documented it, and at LUMIERE and UCSF it partly reflects the images the scores use. The reader baseline, the AUC
+split, the group calibration and the verifier were evaluated on MU and LUMIERE, and the published-pipeline comparison
+on MU. In the first 12 weeks after radiotherapy MU holds few progression scans, and the report marks such scans as
+having few comparable cases. Extending these analyses to UCSF-ALPTDG and pooling rare situations across further
+cohorts, such as Burdenko and UCSD-PTGBM, would sharpen these estimates. The test of PRISM's clinical value is a
+reader study, for which a protocol has been prepared (Supplementary Section~S21.1).
 
 \subsection*{Conclusion}
 
-% Sources: Sections 4.1--4.5.
 On public glioma follow-up data, simple models of the treatment course and of tumour measurements ranked scans better
 than the published image-only pipeline run with its authors' code, and the locked combined and imaging models kept
-ranking them at two other centres. By keeping the
-treatment-course evidence apart from the image evidence at every scan, PRISM shows what each score rests on, and it
-reports both in a local report checked against the scan's record.
+ranking them at two other centres. Because it keeps treatment-course and image evidence as separate scores, PRISM
+shows the basis of each, and its local report states both, checked against the scan's record.
 
-% =====================================================================================================
 \section*{Acknowledgements}
 \todo{PENDING AUTHOR DECISION}.
 
