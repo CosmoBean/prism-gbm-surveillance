@@ -333,3 +333,7 @@ Add each reaction as a dated, one-line rule.
   real held-out output laid out as a clinical page (BT-RADS order; numbers in tables and graphics, sentences once with
   their cited fields), not an invented example. The figures after Tak et al. 2025 (cohort characteristics, case
   strips) were accepted as drawn. Review material goes in `docs/review/`.
+- 2026-11-19 (author, from the PI): "not about what the system can do, but what the system is". The Introduction
+  ends with a short paragraph on what PRISM is technically (a chain of deterministic stages around one local language
+  model, centred on the record; the tools underneath). The language model is one writing step; do not dress it up as
+  agents or a multi-agent council. Tables use visibly shaded alternate rows.

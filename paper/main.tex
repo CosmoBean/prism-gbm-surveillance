@@ -131,6 +131,19 @@ UCSF-ALPTDG.
 and a verifier test its numbers and claims against that record.
 \end{itemize}
 
+% Sources: prism/report/{llm,records,checker,verifier}.py; pyproject.toml (author request 2026-11-19: say what the
+% system is, not what it can do).
+PRISM is a software system rather than a new model: a chain of deterministic stages around a single language model,
+all running on one local computer. Its centre is the scan's record, a structured document in which every value sits
+under a fixed key beside its source, and through which every stage passes. The stages before it are established
+tools. The measurement stage reads the released tumour masks (NiBabel, SimpleITK), the three models are penalised
+logistic regressions \citep{pedregosa2011}, and the confidence statements are split-conformal sets and counts drawn
+from the development data. The language model, an open-weight model served with vLLM \citep{kwon2023}, is one
+writing step. It receives the record as text, decodes under a JSON schema that makes every sentence name the record
+keys it uses, and has no images, tools or other inputs. The stages after it are programs without a model, so a
+report always receives the same verdict. What is new is the arrangement: scores, evidence and prose share one
+record, and each can be audited against it.
+
 % =====================================================================================================
 \section{PRISM}\label{sec:2}
 
@@ -348,7 +361,7 @@ Timing-and-enhancement baseline, AUC split, group calibration & Run & Run & Not 
 
 % Sources: CHRISTODOULOU_FAITHFUL_PLAN.md (with deviations); CHRISTODOULOU_REPLICATION.md (faithful run);
 % ref christodoulou2026.
-\paragraph{The published approach.} We ran the published MU radiomics pipeline \citep{christodoulou2026} with the
+\paragraph*{The published approach.} We ran the published MU radiomics pipeline \citep{christodoulou2026} with the
 authors' public code and settings, on the same patients, masks, label and folds as PRISM. It extracts 4,892 radiomic
 features from the original, Laplacian of Gaussian and wavelet images of the four sequences of the current scan, keeps
 256 of them within each training set by the authors' ranking, and fits a class weighted gradient boosted model tuned
@@ -360,7 +373,7 @@ of approaches on one task rather than a replication of the published estimate. T
 stated that the comparison with PRISM's imaging model would be withdrawn if the pipeline did not rank below it.
 
 % Sources: MASK_SENSITIVITY_PLAN.md (with deviations); METHODS_RESULTS.md E5; ref hatamizadeh2022.
-\paragraph{Mask sensitivity.} The masks released with MU are noisy: between scans at most 30 days apart the enhancing
+\paragraph*{Mask sensitivity.} The masks released with MU are noisy: between scans at most 30 days apart the enhancing
 volume changes by a median factor of 2.6. To test whether the MU results depend on them, we replaced every MU mask
 with the label map of one public segmenter, a Swin UNETR trained on BraTS 2021 \citep{hatamizadeh2022}, kept the
 resection cavity from the released mask, recomputed the 27 measurements, and refitted the imaging and combined models
@@ -368,14 +381,14 @@ and the timing-and-enhancement baseline in the same folds. The plan called the r
 including zero and the reading against the timing-and-enhancement baseline did not change.
 
 % Sources: CLINICIAN_BASELINE_PLAN.md; METHODS_RESULTS.md E4; ref beaulieujones2021.
-\paragraph{The timing-and-enhancement baseline.} To measure what a score adds to evidence a clinician already holds
+\paragraph*{The timing-and-enhancement baseline.} To measure what a score adds to evidence a clinician already holds
 \citep{beaulieujones2021}, we fitted a ridge logistic regression on the time window after radiotherapy, log enhancing
 volume and its change since the previous scan, with the same pipeline, folds and locking as PRISM's models. At LUMIERE the window is
 the rater's flag. The plan fixed the reading in advance. A gain whose 95\% CI lies above zero counts as a gain, and
 one whose CI includes zero is reported as no clear gain.
 
 % Sources: METHODS_PLAN.md M1; prism/analyses/methods.py; refs kallus2019, janes2008, janes2009.
-\paragraph{Splitting the AUC by time window.} Let $P$ and $N$ be the scans with and without progression, $s$ a score,
+\paragraph*{Splitting the AUC by time window.} Let $P$ and $N$ be the scans with and without progression, $s$ a score,
 and $c$ the time window of each scan. The AUC is the share of pairs ranked correctly,
 \begin{equation}
 \mathrm{AUC} = \frac{1}{|P|\,|N|} \sum_{i \in P} \sum_{j \in N} K(s_i, s_j), \qquad
