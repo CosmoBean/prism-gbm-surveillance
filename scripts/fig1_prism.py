@@ -3,7 +3,8 @@ since radiotherapy (modelled on Tak et al. 2025, NEJM AI, Figure 1A); (b) what P
 stage by stage; (c) the evaluation protocol.
 
 Panel (a) reads the public MU-Glioma-Post images, masks and clinical workbook (data/mu-glioma-post, see
-prism/config.py). Weeks after radiotherapy, enhancing volumes and the label of each scan are computed here from those
+prism/config.py), and PRISM's own segmentation of each scan by the BraTS 2021 Swin UNETR
+(outputs/features/seg_swin/mu, written by prism/features/reseg.py; plan docs/results/SEGMENTER_STAGE_PLAN.md). Weeks after radiotherapy, enhancing volumes and the label of each scan are computed here from those
 files with the paper's label rule; no model score is shown. Panels (b) and (c) are a methods schematic as specified in
 the Methods (Sections 2.1-2.3, 3.1-3.5); the two input slices in (b) are the patient's last two scans from (a).
 Colour follows the score as in every figure (scripts/figure_style.py); navy marks the system's own stages.
@@ -23,7 +24,9 @@ REPO = Path(__file__).resolve().parents[1]
 MU = REPO / "data" / "mu-glioma-post"
 PATIENT = "PatientID_0204"        # early enhancement that resolved, then progression (selection in the docstring)
 ET_LABEL = 3                      # enhancing tumour in the released masks (prism/config.py)
-CONTOUR = "#F2C14E"
+CONTOUR = "#F2C14E"               # PRISM's segmentation (Swin UNETR, BraTS 2021)
+RELEASED = "#7FD3F0"              # the mask released with the cohort, for comparison
+SEG = REPO / "outputs" / "features" / "seg_swin" / "mu"
 MONO = "DejaVu Sans Mono"
 BLACK = "#000000"        # Figure 1 structure (boxes, arrows, stage labels) in black, not the house navy
 
@@ -64,7 +67,9 @@ def scan_slice(patient: str, n: int) -> dict:
     half = max(ys.max() - ys.min(), xs.max() - xs.min()) // 2 + 4
     lo, hi = np.percentile(img[img > 0], [1, 99.5])
     crop = lambda a: np.rot90(a[max(cy - half, 0):cy + half, max(cx - half, 0):cx + half])   # anterior up
-    return dict(img=crop(np.clip((img - lo) / (hi - lo), 0, 1)), msk=crop(et[:, :, z]), et_cc=float(et.sum()) / 1000)
+    net = np.asarray(nib.load(str(SEG / patient / f"Timepoint_{n}.nii.gz")).dataobj) == ET_LABEL
+    return dict(img=crop(np.clip((img - lo) / (hi - lo), 0, 1)), msk=crop(et[:, :, z]), net=crop(net[:, :, z]),
+                et_cc=float(et.sum()) / 1000, net_cc=float(net.sum()) / 1000)
 
 
 def patient_scans():
@@ -88,7 +93,9 @@ def patient_scans():
 def show_scan(iax, scan):
     iax.imshow(scan["img"], cmap="gray", vmin=0, vmax=1, interpolation="bilinear")
     if scan["msk"].any():
-        iax.contour(scan["msk"].astype(float), levels=[0.5], colors=[CONTOUR], linewidths=0.6)
+        iax.contour(scan["msk"].astype(float), levels=[0.5], colors=[RELEASED], linewidths=0.45, linestyles="--")
+    if scan["net"].any():
+        iax.contour(scan["net"].astype(float), levels=[0.5], colors=[CONTOUR], linewidths=0.6)
     iax.set_xticks([]); iax.set_yticks([])
     for sp in iax.spines.values():
         sp.set_visible(False)
@@ -137,7 +144,7 @@ def fig1(output: Path) -> None:
         text(x + iw / 2, H - 4.6, sc["label"], size=6.2, colour=colour, ha="center",
              weight="bold" if sc["label"] == "Progression" else "normal",
              style="italic" if sc["label"] == "Not labelled" else "normal")
-        text(x + iw / 2, iy0 - 1.2, f"{sc['weeks']:.1f} weeks after RT\nenhancing {sc['et_cc']:.1f} cc", size=5.6,
+        text(x + iw / 2, iy0 - 1.2, f"{sc['weeks']:.1f} weeks after RT\nenhancing {sc['net_cc']:.1f} cc ({sc['et_cc']:.1f})", size=5.6,
              ha="center")
         if k:
             px = x - gap_x
@@ -160,9 +167,11 @@ def fig1(output: Path) -> None:
         ax.add_patch(plt.Circle((wx(sc["weeks"]), ty), 0.75, fc=BLACK, ec="white", lw=0.3, zorder=4))
     text(wx(6), ty + 2.0, "first 12 weeks", size=5.4, colour=st.HIST, ha="center", va="bottom")
     text((tx0 + tx1) / 2, ty - 4.0, "weeks after the end of radiotherapy", size=5.6, colour=st.MUTED, ha="center")
-    text(2.0, H - 8.6, "T1c MRI, the axial slice\nwith most enhancement;\nenhancing tumour from\nthe released mask", size=5.8)
-    ax.plot([2.4, 5.4], [H - 21.4, H - 21.4], color=CONTOUR, lw=1.2)
-    text(6.4, H - 20.4, "enhancing outline", size=5.4, colour=st.MUTED)
+    text(2.0, H - 8.6, "T1c MRI, the axial slice\nwith most enhancement;\nenhancing tumour outlined", size=5.8)
+    ax.plot([2.4, 5.4], [H - 18.4, H - 18.4], color=CONTOUR, lw=1.2)
+    text(6.4, H - 17.4, "PRISM (Swin UNETR)", size=5.4, colour=st.MUTED)
+    ax.plot([2.4, 5.4], [H - 21.4, H - 21.4], color=RELEASED, lw=0.9, ls="--")
+    text(6.4, H - 20.4, "released mask (cc)", size=5.4, colour=st.MUTED)
     text(2.0, H - 25.0, "Label: progression\ndocumented at this scan,\nor no progression for\n\u2265 120 days after it",
          size=5.4, colour=st.MUTED)
     ax.plot([1.0, W - 1.0], [H0 + 1.2, H0 + 1.2], color=st.RULE, lw=0.5)
@@ -190,7 +199,7 @@ def fig1(output: Path) -> None:
         iax = fig.add_axes([sx / W, (top - 13.0) / H, 13.0 / W, 13.0 / H])
         show_scan(iax, scans[k - 2])
         text(sx + 6.5, top - 13.6, label, size=5.6, colour=st.MUTED, ha="center")
-    text(x0, top - 17.4, "T1c and FLAIR MRI,\nreleased masks (enhancing,\nFLAIR, necrosis, cavity)", size=5.8)
+    text(x0, top - 17.4, "T1c, T1, T2, FLAIR MRI;\nsegmented by a Swin UNETR\n(BraTS 2021) or the\ncohort's released masks", size=5.8)
 
     ty = y_hist + 7.0          # treatment course as of the scan day
     ax.plot([x0 + 0.5, x1 - 1.0], [ty, ty], color=st.INK, lw=0.6)
