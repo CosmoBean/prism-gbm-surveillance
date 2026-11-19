@@ -21,8 +21,9 @@ rebuilt. Write comments under any figure and I will apply them.
 - MU: median progression scan 22.0 weeks after radiotherapy, non-progression 8.9 weeks: the timing link is visible
   before any model.
 - LUMIERE: 29 against 20 weeks after surgery (no radiotherapy dates).
-- Counts match the paper (MU 146 / 80 / 62; LUMIERE 178 / 79 / 73).
-- UCSF is not drawn: its data are not on orchard. The caption points to Table 1 for it.
+- UCSF (added 2026-11-19, data restored): 66 against 63 weeks after the first surgery; one second scan per patient,
+  so weeks since the previous scan is the scan 1 to scan 2 interval (5.9 against 8.0 weeks).
+- Counts match the paper (MU 146 / 80 / 62; LUMIERE 178 / 79 / 73; UCSF 69 / 69 / 29).
 
 ![Cohort characteristics](../manuscript/figures/fig_cohorts.png)
 
@@ -38,11 +39,17 @@ rebuilt. Write comments under any figure and I will apply them.
 
 ## Figure 4: where the ranking comes from (Section 4.3)
 
+UCSF panel added 2026-11-19 (context = time after the radiotherapy start, six-week course assumed). At UCSF 88% of
+pairs lie in one window, so the across-window intervals are wide; one sentence added to 4.3.
+
 ![Context split](../manuscript/figures/fig3_context_split.png)
 
 ---
 
 ## Figure 5: coverage within groups (Section 4.4)
+
+UCSF panel added 2026-11-19. Group calibration does not lift UCSF's least covered group (later, enhancement not
+increased: 61% marginal, 54% within groups); one sentence added to 4.4.
 
 ![Group conformal](../manuscript/figures/fig4_group_conformal.png)
 

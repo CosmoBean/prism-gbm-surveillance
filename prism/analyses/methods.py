@@ -30,7 +30,7 @@ from threadpoolctl import threadpool_limits
 from prism.analyses import detection as D
 from prism.analyses import system as S
 from prism.audit import conformal as cf
-from prism.config import RESULTS
+from prism.config import RESULTS, SKIP_UCSF
 
 OUT = RESULTS / "analyses" / "methods"
 SEED = 20261115
@@ -299,6 +299,57 @@ def run_lumiere(n_boot):
     return t1, n1, rows, extras
 
 
+def run_ucsf(n_boot):
+    """UCSF-ALPTDG, grade 4 scan 2 (locked MU models). Context rt_phase, as the plan fixes; the context-only score takes
+    MU's rate for the matching stratum and MU's pooled rate otherwise (no_rt, rt_date_unknown). M2 groups as the card's
+    situation; scans whose time after radiotherapy is unknown fall to level 2, as at LUMIERE."""
+    from prism.analyses import ucsf_external as UX
+    c = S.ucsf_cohort()
+    ev = ~np.isnan(c["y"])
+    y, pid = c["y"][ev].astype(int), c["patient_id"][ev]
+    ph = c["comp_phase"].astype(str)[ev]
+    d4, A4 = UX.mu_detection("grade4")
+    y4, p4 = d4.label_120.to_numpy(), d4.patient_id.to_numpy()
+    lab = ~np.isnan(y4)
+    ph4 = d4.phase.astype(str).to_numpy()
+    rate = pd.Series(y4[lab]).groupby(ph4[lab]).mean()
+    ctx = pd.Series(ph).map(rate).fillna(float(y4[lab].mean())).to_numpy(float)
+    im = pd.read_csv(S.OUTPUTS / "data" / "ucsf" / "imaging_features.csv").set_index("scan_id")
+    et = im.et_cc.reindex(c["scan_id"][ev]).to_numpy(float)
+    scores = {p: c["S"][f"p_{p}"][:, ev] for p in PW}
+    scores["context_only"] = ctx[None, :]
+    scores["enhancing_volume"] = np.log(et + 1e-3)[None, :]
+    from sklearn.metrics import roc_auc_score
+    chk = {p: float(roc_auc_score(y, scores[p][0])) for p in PW}
+    for p, ref in (("timeline", 0.561), ("images", 0.726), ("combined", 0.856)):
+        assert abs(chk[p] - ref) < 1e-3, (p, chk[p])
+    t1, n1 = m1_table("ucsf", y, scores, ph, pid, n_boot)
+    # M2: MU calibration rows (registered split seed 0) and their groups
+    names = {"timeline": "A-Tbase", "images": "A-Ipure", "combined": "A-T"}
+    u = UX.ucsf_frame()
+    keep = (u.timepoint.eq(2) & u.grade4).to_numpy()
+    A = UX.ucsf_designs(u, A4)
+    rows_ = np.arange(len(d4))
+    proper, cal = cf.patient_split(p4, 0.3, seed=0)
+    cr = rows_[cal][~np.isnan(y4[cal])]
+    cph, enh_mu = S.mu_situation(d4)
+    g1_mu = np.array([f"{a}|{b}" for a, b in zip(cph, enh_mu)])
+    g1 = np.array([f"{a}|{b}" for a, b in zip(c["card_phase"], c["enh"])])
+    rows, extras = [], []
+    for p in PW:
+        conf = S._fit(A4[names[p]], d4, rows_[proper])
+        pcal = conf(A4[names[p]].iloc[cr])
+        pte = conf(A[names[p]][keep].reset_index(drop=True))
+        Lv, a0, a1, b0, b1 = mondrian_sets(pcal, y4[cr], p4[cr], g1_mu[cr], enh_mu[cr], pte, g1, c["enh"],
+                                           start2=False)
+        assert (b0 == c["sets"][("std", p, 0.2, 0)][0]).all() and (b1 == c["sets"][("std", p, 0.2, 1)][0]).all(), p
+        rr, ex_ = m2_summary("ucsf", p, y, pid, g1[ev], Lv[None, ev], [a0[None, ev], a1[None, ev]],
+                             [b0[None, ev], b1[None, ev]], n_boot)
+        rows += rr
+        extras.append(ex_)
+    return t1, n1, rows, extras, chk
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser()
     ap.add_argument("--workers", type=int, default=20)
@@ -308,11 +359,13 @@ def main(argv=None):
     t0 = time.time()
     t_mu, n_mu, r_mu, e_mu, chk = run_mu(a.workers, a.n_boot)
     t_l, n_l, r_l, e_l = run_lumiere(a.n_boot)
-    pd.concat([t_mu, t_l]).to_csv(OUT / "m1_auc_split.csv", index=False)
-    pd.DataFrame(r_mu + r_l).to_csv(OUT / "m2_coverage.csv", index=False)
-    pd.DataFrame(e_mu + e_l).to_csv(OUT / "m2_levels.csv", index=False)
+    t_u, n_u, r_u, e_u, chk_u = ([], None, [], [], None) if SKIP_UCSF else run_ucsf(a.n_boot)
+    pd.concat([t_mu, t_l, *([] if SKIP_UCSF else [t_u])]).to_csv(OUT / "m1_auc_split.csv", index=False)
+    pd.DataFrame(r_mu + r_l + r_u).to_csv(OUT / "m2_coverage.csv", index=False)
+    pd.DataFrame(e_mu + e_l + e_u).to_csv(OUT / "m2_levels.csv", index=False)
     (OUT / "run_info.json").write_text(json.dumps({"n_boot": a.n_boot, "seed": SEED, "min_patients": MIN_PAT,
-                                                   "alpha": ALPHA, "mu_check_auc": chk, "counts": [n_mu, n_l],
+                                                   "alpha": ALPHA, "mu_check_auc": chk, "ucsf_check_auc": chk_u,
+                                                   "counts": [n_mu, n_l, n_u],
                                                    "seconds": round(time.time() - t0)}, indent=1))
     print(f"done in {time.time() - t0:.0f}s")
 

@@ -11,7 +11,7 @@ Model paper: Tak D et al., *NEJM AI* 2025, doi:10.1056/AIoa2400703. The full tex
 | Figure 1: (a) one real MU patient on a weeks-after-RT axis, (b) method, (c) evaluation | Tak Fig 1A | done | `scripts/fig1_prism.py` (reads `data/mu-glioma-post`) |
 | Figure 2: one row per cohort; AUC with CIs; gain over the timing-and-enhancement baseline | Tak Fig 3 | done | `scripts/fig2_performance.py` (aggregates) |
 | Case strips (`fig_case_strips`): four MU patients chosen by a written rule (first in ID order: A progression, models agree; B no progression, agree; C progression, disagree at that scan; D no progression, disagree), three score cells per scan, 80% set, agreement | Tak Fig 4 | drawn 2026-11-19; not yet in the paper | `scripts/fig_case_strips.py` (records_mu.jsonl, out-of-fold repeat 0; data/mu-glioma-post) |
-| Cohort characteristics (`fig_cohorts`): time of each evaluation scan by label (MU weeks after RT; LUMIERE weeks after surgery), weeks since the previous scan, scans and progression share | Tak Fig 2 | drawn 2026-11-19 for MU and LUMIERE; UCSF row needs the UCSF data restored; not yet in the paper | `scripts/fig_cohorts.py` (records_*.jsonl and labels) |
+| Cohort characteristics (`fig_cohorts`): time of each evaluation scan by label (MU weeks after RT; LUMIERE weeks after surgery), weeks since the previous scan, scans and progression share | Tak Fig 2 | drawn 2026-11-19 for MU, LUMIERE and UCSF (UCSF data restored 2026-11-19); in the paper | `scripts/fig_cohorts.py` (records_*.jsonl and labels) |
 
 `fig2_transport.pdf` is superseded by `fig2_performance.pdf`.
 

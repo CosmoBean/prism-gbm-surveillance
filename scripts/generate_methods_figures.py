@@ -1,6 +1,7 @@
 """Draw two manuscript figures from aggregate CSVs only (no patient-level data are read).
 
-fig3_context_split: AUC within one time window and across time windows, per score and cohort (m1_auc_split.csv).
+fig3_context_split: AUC within one time window and across time windows, per score and cohort (m1_auc_split.csv);
+MU-Glioma-Post, LUMIERE and UCSF-ALPTDG.
 fig4_group_conformal: coverage of the planned marginal and the group-conditional conformal sets of the combined
 model, per group of scans (m2_coverage.csv).
 
@@ -23,7 +24,7 @@ DEFAULT_AGG = REPO / "outputs/results/analyses/methods"
 OUTPUT = REPO / "docs/manuscript/figures"
 WIDTH = st.WIDTH
 
-COHORTS = [("mu", "MU-Glioma-Post"), ("lumiere", "LUMIERE")]
+COHORTS = [("mu", "MU-Glioma-Post"), ("lumiere", "LUMIERE"), ("ucsf", "UCSF-ALPTDG")]
 SCORES = [("timeline", "clinical-history"), ("images", "imaging"), ("combined", "combined"),
           ("enhancing_volume", "enhancing volume"), ("context_only", "time window only")]
 TIME = {"later_post_rt": "later after RT", "early_post_rt": "within 12 weeks after RT",
@@ -52,7 +53,7 @@ def reference_line(ax, x, dashes=(0, (3, 2))):
 
 def context_split(agg: Path) -> None:
     df = pd.read_csv(agg / "m1_auc_split.csv")
-    fig, axes = plt.subplots(1, 2, figsize=(WIDTH, 2.3), sharey=True)
+    fig, axes = plt.subplots(1, len(COHORTS), figsize=(WIDTH, 2.3), sharey=True)
     fig.subplots_adjust(left=0.135, right=0.985, top=0.80, bottom=0.17, wspace=0.10)
     off = 0.16
     for ax, (cohort, cohort_name) in zip(axes, COHORTS):
@@ -107,9 +108,10 @@ def group_conformal(agg: Path) -> None:
     counts = [len(rows[c]) for c, _ in COHORTS]
     row_in, gap_in, top_in, bottom_in = 0.18, 0.42, 0.42, 0.40
     height = top_in + bottom_in + gap_in + row_in * sum(counts)
-    fig, axes = plt.subplots(2, 1, figsize=(WIDTH, height), gridspec_kw={"height_ratios": counts})
+    height += gap_in * (len(COHORTS) - 2)
+    fig, axes = plt.subplots(len(COHORTS), 1, figsize=(WIDTH, height), gridspec_kw={"height_ratios": counts})
     fig.subplots_adjust(left=0.37, right=0.97, top=1 - top_in / height, bottom=bottom_in / height,
-                        hspace=gap_in / (row_in * sum(counts) / 2))
+                        hspace=gap_in / (row_in * sum(counts) / len(COHORTS)))
     off = 0.16
     for ax, (cohort, cohort_name) in zip(axes, COHORTS):
         sub = df[df.cohort == cohort]

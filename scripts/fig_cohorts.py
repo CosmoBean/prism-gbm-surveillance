@@ -2,15 +2,15 @@
 cohorts before any model is shown.
 
 One row per cohort. (a) When each evaluation scan was taken, split by label: weeks after the end of radiotherapy at MU
-(first 12 weeks shaded); LUMIERE has no radiotherapy dates, so weeks after surgery. (b) Weeks since the patient's
+(first 12 weeks shaded); LUMIERE and UCSF have no radiotherapy end dates, so weeks after surgery (UCSF: after the
+first surgery, which the release counts as the diagnosis). (b) Weeks since the patient's
 previous scan, split by label. (c) Scans, patients and the share of progression scans.
 
 Evaluation sets as in the paper: MU, the grade-4 intended-use scans (146 scans, 80 patients); LUMIERE, all 178
-labelled scans of 79 patients. Times and intervals come from the system records
+labelled scans of 79 patients; UCSF-ALPTDG, the labelled grade-4 second scans (one per patient). Times and intervals come from the system records
 (outputs/results/analyses/system/records_<cohort>.jsonl: measurements.previous.days_before) and the dates in the
-released data (MU clinical workbook, via fig1_prism; LUMIERE week in the scan name, weeks after surgery). Labels from
-records_<cohort>_EVALUATION_ONLY.csv. UCSF-ALPTDG is not drawn: its images and tables are not on this machine
-(see FIGURES.md).
+released data (MU clinical workbook, via fig1_prism; LUMIERE week in the scan name, weeks after surgery; UCSF
+days_from_diagnosis_to_mri in outputs/data/ucsf/scans.csv). Labels from records_<cohort>_EVALUATION_ONLY.csv.
 """
 from __future__ import annotations
 
@@ -39,7 +39,8 @@ def evaluation_scans(cohort: str) -> pd.DataFrame:
     lab = pd.read_csv(RECORDS / f"records_{cohort}_EVALUATION_ONLY.csv")
     df = df.merge(lab[["record_id", "label"] + [c for c in lab.columns if c.startswith("eval_")]], on="record_id",
                   validate="one_to_one")
-    keep = df.eval_intended_use if cohort == "mu" else df.eval_all
+    keep = {"mu": "eval_intended_use", "lumiere": "eval_all", "ucsf": "eval_scan2_pm30"}[cohort]
+    keep = df[keep].astype(bool)
     df = df[keep & df.label.notna()].copy()
     if cohort == "mu":
         clin = load_clinical().set_index("Patient_ID")
@@ -48,6 +49,9 @@ def evaluation_scans(cohort: str) -> pd.DataFrame:
             tp = int(row.scan_id.rsplit("_", 1)[1])
             return (scan_days(c)[tp] - float(c["Number of days from Diagnosis to Radiation Therapy end date"])) / 7
         df["weeks"] = df.apply(weeks, axis=1)
+    elif cohort == "ucsf":
+        sc = pd.read_csv(REPO / "outputs" / "data" / "ucsf" / "scans.csv").set_index("scan_id")
+        df["weeks"] = sc.days_from_diagnosis_to_mri.reindex(df.scan_id).to_numpy(float) / 7
     else:
         df["weeks"] = df.scan_id.str.extract(r"week-(\d+)")[0].astype(float)
     return df
@@ -70,11 +74,12 @@ def strip(ax, df, col, rng):
 
 def draw(output: Path) -> dict:
     cohorts = [("mu", "MU-Glioma-Post", "weeks after the end of radiotherapy"),
-               ("lumiere", "LUMIERE", "weeks after surgery (no radiotherapy dates)")]
+               ("lumiere", "LUMIERE", "weeks after surgery (no radiotherapy dates)"),
+               ("ucsf", "UCSF-ALPTDG", "weeks after the first surgery (no radiotherapy end dates)")]
     rng = np.random.default_rng(20261119)
-    fig = plt.figure(figsize=(st.WIDTH, 3.5))
-    gs = fig.add_gridspec(len(cohorts), 3, width_ratios=[2.3, 1.5, 1.0], left=0.12, right=0.985, top=0.83,
-                          bottom=0.12, wspace=0.28, hspace=0.95)
+    fig = plt.figure(figsize=(st.WIDTH, 5.1))
+    gs = fig.add_gridspec(len(cohorts), 3, width_ratios=[2.3, 1.5, 1.0], left=0.12, right=0.985, top=0.88,
+                          bottom=0.08, wspace=0.28, hspace=0.95)
     summary = {}
     for i, (key, name, tlabel) in enumerate(cohorts):
         df = evaluation_scans(key)

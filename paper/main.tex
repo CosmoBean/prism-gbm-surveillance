@@ -314,14 +314,14 @@ documented start of radiotherapy by the scan day (24 of them from 9 patients wit
 % Drawn by scripts/fig_cohorts.py from the system records and the released dates (after Tak et al. 2025, Figure 2).
 \begin{figure}[!htbp]
 \centering
-\figslot{fig_cohorts.pdf}{0.40\textheight}{For MU and LUMIERE, the time of each evaluation scan and the interval since
-the previous scan, by label, and the share of progression scans.}
+\figslot{fig_cohorts.pdf}{0.55\textheight}{For MU, LUMIERE and UCSF, the time of each evaluation scan and the interval
+since the previous scan, by label, and the share of progression scans.}
 \caption{\textbf{When the evaluation scans were taken.} One row per cohort. (a) The time of each scan, split by label:
-at MU-Glioma-Post in weeks after the end of radiotherapy, with the first 12 weeks shaded, and at LUMIERE, which
-records no radiotherapy dates, in weeks after surgery. (b) Weeks since the patient's previous scan. (c) Evaluation
-scans with and without progression. Each point is one scan (filled, progression; open, no progression), and the
-vertical bar marks the median. MU shows the 146 scans of the intended use; UCSF-ALPTDG is described in
-Table~\ref{tab:1}.}
+at MU-Glioma-Post in weeks after the end of radiotherapy, with the first 12 weeks shaded; at LUMIERE, which
+records no radiotherapy dates, in weeks after surgery; and at UCSF-ALPTDG, which records no end of radiotherapy, in
+weeks after the first surgery. (b) Weeks since the patient's previous scan. (c) Evaluation scans with and without
+progression. Each point is one scan (filled, progression; open, no progression), and the vertical bar marks the
+median. MU shows the 146 scans of the intended use and UCSF the second scan of each grade 4 patient.}
 \label{fig:cohorts}
 \end{figure}
 
@@ -336,8 +336,7 @@ model was planned before any score was compared with the label; at LUMIERE the c
 other scores are exploratory. AUCs carry 95\% confidence intervals (CIs) from 1,000 bootstrap samples of
 patients (2,000 for the timing-and-enhancement baseline, the AUC split, the group-conditional sets, the mask sensitivity
 analyses, the published approach on the second masks, and the calibration, spectrum and marker-coding analyses), which resample the held out predictions without refitting the models. The timing-and-enhancement baseline, the AUC split and group calibration were run under
-further plans written before they were coded. UCSF-ALPTDG was no longer on our hardware when they ran, so they were
-evaluated on MU and LUMIERE only.
+further plans written before they were coded; the baseline was evaluated on MU and LUMIERE.
 
 % Sources: DETECTION_TASK.md; UCSF_PLAN.md; NUMBERS.md 2.2 and 9.
 \begin{table}[!htbp]
@@ -603,7 +602,9 @@ Supplementary Section~S10). Adding clinical history to images raised the AUC by 
 scans the rater flagged as within three months of radiotherapy had progression
 (Table~\ref{tab:1}), and the reduced models take the flag
 as an input, so the reduced clinical-history model's across window AUC of 0.96 against 0.59 within one shows mainly how much the flag carries. There the
-imaging model ranked scans better within a window (0.71) than across (0.51).
+imaging model ranked scans better within a window (0.71) than across (0.51). At UCSF nearly nine in ten pairs fell
+within one window, almost all later than 12 weeks after radiotherapy, so the within window AUCs (combined 0.87,
+imaging 0.73) are close to the overall ones and the across window AUCs are too few to read.
 
 % Sources: scripts/generate_methods_figures.py; METHODS_RESULTS.md M1.
 \begin{figure}[!htbp]
@@ -612,10 +613,10 @@ imaging model ranked scans better within a window (0.71) than across (0.51).
 across time windows with 95\% CIs, and the overall AUC.}
 \caption{\textbf{Where the ranking comes from.} For each score, the AUC over pairs of scans from the same time
 window after radiotherapy (filled circles), over pairs from different windows (open squares) and over all pairs
-(ticks), at MU-Glioma-Post (time window from the treatment dates) and LUMIERE (the rater's flag for the first three
-months). The overall AUC is the weighted mean of the other two. The time window only score ranks scans by the
-progression rate of their window in the training folds. Its within window value is omitted, because at LUMIERE it ties
-all such pairs and at MU it reflects only how the rates vary between training folds. At LUMIERE enhancing volume alone
+(ticks), at MU-Glioma-Post (time window from the treatment dates), LUMIERE (the rater's flag for the first three
+months) and UCSF-ALPTDG (from the radiotherapy start, assuming a six week course). The overall AUC is the weighted mean of the other two. The time window only score ranks scans by the
+progression rate of their window in the training folds (externally, MU's rate for the matching window). Its within
+window value is omitted, because at LUMIERE and UCSF it ties all such pairs and at MU it reflects only how the rates vary between training folds. At LUMIERE enhancing volume alone
 is evaluated on the 163 of 178 scans with a recorded enhancing volume. 95\% CIs from 2,000 bootstrap
 samples of patients.}
 \label{fig:3}
@@ -640,18 +641,19 @@ Calibrating within groups changed which groups were covered more than how well t
 (Figure~\ref{fig:4}). In the later group with increased enhancement coverage rose to 72\%, but a
 marginal set enlarged to the same share of sets holding both outcomes covered it at 74\% (exploratory), so the gain
 came from larger sets. Group calibration held both outcomes more often (31\% of MU sets against 25\%) and left 4\% of
-MU sets empty.
+MU sets empty. At UCSF it did not lift the least covered group, later scans without increased enhancement
+(61\% marginal, 54\% within groups).
 
 % Sources: scripts/generate_methods_figures.py; METHODS_RESULTS.md M2.
 \begin{figure}[!htbp]
 \centering
 \figslot{fig4_group_conformal.pdf}{0.50\textheight}{Coverage of the combined score's 80\% sets by group, marginal
-and group-conditional, MU and LUMIERE.}
+and group-conditional, MU, LUMIERE and UCSF.}
 \caption{\textbf{Coverage within groups of comparable scans.} Coverage of the combined score's 80\% conformal sets,
 overall, by outcome and in each group of time window and enhancement state that holds at least 9 evaluation scans, for the planned
 marginal sets and for sets calibrated within groups. The size matched marginal sets are in Supplementary
 Section~S10. The dashed line marks the nominal 80\%. LUMIERE records no radiotherapy
-dates, so its groups differ by enhancement state only. 95\% CIs from 2,000 bootstrap samples of patients.}
+dates, so its groups differ by enhancement state only; at UCSF the window assumes a six week course. 95\% CIs from 2,000 bootstrap samples of patients.}
 \label{fig:4}
 \end{figure}
 
@@ -795,10 +797,9 @@ numbers altogether \citep{pham2026} or trace numbers to a measurement file witho
 measurements, including the released masks.
 
 PRISM was developed on one public cohort and tested at two external centres. The label is progression as each centre
-documented it, and at LUMIERE and UCSF it partly reflects the images the scores use. The timing-and-enhancement baseline, the AUC
-split, the group calibration and the verifier were evaluated on MU and LUMIERE, and the published-pipeline comparison
-on MU. In the first 12 weeks after radiotherapy MU holds few progression scans, and the report marks such scans as
-having few comparable cases. Extending these analyses to UCSF-ALPTDG and pooling rare situations across further
+documented it, and at LUMIERE and UCSF it partly reflects the images the scores use. The timing-and-enhancement baseline and the verifier were evaluated on MU and LUMIERE, and the
+published-pipeline comparison on MU. In the first 12 weeks after radiotherapy MU holds few progression scans, and the report marks such scans as
+having few comparable cases. Extending the baseline and the verifier to UCSF-ALPTDG and pooling rare situations across further
 cohorts, such as Burdenko and UCSD-PTGBM, would sharpen these estimates. A reader study of PRISM's
 clinical value is left to future work.
 
