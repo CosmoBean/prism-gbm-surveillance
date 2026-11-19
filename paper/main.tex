@@ -141,7 +141,10 @@ logistic regressions \citep{pedregosa2011}, and the confidence statements are sp
 from the development data. The language model, an open-weight model served with vLLM \citep{kwon2023}, is one
 writing step. It receives the record as text, decodes under a JSON schema that makes every sentence name the record
 keys it uses, and has no images, tools or other inputs. The stages after it are programs without a model, so a
-report always receives the same verdict. What is new is the arrangement: scores, evidence and prose share one
+report always receives the same verdict. Related systems for brain tumour follow-up use a language model only to
+phrase automated measurements \citep{herasrivera2026}, or chain language-model agents that extract the clinical
+history from notes and assign a BT-RADS category \citep{jabal2026}. In PRISM the clinical history enters the record
+as data, and the language model decides nothing. What is new is the arrangement: scores, evidence and prose share one
 record, and each can be audited against it.
 
 % =====================================================================================================
