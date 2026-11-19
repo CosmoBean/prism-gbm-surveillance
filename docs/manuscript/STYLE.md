@@ -216,3 +216,5 @@ the next. Agree on the story ([OUTLINE.md](OUTLINE.md)) before writing prose.
 Add each new reaction as a dated one-line rule.
 - 2026-11-19: guidance consolidated. Only the current rules are kept; the history guides are moved to
   `docs/manuscript/archive/`.
+- 2026-11-19: table row shading is neutral grey (`rowgrey` = gray 0.92 in `paper/macros.tex`), never a blue tint; blue
+  distracts.
