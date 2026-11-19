@@ -6,6 +6,7 @@ Everything waiting for the author's review, in one place. Open in a markdown pre
 |---|---|---|
 | [FIGURE_REVIEW.md](FIGURE_REVIEW.md) | Every manuscript figure in reading order, with notes | Figures in the paper (2026-11-19) |
 | [REPORT_FORMAT_RESEARCH.md](REPORT_FORMAT_RESEARCH.md) | How good radiology and clinical-AI reports are laid out; what the old Figure 5a did oddly; the redesign | Redesign built (`scripts/fig5_report.py`) |
+| [STYLE_DIAGNOSIS_VS_TAK.md](STYLE_DIAGNOSIS_VS_TAK.md) | **Start here for style.** Why our prose feels off, measured against Tak: no narrator, no question→action→result→meaning, qualifiers inside claims, private vocabulary; a demonstration rewrite | Notes only; nothing applied |
 | [WRITING_NOTES_TAK_COMPARISON.md](WRITING_NOTES_TAK_COMPARISON.md) | Our prose against Tak et al. 2025 (NEJM AI), section by section, with rewrites | Notes only; nothing applied |
 | [WRITING_NOTES_BEST_PRACTICE.md](WRITING_NOTES_BEST_PRACTICE.md) | Our prose against journal guidance (NEJM AI, Lancet DH, Nat Med, Radiology: AI), Gopen & Swan, TRIPOD+AI, CLAIM | Notes only; nothing applied |
 | [SIMILAR_SYSTEMS.md](SIMILAR_SYSTEMS.md) | Nearest systems (BTReport, Duke multi-agent BT-RADS, MAIRA-2, agents, ConMIL) and the multi-agent evidence; why PRISM is a "system" with one writer, not agents | Two neighbours cited in the Introduction |
