@@ -18,8 +18,9 @@ from matplotlib.patches import FancyArrowPatch, FancyBboxPatch, Rectangle
 
 import figure_style as st
 
-W, H0, PT = 180.0, 113.0, 53.0   # drawing units (about 1 mm each); H0 = panels (b)-(c), PT = panel (a)
-H = H0 + PT                       # W / H equals the figure aspect
+W, H0, PT = 180.0, 113.0, 53.0   # drawing units (about 1 mm each); H0 = panels (c)-(d), PT = panel (a)
+SG = 40.0                         # panel (b), the segmenter
+H = H0 + SG + PT                       # W / H equals the figure aspect
 REPO = Path(__file__).resolve().parents[1]
 MU = REPO / "data" / "mu-glioma-post"
 PATIENT = "PatientID_0204"        # early enhancement that resolved, then progression (selection in the docstring)
@@ -72,6 +73,30 @@ def scan_slice(patient: str, n: int) -> dict:
                 et_cc=float(et.sum()) / 1000, net_cc=float(net.sum()) / 1000)
 
 
+def sequence_slices(patient: str, n: int) -> dict:
+    """The four sequences of one scan at its slice with most enhancement (released mask, as in scan_slice), cropped
+    alike, and PRISM's label map on that slice (3 enhancing, 1 necrosis, 2 FLAIR hyperintensity)."""
+    import nibabel as nib
+    import numpy as np
+    d = MU / "MU-Glioma-Post" / patient / f"Timepoint_{n}"
+    vol = {s: np.asarray(nib.load(str(d / f"{patient}_Timepoint_{n}_brain_{s}.nii.gz")).dataobj, dtype=np.float32)
+           for s in ("t2f", "t1c", "t1n", "t2w")}
+    lesion = np.asarray(nib.load(str(d / f"{patient}_Timepoint_{n}_tumorMask.nii.gz")).dataobj)
+    z = int(np.argmax((lesion == ET_LABEL).sum(axis=(0, 1))))
+    lab = np.asarray(nib.load(str(SEG / patient / f"Timepoint_{n}.nii.gz")).dataobj)[:, :, z]
+    ys, xs = np.nonzero(vol["t1c"][:, :, z] > 0)
+    cy, cx = (ys.min() + ys.max()) // 2, (xs.min() + xs.max()) // 2
+    half = max(ys.max() - ys.min(), xs.max() - xs.min()) // 2 + 4
+    crop = lambda a: np.rot90(a[max(cy - half, 0):cy + half, max(cx - half, 0):cx + half])
+    out = {}
+    for s, v in vol.items():
+        img = v[:, :, z]
+        lo, hi = np.percentile(img[img > 0], [1, 99.5])
+        out[s] = crop(np.clip((img - lo) / (hi - lo), 0, 1))
+    out["label"] = crop(lab)
+    return out
+
+
 def patient_scans():
     """The patient's post-radiotherapy scans: weeks after RT end, enhancing volume (cc), label, and a T1c slice
     with its enhancing mask, cropped around the lesion. Label rule as in the paper: progression scan = the scan
@@ -99,6 +124,101 @@ def show_scan(iax, scan):
     iax.set_xticks([]); iax.set_yticks([])
     for sp in iax.spines.values():
         sp.set_visible(False)
+
+
+SEQ_LABELS = [("t2f", "FLAIR"), ("t1c", "T1c"), ("t1n", "T1"), ("t2w", "T2")]
+LABEL_RGB = {3: "#F2C14E", 1: "#D65F5F", 2: "#7BC67B"}   # enhancing, necrosis, FLAIR hyperintensity
+
+
+def draw_segmenter(fig, ax, text, arrow, box, seq) -> None:
+    """Panel (b): the scan's four sequences, the Swin UNETR (MONAI, feature size 48; stage sizes checked against the
+    instantiated network), and its label map on the same slice."""
+    import numpy as np
+    from matplotlib.colors import to_rgb
+    top = H0 + SG
+    st.panel_header(fig, (top - 0.6) / H, "b", "PRISM's segmenter: a Swin UNETR applied to every scan")
+    cy0, cy1 = H0 + 3.0, top - 7.0            # content band
+
+    # inputs: the four sequences, 2 x 2
+    tw = 11.6
+    for k, (key, name) in enumerate(SEQ_LABELS):
+        r, c = divmod(k, 2)
+        x, y = 2.0 + c * (tw + 1.4), cy1 - (r + 1) * tw - r * 3.4
+        iax = fig.add_axes([x / W, y / H, tw / W, tw / H])
+        iax.imshow(seq[key], cmap="gray", vmin=0, vmax=1, interpolation="bilinear")
+        iax.set_xticks([]); iax.set_yticks([]); [sp.set_visible(False) for sp in iax.spines.values()]
+        text(x + tw / 2, y - 0.4, name, size=5.4, colour=st.MUTED, ha="center")
+    arrow((28.6, (cy0 + cy1) / 2 + 1.0), (36.0, (cy0 + cy1) / 2 + 1.0))
+    text(32.3, (cy0 + cy1) / 2 - 0.6, "4 channels\n128³ windows", size=4.8, colour=st.MUTED, ha="center")
+
+    # the network: Swin Transformer encoder, convolutional decoder, skip connections
+    lv = 4.9                                  # level spacing
+    bh = 3.5                                  # box height
+    y_of = lambda i: cy1 - 3.6 - i * lv
+    enc = [("patch embedding", 48, 64), ("Swin stage 1", 96, 32), ("Swin stage 2", 192, 16),
+           ("Swin stage 3", 384, 8), ("Swin stage 4", 768, 4)]
+    dec = [("decoder", 48, 64), ("decoder", 96, 32), ("decoder", 192, 16), ("decoder", 384, 8)]
+    ex0, dx1, step, bw = 38.0, 136.0, 4.0, 30.0
+    text(ex0, cy1 + 1.4, "Swin Transformer encoder", size=5.8, colour=st.IMG, weight="bold")
+    text(dx1 - bw - 2.0, cy1 + 1.4, "Convolutional decoder", size=5.8, colour=st.IMG, weight="bold", ha="right")
+    for i, (name, ch, res) in enumerate(enc):
+        y = y_of(i)
+        if i < 4:
+            x0 = ex0 + step * i
+        else:
+            x0 = (ex0 + dx1) / 2 - bw / 2
+        box(x0, y - bh / 2, x0 + bw, y + bh / 2, edge=st.IMG, face=st.tint(st.IMG, 0.55 - 0.1 * i), lw=0.6)
+        text(x0 + 1.2, y + 0.1, name, size=5.2, colour="white" if i >= 2 else st.INK, va="center")
+        text(x0 + bw - 1.2, y + 0.1, f"{ch} \u00d7 {res}\u00b3", size=5.2, colour="white" if i >= 2 else st.INK,
+             va="center", ha="right")
+        if i < 3:                             # patch merging down to the next stage
+            arrow((x0 + step + 1.5, y - bh / 2), (x0 + step + 1.5, y_of(i + 1) + bh / 2), st.IMG, lw=0.6)
+        elif i == 3:
+            xa = x0 + 1.5
+            ax.plot([xa, xa], [y - bh / 2, y_of(4)], color=st.IMG, lw=0.6)
+            arrow((xa, y_of(4)), ((ex0 + dx1) / 2 - bw / 2, y_of(4)), st.IMG, lw=0.6)
+    for i, (name, ch, res) in enumerate(dec):
+        y = y_of(i)
+        x1 = dx1 - step * i
+        box(x1 - bw, y - bh / 2, x1, y + bh / 2, edge=st.IMG, face=st.tint(st.IMG, 0.88), lw=0.6)
+        text(x1 - bw + 1.2, y + 0.1, "up-convolution, residual", size=5.0, colour=st.INK, va="center")
+        text(x1 - 1.2, y + 0.1, f"{ch} \u00d7 {res}\u00b3", size=5.2, colour=st.INK, va="center", ha="right")
+        below = y_of(i + 1) + bh / 2
+        bx = x1 - 3.0
+        arrow((bx, below if i < 3 else y_of(4)), (bx, y - bh / 2), st.IMG, lw=0.6)
+        # skip connection from the encoder stage at the same resolution
+        ax.plot([ex0 + step * i + bw, x1 - bw], [y, y], color=st.MUTED, lw=0.5, ls=(0, (2, 1.5)), zorder=1)
+    bott = y_of(4)
+    ax.plot([(ex0 + dx1) / 2 + bw / 2, dx1 - step * 3 - 3.0], [bott, bott], color=st.IMG, lw=0.6)
+    text((ex0 + dx1) / 2, y_of(0) + 0.2, "skip connections", size=4.8, colour=st.MUTED, ha="center", va="center",
+         bbox=dict(fc="white", ec="none", pad=0.4))
+    # output head
+    oy = y_of(0) + lv
+    box(dx1 - bw, oy - bh / 2, dx1, oy + bh / 2, edge=BLACK, face="white", lw=0.6)
+    text(dx1 - bw + 1.2, oy + 0.1, "1\u00d71\u00d71 conv, 3 sigmoids", size=5.0, va="center")
+    text(dx1 - 1.2, oy + 0.1, "TC, WT, ET", size=5.0, va="center", ha="right", weight="bold")
+    arrow((dx1 - 3.0, y_of(0) + bh / 2), (dx1 - 3.0, oy - bh / 2), st.IMG, lw=0.6)
+    text((ex0 + dx1) / 2, cy0 - 0.2,
+         "Shifted-window self-attention (7\u00b3 windows; 3, 6, 12, 24 heads), two blocks per stage; patch merging "
+         "halves the resolution.\n62 M parameters; trained on BraTS 2021 and fixed, with no tuning on any cohort; "
+         "sliding-window inference, overlap 0.5.", size=4.9, colour=st.MUTED, ha="center", va="bottom")
+
+    # output: the label map on the T1c slice
+    ow = 25.0
+    ox, oy0 = 146.0, cy1 - ow
+    arrow((dx1 + 1.0, oy), (ox - 1.0, oy0 + ow / 2 + 4.0))
+    iax = fig.add_axes([ox / W, oy0 / H, ow / W, ow / H])
+    iax.imshow(seq["t1c"], cmap="gray", vmin=0, vmax=1, interpolation="bilinear")
+    rgba = np.zeros(seq["label"].shape + (4,))
+    for lab, colour in LABEL_RGB.items():
+        rgba[seq["label"] == lab] = (*to_rgb(colour), 0.6)
+    iax.imshow(rgba, interpolation="nearest")
+    iax.set_xticks([]); iax.set_yticks([]); [sp.set_visible(False) for sp in iax.spines.values()]
+    for k, (lab, name) in enumerate([(3, "enhancing"), (1, "necrosis"), (2, "FLAIR")]):
+        lx = ox - 3.0 + k * 11.0
+        ax.add_patch(Rectangle((lx, oy0 - 3.2), 1.6, 1.6, fc=LABEL_RGB[lab], ec="none"))
+        text(lx + 2.0, oy0 - 1.6, name, size=4.8, colour=st.MUTED)
+    text(ox + ow / 2, oy0 - 4.6, "volumes and shape \u2192 (c), step 2", size=5.0, colour=st.MUTED, ha="center")
 
 
 def fig1(output: Path) -> None:
@@ -174,10 +294,14 @@ def fig1(output: Path) -> None:
     text(6.4, H - 20.4, "released mask (cc)", size=5.4, colour=st.MUTED)
     text(2.0, H - 25.0, "Label: progression\ndocumented at this scan,\nor no progression for\n\u2265 120 days after it",
          size=5.4, colour=st.MUTED)
+    ax.plot([1.0, W - 1.0], [H0 + SG + 1.2, H0 + SG + 1.2], color=st.RULE, lw=0.5)
+
+    # ================================================================ (b) the segmenter
+    draw_segmenter(fig, ax, text, arrow, box, sequence_slices(PATIENT, scans[-1]["tp"]))
     ax.plot([1.0, W - 1.0], [H0 + 1.2, H0 + 1.2], color=st.RULE, lw=0.5)
 
     # ================================================================ (a) the pipeline at one scan
-    st.panel_header(fig, (H0 - 0.6) / H, "b", "PRISM at one follow-up scan")
+    st.panel_header(fig, (H0 - 0.6) / H, "c", "PRISM at one follow-up scan")
 
     cols = [(2.0, 28.0), (32.0, 68.0), (72.0, 103.0), (107.0, 140.0), (144.0, 179.0)]
     stages = ["Inputs", "Features", "Models", "Evidence statements", "Record and report"]
@@ -199,7 +323,7 @@ def fig1(output: Path) -> None:
         iax = fig.add_axes([sx / W, (top - 13.0) / H, 13.0 / W, 13.0 / H])
         show_scan(iax, scans[k - 2])
         text(sx + 6.5, top - 13.6, label, size=5.6, colour=st.MUTED, ha="center")
-    text(x0, top - 17.4, "T1c, T1, T2, FLAIR MRI;\nsegmented by a Swin UNETR\n(BraTS 2021) or the\ncohort's released masks", size=5.8)
+    text(x0, top - 17.4, "T1c, T1, T2, FLAIR MRI;\nmasks from PRISM's\nsegmenter (b) or released\nwith the cohort", size=5.8)
 
     ty = y_hist + 7.0          # treatment course as of the scan day
     ax.plot([x0 + 0.5, x1 - 1.0], [ty, ty], color=st.INK, lw=0.6)
@@ -309,7 +433,7 @@ def fig1(output: Path) -> None:
 
     # ================================================================ (b) evaluation protocol
     by1 = eb - 7.0
-    st.panel_header(fig, (by1 + 2.4) / H, "c", "Evaluation")
+    st.panel_header(fig, (by1 + 2.4) / H, "d", "Evaluation")
     bt, bb = by1 - 4.0, 7.5
     mid = (bt + bb) / 2
     card(2.0, bb, 50.0, bt, "Development: MU-Glioma-Post", BLACK,
