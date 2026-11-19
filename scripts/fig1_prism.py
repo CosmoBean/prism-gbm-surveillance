@@ -28,41 +28,60 @@ MONO = "DejaVu Sans Mono"
 BLACK = "#000000"        # Figure 1 structure (boxes, arrows, stage labels) in black, not the house navy
 
 
+def load_clinical():
+    import pandas as pd
+    return pd.read_excel(MU / "MU-Glioma-Post_ClinicalData-July2025.xlsx", sheet_name="MU Glioma Post")
+
+
+def scan_days(row) -> dict[int, float]:
+    """{timepoint: days from diagnosis to the MRI} from one clinical-workbook row."""
+    import re
+    import pandas as pd
+    out = {}
+    for c in row.index:
+        if (m := re.search(r"Timepoint_(\d+)", str(c))):
+            day = pd.to_numeric(row[c], errors="coerce")
+            if pd.notna(day):
+                out[int(m.group(1))] = float(day)
+    return out
+
+
+def scan_slice(patient: str, n: int) -> dict:
+    """The T1c axial slice with most enhancement (the visits are not co-registered), cropped to the brain, with its
+    enhancing mask and the enhancing volume (cc)."""
+    import nibabel as nib
+    import numpy as np
+    d = MU / "MU-Glioma-Post" / patient / f"Timepoint_{n}"
+    t1c = np.asarray(nib.load(str(d / f"{patient}_Timepoint_{n}_brain_t1c.nii.gz")).dataobj, dtype=np.float32)
+    lesion = np.asarray(nib.load(str(d / f"{patient}_Timepoint_{n}_tumorMask.nii.gz")).dataobj)
+    et = lesion == ET_LABEL
+    # the slice with most enhancement; without enhancement, most lesion; without a lesion, most brain
+    pick = et if et.any() else (lesion > 0) if (lesion > 0).any() else (t1c > 0)
+    z = int(np.argmax(pick.sum(axis=(0, 1))))
+    img = t1c[:, :, z]
+    ys, xs = np.nonzero(img > 0)
+    cy, cx = (ys.min() + ys.max()) // 2, (xs.min() + xs.max()) // 2
+    half = max(ys.max() - ys.min(), xs.max() - xs.min()) // 2 + 4
+    lo, hi = np.percentile(img[img > 0], [1, 99.5])
+    crop = lambda a: np.rot90(a[max(cy - half, 0):cy + half, max(cx - half, 0):cx + half])   # anterior up
+    return dict(img=crop(np.clip((img - lo) / (hi - lo), 0, 1)), msk=crop(et[:, :, z]), et_cc=float(et.sum()) / 1000)
+
+
 def patient_scans():
     """The patient's post-radiotherapy scans: weeks after RT end, enhancing volume (cc), label, and a T1c slice
     with its enhancing mask, cropped around the lesion. Label rule as in the paper: progression scan = the scan
     dated within 14 days of documented progression; no progression = followed by >= 120 days without progression."""
-    import re
-    import nibabel as nib
-    import numpy as np
-    import pandas as pd
-    clin = pd.read_excel(MU / "MU-Glioma-Post_ClinicalData-July2025.xlsx", sheet_name="MU Glioma Post")
+    clin = load_clinical()
     row = clin[clin["Patient_ID"] == PATIENT].iloc[0]
     rt = float(row["Number of days from Diagnosis to Radiation Therapy end date"])
     prog = float(row["Number of days from Diagnosis to date of First Progression"])
-    tps = {int(m.group(1)): c for c in clin.columns if (m := re.search(r"Timepoint_(\d+)", str(c)))}
     scans = []
-    for n, col in sorted(tps.items()):
-        day = pd.to_numeric(row[col], errors="coerce")
-        d = MU / "MU-Glioma-Post" / PATIENT / f"Timepoint_{n}"
-        if np.isnan(day) or day < rt or day > prog + 14 or not d.exists():
+    for n, day in sorted(scan_days(row).items()):
+        if day < rt or day > prog + 14 or not (MU / "MU-Glioma-Post" / PATIENT / f"Timepoint_{n}").exists():
             continue
-        t1c = np.asarray(nib.load(str(d / f"{PATIENT}_Timepoint_{n}_brain_t1c.nii.gz")).dataobj, dtype=np.float32)
-        mask = np.asarray(nib.load(str(d / f"{PATIENT}_Timepoint_{n}_tumorMask.nii.gz")).dataobj)
         label = ("Progression" if abs(day - prog) <= 14 else
                  "No progression" if prog - day >= 120 else "Not labelled")
-        scans.append(dict(tp=n, weeks=(day - rt) / 7, et_cc=float((mask == ET_LABEL).sum()) / 1000,
-                          label=label, t1c=t1c, et=(mask == ET_LABEL)))
-    for s in scans:                     # the visits are not co-registered: each scan's slice with most enhancement
-        z = int(np.argmax(s["et"].sum(axis=(0, 1))))
-        img = s["t1c"][:, :, z]
-        ys, xs = np.nonzero(img > 0)
-        cy, cx = (ys.min() + ys.max()) // 2, (xs.min() + xs.max()) // 2
-        half = max(ys.max() - ys.min(), xs.max() - xs.min()) // 2 + 4
-        lo, hi = np.percentile(img[img > 0], [1, 99.5])
-        crop = lambda a: np.rot90(a[max(cy - half, 0):cy + half, max(cx - half, 0):cx + half])   # anterior up
-        s["img"], s["msk"] = crop(np.clip((img - lo) / (hi - lo), 0, 1)), crop(s["et"][:, :, z])
-        del s["t1c"], s["et"]
+        scans.append(dict(tp=n, weeks=(day - rt) / 7, label=label, **scan_slice(PATIENT, n)))
     return scans
 
 

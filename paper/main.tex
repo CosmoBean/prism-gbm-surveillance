@@ -255,7 +255,8 @@ followed by at least 120 days without progression, and at LUMIERE it is a scan r
 with all scans before progression as negatives, as the detection plan specified. Each cohort defines
 progression in its own way (Table~\ref{tab:eval}), so AUCs are compared between models within a cohort. The design
 ties time to the label. On MU most progression scans were taken later than 12 weeks after radiotherapy and most scans
-without progression within 12 weeks (Table~\ref{tab:1}), so the time window alone separates many pairs. On MU the
+without progression within 12 weeks (Table~\ref{tab:1}, Figure~\ref{fig:cohorts}), so the time window alone separates
+many pairs. On MU the
 intended use covers scans on or after a documented start of radiotherapy, and MU results refer to it: 146 scans of 80
 patients, out of 181 detection scans of 92 patients among the cohort's 126 grade 4 patients.
 
@@ -293,6 +294,20 @@ documented start of radiotherapy by the scan day (24 of them from 9 patients wit
 \end{tablenotes}
 \end{threeparttable}
 \end{table}
+
+% Drawn by scripts/fig_cohorts.py from the system records and the released dates (after Tak et al. 2025, Figure 2).
+\begin{figure}[!htbp]
+\centering
+\figslot{fig_cohorts.pdf}{0.40\textheight}{For MU and LUMIERE, the time of each evaluation scan and the interval since
+the previous scan, by label, and the share of progression scans.}
+\caption{\textbf{When the evaluation scans were taken.} One row per cohort. (a) The time of each scan, split by label:
+at MU-Glioma-Post in weeks after the end of radiotherapy, with the first 12 weeks shaded, and at LUMIERE, which
+records no radiotherapy dates, in weeks after surgery. (b) Weeks since the patient's previous scan. (c) Evaluation
+scans with and without progression. Each point is one scan (filled, progression; open, no progression), and the
+vertical bar marks the median. MU shows the 146 scans of the intended use; UCSF-ALPTDG is described in
+Table~\ref{tab:1}.}
+\label{fig:cohorts}
+\end{figure}
 
 \subsection{Evaluation design}\label{sec:3.2}
 
@@ -541,16 +556,6 @@ recorded volume. The dashed line marks chance.}
 \end{figure}
 % Figure 2 follows Tak et al. 2025 Figure 3 (one row per cohort; AUC with CIs; comparison with the baseline).
 % Drawn by scripts/fig2_performance.py from verified aggregates only.
-%
-% PLANNED (to finish on orchard, where outputs/ exists): two more figures from tak2025_NOTES.md.
-% (1) Case strips, after Tak et al. Figure 4: 3-4 patients, real scans over time, three score cells per scan
-%     (clinical history, imaging, combined), the 80% conformal set and the disagreement mark, outcome label.
-%     Spec and skeleton: scripts/fig_case_strips.py. Data: outputs/results/analyses/system/<cohort>.jsonl.
-% (2) Cohort characteristics, after Tak et al. Figure 2: per cohort (MU, LUMIERE, UCSF), weeks after radiotherapy at
-%     each scan split by progression vs not, scan interval, progression rate. Shows the timing confound and the
-%     shift between cohorts. Data: the cohort tables under outputs/ (e.g. outputs/data/lumiere_cohort.csv).
-% When a file exists, add it here with \figslot{<file>.pdf}{<height>}{<spec>} and a caption that states how patients
-% were selected.
 
 
 % Sources: UCSF_AUDIT.md sections 3--6; UCSF_RESULTS.md Part C (Q4); NUMBERS.md 5; CHRISTODOULOU_REPLICATION.md (UCSF).
@@ -643,6 +648,25 @@ tested tier for 37\% of MU scans, 89\% at LUMIERE and none at UCSF, and no situa
 radiotherapy at MU held more than three progression scans. At least one flag of the record was raised for 91\% of MU
 scans and 93\% at LUMIERE. We therefore present the agreement and the card as descriptions of the evidence, not as
 warnings.
+Figure~\ref{fig:cases} follows four MU patients scan by scan, with the three scores, the set and the agreement
+statement as the record holds them.
+
+% Drawn by scripts/fig_case_strips.py from records_mu.jsonl and the released images (after Tak et al. 2025, Figure 4).
+\begin{figure}[!htbp]
+\centering
+\figslot{fig_case_strips.pdf}{0.85\textheight}{Four MU patients, scan by scan: T1c slices, weeks after radiotherapy,
+the three scores, the 80\% set and the agreement statement.}
+\caption{\textbf{Four patients' follow-up as PRISM records it.} Each strip is one MU-Glioma-Post patient: the T1c
+slice with most enhancement at each evaluation scan (without enhancement, most lesion), the weeks after the end of
+radiotherapy and between scans, and under each scan the clinical-history, imaging and combined scores (shade follows
+the score), the combined score's 80\% conformal set and whether the clinical-history and imaging models fall on the same
+side of their cohort medians. Scores are out of fold, from the first of the five repeats of cross validation, and rank
+scans; they are not probabilities for the patient. Among grade 4 patients with at least three evaluation scans, each
+strip shows the first patient in identifier order who (A) progressed with the models agreeing at every scan, (B) did
+not progress with the models agreeing at every scan, (C) progressed with the models disagreeing at the progression
+scan, and (D) did not progress with the models disagreeing at one scan or more.}
+\label{fig:cases}
+\end{figure}
 
 \subsection{Reports passed the checker after one revision of the prompt}\label{sec:4.5}
 

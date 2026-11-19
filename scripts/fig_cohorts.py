@@ -1,0 +1,121 @@
+"""Cohort characteristics, modelled on Tak et al. 2025 (NEJM AI) Figure 2: how the evaluation scans differ between
+cohorts before any model is shown.
+
+One row per cohort. (a) When each evaluation scan was taken, split by label: weeks after the end of radiotherapy at MU
+(first 12 weeks shaded); LUMIERE has no radiotherapy dates, so weeks after surgery. (b) Weeks since the patient's
+previous scan, split by label. (c) Scans, patients and the share of progression scans.
+
+Evaluation sets as in the paper: MU, the grade-4 intended-use scans (146 scans, 80 patients); LUMIERE, all 178
+labelled scans of 79 patients. Times and intervals come from the system records
+(outputs/results/analyses/system/records_<cohort>.jsonl: measurements.previous.days_before) and the dates in the
+released data (MU clinical workbook, via fig1_prism; LUMIERE week in the scan name, weeks after surgery). Labels from
+records_<cohort>_EVALUATION_ONLY.csv. UCSF-ALPTDG is not drawn: its images and tables are not on this machine
+(see FIGURES.md).
+"""
+from __future__ import annotations
+
+import argparse
+import json
+from pathlib import Path
+
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+
+import figure_style as st
+from fig1_prism import load_clinical, scan_days
+
+REPO = Path(__file__).resolve().parents[1]
+RECORDS = REPO / "outputs" / "results" / "analyses" / "system"
+PROG, NOPROG = st.INK, st.MUTED       # progression filled dark, no progression open grey (shape and fill, not hue)
+
+
+def evaluation_scans(cohort: str) -> pd.DataFrame:
+    with open(RECORDS / f"records_{cohort}.jsonl") as f:
+        recs = [json.loads(line) for line in f]
+    df = pd.DataFrame([{"record_id": r["record_id"], "scan_id": r["scan_id"], "patient_id": r["patient_id"],
+                        "interval_days": (r["measurements"].get("previous") or {}).get("days_before")}
+                       for r in recs])
+    lab = pd.read_csv(RECORDS / f"records_{cohort}_EVALUATION_ONLY.csv")
+    df = df.merge(lab[["record_id", "label"] + [c for c in lab.columns if c.startswith("eval_")]], on="record_id",
+                  validate="one_to_one")
+    keep = df.eval_intended_use if cohort == "mu" else df.eval_all
+    df = df[keep & df.label.notna()].copy()
+    if cohort == "mu":
+        clin = load_clinical().set_index("Patient_ID")
+        def weeks(row):
+            c = clin.loc[row.patient_id]
+            tp = int(row.scan_id.rsplit("_", 1)[1])
+            return (scan_days(c)[tp] - float(c["Number of days from Diagnosis to Radiation Therapy end date"])) / 7
+        df["weeks"] = df.apply(weeks, axis=1)
+    else:
+        df["weeks"] = df.scan_id.str.extract(r"week-(\d+)")[0].astype(float)
+    return df
+
+
+def strip(ax, df, col, rng):
+    """Two rows of jittered dots (progression above), with each row's median as a short bar."""
+    for y, lab, colour, face in [(1, 1, PROG, PROG), (0, 0, NOPROG, "white")]:
+        v = df.loc[df.label == lab, col].dropna().to_numpy()
+        yy = y + rng.uniform(-0.22, 0.22, len(v))
+        ax.scatter(v, yy, s=7, marker="o", facecolor=face, edgecolor=colour, linewidth=0.5, zorder=3)
+        if len(v):
+            m = float(np.median(v))
+            ax.plot([m, m], [y - 0.36, y + 0.36], color=colour, lw=1.4, zorder=4, solid_capstyle="butt")
+    ax.set_yticks([0, 1], ["No progression", "Progression"])
+    ax.set_ylim(-0.6, 1.6)
+    ax.spines["left"].set_visible(False)
+    ax.tick_params(axis="y", length=0)
+
+
+def draw(output: Path) -> dict:
+    cohorts = [("mu", "MU-Glioma-Post", "weeks after the end of radiotherapy"),
+               ("lumiere", "LUMIERE", "weeks after surgery (no radiotherapy dates)")]
+    rng = np.random.default_rng(20261119)
+    fig = plt.figure(figsize=(st.WIDTH, 3.5))
+    gs = fig.add_gridspec(len(cohorts), 3, width_ratios=[2.3, 1.5, 1.0], left=0.12, right=0.985, top=0.83,
+                          bottom=0.12, wspace=0.28, hspace=0.95)
+    summary = {}
+    for i, (key, name, tlabel) in enumerate(cohorts):
+        df = evaluation_scans(key)
+        n, npat, npos = len(df), df.patient_id.nunique(), int((df.label == 1).sum())
+        summary[key] = dict(scans=n, patients=npat, progression=npos,
+                            median_weeks={int(k): round(float(v), 1) for k, v in df.groupby("label").weeks.median().items()},
+                            median_interval_weeks={int(k): round(float(v) / 7, 1) for k, v in
+                                                   df.groupby("label").interval_days.median().items()})
+        ax = fig.add_subplot(gs[i, 0])
+        if key == "mu":
+            ax.axvspan(0, 12, color=st.tint(st.HIST, 0.75), lw=0, zorder=1)
+            ax.text(6, 1.62, "first 12 weeks", fontsize=5.6, color=st.HIST, ha="center", va="bottom")
+        strip(ax, df, "weeks", rng)
+        ax.set_xlim(left=min(0, df.weeks.min() - 2))
+        ax.set_xlabel(tlabel)
+        fig.text(0.004, ax.get_position().y1 + 0.045, name, fontsize=7, weight="bold", ha="left", va="bottom")
+
+        ax2 = fig.add_subplot(gs[i, 1])
+        df["interval_weeks"] = df.interval_days / 7
+        strip(ax2, df, "interval_weeks", rng)
+        ax2.set_yticklabels([])
+        ax2.set_xlim(left=0)
+        ax2.set_xlabel("weeks since the previous scan")
+
+        ax3 = fig.add_subplot(gs[i, 2])
+        ax3.barh([0], [n - npos], color="white", edgecolor=NOPROG, lw=0.6, height=0.5)
+        ax3.barh([0], [npos], left=[n - npos], color=PROG, height=0.5)
+        ax3.set_xlim(0, 180); ax3.set_ylim(-0.6, 1.6); ax3.set_yticks([])
+        ax3.spines["left"].set_visible(False)
+        ax3.set_xlabel("evaluation scans")
+        ax3.text(0, 0.55, f"{n} scans, {npat} patients\n{npos} progression ({100 * npos / n:.0f}%)", fontsize=6.2,
+                 ha="left", va="bottom", color=st.INK)
+        if i == 0:
+            for a, letter in [(ax, "a"), (ax2, "b"), (ax3, "c")]:
+                st.letter(fig, a.get_position().x0 - (0.1 if a is ax else 0.012), 0.995, letter)
+    st.save(fig, output, "fig_cohorts")
+    return summary
+
+
+if __name__ == "__main__":
+    p = argparse.ArgumentParser()
+    p.add_argument("--output", type=Path, default=REPO / "docs/manuscript/figures")
+    a = p.parse_args()
+    print(json.dumps(draw(a.output), indent=1))
