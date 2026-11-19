@@ -1,6 +1,6 @@
 # Manuscript (LaTeX) — source of truth
 
-From 2026-10-15 the manuscript lives here. `docs/manuscript/DRAFT.md` and `docs/manuscript/SUPPLEMENT.md`
+From 2026-10-15 the manuscript lives here. `docs/manuscript/archive/DRAFT.md` and `docs/manuscript/archive/SUPPLEMENT.md`
 are **frozen snapshots** of the text this project was converted from; do not edit them. Make all text, number and
 reference changes in this directory.
 

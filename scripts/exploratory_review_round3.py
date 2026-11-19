@@ -1,5 +1,5 @@
 """EXPLORATORY (added after internal review round 3, 2026-10-26; not pre-specified): analyses requested by
-docs/manuscript/council/round3_reviewer2.md (M2, M3, M4, M6; NUMBERS.md mismatch 8).
+docs/manuscript/archive/council/round3_reviewer2.md (M2, M3, M4, M6; NUMBERS.md mismatch 8).
 
 Populations as in prism/analyses/system.py: MU grade-4 intended use (out-of-fold, 5 repeats, mean over repeats),
 LUMIERE detection (locked), UCSF grade-4 scan 2 pos_s2_pm30 vs primary negatives (locked).

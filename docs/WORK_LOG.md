@@ -1719,7 +1719,7 @@ Hashes are short git hashes. "Plan" = a pre-specified analysis plan committed be
 | 10-15 | 9cc58e0 | Candidate datasets CFB-GBM, UCSD-PTGBM (`docs/literature/DATASETS.md`); TCIA Aspera blocked from the cluster. |
 | 10-15 | 77c694f, c0bc537 | Clean-label test: imaging-defined MU endpoint, imaging 0.628 vs baseline 0.696 (`CLEAN_LABEL.md`); CFB-GBM ADC vs conventional radiomics, pre-specified rule (delta >= 0.03, CI excl. 0) (`CFB_ADC.md`). |
 | 10-15 | 1f28fec | Auditable decision-support layer around the baseline model (`AUDIT_SYSTEM.md`; per-scan audit record, locked artefact, model card). |
-| 10-15 | f4cf52c, e33e560, cd7b688 | Figures 1-5, Markdown draft (`docs/manuscript/DRAFT.md`, `SUPPLEMENT.md`, `DRAFT_NOTES.md`; now frozen), LaTeX conversion into `paper/` with `build.sh`. |
+| 10-15 | f4cf52c, e33e560, cd7b688 | Figures 1-5, Markdown draft (`docs/manuscript/archive/DRAFT.md`, `SUPPLEMENT.md`, `DRAFT_NOTES.md`; now frozen), LaTeX conversion into `paper/` with `build.sh`. |
 | 10-15 | 65d2e26 | Reframe as "the PRISM paper" (user: PRISM is the author's own system; not a re-evaluation of others). |
 | 10-15 | e33541b, 8cc9f0f, c4d0599 | Report generator v1 rebuilt on the per-scan audit record (`REPORT_AGENT.md`, local vLLM), Figure 5, supplement S19. |
 | 10-15 | 01c9500 | Formatted for CMBBE: Imaging & Visualization (T&F Interact, CSE refs). |

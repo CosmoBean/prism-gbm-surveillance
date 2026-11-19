@@ -11,15 +11,15 @@ notebook into the paper.
 ## Before writing anything
 
 Read, in this order:
-1. `docs/manuscript/STYLE.md`: the rules (the models, the claim, the 80 / 20 disclosure rule, numbers, prose,
-   section recipes, the author's recorded reactions in section 10).
+1. `docs/manuscript/STYLE.md`: the current rules (what the paper is, names and terms, the 80 / 20 rule, numbers,
+   prose, sections, figures, tests, retired directions, reactions since consolidation). Only current rules live
+   there; never revive anything from its section 9 or from `docs/manuscript/archive/`.
 2. `docs/manuscript/OUTLINE.md`: the current argument spine. If the requested change conflicts with it, raise that
    with the author before writing; do not drift the story silently.
 3. `docs/manuscript/RESERVE.md`: what is deliberately left for reviewers, and the answers.
 4. `docs/manuscript/LOCKED.md`: passages the author approved. Never change them without explicit approval; flag
    problems and propose the smallest edit.
-5. `docs/manuscript/STORY.md`: the agreed story and every result mapped to its place.
-6. `docs/manuscript/JOURNAL_RULES.md`: the journal's hard constraints (abstract ≤ 150 words, ≤ 3 keywords,
+5. `docs/manuscript/JOURNAL_RULES.md`: the journal's hard constraints (abstract ≤ 150 words, ≤ 3 keywords,
    British -ise, back-matter order).
 
 ## Workflow
