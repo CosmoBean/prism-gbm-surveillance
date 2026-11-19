@@ -1,5 +1,20 @@
 # Manuscript figures and tables (results sections 1–3 + phase of care)
 
+## Redesign after Tak et al. 2025 (2026-11-18)
+
+Model paper: Tak D et al., *NEJM AI* 2025, doi:10.1056/AIoa2400703. The full text and figures are kept locally in
+`docs/literature/examples/` (gitignored), and our analysis is in
+[tak2025_NOTES.md](../literature/examples/tak2025_NOTES.md).
+
+| Figure | Modelled on | Status | Code |
+|---|---|---|---|
+| Figure 1: (a) one real MU patient on a weeks-after-RT axis, (b) method, (c) evaluation | Tak Fig 1A | done | `scripts/fig1_prism.py` (reads `data/mu-glioma-post`) |
+| Figure 2: one row per cohort; AUC with CIs; gain over the timing-and-enhancement baseline | Tak Fig 3 | done | `scripts/fig2_performance.py` (aggregates) |
+| Case strips: three score cells per scan, conformal set, disagreement mark | Tak Fig 4 | planned; on orchard | `scripts/fig_case_strips.py` (spec and skeleton) |
+| Cohort characteristics: weeks after RT by label, scan interval, progression rate | Tak Fig 2 | planned; on orchard | not started |
+
+`fig2_transport.pdf` is superseded by `fig2_performance.pdf`.
+
 ## System-first display inventory (approved 2026-10-26)
 
 | Display | One reader question | Source and scope |
