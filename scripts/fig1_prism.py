@@ -19,7 +19,7 @@ from matplotlib.patches import FancyArrowPatch, FancyBboxPatch, Rectangle
 import figure_style as st
 
 W, H0, PT = 180.0, 113.0, 53.0   # drawing units (about 1 mm each); H0 = panels (c)-(d), PT = panel (a)
-SG = 40.0                         # panel (b), the segmenter
+SG = 50.0                         # panel (b), the segmenter
 H = H0 + SG + PT                       # W / H equals the figure aspect
 REPO = Path(__file__).resolve().parents[1]
 MU = REPO / "data" / "mu-glioma-post"
@@ -131,82 +131,124 @@ LABEL_RGB = {3: "#F2C14E", 1: "#D65F5F", 2: "#7BC67B"}   # enhancing, necrosis, 
 
 
 def draw_segmenter(fig, ax, text, arrow, box, seq) -> None:
-    """Panel (b): the scan's four sequences, the Swin UNETR (MONAI, feature size 48; stage sizes checked against the
-    instantiated network), and its label map on the same slice."""
+    """Panel (b): the scan's four sequences, the Swin UNETR (MONAI, feature size 48; stage sizes, window and heads
+    checked against the instantiated network), the inside of a Swin stage (two successive blocks, regular and shifted
+    windows), and the network's label map on the same slice."""
     import numpy as np
     from matplotlib.colors import to_rgb
     top = H0 + SG
     st.panel_header(fig, (top - 0.6) / H, "b", "PRISM's segmenter: a Swin UNETR applied to every scan")
-    cy0, cy1 = H0 + 3.0, top - 7.0            # content band
+    cy0, cy1 = H0 + 3.0, top - 8.0            # content band
 
-    # inputs: the four sequences, 2 x 2
-    tw = 11.6
+    # ---- inputs: the four sequences, 2 x 2
+    tw = 10.6
     for k, (key, name) in enumerate(SEQ_LABELS):
         r, c = divmod(k, 2)
-        x, y = 2.0 + c * (tw + 1.4), cy1 - (r + 1) * tw - r * 3.4
+        x, y = 2.0 + c * (tw + 1.2), cy1 - 2.0 - (r + 1) * tw - r * 3.4
         iax = fig.add_axes([x / W, y / H, tw / W, tw / H])
         iax.imshow(seq[key], cmap="gray", vmin=0, vmax=1, interpolation="bilinear")
         iax.set_xticks([]); iax.set_yticks([]); [sp.set_visible(False) for sp in iax.spines.values()]
-        text(x + tw / 2, y - 0.4, name, size=5.4, colour=st.MUTED, ha="center")
-    arrow((28.6, (cy0 + cy1) / 2 + 1.0), (36.0, (cy0 + cy1) / 2 + 1.0))
-    text(32.3, (cy0 + cy1) / 2 - 0.6, "4 channels\n128³ windows", size=4.8, colour=st.MUTED, ha="center")
+        text(x + tw / 2, y - 0.4, name, size=5.2, colour=st.MUTED, ha="center")
+    ym = cy1 - 2.0 - tw - 1.7
+    arrow((25.2, ym), (30.8, ym))
+    text(28.0, ym - 1.4, "4 ch.,\n128³\nwindows", size=4.5, colour=st.MUTED, ha="center")
 
-    # the network: Swin Transformer encoder, convolutional decoder, skip connections
-    lv = 4.9                                  # level spacing
-    bh = 3.5                                  # box height
-    y_of = lambda i: cy1 - 3.6 - i * lv
+    # ---- the network: Swin Transformer encoder, convolutional decoder, skip connections
+    lv, bh = 6.0, 3.6
+    y_of = lambda i: cy1 - 5.0 - i * lv
     enc = [("patch embedding", 48, 64), ("Swin stage 1", 96, 32), ("Swin stage 2", 192, 16),
            ("Swin stage 3", 384, 8), ("Swin stage 4", 768, 4)]
-    dec = [("decoder", 48, 64), ("decoder", 96, 32), ("decoder", 192, 16), ("decoder", 384, 8)]
-    ex0, dx1, step, bw = 38.0, 136.0, 4.0, 30.0
-    text(ex0, cy1 + 1.4, "Swin Transformer encoder", size=5.8, colour=st.IMG, weight="bold")
-    text(dx1 - bw - 2.0, cy1 + 1.4, "Convolutional decoder", size=5.8, colour=st.IMG, weight="bold", ha="right")
+    ex0, dx1, step, bw = 31.0, 106.0, 3.2, 24.0
+    mid = (ex0 + dx1) / 2
+    text(ex0, cy1 + 1.6, "Swin Transformer encoder", size=5.8, colour=st.IMG, weight="bold")
     for i, (name, ch, res) in enumerate(enc):
         y = y_of(i)
-        if i < 4:
-            x0 = ex0 + step * i
-        else:
-            x0 = (ex0 + dx1) / 2 - bw / 2
+        x0 = ex0 + step * i if i < 4 else mid - bw / 2
         box(x0, y - bh / 2, x0 + bw, y + bh / 2, edge=st.IMG, face=st.tint(st.IMG, 0.55 - 0.1 * i), lw=0.6)
-        text(x0 + 1.2, y + 0.1, name, size=5.2, colour="white" if i >= 2 else st.INK, va="center")
-        text(x0 + bw - 1.2, y + 0.1, f"{ch} \u00d7 {res}\u00b3", size=5.2, colour="white" if i >= 2 else st.INK,
-             va="center", ha="right")
-        if i < 3:                             # patch merging down to the next stage
-            arrow((x0 + step + 1.5, y - bh / 2), (x0 + step + 1.5, y_of(i + 1) + bh / 2), st.IMG, lw=0.6)
+        ink = "white" if i >= 2 else st.INK
+        text(x0 + 1.0, y + 0.1, name, size=5.0, colour=ink, va="center")
+        text(x0 + bw - 1.0, y + 0.1, f"{ch} × {res}³", size=5.0, colour=ink, va="center", ha="right")
+        if i < 3:
+            arrow((x0 + step + 1.4, y - bh / 2), (x0 + step + 1.4, y_of(i + 1) + bh / 2), st.IMG, lw=0.6)
         elif i == 3:
-            xa = x0 + 1.5
-            ax.plot([xa, xa], [y - bh / 2, y_of(4)], color=st.IMG, lw=0.6)
-            arrow((xa, y_of(4)), ((ex0 + dx1) / 2 - bw / 2, y_of(4)), st.IMG, lw=0.6)
-    for i, (name, ch, res) in enumerate(dec):
-        y = y_of(i)
-        x1 = dx1 - step * i
+            ax.plot([x0 + 1.4, x0 + 1.4], [y - bh / 2, y_of(4)], color=st.IMG, lw=0.6)
+            arrow((x0 + 1.4, y_of(4)), (mid - bw / 2, y_of(4)), st.IMG, lw=0.6)
+    for i, ch, res in [(0, 48, 64), (1, 96, 32), (2, 192, 16), (3, 384, 8)]:
+        y, x1 = y_of(i), dx1 - step * i
         box(x1 - bw, y - bh / 2, x1, y + bh / 2, edge=st.IMG, face=st.tint(st.IMG, 0.88), lw=0.6)
-        text(x1 - bw + 1.2, y + 0.1, "up-convolution, residual", size=5.0, colour=st.INK, va="center")
-        text(x1 - 1.2, y + 0.1, f"{ch} \u00d7 {res}\u00b3", size=5.2, colour=st.INK, va="center", ha="right")
-        below = y_of(i + 1) + bh / 2
-        bx = x1 - 3.0
-        arrow((bx, below if i < 3 else y_of(4)), (bx, y - bh / 2), st.IMG, lw=0.6)
-        # skip connection from the encoder stage at the same resolution
+        text(x1 - bw + 1.0, y + 0.1, "up-conv, residual", size=4.9, va="center")
+        text(x1 - 1.0, y + 0.1, f"{ch} × {res}³", size=5.0, va="center", ha="right")
+        arrow((x1 - 2.6, y_of(i + 1) + bh / 2 if i < 3 else y_of(4)), (x1 - 2.6, y - bh / 2), st.IMG, lw=0.6)
         ax.plot([ex0 + step * i + bw, x1 - bw], [y, y], color=st.MUTED, lw=0.5, ls=(0, (2, 1.5)), zorder=1)
-    bott = y_of(4)
-    ax.plot([(ex0 + dx1) / 2 + bw / 2, dx1 - step * 3 - 3.0], [bott, bott], color=st.IMG, lw=0.6)
-    text((ex0 + dx1) / 2, y_of(0) + 0.2, "skip connections", size=4.8, colour=st.MUTED, ha="center", va="center",
-         bbox=dict(fc="white", ec="none", pad=0.4))
-    # output head
+    ax.plot([mid + bw / 2, dx1 - step * 3 - 2.6], [y_of(4), y_of(4)], color=st.IMG, lw=0.6)
+    text(mid, y_of(0) + 0.2, "skip", size=4.6, colour=st.MUTED, ha="center", va="center",
+         bbox=dict(fc="white", ec="none", pad=0.3))
     oy = y_of(0) + lv
     box(dx1 - bw, oy - bh / 2, dx1, oy + bh / 2, edge=BLACK, face="white", lw=0.6)
-    text(dx1 - bw + 1.2, oy + 0.1, "1\u00d71\u00d71 conv, 3 sigmoids", size=5.0, va="center")
-    text(dx1 - 1.2, oy + 0.1, "TC, WT, ET", size=5.0, va="center", ha="right", weight="bold")
-    arrow((dx1 - 3.0, y_of(0) + bh / 2), (dx1 - 3.0, oy - bh / 2), st.IMG, lw=0.6)
-    text((ex0 + dx1) / 2, cy0 - 0.2,
-         "Shifted-window self-attention (7\u00b3 windows; 3, 6, 12, 24 heads), two blocks per stage; patch merging "
-         "halves the resolution.\n62 M parameters; trained on BraTS 2021 and fixed, with no tuning on any cohort; "
-         "sliding-window inference, overlap 0.5.", size=4.9, colour=st.MUTED, ha="center", va="bottom")
+    text(dx1 - bw + 1.0, oy + 0.1, "1×1×1 conv", size=4.9, va="center")
+    text(dx1 - 1.0, oy + 0.1, "TC, WT, ET", size=4.9, va="center", ha="right", weight="bold")
+    text(dx1 - bw - 1.6, oy + 0.1, "Convolutional decoder", size=5.8, colour=st.IMG, weight="bold", ha="right",
+         va="center")
+    arrow((dx1 - 2.6, y_of(0) + bh / 2), (dx1 - 2.6, oy - bh / 2), st.IMG, lw=0.6)
+    text(mid, cy0 - 0.4, "62 M parameters; trained on BraTS 2021 and fixed, with no tuning on any cohort;\n"
+         "sliding-window inference, overlap 0.5; patch merging halves the resolution", size=4.8,
+         colour=st.MUTED, ha="center", va="bottom")
 
-    # output: the label map on the T1c slice
-    ow = 25.0
-    ox, oy0 = 146.0, cy1 - ow
-    arrow((dx1 + 1.0, oy), (ox - 1.0, oy0 + ow / 2 + 4.0))
+    # ---- inside each Swin stage: two successive blocks (regular, then shifted windows)
+    bx0 = 111.0
+    text(bx0, cy1 + 1.6, "Inside each Swin stage", size=5.8, colour=st.IMG, weight="bold")
+    cw, eh, es = 11.0, 2.6, 3.7
+    for c, attn in enumerate(["W-MSA", "SW-MSA"]):
+        x0 = bx0 + c * (cw + 3.4)
+        xc = x0 + cw / 2
+        y = cy1 - 1.4
+        text(xc, y - 0.6, f"block {'l' if c == 0 else 'l+1'}", size=4.8, colour=st.MUTED, ha="center", style="italic", va="bottom")
+        y -= 2.6
+        ys = {}
+        for k, name in enumerate(["LN", attn, "+", "LN", "MLP", "+"]):
+            yc = y - k * es
+            ys[k] = yc
+            if name == "+":
+                ax.add_patch(plt.Circle((xc, yc), 1.0, fc="white", ec=st.IMG, lw=0.6, zorder=3))
+                text(xc, yc + 0.05, "+", size=5.6, colour=st.IMG, ha="center", va="center", weight="bold")
+            else:
+                face = st.tint(st.IMG, 0.55) if "MSA" in name else (st.tint(st.IMG, 0.75) if name == "MLP"
+                                                                     else st.tint(st.IMG, 0.92))
+                box(x0, yc - eh / 2, x0 + cw, yc + eh / 2, edge=st.IMG, face=face, lw=0.5)
+                text(xc, yc + 0.05, name, size=4.9, ha="center", va="center",
+                     colour="white" if "MSA" in name else st.INK)
+            if k:
+                arrow((xc, ys[k - 1] - (1.0 if k - 1 in (2,) else eh / 2)), (xc, yc + (1.0 if name == "+" else eh / 2)),
+                      st.IMG, lw=0.5)
+        for a, b in [(0, 2), (3, 5)]:              # residual connections
+            rx = x0 + cw + 1.0
+            ya = ys[a] + eh / 2 + 0.7
+            ax.plot([xc, rx, rx], [ya, ya, ys[b]], color=st.IMG, lw=0.5)
+            arrow((rx, ys[b]), (xc + 1.0, ys[b]), st.IMG, lw=0.5)
+    text(bx0, ys[5] - 2.2,
+         r"$\hat{z}^{l} = \mathrm{W\text{-}MSA}(\mathrm{LN}(z^{l-1})) + z^{l-1}$" "\n"
+         r"$z^{l} = \mathrm{MLP}(\mathrm{LN}(\hat{z}^{l})) + \hat{z}^{l}$", size=5.0)
+    # windows: regular, and shifted by half a window (patch grid 8 x 8, windows of 4 x 4 patches)
+    g, gx = 9.6, bx0 + 2 * (cw + 3.4) + 0.6
+    for r, (lab, cuts) in enumerate([("windows", [0.5]), ("shifted", [0.25, 0.75])]):
+        gy = cy1 - 2.4 - (r + 1) * g - r * 4.2
+        for t in np.linspace(0, 1, 9):
+            ax.plot([gx + t * g, gx + t * g], [gy, gy + g], color=st.RULE, lw=0.3)
+            ax.plot([gx, gx + g], [gy + t * g, gy + t * g], color=st.RULE, lw=0.3)
+        ax.add_patch(Rectangle((gx, gy), g, g, fc="none", ec=st.IMG, lw=0.7))
+        for t in cuts:
+            ax.plot([gx + t * g, gx + t * g], [gy, gy + g], color=st.IMG, lw=0.7)
+            ax.plot([gx, gx + g], [gy + t * g, gy + t * g], color=st.IMG, lw=0.7)
+        text(gx + g / 2, gy - 0.4, lab, size=4.8, colour=st.MUTED, ha="center")
+    text(gx + g / 2, cy1 - 0.4, "7³ windows", size=4.6, colour=st.MUTED, ha="center")
+
+    # ---- output: the label map on the T1c slice
+    ow = 20.0
+    ox, oy0 = 158.5, cy1 - 1.0 - ow
+    lx = (dx1 + 2.4)
+    ax.plot([dx1, lx, lx], [oy, oy, cy1 + 4.0], color=BLACK, lw=0.6)
+    ax.plot([lx, ox + ow / 2], [cy1 + 4.0, cy1 + 4.0], color=BLACK, lw=0.6)
+    arrow((ox + ow / 2, cy1 + 4.0), (ox + ow / 2, oy0 + ow + 0.2))
     iax = fig.add_axes([ox / W, oy0 / H, ow / W, ow / H])
     iax.imshow(seq["t1c"], cmap="gray", vmin=0, vmax=1, interpolation="bilinear")
     rgba = np.zeros(seq["label"].shape + (4,))
@@ -215,10 +257,10 @@ def draw_segmenter(fig, ax, text, arrow, box, seq) -> None:
     iax.imshow(rgba, interpolation="nearest")
     iax.set_xticks([]); iax.set_yticks([]); [sp.set_visible(False) for sp in iax.spines.values()]
     for k, (lab, name) in enumerate([(3, "enhancing"), (1, "necrosis"), (2, "FLAIR")]):
-        lx = ox - 3.0 + k * 11.0
-        ax.add_patch(Rectangle((lx, oy0 - 3.2), 1.6, 1.6, fc=LABEL_RGB[lab], ec="none"))
-        text(lx + 2.0, oy0 - 1.6, name, size=4.8, colour=st.MUTED)
-    text(ox + ow / 2, oy0 - 4.6, "volumes and shape \u2192 (c), step 2", size=5.0, colour=st.MUTED, ha="center")
+        ly = oy0 - 2.2 - k * 2.6
+        ax.add_patch(Rectangle((ox, ly - 0.7), 1.5, 1.5, fc=LABEL_RGB[lab], ec="none"))
+        text(ox + 2.2, ly + 0.8, name, size=4.8, colour=st.MUTED)
+    text(ox, oy0 - 10.2, "volumes and shape\n→ (c), step 2", size=4.8, colour=st.MUTED)
 
 
 def fig1(output: Path) -> None:

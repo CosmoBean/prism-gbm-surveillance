@@ -174,7 +174,10 @@ labelled by the paper's rule: progression documented at the scan, or no progress
 the scan at 24.7 weeks meets neither and is not labelled. (b) PRISM's segmenter, shown on the patient's last scan. A
 Swin UNETR \citep{hatamizadeh2022} takes the four sequences as channels. Its Swin Transformer encoder applies
 self-attention within shifted local windows and halves the resolution at each stage, and its convolutional decoder
-restores it through skip connections from every stage. Three sigmoid outputs give the tumour core, the whole tumour
+restores it through skip connections from every stage. Each Swin stage holds two successive blocks (right):
+layer normalisation, multi-head self-attention within 7\textsuperscript{3} windows, and a multilayer perceptron, each
+with a residual connection; the second block shifts the windows by half a window, so that information passes between
+neighbouring windows. Three sigmoid outputs give the tumour core, the whole tumour
 and the enhancing tumour, from which follow the enhancing, necrosis and FLAIR masks. The network was trained on
 BraTS 2021 and is applied unchanged to every scan. (c) What PRISM computes at one follow-up scan. The masks come from
 PRISM's segmenter or are those released with the cohort; the results in this paper use the released masks unless
