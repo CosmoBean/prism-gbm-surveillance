@@ -680,17 +680,21 @@ followed the change, against a planned minimum of 27. Of six other local models 
 this paper's model names and no other change; all passed the checker, and the verifier was tested on these reports
 (Supplementary Section~S9).
 
-% Sources: NUMBERS.md section 11 (Fig 5); REPORT_V3_1.md.
+% Sources: NUMBERS.md section 11 (Fig 5b); REPORT_V3_1.md. Panel (a) drawn by scripts/fig5_report.py from the record
+% and the language model's output for MU PatientID_0029 Timepoint 4 (report v3.2, accepted by the checker).
 \begin{figure}[!htbp]
 \centering
-\figslot{fig5_report.pdf}{0.72\textheight}{One rendered report (segmentation figure, model scores, combined score,
-confidence) and reports passing the check for seven local models.}
-\caption{\textbf{The report PRISM writes, and the check.} (a) A report for a synthetic scan eight weeks after
-radiotherapy with growing enhancement. The segmentation figure is drawn rather than taken from a patient, the volumes
-and scores are invented, and the card row is MU's. Each sentence lists, in grey, the record fields it cites. (b)
-Reports passing the planned checker, of 406, for seven local language models given the same prompt (Qwen3.5 2B, 4B
-and 9B, Gemma-4 E4B and 31B, Qwen3.8-27B used in PRISM, and Qwen3.5-35B-A3B) after one revision of the prompt. Dark
-bars show models for which at least 95\% passed in every cohort, and the model weight size is at the right.}
+\figslot{fig5_report.pdf}{0.92\textheight}{One report PRISM wrote for a held-out scan, and reports passing the check
+for seven local models.}
+\caption{\textbf{The report PRISM writes, and the check.} (a) The report for the progression scan of the patient in
+strip C of Figure~\ref{fig:cases}, written for a patient not used to develop the prompt and accepted by the checker.
+The page follows the order of the BT-RADS follow-up template: the scan's timing and the flags raised; the attached
+segmentation slices and the volumes; the three scores against their cohort medians with their conformal sets; the
+reliability card; the language model's sentences verbatim, each with the record fields it cites; and the fixed
+limitations. Every value comes from the scan's record. (b) Reports passing the planned checker, of 406, for seven
+local language models given the same prompt (Qwen3.5 2B, 4B and 9B, Gemma-4 E4B and 31B, Qwen3.8-27B used in PRISM,
+and Qwen3.5-35B-A3B). Dark bars show models for which at least 95\% passed in every cohort, and the model weight size
+is at the right. BT-RADS denotes the Brain Tumor Reporting and Data System.}
 \label{fig:5}
 \end{figure}
 
