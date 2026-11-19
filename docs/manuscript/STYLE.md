@@ -329,3 +329,7 @@ Add each reaction as a dated, one-line rule.
 - 2026-11-18 (author, guiding professor): the Introduction is longer (about seven paragraphs) with a real
   literature review that sets up the abstract's premises; this replaces the "three or four paragraphs, no list of
   contributions" recipe. Contributions follow the abstract's spine.
+- 2026-11-19 (author): the old report figure looked "weird" in format. Figures that show the system's output show a
+  real held-out output laid out as a clinical page (BT-RADS order; numbers in tables and graphics, sentences once with
+  their cited fields), not an invented example. The figures after Tak et al. 2025 (cohort characteristics, case
+  strips) were accepted as drawn. Review material goes in `docs/review/`.
