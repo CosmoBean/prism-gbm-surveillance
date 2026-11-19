@@ -4,16 +4,10 @@ Passages the author has approved. They are not changed without the author's expl
 polish. If a later result or a number check makes a locked passage wrong, flag it to the author and propose the
 smallest edit; do not rewrite it.
 
-## Abstract (locked 2026-10-24; 149 words)
+## Abstract (locked 2026-11-18; 149 words; replaces the 2026-10-24 version)
 
-Models that predict glioma progression from surveillance MRI can score well without learning much about the tumour.
-We built PRISM, which keeps image and treatment-timeline evidence apart and records what each contributed at every
-scan. On MU-Glioma-Post, PRISM's first evaluation reached an AUC of 0.80 on one test split, but a model with no
-images did better on the same split, and over 500 splits the result averaged 0.72. At the scan where progression
-was called, clinical and timeline data alone reached 0.82. Each assumption built into the image model raised its
-AUC, from 0.66 to 0.81, but only by encoding the timeline; within a phase of care, images held at about 0.68, as much
-as the timeline. PRISM therefore shows both kinds of evidence side by side for every scan, and flags the weeks after
-radiotherapy, when pseudoprogression is common and neither has been shown to be reliable.
+A score for a follow-up MRI after glioma treatment is useful only if the reader can see what it rests on, and a generated report only if each statement can be checked against the record. PRISM is a local system built for both. It scores each scan with separate imaging, clinical-history and combined models, keeps every value in one record with its source, and a local language model writes a report checked against it. The separation exposed what a single score would hide. On MU-Glioma-Post, the time after radiotherapy and the enhancing tumour carried most of the ranking, and the combined model added no clear gain over a baseline of the two (AUC 0.80). Applied unchanged, the reduced combined model reached 0.77 at LUMIERE and 0.86 at UCSF-ALPTDG. All 406 reports for held-out patients passed the record check, and a verifier rejected every value placed under the wrong region.
 
-Sources for each number: [STORY.md](STORY.md) (0.80, 0.72: step 1; 0.82: step 2; 0.66, 0.81, 0.68: step 3).
-The ladder (0.66, 0.81, 0.68) is exploratory and must be labelled so in the Methods.
+Sources: METHODS_RESULTS.md E4 (0.80, no clear gain); NUMBERS.md 4 (0.77, 0.86); NUMBERS.md 7 (406, patients not
+used to develop the prompt); Section 4.5, Table 5 (verifier). Development history (the prompt revision) belongs in
+Methods, not the abstract.

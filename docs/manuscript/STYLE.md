@@ -320,3 +320,12 @@ Add each reaction as a dated, one-line rule.
 - 2026-11-17: Figures share one house style (`scripts/figure_style.py`; colour follows the score; Figure 1 is a
   methods schematic with no results). "Remove any stale entries that do not add to the paper": the supplement keeps
   only content the current paper rests on; earlier-study analyses stay in `docs/results/` and git history.
+- 2026-11-18 (author): title "PRISM: an auditable local system for glioma follow-up MRI" (keep "local system"). Keep titles short; no adjectives
+  that are not needed. "Auditable" is defined once in the Introduction (inputs reported separately; every report number
+  traced to its record entry and checked).
+- 2026-11-18 (author): put the best foot forward. The abstract runs premise, system, what the separation exposed,
+  transfer, checked reports. Development history (prompt revisions, rule revisions) is stated once in Methods, never
+  in the abstract or headings. Claim only what holds without a caveat. The radiomics comparison is not in the abstract.
+- 2026-11-18 (author, guiding professor): the Introduction is longer (about seven paragraphs) with a real
+  literature review that sets up the abstract's premises; this replaces the "three or four paragraphs, no list of
+  contributions" recipe. Contributions follow the abstract's spine.

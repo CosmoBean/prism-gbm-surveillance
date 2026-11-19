@@ -1,5 +1,14 @@
 # Outline: the argument of the PRISM paper (layer 1)
 
+## Spine 2026-11-18 (author approved the abstract in LOCKED.md)
+
+Title "PRISM: an auditable local system for glioma follow-up MRI". Story order: (1) premise: a score is useful only
+if the reader can see what it rests on, and a report only if it can be checked; (2) PRISM, a local system built for
+both; (3) the separation exposed that timing and enhancement carry most of the ranking (no clear gain over the
+baseline); (4) locked transfer to LUMIERE and UCSF-ALPTDG; (5) reports checked against the record, verifier.
+The comparison with the published radiomics pipeline leaves the abstract and the contributions and stays in
+Results as context. Next: align the contribution bullets, then the Results order.
+
 ## System-first submission version 2026-11-15 (PENDING AUTHOR reaction; supersedes the methods rewrite below)
 
 Author's direction (2026-11-15, after the review in REVIEW_2026-11-15.md):
