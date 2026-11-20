@@ -108,25 +108,26 @@ that runs on one local computer (Figure~\ref{fig:1}). In other recent systems, l
 notes and assign a BT-RADS category \citep{jabal2026}. PRISM's language model makes no decision: it writes up values
 computed elsewhere, so every sentence it writes can be checked. Our contributions are:
 \begin{enumerate}
-\item A local pipeline that outlines the tumour on each scan with a public segmentation network trained on BraTS data,
-either Swin UNETR \citep{hatamizadeh2022} or the first-placed BraTS 2024 post-treatment model \citep{ferreira2024},
-and computes 27 measurements of its volume, shape, intensity and change since earlier scans, with no patient data
-leaving the computer.
-\item Separate scores from the images and from the clinical history, each given with its uncertainty. Three ridge
-logistic regressions \citep{pedregosa2011} score each scan from the image measurements, which never see a date, from
-the clinical history, and from both. Each score comes with the set of outcomes it cannot rule out, built to contain
-the true outcome for 80\% of scans \citep{angelopoulos2023}, together with whether the two scores agree and how the
-models performed on similar earlier scans.
-\item A way to see what each score adds to what the clinician already knows, by comparing it with a reference model
-of the time since radiotherapy and the enhancing tumour volume, and by splitting its AUC into pairs of scans taken in
-the same time window after radiotherapy and pairs taken in different windows \citep{kallus2019}.
-\item External validation without retraining: fitted once on 181 scans from 92 patients in MU-Glioma-Post, the models
-were applied unchanged to 178 scans from 79 patients in LUMIERE and 69 scans from 69 patients in UCSF-ALPTDG, both
-from the masks supplied with each dataset and from PRISM's own segmentation.
-\item Report generation that can be verified deterministically. The language model, Qwen3.8-27B served with vLLM
-\citep{kwon2023}, writes only from a record that holds each value with its source, and a rule-based checker and
-verifier test every number and direction in the report against that record. Every report written for a held-out scan
-passed them, and we tested the checks with 24 kinds of planted error.
+\item A local pipeline that segments the tumour on each scan with a public network trained on BraTS data, either Swin
+UNETR \citep{hatamizadeh2022} or the top-ranked model of the BraTS 2024 post-treatment challenge
+\citep{ferreira2024}, and derives 27 measurements of tumour volume, shape, intensity and change from earlier scans,
+without patient data leaving the computer.
+\item Separate imaging and clinical-history scores, each reported with its uncertainty. Three ridge logistic
+regressions \citep{pedregosa2011} score each scan from the image measurements alone, which contain no dates, from the
+clinical history, and from the two combined. Each score is accompanied by the set of outcomes it cannot exclude,
+calibrated to contain the true outcome in 80\% of scans \citep{angelopoulos2023}, a statement of whether the imaging
+and clinical-history scores agree, and the models' performance on comparable earlier scans.
+\item An evaluation of what each score adds to what the clinician already knows. Each score is compared with a
+reference model based on the time since radiotherapy and the enhancing tumour volume, and its AUC is split into a part
+from pairs of scans in the same time window after radiotherapy and a part from pairs in different windows
+\citep{kallus2019}.
+\item External validation without retraining. The models were fitted once, on 181 scans from 92 patients in
+MU-Glioma-Post, and applied unchanged to 178 scans from 79 patients in LUMIERE and 69 scans from 69 patients in
+UCSF-ALPTDG, using both the masks supplied with each dataset and PRISM's own segmentation.
+\item Report generation with deterministic verification. The language model, Qwen3.8-27B served with vLLM
+\citep{kwon2023}, writes the report only from a structured record that holds each value with its source, and a
+rule-based checker and verifier test every number and direction against that record. All reports for held-out scans
+passed these checks, which were themselves tested with 24 types of planted error.
 \end{enumerate}
 
 Section~\ref{sec:2} describes the cohorts, PRISM's stages and the evaluation. Section~\ref{sec:3} reports the results
