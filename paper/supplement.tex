@@ -783,6 +783,28 @@ S & A score on the wrong side of its median, in new words (exceeds, under) & 104
 \end{table}
 
 \FloatBarrier
+\section{Calibration of the three scores}\label{sec:S27}
+
+% Drawn by scripts/fig_calibration.py from the per-scan scores of the ROC curves in Figure 3 (fig2_performance.roc_data).
+The three scores rank scans; their probabilities were not recalibrated for any centre. Supplementary
+Figure~S1 shows how far the predicted probabilities sit from the observed share of progression scans in each
+cohort, with the calibration slope and intercept quoted in the Results.
+
+\begin{figure}[!htbp]
+\renewcommand{\thefigure}{S1}\renewcommand{\theHfigure}{S1}
+\centering
+\figslot{figS_calibration.pdf}{0.40\textheight}{Calibration curves of the three scores per cohort.}
+\caption{\textbf{Calibration of the clinical-history, imaging and combined scores.} (a) MU-Glioma-Post, out of fold
+in the intended use; (b) LUMIERE and (c) UCSF-ALPTDG, models fitted on MU and applied unchanged (at both, the reduced
+combined model). The evaluation scans of each score are split into five equal-size bins of predicted probability;
+each point is a bin's mean prediction against its observed share of progression scans (at MU, averaged over the five
+repeats of cross validation). The dashed diagonal is perfect calibration. Slope: the coefficient of the logit of
+the prediction in a logistic regression on the label (1 is ideal); intercept: calibration-in-the-large with the
+logit as offset (0 is ideal).}
+\label{fig:S_calibration}
+\end{figure}
+
+\FloatBarrier
 \bibliography{refs}
 
 \end{document}
