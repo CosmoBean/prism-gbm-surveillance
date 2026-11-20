@@ -110,14 +110,15 @@ marks the enhancing tumour, necrosis and FLAIR hyperintensity, or the first-plac
 \citep{ferreira2024}, which also marks the resection cavity, or it takes the masks supplied with the dataset. From the
 outlines of the current and earlier scans it computes 27 measurements of volume, shape, intensity and change. Three
 ridge logistic regressions \citep{pedregosa2011} score the scan: one from the image measurements alone, with no dates,
-one from the clinical history, and one from the two combined. Each score comes with an 80\% split-conformal set, a
-statement of whether the image and clinical-history scores agree, and the models' measured performance on comparable
-earlier scans. Every value is collated into one JSON record under a fixed key, with its source. An open-weight
-language model (Qwen3.8-27B, served with vLLM \citep{kwon2023}) writes the report from that record alone, under a
-JSON schema that makes each sentence list the record keys it uses. A deterministic checker and a verifier then test
-every number, flag and direction in the report against the record. Unlike systems in which language-model agents read
-clinical notes and assign a BT-RADS category \citep{jabal2026}, PRISM gives the language model the clinical history
-as data and no decision to make, which is what makes every sentence checkable.
+one from the clinical history, and one from the two combined. Beside each score, PRISM states how sure it is: the outcomes it cannot rule out (progression, no
+progression, or both), chosen so that they include the true outcome for 80\% of scans \citep{angelopoulos2023},
+whether the image and clinical-history scores agree, and how well the models performed on similar earlier scans. All
+of these values are stored in one structured record, each with its source. A local open-weight language model
+(Qwen3.8-27B, served with vLLM \citep{kwon2023}) writes the report from this record alone, and each sentence lists the
+record entries it uses. Rule-based checks then compare every number and direction in the report with the record.
+Unlike systems in which language-model agents read clinical notes and assign a BT-RADS category \citep{jabal2026},
+PRISM's language model receives the clinical history as data and makes no decision, so every sentence can be
+checked.
 
 In this study, we developed PRISM and validated it on three public cohorts. Our contributions are:
 \begin{itemize}
