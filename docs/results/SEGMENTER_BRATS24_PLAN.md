@@ -92,3 +92,9 @@ of the cavity inputs. The second- and third-place models, if time allows.
   - P2 is reported on these scans.
 - **Runner:** `scripts/run_brats24.sh`, one container per GPU (`CUDA_VISIBLE_DEVICES` passed into the container
   with `enroot --env`), cohorts in turn, resumable with `--skip-done`.
+- **MU scope narrowed (2026-11-20, before any MU map existed beyond the 3-scan check).** MU runs on every scan up to
+  and including each patient's last labelled scan: 258 scans of the 92 patients with labelled detection rows, out of
+  the 391 scans of all grade 4 patients (full list kept in `ids_mu_all_grade4.txt`).
+  - The change inputs use only earlier scans, so no labelled row or evaluation scan loses an input.
+  - P3 uses the consecutive pairs within this scope.
+  - Reason: the author's deadline (results by 08:00).
