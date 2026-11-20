@@ -114,20 +114,24 @@ then test every number, flag and direction in the report against the record, and
 in which language-model agents read clinical notes and assign a BT-RADS category \citep{jabal2026}, PRISM gives the
 language model the clinical history as data and no decision to make, which is what makes every sentence checkable.
 
-Our contributions are:
+In this study, we developed PRISM and validated it on three public cohorts. Our contributions are:
 \begin{itemize}
-\item \textbf{A local pipeline from MRI to a checked report.} Segmentation (Swin UNETR or the BraTS 2024 post-treatment
-ensemble), 27 longitudinal measurements, three ridge logistic regressions with split-conformal sets, a JSON record with
-the source of every value, and a schema-constrained report from a 27-billion-parameter open-weight model, all on one
-computer.
-\item \textbf{An evaluation that separates the evidence.} Every score is compared with a reference model of the time
-since radiotherapy and the enhancing tumour volume, and its AUC is split into pairs of scans from the same time window
-and pairs from different windows \citep{kallus2019}.
-\item \textbf{External validation without retraining.} The models were fitted once on MU-Glioma-Post (126 patients)
-and applied unchanged to LUMIERE (79 patients) and UCSF-ALPTDG (69 patients), from the supplied masks and from PRISM's
-own segmentation.
-\item \textbf{Report checks that are themselves tested.} A deterministic checker and a verifier test every number and
-direction in the report against the record, and we measure what they catch with 24 kinds of planted error.
+\item \textbf{An end-to-end local system for follow-up MRI.} PRISM segments each scan with a BraTS-trained network,
+derives 27 longitudinal measurements, scores the scan with three ridge logistic regressions and split-conformal sets,
+and writes a schema-constrained report with a 27-billion-parameter open-weight language model. Every stage runs on one
+computer, so no patient data leave the hospital.
+\item \textbf{Separate evidence streams for every score.} The imaging model never sees dates, the clinical-history
+model never sees images, and a combined model sees both. For each scan, a reader can therefore see whether the score
+comes from the tumour or from the treatment course.
+\item \textbf{An evaluation of what each score adds.} We compare every score with a reference model of the time since
+radiotherapy and the enhancing tumour volume, and split its AUC into pairs of scans from the same time window and from
+different windows \citep{kallus2019}. This measures what the images add beyond what a clinician already knows.
+\item \textbf{External validation without retraining.} Fitted once on 126 patients from MU-Glioma-Post, the models were
+applied unchanged to 79 patients from LUMIERE and 69 from UCSF-ALPTDG, from the supplied masks and from PRISM's own
+segmentation.
+\item \textbf{A report checked against its record.} A deterministic checker and a verifier test every number and
+direction in the report against the record. We test the checks themselves with 24 kinds of planted error, and all 406
+reports written for held-out scans passed them.
 \end{itemize}
 
 Section~\ref{sec:2} describes the cohorts, PRISM's stages and the evaluation. Section~\ref{sec:3} reports the results
