@@ -35,7 +35,7 @@ from prism.features import reseg as R
 # its rootfs lock is unreliable on NFS): brats24_1_g0 ... brats24_1_g3, made with `enroot create` from the .sqsh.
 ENROOT_DATA = os.environ.get("PRISM_ENROOT_DATA", "/tmp/enroot/data")
 CONTAINER = "brats24_1_g{gpu}"
-OUT = OUTPUTS / "features" / "seg_brats24"
+OUT = Path(os.environ.get("PRISM_BRATS24_OUT", OUTPUTS / "features" / "seg_brats24"))   # maps, volumes csv
 WORK = Path(os.environ.get("PRISM_BRATS24_WORK", "/tmp/brats24_work"))
 LABEL_RC = 4
 SEQ = {"t1c": "t1c", "t1n": "t1", "t2f": "flair", "t2w": "t2"}     # BraTS suffix -> our channel name
