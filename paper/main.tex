@@ -31,8 +31,8 @@
 \begin{abstract}
 Machine learning models for glioma follow-up MRI report high accuracy, but a single AUC cannot show what drives a
 model's predictions. We built PRISM (Progression Reading with Independent Scores and Measurements),
-running on one local computer: a Swin UNETR network trained on BraTS data segments each scan, separate logistic regressions score the images,
-the clinical history and both, conformal sets state each score's certainty, and a local large language model writes a
+running on one local computer: a Swin UNETR network trained on BraTS data segments each scan, three logistic regressions score it from its image measurements, its clinical history and the two
+combined, each with a conformal prediction set, and a local large language model writes a
 report whose every number is checked against its source. On MU-Glioma-Post, the combined model reached an AUC of
 0.82. Without retraining, it reached 0.77 at LUMIERE and 0.86 at UCSF-ALPTDG. For each scan,
 PRISM reports what its score rests on: the image and clinical-history scores, whether they agree, and how the models
