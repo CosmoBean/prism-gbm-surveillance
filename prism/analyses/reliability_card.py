@@ -7,11 +7,17 @@ not save (MU I_pure and B1+I_pure out-of-fold, exactly as scripts/exploratory_pu
 image-only locked, exactly as scripts/exploratory_pure_imaging_forward_lumiere.py). Every re-created score is checked
 against the published AUC before it is used.
 
-Scores used (pathway -> arm), grade 4 throughout:
-  mu             timeline B1, images I_pure, both B1+I_pure   detection OOF, 5 x 5 CV, all scans, primary negatives
-  lumiere        timeline Tbase, images T_img, both T          locked MU fit (transportable designs; no RT dates)
-  ucsf_locked    timeline A-Tbase, images A-Ipure, both A-T    locked MU fit, scan 2, pos_s2_pm30 vs primary negatives
-  ucsf_internal  timeline B-Tl, images Ipure, both B-Tl+Ipure  UCSF-trained 5 x 5 CV, same set
+Scores used (pathway -> arm), grade 4 throughout. Since 2026-11-19 (docs/results/ADOPT_AB.md) the imaging arm is
+A, the stratified imaging model (within-window score beta . x_img), and the combined arm is B, the offset combined
+model, on the same inputs, computed by prism.analyses.system (mu_predict, lumiere_cohort, ucsf_cohort):
+  mu             timeline B1, images A on I_pure, both B on B1+I_pure   detection OOF, 5 x 5 CV, all scans, primary
+                                                                        negatives
+  lumiere        timeline Tbase, images A on T_img, both B on T         locked MU fit (transportable designs; no RT
+                                                                        dates; A on T_img for every scan, as before)
+  ucsf_locked    timeline A-Tbase, images A on A-Ipure, both B on A-T   locked MU fit, scan 2, pos_s2_pm30 vs primary
+                                                                        negatives
+  ucsf_internal  timeline B-Tl, images Ipure, both B-Tl+Ipure  UCSF-trained 5 x 5 CV, same set (unchanged; not
+                                                               PRISM's locked models)
 
     PYTHONPATH=. .venv/bin/python -m prism.analyses.reliability_card [--steps scores table records evaluate]
     -> outputs/results/analyses/reliability_card/  (patient-level files stay there; git-ignored)
@@ -31,13 +37,15 @@ from prism.audit import reliability as R
 from prism.config import MEASUREMENTS, OUTPUTS, RESULTS
 
 OUT = RESULTS / "analyses" / "reliability_card"
-ARMS = {"mu": ("B1", "I_pure", "B1+I_pure"), "lumiere": ("Tbase", "T_img", "T"),
-        "ucsf_locked": ("A-Tbase@grade4", "A-Ipure@grade4", "A-T@grade4"),
+ARMS = {"mu": ("B1", "A:I_pure", "B:B1+I_pure"), "lumiere": ("Tbase", "A:T_img", "B:T"),
+        "ucsf_locked": ("A-Tbase@grade4", "A:A-Ipure@grade4", "B:A-T@grade4"),
         "ucsf_internal": ("B-Tl", "Ipure", "B-Tl+Ipure")}
-# published AUCs the re-created / re-read scores must reproduce (DETECTION_TASK.md, STORY.md, UCSF_RESULTS.md)
-EXPECTED = {("mu", "timeline"): 0.845, ("mu", "images"): 0.712, ("lumiere", "timeline"): 0.689,
-            ("lumiere", "images"): 0.655, ("lumiere", "both"): 0.773, ("ucsf_locked", "timeline"): 0.561,
-            ("ucsf_locked", "images"): 0.726, ("ucsf_locked", "both"): 0.856, ("ucsf_internal", "timeline"): 0.669,
+# AUCs the scores must reproduce. Clinical-history and UCSF-internal: published (DETECTION_TASK.md, STORY.md,
+# UCSF_RESULTS.md). A and B: the values of system.EXPECTED (ADOPT_AB.md; before adoption mu images 0.712, lumiere
+# images 0.655, both 0.773, ucsf_locked images 0.726, both 0.856).
+EXPECTED = {("mu", "timeline"): 0.845, ("mu", "images"): 0.6688, ("mu", "both"): 0.8440, ("lumiere", "timeline"): 0.689,
+            ("lumiere", "images"): 0.6414, ("lumiere", "both"): 0.7537, ("ucsf_locked", "timeline"): 0.561,
+            ("ucsf_locked", "images"): 0.7690, ("ucsf_locked", "both"): 0.8681, ("ucsf_internal", "timeline"): 0.669,
             ("ucsf_internal", "images"): 0.863, ("ucsf_internal", "both"): 0.871}
 UCSF_SET = "grade4|scan2|pos_s2_pm30"
 
@@ -65,20 +73,24 @@ def mu_designs():
 
 
 def mu_scores() -> pd.DataFrame:
+    """Out-of-fold B1, A (within-window score) and B (probability) per repeat, from system.mu_predict."""
     from prism.analyses import detection as D
-    from prism.experiments import c3_radiomics as c3
+    from prism.analyses import system as S
     from threadpoolctl import threadpool_limits
     threadpool_limits(1)
-    d, A = mu_designs()
+    d, _ = S.mu_designs("grade4")
     out = d[["scan_id", "patient_id"]].copy()
-    for a, Xa in A.items():
+    cols = {a: np.full((5, len(d)), np.nan) for a in ARMS["mu"]}
+    for r in range(5):
+        f = D.fold_ids(d, r)
+        for k in range(5):
+            tr, te = np.where(f != k)[0], np.where(f == k)[0]
+            o = S.mu_predict("grade4", tr, te, r)
+            for a, p in zip(ARMS["mu"], ("timeline", "images", "combined")):
+                cols[a][r, te] = o[p]
+    for a in ARMS["mu"]:
         for r in range(5):
-            f = D.fold_ids(d, r)
-            v = np.full(len(d), np.nan)
-            for k in range(5):
-                tr, te = np.where(f != k)[0], np.where(f == k)[0]
-                v[te] = c3.fit_predict(c3.BASELINES[0], d, Xa, {}, None, tr, te, seed=r)
-            out[f"{a}#r{r}"] = v
+            out[f"{a}#r{r}"] = cols[a][r]
     pub = pd.read_csv(D.OUT / "oof_grade4_primary.csv.gz").set_index("scan_id").reindex(out.scan_id)
     dev = max(float(np.nanmax(np.abs(pub[f"B1#r{r}"].to_numpy() - out[f"B1#r{r}"].to_numpy()))) for r in range(5))
     assert dev < 1e-9, f"B1 out-of-fold differs from the published detection OOF by {dev:.2e}"
@@ -127,25 +139,22 @@ def mu_ood() -> pd.DataFrame:
 
 # ---------------------------------------------------------------- LUMIERE
 def lumiere_frame() -> pd.DataFrame:
-    from sklearn.base import clone
+    """Locked scores from system.lumiere_cohort: Tbase, A on T_img for every scan (the card's image score, as
+    before adoption), B on T."""
     from prism.analyses import detection as D
-    from prism.experiments import c3_radiomics as c3
-    L, LX, _ = D.lumiere_detection()
-    dm, X, *_ = D.context("grade4", "primary")
-    img = [c for c in X["T"].columns if c not in D.T_BASE + ["has_prev", "log_days_from_prev"]]
-    tr = np.where(dm.label_120.notna())[0]
+    from prism.analyses import system as S
+    c = S.lumiere_cohort()
+    L = c["d"]
     f = pd.DataFrame({"cohort": "lumiere", "scan_id": L.scan_id, "patient_id": L.patient_id, "label": L.label_det,
                       "phase": "unknown",
                       "enhancement": [R.enhancement_state(a, b if p else np.nan)
                                       for a, b, p in zip(L.et, L.prev_et, L.prev_scan_id.ne(""))]})
-    for p, (arm, cols) in zip(R.PATHWAYS, (("Tbase", D.T_BASE), ("T_img", img), ("T", list(X["T"].columns)))):
-        bp = clone(c3.BASE_PRE).fit(X["T"][cols].iloc[tr])
-        mdl = c3._ridge(bp.transform(X["T"][cols].iloc[tr]), dm, tr, 0)
-        f[f"{p}#r0"] = mdl.predict_proba(bp.transform(LX[cols]))[:, 1]
+    f["timeline#r0"] = c["S"]["p_timeline"][0]
+    f["images#r0"] = c["check_t_img_all"]
+    f["both#r0"] = c["S"]["p_combined"][0]
     pub = pd.read_csv(D.OUT / "lumiere_predictions.csv").set_index("scan_id").reindex(f.scan_id)
-    for p, a in (("timeline", "Tbase"), ("both", "T")):
-        dev = float(np.abs(pub[f"{a}@grade4"].to_numpy() - f[f"{p}#r0"].to_numpy()).max())
-        assert dev < 1e-9, f"LUMIERE {a} differs from the published locked predictions by {dev:.2e}"
+    dev = float(np.abs(pub["Tbase@grade4"].to_numpy() - f["timeline#r0"].to_numpy()).max())
+    assert dev < 1e-9, f"LUMIERE Tbase differs from the published locked predictions by {dev:.2e}"
     return f
 
 
@@ -163,11 +172,16 @@ def ucsf_frames() -> list[pd.DataFrame]:
                          "label": o.label.to_numpy(float),
                          "phase": [R.phase_cell(p) for p in s.rt_phase.reindex(o.scan_id)],
                          "enhancement": [R.enhancement_state(a, b) for a, b in zip(e2, e1)]})
-    loc = pd.read_csv(U / "locked" / "scores.csv").set_index("scan_id").reindex(o.scan_id)
+    from prism.analyses import system as S
+    c = S.ucsf_cohort()
+    loc = pd.DataFrame({p: c["S"][f"p_{q}"][0] for p, q in zip(R.PATHWAYS, ("timeline", "images", "combined"))},
+                       index=c["scan_id"]).reindex(o.scan_id)
+    pub = pd.read_csv(U / "locked" / "scores.csv").set_index("scan_id").reindex(o.scan_id)
+    assert float(np.abs(pub["A-Tbase@grade4"].to_numpy() - loc["timeline"].to_numpy()).max()) < 1e-9
     fl = base.assign(cohort="ucsf_locked")
     fi = base.assign(cohort="ucsf_internal")
-    for p, a in zip(R.PATHWAYS, ARMS["ucsf_locked"]):
-        fl[f"{p}#r0"] = loc[a].to_numpy()
+    for p in R.PATHWAYS:
+        fl[f"{p}#r0"] = loc[p].to_numpy()
     for p, a in zip(R.PATHWAYS, ARMS["ucsf_internal"]):
         for r in range(5):
             fi[f"{p}#r{r}"] = o[f"{a}#r{r}"].to_numpy()
@@ -252,7 +266,7 @@ def table_step(n_boot=R.N_BOOT):
             a = R.mean_auc(e.label.to_numpy(int), score_matrix(e, p), np.ones(len(e), bool))
             exp = EXPECTED.get((k, p))
             checks.append({"cohort": k, "pathway": p, "auc_overall": a, "published": exp,
-                           "ok": exp is None or abs(a - exp) < 0.0051})
+                           "ok": exp is not None and abs(a - exp) < 0.0051})
         r, ar = cohort_table(f, n_boot)
         rows += r
         arows += ar

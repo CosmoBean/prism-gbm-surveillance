@@ -3,6 +3,12 @@
 PLAN: docs/results/SYSTEM_PLAN.md (commit e7cba80; sections 1-3 and 5). Results, schema and deviations:
 docs/results/SYSTEM_RESULTS.md. Reports from these records (S5-S7) are a separate stage.
 
+Since 2026-11-19 (docs/results/ADOPT_AB.md) the imaging model is A, the stratified imaging model, and the combined
+model is B, the offset combined model (prism.analyses.stratified_offset.fit_A / fit_B; same inputs per centre as
+below; B externally in the reduced form with the locked reduced baseline as the offset). A ranks scans and decides the
+agreement statement by its within-window score; the record shows its window-calibrated probability. The record's
+`model` block holds A's score, window and intercept and B's increment.
+
 Pathways (grade 4 primary; MU all gliomas secondary):
   cohort   timeline        images                                        combined
   MU       B1 OOF (5 x 5)  I_pure OOF                                    B1 + I_pure OOF
@@ -54,13 +60,31 @@ SCHEMA = "prism.system_record/1"
 LABEL_KEYS = {"label", "label_det", "label_120", "neg_primary", "neg_secondary", "rating", "neg_class",
               "days_to_progression", "pos_s2_pm30", "pos_s2_between", "pos_s1_at", "is_progression_scan", "y"}
 VOL3 = ["log_et_cc", "log_necrosis_cavity_cc", "log_snfh_cc"]
-EXPECTED = {  # published AUCs (DETECTION_TASK.md, RELIABILITY_CARD.md, UCSF_RESULTS.md); checked before evaluation
-    ("mu", "grade4", "intended_use", "timeline"): 0.822, ("mu", "grade4", "intended_use", "images"): 0.709,
-    ("mu", "grade4", "intended_use", "combined"): 0.821, ("mu", "grade4", "all_scans", "timeline"): 0.845,
-    ("mu", "grade4", "all_scans", "images"): 0.712, ("mu", "all_glioma", "intended_use", "timeline"): 0.814,
-    ("lumiere", "grade4", "all", "timeline"): 0.689, ("lumiere", "grade4", "all", "combined"): 0.773,
-    ("lumiere", "grade4", "all", "images_T_img_all_scans"): 0.655, ("ucsf", "grade4", "scan2", "timeline"): 0.561,
-    ("ucsf", "grade4", "scan2", "images"): 0.726, ("ucsf", "grade4", "scan2", "combined"): 0.856}
+BASE_LOCKED = ["early_post_rt", "log_et_cc", "logratio_prev_et", "has_prev"]  # B's offset externally (S2)
+# Reference AUCs, checked before evaluation. Since 2026-11-19 (docs/results/ADOPT_AB.md) the imaging model is A
+# (stratified, within-window score) and the combined model is B (offset); the values before adoption are listed in
+# ADOPT_AB.md. Clinical-history values are unchanged (DETECTION_TASK.md, UCSF_RESULTS.md).
+EXPECTED = {
+    ("mu", "grade4", "intended_use", "timeline"): 0.822, ("mu", "grade4", "intended_use", "images"): 0.6688,
+    ("mu", "grade4", "intended_use", "combined"): 0.8137, ("mu", "grade4", "all_scans", "timeline"): 0.845,
+    ("mu", "grade4", "all_scans", "images"): 0.6688, ("mu", "all_glioma", "intended_use", "timeline"): 0.814,
+    ("lumiere", "grade4", "all", "timeline"): 0.689, ("lumiere", "grade4", "all", "images"): 0.6421,
+    ("lumiere", "grade4", "all", "combined"): 0.7537,
+    ("lumiere", "grade4", "all", "images_T_img_all_scans"): 0.6414, ("ucsf", "grade4", "scan2", "timeline"): 0.561,
+    ("ucsf", "grade4", "scan2", "images"): 0.7690, ("ucsf", "grade4", "scan2", "combined"): 0.8681}
+S2_SCORES = RESULTS / "analyses" / "stratified_offset" / "scores.npz"
+OBJECTIVE = {
+    "images": "A, stratified imaging model (docs/results/ADOPT_AB.md; prism.analyses.stratified_offset.fit_A): ridge "
+              "logistic with one unpenalised intercept per MU time window in training; ranking score = beta . x_img "
+              "(no window intercept); shown probability = sigmoid(MU window intercept + beta . x_img)",
+    "combined": "B, offset combined model (docs/results/ADOPT_AB.md; prism.analyses.stratified_offset.fit_B): logit "
+                "p = eta_baseline + b0 + beta . z, eta_baseline = the timing-and-enhancement baseline's logit "
+                "fitted on the same rows, entered as a fixed offset; increment = beta . z (logit scale)",
+    "timeline": "unchanged ridge logistic regression"}
+
+
+def _sig(x):
+    return 1.0 / (1.0 + np.exp(-np.asarray(x, float)))
 
 
 # ---------------------------------------------------------------- fitting
@@ -90,8 +114,40 @@ def mu_designs(pop):
     return d, {"timeline": b1, "images": A["A-Ipure"], "combined": pd.concat([b1, A["A-Ipure"]], axis=1)}
 
 
-def mu_job(job):
+@lru_cache(maxsize=2)
+def mu_ab_inputs(pop):
+    """A's training windows (the card's phase cells, mu_situation) and B's offset design (the timing-and-enhancement
+    baseline, clinician_baseline.mu_reader_design), as stratified_offset.mu_frame."""
+    from prism.analyses import clinician_baseline as CB
+    d, X = mu_designs(pop)
+    return mu_situation(d)[0], CB.mu_reader_design(d, X)
+
+
+def mu_predict(pop, tr, rows, r) -> dict:
+    """The three models fitted on the labelled rows of `tr` (seed r), predicting `rows`:
+    timeline = clinical-history probability (unchanged); images = A's within-window score beta . x_img;
+    images_icpt / images_prob = the fold's MU window intercept of each row and sigmoid(intercept + score);
+    combined = B's probability; combined_increment = beta . z; combined_offset = the baseline logit; combined_b0."""
+    from prism.analyses import stratified_offset as SO
     from prism.experiments import c3_radiomics as c3
+    d, X = mu_designs(pop)
+    win, Rb = mu_ab_inputs(pop)
+    o = {"timeline": c3.fit_predict(c3.BASELINES[0], d, X["timeline"], {}, None, tr, rows, seed=r)}
+    sA, pA, mA = SO.fit_A(X["images"], d, tr, win)
+    lab = tr[d.label_120.notna().to_numpy()[tr]]
+    o["images"] = sA(X["images"].iloc[rows])
+    o["images_icpt"] = SO._win_intercepts(mA["a"], mA["levels"], win[lab], win[rows])
+    o["images_prob"] = _sig(o["images_icpt"] + o["images"])
+    assert np.allclose(o["images_prob"], pA(X["images"].iloc[rows], win[rows]), rtol=0, atol=1e-12)
+    pB, iB, eb, mB = SO.fit_B(X["combined"], Rb, d, tr, r)
+    o["combined"] = pB(X["combined"].iloc[rows], Rb.iloc[rows])
+    o["combined_increment"] = iB(X["combined"].iloc[rows])
+    o["combined_offset"] = eb(Rb.iloc[rows])
+    o["combined_b0"] = float(mB["a"][0])
+    return o
+
+
+def mu_job(job):
     pop, r, k = job
     threadpool_limits(1)
     warnings.filterwarnings("ignore")
@@ -101,15 +157,26 @@ def mu_job(job):
     tr, te = np.where(f != k)[0], np.where(f == k)[0]
     proper, cal = cf.patient_split(pid[tr], 0.3, seed=10 * r + k)
     cr = tr[cal][~np.isnan(y[tr[cal]])]
-    out = {"pop": pop, "r": r, "k": k, "te": te, "n_cal_scans": len(cr), "n_cal_patients": len(np.unique(pid[cr]))}
-    for p, Xa in X.items():
-        out[f"p_{p}"] = c3.fit_predict(c3.BASELINES[0], d, Xa, {}, None, tr, te, seed=r)
-        pc = c3.fit_predict(c3.BASELINES[0], d, Xa, {}, None, tr[proper], np.concatenate([cr, te]), seed=r)
-        out[f"pc_{p}"] = pc[len(cr):]
-        out[f"q_{p}"], out[f"qm_{p}"] = _q(pc[:len(cr)], y[cr].astype(int), pid[cr])
+    out = {"pop": pop, "r": r, "k": k, "te": te, "cr": cr, "tr_lab": tr[~np.isnan(y[tr])],
+           "n_cal_scans": len(cr), "n_cal_patients": len(np.unique(pid[cr]))}
+    full = mu_predict(pop, tr, te, r)
+    conf = mu_predict(pop, tr[proper], np.concatenate([cr, te]), r)
+    nc = len(cr)
+    for p in PW:
+        out[f"p_{p}"] = full[p]                                      # ranking score (AUC, agreement)
+        pc = conf["images_prob"] if p == "images" else conf[p]       # conformal model probability
+        out[f"pccal_{p}"], out[f"pc_{p}"] = pc[:nc], pc[nc:]
+        out[f"q_{p}"], out[f"qm_{p}"] = _q(pc[:nc], y[cr].astype(int), pid[cr])
+    out["pcs_images"] = conf["images"][nc:]                          # conformal model's within-window score
+    out["prob_images"], out["icpt_images"] = full["images_prob"], full["images_icpt"]
+    out["incr_combined"], out["offset_combined"] = full["combined_increment"], full["combined_offset"]
+    out["b0_combined"] = np.full(len(te), full["combined_b0"])
     lab = tr[~np.isnan(y[tr])]
     out["ood"] = ood_flags(X["combined"].iloc[te], d.iloc[te], ood_ranges(X["combined"], lab))
     return out
+
+
+EXTRA = ("prob_images", "icpt_images", "pcs_images", "incr_combined", "offset_combined", "b0_combined")
 
 
 def mu_situation(d):
@@ -166,12 +233,15 @@ def mu_cohort(pop, workers):
     with ProcessPoolExecutor(workers) as ex:
         res = list(ex.map(mu_job, jobs))
     S = {f"{a}_{p}": np.full((5, n), np.nan) for a in ("p", "pc") for p in PW}
+    S.update({e: np.full((5, n), np.nan) for e in EXTRA})
     sets = {(kind, p, a, c): np.zeros((5, n), bool) for kind in ("std", "mon") for p in PW for a in ALPHAS for c in (0, 1)}
     ood = [[None] * n for _ in range(5)]
     fold = np.zeros((5, n), int)
     for j in res:
         r, te = j["r"], j["te"]
         fold[r, te] = j["k"]
+        for e in EXTRA:
+            S[e][r, te] = j[e]
         for p in PW:
             S[f"p_{p}"][r, te], S[f"pc_{p}"][r, te] = j[f"p_{p}"], j[f"pc_{p}"]
             for a in ALPHAS:
@@ -188,27 +258,65 @@ def mu_cohort(pop, workers):
             "eval": {"intended_use": d.label_120.notna().to_numpy() & d.intended_use.to_numpy(),
                      "all_scans": d.label_120.notna().to_numpy()},
             "median_set": d.label_120.notna().to_numpy(), "meas": mu_measurements(d),
-            "cal": [(j["r"], j["k"], j["n_cal_scans"], j["n_cal_patients"]) for j in res]}
+            "cal": [(j["r"], j["k"], j["n_cal_scans"], j["n_cal_patients"]) for j in res],
+            "jobs": [{k: j[k] for k in ("r", "k", "te", "cr", "tr_lab", *(f"pccal_{p}" for p in PW))} for j in res]}
 
 
 # ---------------------------------------------------------------- external (locked)
-def locked_models(Xmu: dict, d) -> dict:
-    """{pathway: (full fit, conformal fit, std q, Mondrian q)} on the MU grade-4 detection training rows."""
+def _plain_model(X, d, rows, proper):
+    full, conf = _fit(X, d, rows), _fit(X, d, rows[proper])
+    return {"score": lambda Z, w: full(Z), "prob": lambda Z, w: full(Z), "conf": lambda Z, w: conf(Z),
+            "conf_score": lambda Z, w: conf(Z), "extra": lambda Z, w: {}}
+
+
+def _A_model(X, d, rows, proper, win):
+    """A (stratified imaging model), locked: windows `win` of the MU rows in training; `w` = the new scans' windows."""
+    from prism.analyses import stratified_offset as SO
+    sA, pA, mA = SO.fit_A(X, d, rows, win)
+    sAc, pAc, _ = SO.fit_A(X, d, rows[proper], win)
+    wtr = win[rows[d.label_120.notna().to_numpy()[rows]]]
+    return {"score": lambda Z, w: sA(Z), "prob": lambda Z, w: pA(Z, w), "conf": lambda Z, w: pAc(Z, w),
+            "conf_score": lambda Z, w: sAc(Z),
+            "extra": lambda Z, w: {"icpt_images": SO._win_intercepts(mA["a"], mA["levels"], wtr, w)}, "fit": mA}
+
+
+def _B_model(X, d, rows, proper):
+    """B (offset combined model), locked, reduced form: offset = the locked reduced baseline (BASE_LOCKED)."""
+    from prism.analyses import stratified_offset as SO
+    pB, iB, eb, mB = SO.fit_B(X, X[BASE_LOCKED], d, rows, 0)
+    pBc = SO.fit_B(X, X[BASE_LOCKED], d, rows[proper], 0)[0]
+    b0 = float(mB["a"][0])
+    return {"score": lambda Z, w: pB(Z, Z[BASE_LOCKED]), "prob": lambda Z, w: pB(Z, Z[BASE_LOCKED]),
+            "conf": lambda Z, w: pBc(Z, Z[BASE_LOCKED]), "conf_score": lambda Z, w: pBc(Z, Z[BASE_LOCKED]),
+            "extra": lambda Z, w: {"incr_combined": iB(Z), "offset_combined": eb(Z[BASE_LOCKED]),
+                                   "b0_combined": np.full(len(Z), b0)}, "fit": mB}
+
+
+def locked_models(Xmu: dict, d, kinds: dict) -> dict:
+    """{name: model} on the MU grade-4 detection training rows; kinds[name] in plain (clinical-history), A, B.
+    A model: score (ranking), prob (shown), conf / conf_score (the conformal model, refitted on the 70% proper
+    split, seed 0), q / qm (standard and Mondrian thresholds on the 30% calibration rows) and extra (record fields)."""
     rows = np.arange(len(d))
     y, pid = d.label_120.to_numpy(), d.patient_id.to_numpy()
     proper, cal = cf.patient_split(pid, 0.3, seed=0)
     cr = rows[cal][~np.isnan(y[cal])]
+    win = mu_situation(d)[0]
     out = {}
-    for p, X in Xmu.items():
-        full, conf = _fit(X, d, rows), _fit(X, d, rows[proper])
-        out[p] = (full, conf, *_q(conf(X.iloc[cr]), y[cr].astype(int), pid[cr]))
+    for name, X in Xmu.items():
+        k = kinds.get(name, "plain")
+        m = (_plain_model(X, d, rows, proper) if k == "plain" else _A_model(X, d, rows, proper, win) if k == "A"
+             else _B_model(X, d, rows, proper))
+        m["q"], m["qm"] = _q(m["conf"](X.iloc[cr], win[cr]), y[cr].astype(int), pid[cr])
+        out[name] = m
     return out
 
 
-def _apply(models: dict, Xext: dict, use: dict | None = None):
-    """Locked scores, conformal-model scores and sets. use = {pathway: (alt model name, rows mask)} substitutes."""
+def _apply(models: dict, Xext: dict, wext, use: dict | None = None):
+    """Locked scores, conformal-model scores, sets and record extras. wext = the external scans' windows (A's
+    shown probability). use = {pathway: (alt model name, rows mask)} substitutes."""
     n = len(next(iter(Xext.values())))
     S = {f"{a}_{p}": np.full((1, n), np.nan) for a in ("p", "pc") for p in PW}
+    S.update({e: np.full((1, n), np.nan) for e in EXTRA})
     sets = {(kind, p, a, c): np.zeros((1, n), bool) for kind in ("std", "mon") for p in PW for a in ALPHAS for c in (0, 1)}
     for p in PW:
         parts = [(p, np.ones(n, bool))]
@@ -216,9 +324,15 @@ def _apply(models: dict, Xext: dict, use: dict | None = None):
             alt, m = use[p]
             parts = [(p, ~m), (alt, m)]
         for name, m in parts:
-            full, conf, q, qm = models[name]
-            pf, pc = full(Xext[name]), conf(Xext[name])
+            M = models[name]
+            Z = Xext[name]
+            pf, pc = M["score"](Z, wext), M["conf"](Z, wext)
             S[f"p_{p}"][0, m], S[f"pc_{p}"][0, m] = pf[m], pc[m]
+            if p == "images":
+                S["prob_images"][0, m], S["pcs_images"][0, m] = M["prob"](Z, wext)[m], M["conf_score"](Z, wext)[m]
+            for e, v in M["extra"](Z, wext).items():
+                S[e][0, m] = np.asarray(v)[m]
+            q, qm = M["q"], M["qm"]
             for a in ALPHAS:
                 h0, h1 = cf.prediction_sets(pc[m], q[a])
                 sets[("std", p, a, 0)][0, m], sets[("std", p, a, 1)][0, m] = h0, h1
@@ -233,12 +347,13 @@ def lumiere_cohort():
     dm, X, *_ = D.context("grade4", "primary")
     timg = [c for c in X["T"].columns if c not in D.T_BASE + ["has_prev", "log_days_from_prev"]]
     Xmu = {"timeline": X["T"][D.T_BASE], "images": X["T"][timg], "combined": X["T"], "images_scan": X["T"][VOL3]}
-    models = locked_models(Xmu, dm)
+    models = locked_models(Xmu, dm, {"images": "A", "images_scan": "A", "combined": "B"})
     Xl = {"timeline": LX[D.T_BASE], "images": LX[timg], "combined": LX, "images_scan": LX[VOL3]}
     nop = L.prev_scan_id.eq("").to_numpy()
-    # check before substitution: T_img on all scans is the card's LUMIERE image score
-    t_img_all = models["images"][0](Xl["images"])
-    S, sets = _apply(models, Xl, {"images": ("images_scan", nop)})
+    wl = np.array(["unknown"] * len(L))  # no RT dates: A's "unknown" window intercept (ADOPT_AB.md rule 2)
+    # check before substitution: A's T_img score on all scans is the card's LUMIERE image score
+    t_img_all = models["images"]["score"](Xl["images"], wl)
+    S, sets = _apply(models, Xl, wl, {"images": ("images_scan", nop)})
     dmo = demographics()
     idh = dmo.idh_raw.astype(str).str.strip().str.lower()
     mg = dmo.mgmt_raw.astype(str).str.strip().str.lower()
@@ -281,10 +396,11 @@ def ucsf_cohort():
     A = UX.ucsf_designs(u, A4)
     keep = (u.timepoint.eq(2) & u.grade4).to_numpy()
     names = {"timeline": "A-Tbase", "images": "A-Ipure", "combined": "A-T"}
-    models = locked_models({p: A4[a] for p, a in names.items()}, d4)
+    models = locked_models({p: A4[a] for p, a in names.items()}, d4, {"images": "A", "combined": "B"})
     Xu = {p: A[a][keep].reset_index(drop=True) for p, a in names.items()}
-    S, sets = _apply(models, Xu)
     uk = u[keep].reset_index(drop=True)
+    wu = np.array([R.phase_cell(p) for p in uk.rt_phase])  # approximated window (ADOPT_AB.md rule 2)
+    S, sets = _apply(models, Xu, wu)
     union = pd.concat([A4["A-T"], A4["A-Ipure"].drop(columns=[c for c in A4["A-Ipure"] if c in A4["A-T"]])], axis=1)
     uu = pd.concat([Xu["combined"], Xu["images"][[c for c in union.columns if c not in Xu["combined"]]]], axis=1)
     tr = np.where(d4.label_120.notna())[0]
@@ -339,11 +455,12 @@ def provenance(c, i, r=0):
                                      "scan, ET / lesion ratio to the whole-history minimum)",
                            "combined": "B1 + I_pure"},
                 "conformal": f"patient split 70 / 30 inside the outer training fold, seed {10 * r + int(c['fold'][r, i])};"
-                             " pathway refitted on the 70%", "population_model": c["pop"]}
+                             " pathway refitted on the 70%", "population_model": c["pop"], "objective": OBJECTIVE}
     mid = {"lumiere": {"timeline": "Tbase@grade4", "images": str(c["image_model"][i]) if "image_model" in c else "",
                        "combined": "T@grade4"},
            "ucsf": {"timeline": "A-Tbase@grade4", "images": "A-Ipure@grade4", "combined": "A-T@grade4"}}[c["cohort"]]
-    return {"scores": "locked MU grade-4 model (fitted once on the MU grade-4 detection training rows: positives + "
+    return {"objective": OBJECTIVE,
+            "scores": "locked MU grade-4 model (fitted once on the MU grade-4 detection training rows: positives + "
                       "primary negatives; c3.BASE_PRE + verified ridge, seed 0), applied once; no refit",
             "models": mid, "conformal": "one MU-calibrated model per pathway (MU patient split 70 / 30, seed 0), "
                                         "applied locked", "population_model": "grade4"}
@@ -354,8 +471,14 @@ def build_record(c: dict, i: int, table, atable, r: int = 0) -> dict:
     S = c["S"]
     ph, en = c["card_phase"][i], c["enh"][i]
     reasons = list(c["ood"][r][i])
-    card = R.build_card(ph, en, table, c["own"], {"timeline": S["p_timeline"][r, i], "images": S["p_images"][r, i]},
-                        {k: float(v[r]) for k, v in c["medians"].items()}, reasons, atable)
+    # ADOPT_AB.md rule 3: the card shows A's probability and the cohort median of A's within-window score mapped to
+    # this scan's window; probability > mapped median exactly when score > median (same intercept, monotone)
+    med_t, med_i = float(c["medians"]["timeline"][r]), float(c["medians"]["images"][r])
+    a_i = float(S["icpt_images"][r, i])
+    card = R.build_card(ph, en, table, c["own"], {"timeline": S["p_timeline"][r, i], "images": S["prob_images"][r, i]},
+                        {"timeline": med_t, "images": float(_sig(a_i + med_i))}, reasons, atable)
+    assert card["agreement"]["images_side"] == R.side(S["p_images"][r, i], med_i), "mapped median changed a side"
+    assert card["agreement"]["agree"] == (not c["flags"]["disagree"][r, i])
     pf = c["flags"]
     flags = {"pathways_disagree": bool(pf["disagree"][r, i]), "out_of_range": bool(pf["out_of_range"][r, i]),
              "out_of_range_reasons": reasons, "tier_flag": bool(pf["tier"][r, i]), "tier": c["tier"][i],
@@ -374,7 +497,26 @@ def build_record(c: dict, i: int, table, atable, r: int = 0) -> dict:
         rec["phase_of_care"] = "unknown (no RT dates)"
         rec["rater_flag_within_3_months_after_rt"] = bool(c["early_flag"][i] == 1)
     rec["situation"] = card["situation"]
-    rec["scores"] = {p: float(S[f"p_{p}"][r, i]) for p in PW}
+    rec["scores"] = {"timeline": float(S["p_timeline"][r, i]), "images": float(S["prob_images"][r, i]),
+                     "combined": float(S["p_combined"][r, i])}
+    rec["model"] = {
+        "images": {"within_window_score": float(S["p_images"][r, i]), "cohort_median_within_window_score": med_i,
+                   "window": str(c["card_phase"][i]) if c["cohort"] != "lumiere" else "unknown",
+                   "window_intercept": a_i, "probability": float(S["prob_images"][r, i]),
+                   "source": "A, stratified imaging model (ADOPT_AB.md): within_window_score = beta . x_img ranks "
+                             "scans and decides the agreement statement (score > cohort median); probability = "
+                             "sigmoid(window_intercept + within_window_score), window_intercept = the MU fit's "
+                             "intercept for this scan's window" + {"mu": " (training fold's fit)",
+                                                                  "lumiere": " ('unknown': no RT dates)",
+                                                                  "ucsf": " (approximated window from rt_phase)"}[
+                                 c["cohort"]]},
+        "combined": {"score": float(S["p_combined"][r, i]), "increment": float(S["incr_combined"][r, i]),
+                     "baseline_logit": float(S["offset_combined"][r, i]), "intercept": float(S["b0_combined"][r, i]),
+                     "source": "B, offset combined model (ADOPT_AB.md): logit(score) = baseline_logit + intercept + "
+                               "increment; baseline_logit = the timing-and-enhancement baseline fitted on the same "
+                               "rows (fixed offset); increment = beta . z, what the images and the history add, "
+                               "logit scale" + ("" if c["cohort"] == "mu" else
+                                                "; reduced form, locked reduced baseline as the offset")}}
     rec["measurements"] = c["meas"][i]
     rec["card"] = card
     rec["conformal"] = {**{f"alpha_{a}": {p: set_text(c, "std", p, a, r, i) for p in PW} for a in ALPHAS},
@@ -529,7 +671,8 @@ def evaluate_set(c: dict, setname: str, workers: int, n_boot: int, n_ref: int, n
                                  "below_0.78": bool(hit[:, mm].mean() < 0.78)})
     # conformal model AUC (cost of splitting)
     split = [{**key, "pathway": p, "auc_displayed": auc_m(y, c["S"][f"p_{p}"][:, m], np.ones_like(P, bool)),
-              "auc_conformal_model": auc_m(y, c["S"][f"pc_{p}"][:, m], np.ones_like(P, bool))} for p in PW]
+              "auc_conformal_model": auc_m(y, c["S"]["pcs_images" if p == "images" else f"pc_{p}"][:, m],
+                                           np.ones_like(P, bool))} for p in PW]
     # S4 inputs: Brier and error at the cohort-median threshold (median of the combined score over the set, per repeat)
     brier = (P - y) ** 2
     err = ((P > np.median(P, axis=1, keepdims=True)).astype(int) != y).astype(float)
@@ -585,21 +728,39 @@ def evaluate_set(c: dict, setname: str, workers: int, n_boot: int, n_ref: int, n
 
 # ---------------------------------------------------------------- checks
 def check_scores(cohorts: dict) -> pd.DataFrame:
+    """Clinical-history scores equal the published ones; A and B equal the S2 run (stratified_offset scores.npz)
+    scan by scan, sets included; AUCs equal EXPECTED (ADOPT_AB.md rule 7)."""
     rows = []
-    add = lambda k, v: rows.append({"check": "|".join(k), "value": v, "published": EXPECTED[k],
-                                    "ok": abs(v - EXPECTED[k]) < 0.0006})
+
+    def add(k, v):
+        ref = EXPECTED[k]
+        rows.append({"check": "|".join(k), "value": v, "published": ref,
+                     "ok": ref is not None and abs(v - ref) < 0.0006})
+
+    def dev(check, a, b, tol=1e-9):
+        a, b = np.asarray(a, float), np.asarray(b, float)
+        dv = float(np.nanmax(np.abs(a - b))) if a.shape == b.shape else np.inf
+        rows.append({"check": check, "value": dv, "published": 0.0, "ok": dv < tol})
+
+    s2 = np.load(S2_SCORES, allow_pickle=True)
     for pop in ("grade4", "all_glioma"):
         c = cohorts[("mu", pop)]
         pub = pd.read_csv(D.OUT / f"oof_{pop}_primary.csv.gz").set_index("scan_id").reindex(c["scan_id"])
-        dev = max(float(np.nanmax(np.abs(pub[f"B1#r{r}"].to_numpy() - c["S"]["p_timeline"][r]))) for r in range(5))
-        rows.append({"check": f"mu|{pop}|B1 OOF == detection oof (max dev)", "value": dev, "published": 0.0,
-                     "ok": dev < 1e-9})
+        dev(f"mu|{pop}|B1 OOF == detection oof (max dev)", np.stack([pub[f"B1#r{r}"].to_numpy() for r in range(5)]),
+            c["S"]["p_timeline"])
         if pop == "grade4":
             card = pd.read_csv(RC.OUT / "mu_scores.csv.gz").set_index("scan_id").reindex(c["scan_id"])
-            for p, a in (("images", "I_pure"), ("combined", "B1+I_pure")):
-                dv = max(float(np.nanmax(np.abs(card[f"{a}#r{r}"].to_numpy() - c["S"][f"p_{p}"][r]))) for r in range(5))
-                rows.append({"check": f"mu|grade4|{a} OOF == reliability-card scores (max dev)", "value": dv,
-                             "published": 0.0, "ok": dv < 1e-9})
+            for p, a in (("images", RC.ARMS["mu"][1]), ("combined", RC.ARMS["mu"][2])):
+                dev(f"mu|grade4|{a} OOF == reliability-card scores (max dev)",
+                    np.stack([card[f"{a}#r{r}"].to_numpy() for r in range(5)]) if f"{a}#r0" in card else np.nan,
+                    c["S"][f"p_{p}"])
+            ev = c["eval"]["intended_use"]
+            for k, v in (("A", c["S"]["p_images"]), ("A_prob", c["S"]["prob_images"]), ("B", c["S"]["p_combined"]),
+                         ("B_incr", c["S"]["incr_combined"])):
+                dev(f"mu|grade4|{k} == S2 scores (max dev)", s2[f"mu_{k}"], v[:, ev])
+            for h in (0, 1):
+                dev(f"mu|grade4|combined set{h} alpha 0.2 == S2 B sets", s2[f"mu_set{h}_B"].astype(float),
+                    c["sets"][("std", "combined", 0.2, h)][:, ev].astype(float), 0.5)
         y = c["y"]
         for s, m in c["eval"].items():
             for p in PW:
@@ -608,10 +769,14 @@ def check_scores(cohorts: dict) -> pd.DataFrame:
                     add(k, auc_m(y[m].astype(int), c["S"][f"p_{p}"][:, m], np.ones((5, m.sum()), bool)))
     L = cohorts[("lumiere", "grade4")]
     pub = pd.read_csv(D.OUT / "lumiere_predictions.csv").set_index("scan_id").reindex(L["scan_id"])
-    for p, a in (("timeline", "Tbase@grade4"), ("combined", "T@grade4")):
-        dv = float(np.abs(pub[a].to_numpy() - L["S"][f"p_{p}"][0]).max())
-        rows.append({"check": f"lumiere|{a} == published locked predictions (max dev)", "value": dv, "published": 0.0,
-                     "ok": dv < 1e-9})
+    dev("lumiere|Tbase@grade4 == published locked predictions (max dev)", pub["Tbase@grade4"].to_numpy(),
+        L["S"]["p_timeline"][0])
+    for k, v in (("A", L["S"]["p_images"]), ("B", L["S"]["p_combined"]), ("B_incr", L["S"]["incr_combined"])):
+        dev(f"lumiere|{k} == S2 scores (max dev)", s2[f"lumiere_{k}"], v)
+    for h in (0, 1):
+        dev(f"lumiere|combined set{h} alpha 0.2 == S2 B sets", s2[f"lumiere_set{h}_B"].astype(float),
+            L["sets"][("std", "combined", 0.2, h)].astype(float), 0.5)
+    for p in PW:
         add(("lumiere", "grade4", "all", p), R.auc(L["y"].astype(int), L["S"][f"p_{p}"][0]))
     add(("lumiere", "grade4", "all", "images_T_img_all_scans"), R.auc(L["y"].astype(int), L["check_t_img_all"]))
     if SKIP_UCSF:
@@ -619,16 +784,20 @@ def check_scores(cohorts: dict) -> pd.DataFrame:
     U = cohorts[("ucsf", "grade4")]
     sc = pd.read_csv(RESULTS / "analyses" / "ucsf" / "locked" / "scores.csv").set_index("scan_id").reindex(U["scan_id"])
     m = U["eval"]["scan2_pm30"]
-    for p, a in (("timeline", "A-Tbase@grade4"), ("images", "A-Ipure@grade4"), ("combined", "A-T@grade4")):
-        dv = float(np.abs(sc[a].to_numpy() - U["S"][f"p_{p}"][0]).max())
-        rows.append({"check": f"ucsf|{a} == published locked scores (max dev)", "value": dv, "published": 0.0,
-                     "ok": dv < 1e-9})
+    dev("ucsf|A-Tbase@grade4 == published locked scores (max dev)", sc["A-Tbase@grade4"].to_numpy(),
+        U["S"]["p_timeline"][0])
+    for k, v in (("A", U["S"]["p_images"]), ("B", U["S"]["p_combined"]), ("B_incr", U["S"]["incr_combined"])):
+        dev(f"ucsf|{k} == S2 scores (max dev)", s2[f"ucsf_{k}"], v[:, m])
+    for h in (0, 1):
+        dev(f"ucsf|combined set{h} alpha 0.2 == S2 B sets", s2[f"ucsf_set{h}_B"].astype(float),
+            U["sets"][("std", "combined", 0.2, h)][:, m].astype(float), 0.5)
+    for p in PW:
         add(("ucsf", "grade4", "scan2", p), R.auc(U["y"][m].astype(int), U["S"][f"p_{p}"][0][m]))
     return pd.DataFrame(rows)
 
 
 # ---------------------------------------------------------------- main
-def build(workers):
+def build(workers, check_only=False):
     t0 = time.time()
     cohorts = {("mu", p): mu_cohort(p, workers) for p in D.POPS}
     print(f"MU scores {time.time() - t0:.0f}s", flush=True)
@@ -640,7 +809,8 @@ def build(workers):
     OUT.mkdir(parents=True, exist_ok=True)
     ch.to_csv(OUT / "checks.csv", index=False)
     print(ch.to_string(index=False), flush=True)
-    assert ch.ok.all(), "scores do not reproduce the published values; stopping before any evaluation"
+    if not check_only:
+        assert ch.ok.all(), "scores do not reproduce the reference values; stopping before any evaluation"
     return cohorts
 
 
@@ -655,9 +825,13 @@ def main(argv=None) -> None:
     ap.add_argument("--n-ref", type=int, default=N_REF)
     ap.add_argument("--n-draw", type=int, default=N_DRAW)
     ap.add_argument("--no-evaluate", action="store_true")
+    ap.add_argument("--check-only", action="store_true", help="compute the scores, print the checks and stop")
     a = ap.parse_args(argv)
     warnings.filterwarnings("ignore")
     t0 = time.time()
+    if a.check_only:
+        build(a.workers, check_only=True)
+        return
     (OUT / "RECORDS_READY").unlink(missing_ok=True)
     cohorts = build(a.workers)
     table, atable = RC.load_table()
