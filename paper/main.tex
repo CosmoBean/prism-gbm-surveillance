@@ -511,10 +511,10 @@ unchanged, to six other local open-weight models of 2 to 35 billion parameters.}
 \paragraph*{Development and external testing.} On MU, every model was evaluated by five repeats of fivefold cross
 validation grouped by patient. In each repeat, a model was fitted on the scans of four folds and scored the fifth, so
 every scan was scored once by a model that had not seen its patient. Models were fitted on all grade 4 detection scans
-of the training folds. The AUC was computed over the held-out scores of the 146 scans in the intended use and averaged
-over the five repeats, because a single split of a small cohort gives an unstable estimate \citep{varoquaux2018}. Each
-model was then fitted once on all 181 grade 4 detection scans of MU, including the 35 without a documented start of
-radiotherapy by the scan day, and applied to LUMIERE and UCSF-ALPTDG without retraining or recalibration. Which external tests were planned is given in Table~\ref{tab:2}.
+of the training folds. The AUC was computed over the held-out scores of the 146 evaluation scans (Section~\ref{sec:2.1}) and
+averaged over the five repeats, because a single split of a small cohort gives an estimate with a wide error
+\citep{varoquaux2018}. Each model was then fitted once on all 181 MU training scans and applied to LUMIERE and
+UCSF-ALPTDG without retraining or recalibration. Which external tests were planned is given in Table~\ref{tab:2}.
 \todo{SUPPLEMENT: At UCSF-ALPTDG every model was fixed in a written plan before any score was compared with the label.
 At LUMIERE the combined model and its comparison with the time-and-enhancement model were fixed in advance, and the
 other scores are exploratory.}
