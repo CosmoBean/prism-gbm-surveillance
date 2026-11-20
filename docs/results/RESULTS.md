@@ -5,14 +5,28 @@ Numbers only; detail in the linked documents. The decision record is [SEGMENTER_
 
 ## 1. Primary: PRISM end to end (BraTS24 segmenter, 22 inputs)
 
-From S4's `segmenter22` arm (`outputs/results/analyses/segmenter_brats24/`). **Rerun of the full system (conformal
-sets, cards, reports) pending.**
+System rerun 2026-11-20 (`PRISM_MASKS=brats24_22`, commit e06cca3; `outputs/results/analyses/system_brats24_22/`).
+Scores equal S4's `segmenter22` predictions exactly. CIs: 2,000 patient-bootstrap samples (S4).
 
-| cohort | imaging | combined (reduced) | combined (full, MU) | time-and-enhancement |
+| cohort | clinical history | imaging | combined | time-and-enhancement |
 |---|---|---|---|---|
-| MU | 0.71 | 0.84 | 0.82 | 0.78 |
-| LUMIERE | 0.69 | 0.79 | — | 0.81 |
-| UCSF-ALPTDG | 0.80 | 0.81 | — | 0.88 (approximated window) |
+| MU | 0.82 (0.75–0.90) | 0.71 (0.64–0.78) | 0.82 (0.76–0.89) | 0.78 (0.70–0.87) |
+| LUMIERE | 0.69 (0.60–0.81) | 0.69 (0.61–0.77) | 0.79 (0.72–0.86) | 0.81 (0.73–0.87) |
+| UCSF-ALPTDG | 0.56 (0.42–0.69) | 0.80 (0.68–0.89) | 0.81 (0.70–0.90) | 0.88 (0.79–0.95)† |
+
+Combined at MU is the full combined model; at LUMIERE and UCSF it is the reduced one.
+
+**Coverage of the combined 80% sets:**
+- MU 0.82 (0.77–0.87);
+- LUMIERE 0.82 (0.76–0.87);
+- UCSF 0.80 (0.71–0.88).
+
+**Reliability-card tiers (tested / few cases):**
+- MU 51 / 95;
+- LUMIERE 167 / 11;
+- UCSF 0 / 69.
+
+**Reports:** rerun pending.
 
 ## 2. Reference: released masks (current paper numbers)
 
