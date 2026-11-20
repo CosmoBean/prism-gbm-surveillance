@@ -548,8 +548,8 @@ Imaging model at UCSF & AUC $\geq$ 0.65, lower bound $>$ 0.5 & \textbf{Yes} & \r
 Disagreement of the two models marks scans the combined score ranks less well & AUC difference, CI above 0 & \textbf{Yes} at MU; not at LUMIERE or UCSF & \ref{sec:3.4} \\
 Combined model over the time-and-enhancement model & CI above 0 & \textbf{No clear gain} at MU or LUMIERE & \ref{sec:3.2} \\
 Marginal conformal sets, combined model & Coverage $\geq$ 0.78 in each cohort & \textbf{Yes} on point estimates & \ref{sec:3.4} \\
-Reports pass the checker & $\geq$ 95\% in each cohort & \textbf{No} as planned (every LUMIERE report failed). \textbf{Yes} after one revision of the record fields and the prompt & \ref{sec:3.4} \\
-Verifier closes a blind spot & $\geq$ 95\% of synthetic errors of that kind rejected & After one revision of the rules, \textbf{Yes} for direction and swapped volumes, \textbf{No} for a swapped tier word & \ref{sec:3.4} \\
+Reports pass the checker & $\geq$ 95\% in each cohort & \textbf{No} as planned (every LUMIERE report failed). \textbf{Yes} after one revision of the record fields and the prompt & \ref{sec:3.5} \\
+Verifier closes a blind spot & $\geq$ 95\% of synthetic errors of that kind rejected & After one revision of the rules, \textbf{Yes} for direction and swapped volumes, \textbf{No} for a swapped tier word & \ref{sec:3.5} \\
 Usefulness to clinicians & Not tested & Future work & \ref{sec:4} \\
 \bottomrule
 \end{tabularx}
@@ -723,23 +723,21 @@ UCSF-ALPTDG & 0.91 [0.85--0.94] & 0.92 [0.90--0.95] & $+$0.08 ($+$0.01 to $+$0.1
 \end{tabularx}
 \end{table}
 
-\subsection{Certainty and reports}\label{sec:3.4}
+\subsection{How certain the scores are}\label{sec:3.4}
 
 % Sources: NUMBERS.md 6 and 12B; SYSTEM_RESULTS.md S1.
 The combined score's 80\% sets contained the true outcome in 82\%, 87\% and 78\% of scans at MU, LUMIERE and
-UCSF-ALPTDG, and named a single outcome in 75\%, 62\% and 64\% of scans. Coverage varied within subgroups
-(exploratory). At UCSF-ALPTDG the sets covered 97\% of scans with progression and 65\% (51\% to 79\%) of scans
-without progression. At MU the group of scans later than 12 weeks after radiotherapy with increased enhancement was
-covered at 68\% (55\% to 81\%).
+UCSF-ALPTDG, and named a single outcome in 75\%, 62\% and 64\% of scans. Coverage was lower in some groups of scans
+(exploratory). At UCSF-ALPTDG the sets covered 97\% of scans with progression but 65\% (51\% to 79\%) of scans without
+progression. At MU, later scans with increased enhancement were covered at 68\% (55\% to 81\%).
 
 % Sources: METHODS_RESULTS.md M2 and E2, UCSF section; Supplementary Section S10.
-In the two least covered MU groups, sets calibrated within groups covered no more scans than marginal sets enlarged
-to the same share of sets holding both outcomes (Figure~\ref{fig:4}). In the later group with increased enhancement
-(24 scans), coverage rose to 72\% within groups and to 74\% with the enlarged marginal sets. Calibration within groups
-moved coverage from early scans without a previous scan, which the marginal sets over-covered, to the largest later
-group (Supplementary Section~S10.2). Group calibration held both outcomes in 31\% of MU sets, against 25\% of marginal sets, and left 4\% empty. At
-UCSF-ALPTDG it did not raise coverage in the least covered group, later scans without increased enhancement (61\%
-marginal, 54\% within groups).
+Computing the sets separately for each group did not fix this (Figure~\ref{fig:4}). For the later MU scans with
+increased enhancement (24 scans), coverage rose to 72\%, while making the ordinary sets larger by the same amount gave
+74\%. The group-wise sets mostly moved coverage from early scans, which the ordinary sets over-covered, to the largest
+later group (Supplementary Section~S10.2). They named both outcomes in 31\% of MU scans, against 25\% for the ordinary
+sets, and left 4\% empty. At UCSF-ALPTDG they did not help the least covered group, later scans without increased
+enhancement (61\% with the ordinary sets, 54\% group-wise).
 
 % Sources: scripts/generate_methods_figures.py; METHODS_RESULTS.md M2.
 \begin{figure}[!htbp]
@@ -755,14 +753,14 @@ dates, so its groups differ by enhancement state only; at UCSF the window assume
 \end{figure}
 
 % Sources: SYSTEM_RESULTS.md S2--S4; REVISION_DATA.md R2; NUMBERS.md 6.
-Where the clinical-history and imaging models disagreed, the combined score ranked MU scans less well, at an AUC of
-0.59 against 0.90 where they agreed. At LUMIERE the direction was the same (0.72 against 0.83), with an interval
-including zero, and at UCSF-ALPTDG the two groups did not differ. Figure~\ref{fig:cases} shows four MU patients scan
-by scan.
+When the clinical-history and imaging models disagreed, the combined score ranked MU scans less well, with an AUC of
+0.59 against 0.90 when they agreed. At LUMIERE the pattern was the same (0.72 against 0.83), with an interval
+including zero, and at UCSF-ALPTDG there was no difference. Figure~\ref{fig:cases} shows four MU patients scan by
+scan.
 
-The reliability card reached its tested tier for 37\% of scans at MU, 89\% at LUMIERE and none at UCSF-ALPTDG. No group
-in the first 12 weeks after radiotherapy at MU held more than three scans with progression. At least one flag was
-raised for 91\% of scans at MU and 93\% at LUMIERE.
+The reliability card had enough comparable earlier scans to report the models' results (its tested tier) for 37\%
+of scans at MU, 89\% at LUMIERE and none at UCSF-ALPTDG. At MU, no group in the first 12 weeks after radiotherapy held
+more than three scans with progression. At least one flag was raised for 91\% of scans at MU and 93\% at LUMIERE.
 
 % Drawn by scripts/fig_case_strips.py from records_mu.jsonl and the supplied images (after Tak et al. 2025, Figure 4).
 \begin{figure}[!htbp]
@@ -784,11 +782,13 @@ did not progress with the models disagreeing at one scan or more.}
 \end{figure}
 
 % Sources: REPORT_V3_1.md (S5--S7); REPORT_V3.md; NUMBERS.md 7 and 16 (R4).
+\subsection{The reports and their checks}\label{sec:3.5}
+
 All 406 evaluation reports passed the checker (114 at MU, 162 at LUMIERE and 130 at UCSF-ALPTDG; Figure~\ref{fig:5}
-shows one). This pass rate was measured after the prompt revision (Section~\ref{sec:2.2}) and is exploratory. All 220 reports for scans in groups with few cases or none
-stated that the card had few cases or none. When one entry was changed in
-30 records, 28 reports followed the change, against a planned minimum of 27. Of six other local models given the same prompt, only
-Gemma-4 31B had every report pass (Figure~\ref{fig:llm}).
+shows one). This pass rate was measured after the one revision of the prompt (Section~\ref{sec:2.2}) and is
+exploratory. Each of the 220 reports for scans with few or no comparable cases said so. When one record entry was
+changed in 30 records, 28 reports followed the change, against a planned minimum of 27. Of six other local language
+models given the same prompt, only Gemma-4 31B had every report pass (Figure~\ref{fig:llm}).
 
 % Sources: NUMBERS.md section 11 (Fig 5b); REPORT_V3_1.md. Panel (a) drawn by scripts/fig5_report.py from the record
 % and the language model's output for MU PatientID_0029 Timepoint 4 (report v3.2, accepted by the checker).
@@ -817,17 +817,18 @@ every cohort; the size of each model's weights is in the second column.}
 \end{figure}
 
 % Sources: METHODS_RESULTS.md M3, its diagnostics and E3; Supplementary Section S10.
-The verifier rejected every planted direction error and every misplaced value, including the held-out ones, and no
-more swapped tier words than the checker, because none of its rules covers the tier (Table~\ref{tab:verifier}). The checker had accepted every
-direction error and every swap of the enhancing and FLAIR volumes. Of the 572 variants written by the separate
-language model, the verifier rejected every value placed under the wrong region or score and no correct paraphrase. It
-missed most direction errors phrased in words outside its fixed list, such as regressed or receded.
+The verifier caught every planted direction error and every value placed under the wrong region or score,
+including the kinds of error held out while its rules were written (Table~\ref{tab:verifier}). The checker alone had
+accepted every direction error and every swap of the enhancing and FLAIR volumes. The verifier caught no more swapped
+tier words than the checker, because none of its rules covers the tier. On 572 variants written by a separate language
+model, it rejected every misplaced value and no correct paraphrase, but missed most direction errors phrased in words
+outside its list, such as ``regressed'' or ``receded''.
 
 % Sources: METHODS_RESULTS.md M3; NUMBERS.md 16 (R3).
-Among reports that had passed the checker, the verifier rejected one of the 276 MU and LUMIERE reports written by the
-language model, an MU report, and none of the 276 written by the fixed template. That report was correct. It copied the record's phrase ``not increased since the previous scan'', and the
-verifier's direction rule read the word ``increased'' without its negation. The language model's reports were a quarter shorter than the template's
-(median 308 against 413 words).
+Among the 276 MU and LUMIERE reports that passed the checker, the verifier rejected one written by the language
+model and none written by the fixed template. That report was correct. It copied the record's phrase ``not increased
+since the previous scan'', and the verifier's direction rule read ``increased'' without its negation. The language
+model's reports were a quarter shorter than the template's (median 308 against 413 words).
 
 % Sources: METHODS_RESULTS.md M3 (verifier_mutation mutants.csv).
 \begin{table}[!htbp]
@@ -904,7 +905,7 @@ BT-RADS category \citep{jabal2026}, or to describe the images alone \citep{heras
 history is stored as data in the record, the language model only writes from that record, and every number it writes
 is traced back to its source. Other checks for clinical text either forbid numbers \citep{pham2026} or trace them
 without testing the check itself \citep{mansour2026}. PRISM's checks were tested by planting errors in correct reports
-(Section~\ref{sec:3.4}).
+(Section~\ref{sec:3.5}).
 
 The 80\% sets held their target across each cohort, but not in every small group of scans, such as scans in the first
 weeks after radiotherapy (Section~\ref{sec:3.4}). This is expected when groups are small \citep{mehrtens2023}, and a
