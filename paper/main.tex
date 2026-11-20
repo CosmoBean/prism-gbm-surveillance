@@ -30,17 +30,19 @@
 % Section 4.5 and Table 5 (verifier: every value under the wrong region rejected).
 \begin{abstract}
 Machine learning models for glioma follow-up MRI report high accuracy, but a single AUC cannot show whether a model
-reads the tumour or the calendar. We built PRISM, a local system that scores each follow-up scan separately from the
-images and from the clinical history, states how certain each score is, and writes a report whose every number is
-checked against its source. On MU-Glioma-Post, the time since radiotherapy and the enhancing tumour volume alone ranked
-scans almost as well as the full model (AUC 0.80 against 0.82), and among scans taken at a similar time the images
-ranked at 0.68. Timing did not carry over to other centres, but the model did: without retraining, it reached 0.77 at
-LUMIERE and 0.86 at UCSF-ALPTDG. All 406 held-out reports passed the checks. Keeping the evidence apart shows what a
-progression score rests on, and studies in this field should report it beside the AUC.
+reads the tumour or the calendar. We built PRISM, a system that runs on one local computer: a deep segmentation
+network outlines the tumour on each scan, separate logistic regression models score the image measurements, the
+clinical history and both, a conformal set states how certain each score is, and a local large language model writes
+the report, whose every number is then checked against the scan's record. On MU-Glioma-Post, the time since
+radiotherapy and the enhancing tumour volume alone ranked scans almost as well as the full model (AUC 0.80 against
+0.82), and among scans taken at a similar time the images ranked at 0.68. Timing did not carry over to other centres,
+but the model did: without retraining, it reached 0.77 at LUMIERE and 0.86 at UCSF-ALPTDG. All 406 held-out reports
+passed the checks. Keeping the evidence apart shows what a progression score rests on, and studies in this field
+should report it beside the AUC.
 \end{abstract}
 
 \begin{keywords}
-glioma surveillance, clinical decision support, external validation
+glioma surveillance, brain tumour segmentation, large language models, conformal prediction, external validation
 \end{keywords}
 
 \section{Introduction}\label{sec:1}
