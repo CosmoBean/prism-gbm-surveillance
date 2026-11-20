@@ -8,9 +8,6 @@ Every value is a verified aggregate; no patient-level data are read. Sources:
 - LUMIERE AUCs: NUMBERS.md section 4.
 - UCSF AUCs: NUMBERS.md section 4 (UCSF_RESULTS.md Part A).
 - Baseline and gains over it: METHODS_RESULTS.md E4. The baseline was not run at UCSF.
-- Since 2026-11-19 the imaging model is A (stratified) and the combined model is B (offset): their AUCs are
-  outputs/results/analyses/adopt_ab/auc_old_new.csv (each cohort's published bootstrap; docs/results/ADOPT_AB.md) and
-  their gains over the baseline METHODS_RESULTS.md E4 rerun (clinician_baseline/e4_reader_baseline.csv).
 - Published radiomics pipeline on MU: CHRISTODOULOU_REPLICATION.md (intended use; the authors' code on PRISM's label
   and folds).
 - Enhancing volume alone: NUMBERS.md 11 and 12C (as in the previous fig2_transport).
@@ -41,23 +38,23 @@ SCORES = [
 AUC = {
     "MU-Glioma-Post": {
         "Clinical-history model": (0.822, 0.749, 0.902),
-        "Imaging model": (0.669, 0.580, 0.741),
-        "Combined model": (0.814, 0.733, 0.895),
+        "Imaging model": (0.709, 0.630, 0.781),
+        "Combined model": (0.821, 0.744, 0.894),
         "Timing-and-enhancement baseline": (0.80, 0.71, 0.88),
         "Enhancing volume alone": (0.622, 0.530, 0.717),
         "Published radiomics pipeline": (0.579, 0.499, 0.656),
     },
     "LUMIERE": {
         "Clinical-history model": (0.689, 0.600, 0.805),
-        "Imaging model": (0.642, 0.544, 0.734),
-        "Combined model": (0.754, 0.664, 0.827),
+        "Imaging model": (0.655, 0.565, 0.733),
+        "Combined model": (0.773, 0.679, 0.857),
         "Timing-and-enhancement baseline": (0.73, 0.64, 0.81),
         "Enhancing volume alone": (0.662, 0.563, 0.751),
     },
     "UCSF-ALPTDG": {
         "Clinical-history model": (0.561, 0.420, 0.687),
-        "Imaging model": (0.769, 0.660, 0.870),
-        "Combined model": (0.868, 0.781, 0.940),
+        "Imaging model": (0.726, 0.603, 0.835),
+        "Combined model": (0.856, 0.758, 0.930),
         "Enhancing volume alone": (0.878, 0.793, 0.948),
     },
 }
@@ -65,13 +62,13 @@ AUC = {
 GAIN = {
     "MU-Glioma-Post": {
         "Clinical-history model": (0.02, -0.05, 0.10),
-        "Imaging model": (-0.129, -0.232, -0.033),
-        "Combined model": (0.016, -0.021, 0.048),
+        "Imaging model": (-0.09, -0.19, 0.02),
+        "Combined model": (0.02, -0.03, 0.08),
     },
     "LUMIERE": {
         "Clinical-history model": (-0.05, -0.15, 0.07),
-        "Imaging model": (-0.092, -0.183, -0.010),
-        "Combined model": (0.019, 0.003, 0.043),
+        "Imaging model": (-0.08, -0.16, -0.00),
+        "Combined model": (0.04, -0.01, 0.10),
     },
     "UCSF-ALPTDG": None,
 }
