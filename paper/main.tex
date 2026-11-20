@@ -30,15 +30,14 @@
 % Section 4.5 and Table 5 (verifier: every value under the wrong region rejected).
 \begin{abstract}
 Machine learning models for glioma follow-up MRI report high accuracy, but a single AUC cannot show whether a model
-reads the tumour or the calendar. We built PRISM, a system that runs on one local computer: a deep segmentation
-network outlines the tumour on each scan, separate logistic regression models score the image measurements, the
-clinical history and both, a conformal set states how certain each score is, and a local large language model writes
-the report, whose every number is then checked against the scan's record. On MU-Glioma-Post, the time since
-radiotherapy and the enhancing tumour volume alone ranked scans almost as well as the full model (AUC 0.80 against
-0.82), and among scans taken at a similar time the images ranked at 0.68. Timing did not carry over to other centres,
-but the model did: without retraining, it reached 0.77 at LUMIERE and 0.86 at UCSF-ALPTDG. All 406 held-out reports
-passed the checks. Keeping the evidence apart shows what a progression score rests on, and studies in this field
-should report it beside the AUC.
+reads the tumour or the calendar. We built PRISM (Progression Reading with Independent Scores and Measurements),
+running on one local computer: a deep network segments each scan, separate logistic regressions score the images,
+the clinical history and both, conformal sets state each score's certainty, and a local large language model writes a
+report whose every number is checked against its source. On MU-Glioma-Post, time since radiotherapy and enhancing
+tumour volume alone ranked scans almost as well as the full model (AUC 0.80 against 0.82), and within a time window
+the images ranked at 0.68. Timing did not transfer, but the model did, reaching 0.77 at LUMIERE and 0.86 at
+UCSF-ALPTDG without retraining. All 406 held-out reports passed the checks. Studies should report what a score rests on beside its
+AUC.
 \end{abstract}
 
 \begin{keywords}
@@ -106,7 +105,8 @@ statement against the record \citep{zeba2026}, and checkers for radiology report
 \citep{rao2025rexerr}. Because patient records often cannot leave the hospital, the model should also run locally, and
 open-weight models run on site now read radiology reports as well as closed ones \citep{mukherjee2023,nowak2025}.
 
-We present PRISM, a local system for glioma follow-up MRI built around these needs. PRISM works in six stages
+We present PRISM (Progression Reading with Independent Scores and Measurements), a local system for glioma follow-up
+MRI built around these needs. PRISM works in six stages
 (Figure~\ref{fig:1}). It first outlines the enhancing tumour, necrosis, FLAIR hyperintensity and resection cavity
 with a fixed public segmentation network, either a Swin UNETR trained on BraTS 2021 \citep{hatamizadeh2022} or the
 first-placed BraTS 2024 post-treatment model, or it takes the masks supplied with the dataset. From the outlines of
