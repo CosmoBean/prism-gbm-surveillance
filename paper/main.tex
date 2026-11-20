@@ -104,31 +104,21 @@ also run locally, and open-weight models run on site can label radiology reports
 their findings as well as closed models \citep{nowak2025}.
 
 We present PRISM (Progression Reading with Independent Scores and Measurements), a system for glioma follow-up MRI
-that addresses each of these points and runs on one local computer (Figure~\ref{fig:1}). PRISM outlines the tumour
-with a fixed public segmentation network, either a Swin UNETR trained on BraTS 2021 \citep{hatamizadeh2022}, which
-marks the enhancing tumour, necrosis and FLAIR hyperintensity, or the first-placed BraTS 2024 post-treatment model
-\citep{ferreira2024}, which also marks the resection cavity, or it takes the masks supplied with the dataset. From the
-outlines of the current and earlier scans it computes 27 measurements of volume, shape, intensity and change. Three
-ridge logistic regressions \citep{pedregosa2011} score the scan: one from the image measurements alone, with no dates,
-one from the clinical history, and one from the two combined. Beside each score, PRISM states how sure it is: the outcomes it cannot rule out (progression, no
-progression, or both), chosen so that they include the true outcome for 80\% of scans \citep{angelopoulos2023},
-whether the image and clinical-history scores agree, and how well the models performed on similar earlier scans. All
-of these values are stored in one structured record, each with its source. A local open-weight language model
-(Qwen3.8-27B, served with vLLM \citep{kwon2023}) writes the report from this record alone, and each sentence lists the
-record entries it uses. Rule-based checks then compare every number and direction in the report with the record.
-Unlike systems in which language-model agents read clinical notes and assign a BT-RADS category \citep{jabal2026},
-PRISM's language model receives the clinical history as data and makes no decision, so every sentence can be
-checked.
-
-In this study, we developed PRISM and validated it on three public cohorts. Our contributions are:
+that runs on one local computer (Figure~\ref{fig:1}). Unlike systems in which language-model agents read clinical
+notes and assign a BT-RADS category \citep{jabal2026}, PRISM gives its language model the clinical history as data
+and no decision to make, so every sentence it writes can be checked. Our contributions are:
 \begin{itemize}
-\item \textbf{A pipeline from MRI to a checked report.} PRISM segments each scan with a BraTS-trained network,
-derives 27 longitudinal measurements, scores the scan with three ridge logistic regressions and split-conformal sets,
-and writes a schema-constrained report with a 27-billion-parameter open-weight language model. Every stage runs on one
-computer, so no patient data leave the hospital.
-\item \textbf{Separate evidence streams for every score.} The imaging model never sees dates, the clinical-history
-model never sees images, and a combined model sees both. For each scan, a reader can therefore see whether the score
-comes from the tumour or from the treatment course.
+\item \textbf{A local pipeline from MRI to a checked report.} PRISM outlines the tumour with a fixed public
+segmentation network, a Swin UNETR trained on BraTS 2021 \citep{hatamizadeh2022} or the first-placed BraTS 2024
+post-treatment model \citep{ferreira2024}, or takes the masks supplied with the dataset, and computes 27 measurements
+of volume, shape, intensity and change. An open-weight language model (Qwen3.8-27B, served with vLLM
+\citep{kwon2023}) writes the report from a structured record that holds every value with its source, and each
+sentence lists the record entries it uses. No patient data leave the computer.
+\item \textbf{Separate scores with stated uncertainty.} Three ridge logistic regressions \citep{pedregosa2011} score
+each scan from the image measurements alone, with no dates, from the clinical history, and from the two combined. Each
+score comes with the outcomes it cannot rule out, chosen to include the true outcome for 80\% of scans
+\citep{angelopoulos2023}, a statement of whether the image and clinical-history scores agree, and the models'
+performance on similar earlier scans.
 \item \textbf{An evaluation of what each score adds.} We compare every score with a reference model of the time since
 radiotherapy and the enhancing tumour volume, and split its AUC into pairs of scans from the same time window and from
 different windows \citep{kallus2019}. This measures what the images add beyond what a clinician already knows.
@@ -516,6 +506,20 @@ results are the external AUCs, the gain over the time-and-enhancement model and 
 pipeline. The other tests answer separate questions, each with its own rule, and no correction was made for multiple
 testing. Analyses not fixed in advance are marked exploratory.
 
+
+
+\paragraph*{Statistics.} Every AUC has a 95\% confidence interval (CI) from 1,000 bootstrap samples of patients
+(2,000 in later analyses; Supplementary Section~S3). Each sample draws patients with replacement, keeps all their scans, and resamples the
+held-out predictions without refitting the models. At MU each sample averages the AUC over the five repeats of cross
+validation. Differences between scores are computed within the same samples. A difference whose CI lies above zero
+counts as a gain, and one whose CI includes zero as no clear difference. No P values are reported. Calibration is
+summarised by the calibration intercept and slope (\citealp{vancalster2019}; Supplementary Section~S11).
+
+
+\section{Results}\label{sec:3}
+
+Table~\ref{tab:2} gives the outcome of every planned test, and the sections below report the findings.
+
 % Sources: NUMBERS.md section 9; METHODS_RESULTS.md; CHRISTODOULOU_REPLICATION.md; SEGMENTER_STAGE.md.
 \begin{table}[!htbp]
 \centering
@@ -556,22 +560,11 @@ model at UCSF (0.70) did not meet the coverage rule.
 \end{threeparttable}
 \end{table}
 
-\paragraph*{Statistics.} Every AUC has a 95\% confidence interval (CI) from 1,000 bootstrap samples of patients
-(2,000 in later analyses; Supplementary Section~S3). Each sample draws patients with replacement, keeps all their scans, and resamples the
-held-out predictions without refitting the models. At MU each sample averages the AUC over the five repeats of cross
-validation. Differences between scores are computed within the same samples. A difference whose CI lies above zero
-counts as a gain, and one whose CI includes zero as no clear difference. No P values are reported. Calibration is
-summarised by the calibration intercept and slope (\citealp{vancalster2019}; Supplementary Section~S11).
-
-
-\section{Results}\label{sec:3}
-
 \subsection{Performance at three centres}\label{sec:3.1}
 
 % Sources: DETECTION_TASK.md; UCSF_RESULTS.md Part A--C; NUMBERS.md 3, 4, 12F, 15; METHODS_RESULTS.md E6a, E6d.
-Without retraining, the combined model reached an AUC of 0.77 (0.68--0.86) at LUMIERE and 0.86 (0.76--0.93) at
-UCSF-ALPTDG, against 0.82 (0.74--0.89) at MU (Figure~\ref{fig:2}). The reduced combined model, the form applied at the
-external centres, reached 0.80 at MU. The imaging model reached 0.71 (0.63--0.78) at MU, 0.65 (0.56--0.73;
+Without retraining, the combined model reached an AUC of 0.77 at LUMIERE and 0.86 (0.76--0.93) at
+UCSF-ALPTDG, against 0.82 (0.74--0.89) at MU (Figure~\ref{fig:2}). The reduced combined model reached 0.80 at MU. The imaging model reached 0.71 (0.63--0.78) at MU, 0.65 (0.56--0.73;
 exploratory) at LUMIERE and 0.73 (0.60--0.84) at UCSF-ALPTDG. At UCSF-ALPTDG, the images from one scan alone reached
 0.80 (0.69--0.89).
 
@@ -623,9 +616,7 @@ at MU and 0.73 (0.64--0.81) at LUMIERE.
 At MU, the time since the end of radiotherapy alone ranked scans at 0.77, and a ridge model on every timestamp at
 0.76 (0.66--0.84; both exploratory; Supplementary Section~S15.2). Scans with and without progression were taken at
 different times after radiotherapy (Table~\ref{tab:1}). The patient's characteristics alone, without dates, reached
-0.53 (0.45--0.61), so the clinical-history model's ranking comes from the dates. Image measurements and schedule
-inputs did not add to the clinical-history model by the planned rule, and neither did deep networks tuned on MU
-(Table~\ref{tab:2}).
+0.53 (0.45--0.61), so the clinical-history model's ranking comes from the dates.
 
 % Sources: SKELETON_2026-11-20.md timestamp-only check (LUMIERE days since surgery, UCSF days from RT start, UCSF days
 % since previous scan); UCSF_AUDIT.md sections 3--6; UCSF_RESULTS.md Part C; NUMBERS.md 4, 5, 12C; SEGMENTER_STAGE.md P1.
@@ -645,7 +636,7 @@ within a window at 0.49 (0.37--0.60), at chance. Within a window, the imaging mo
 time-and-enhancement model by $+$0.10 ($-$0.04 to $+$0.26; Supplementary Section~S10.1).
 
 The clinical-history model ranked mainly across windows, with 0.93 (0.88--0.97) of those pairs correct against 0.64
-(0.51--0.78) within one. Ranking scans by their window's progression rate alone also reached 0.93 across windows. The combined
+(0.51--0.78) within one. The window-only score also reached 0.93 across windows. The combined
 model followed the clinical-history model (0.65 within, 0.92 across). Adding clinical history to images raised the AUC by 0.11 (0.03--0.19)
 at MU and 0.12 (0.04--0.21) at LUMIERE, and at both centres the whole gain lay in pairs across windows.
 
@@ -685,21 +676,18 @@ Swin UNETR agreed with the supplied masks at a median enhancing tumour Dice of 0
 
 % Sources: SEGMENTER_STAGE.md P1; METHODS_RESULTS.md E5.
 With Swin UNETR outlines, the imaging model's AUC at MU fell to 0.63, and the combined and time-and-enhancement models
-changed by at most 0.04 at every centre (Table~\ref{tab:seg}). The MU loss was the only one of the nine changes whose
-interval lay below zero, so by the planned rule the segmentation stage did not reproduce the supplied-mask results in
-full. Keeping the supplied cavity gave the same fall, so the loss does not come from the missing cavity. The combined
+changed by at most 0.04 at every centre (Table~\ref{tab:seg}). This was the only one of the nine changes whose interval lay below zero (Table~\ref{tab:2}). Keeping the supplied cavity gave the same fall, so the loss does not come from the missing cavity. The combined
 model showed no clear gain over the time-and-enhancement model under either mask set at MU and LUMIERE
 (Supplementary Section~S4).
 
 % Sources: SEGMENTER_BRATS24.md (P1-P4, exploratory 22-input arm; commit 24059e9).
-The BraTS 2024 post-treatment model, which also outlines the resection cavity, agreed with the supplied cavity at a
+The BraTS 2024 model agreed with the supplied cavity at a
 median Dice of 0.92 at MU-Glioma-Post and 0.93 at UCSF-ALPTDG (other Dice in Table~\ref{tab:seg}). With its outlines,
 the MU imaging model changed by $-$0.03 ($-$0.07 to $+$0.02), a smaller loss than with Swin UNETR and with an interval
-that includes zero. At LUMIERE, whose supplied masks are automatic and labelled differently, the model agreed less with those
-masks (enhancing tumour Dice 0.64). Its enhancing volume there changed by a median factor of 14.4 between scans at
+that includes zero. At LUMIERE it agreed less with the supplied masks (enhancing tumour Dice 0.64). Its enhancing volume there changed by a median factor of 14.4 between scans at
 most 30 days apart, against 2.6 with the supplied masks.
 
-By the planned rule, the BraTS 2024 stage did not reproduce the supplied-mask results in full. The MU
+Two changes broke the planned rule (Table~\ref{tab:2}). The MU
 time-and-enhancement model lost 0.02 ($-$0.04 to $-$0.003). At LUMIERE the same model rose by 0.07 with the BraTS 2024
 enhancing volume, and the combined model fell below it ($-$0.06, $-$0.12 to $-$0.002). Without the five cavity
 measurements, PRISM matched its supplied-mask results from the BraTS 2024 outlines, with an MU imaging AUC of 0.71 and
@@ -769,8 +757,8 @@ dates, so its groups differ by enhancement state only; at UCSF the window assume
 % Sources: SYSTEM_RESULTS.md S2--S4; REVISION_DATA.md R2; NUMBERS.md 6.
 Where the clinical-history and imaging models disagreed, the combined score ranked MU scans less well, at an AUC of
 0.59 against 0.90 where they agreed. At LUMIERE the direction was the same (0.72 against 0.83), with an interval
-including zero, and at UCSF-ALPTDG the two groups did not differ. Figure~\ref{fig:cases} follows four MU patients scan
-by scan, with the three scores, the set and the agreement statement as the record holds them.
+including zero, and at UCSF-ALPTDG the two groups did not differ. Figure~\ref{fig:cases} shows four MU patients scan
+by scan.
 
 The reliability card reached its tested tier for 37\% of scans at MU, 89\% at LUMIERE and none at UCSF-ALPTDG. No group
 in the first 12 weeks after radiotherapy at MU held more than three scans with progression. At least one flag was
@@ -950,15 +938,14 @@ Every report it wrote stated these scores and was checked against the scan's rec
 declare.''} If any author serves on the editorial or advisory board of this journal, state it here.
 
 \section*{Declaration of generative AI use}
-\todo{DRAFT, PENDING AUTHOR CONFIRMATION:} Generative AI is part of the system studied. PRISM's report generator uses
-a local language model (Qwen3.8-27B, with six other models with open weights in a comparison). All ran offline on the
-authors' computing cluster and saw only derived system records. An AI assistant (Claude, Anthropic) was used to write
-and run analysis code, to draft and edit the manuscript under the authors' direction, and, as the separate agent of
-Section~\ref{sec:2.2}, to write planted report errors for synthetic records without access to the verifier's rules.
-It was given mainly aggregate results; during development of earlier report versions it read derived records and
-generated reports of individual patients \todo{AUTHOR: confirm which cohorts}. During that development a local model
-(Gemma-4 31B) also served as an automatic judge. The authors reviewed all code, results and text and take full
-responsibility for the content of this article.
+\todo{DRAFT, PENDING AUTHOR CONFIRMATION:} Generative AI had two roles in this work. The system studied uses a local
+language model (Qwen3.8-27B) to write reports from derived structured records; six additional open-weight models were
+evaluated with the same prompt. All models ran offline on the authors' computing cluster. Claude (Anthropic) assisted,
+under the authors' direction, with analysis code and manuscript drafting and editing. It also generated synthetic
+planted report errors without access to the verifier's rules. Claude was given mainly aggregate results; during earlier
+report development it also read derived records and generated reports for individual patients
+\todo{AUTHOR: confirm cohorts}. Gemma-4 31B was used as an automatic judge during that development. The authors
+reviewed all code, results and text and take full responsibility for the article.
 
 \section*{Funding}
 No funding was obtained for this work.
