@@ -26,6 +26,26 @@ Combined at MU is the full combined model; at LUMIERE and UCSF it is the reduced
 - LUMIERE 167 / 11;
 - UCSF 0 / 69.
 
+**Gain over the time-and-enhancement model** (segmenter; released masks in brackets):
+
+| cohort | clinical history | imaging | combined |
+|---|---|---|---|
+| MU | +0.04 (+0.02) | −0.07 (−0.09) | +0.04 (+0.02) |
+| LUMIERE | −0.12, CI below 0 (−0.05) | −0.11 (−0.08) | −0.02 (+0.04) |
+| UCSF† | — | −0.08 (−0.14) | −0.07, CI below 0 (−0.01) |
+
+**Enhancing volume alone:** MU 0.61, LUMIERE 0.70.
+
+**Calibration slopes** (segmenter; released in brackets):
+- MU imaging 0.83 (0.75).
+- LUMIERE imaging 0.67 (1.91), intercept +0.32 (+0.41).
+- LUMIERE combined 1.73 (1.45).
+- UCSF combined 1.82 (3.29).
+
+**Coverage by group (Figure 5):**
+- LUMIERE progression scans 0.63 (released 0.77).
+- UCSF overall 0.80 (0.78).
+
 **Reports:** rerun pending.
 
 ## 2. Reference: released masks (current paper numbers)
