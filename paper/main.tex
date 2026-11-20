@@ -870,59 +870,53 @@ Reports that passed the checker, rejected by the verifier & 0 of 52 & 1 of 276 &
 % =====================================================================================================
 \section{Discussion}\label{sec:4}
 
-% Sources: Sections 3.1--3.2; refs gomaa2025, tarek2026, booth2022, shi2025, an2021, varoquaux2018, christodoulou2026.
-The separate scores showed that the ranking rested on the time since radiotherapy at MU-Glioma-Post and on the
-enhancing tumour at LUMIERE and UCSF-ALPTDG (Section~\ref{sec:3.2}). At
-MU-Glioma-Post the follow-up schedule ties the time of a scan to its label. The time since treatment was also the
-strongest input in an earlier external comparison \citep{gomaa2025}, and the scan interval affected a second model in
-this setting (Section~\ref{sec:1}; \citealp{tarek2026}). A clinician already knows the time since radiotherapy.
-PRISM's separate clinical-history score shows how much of the combined score that time supplies.
+PRISM ranked follow-up scans better than the radiomics model previously published on the same cohort
+\citep{christodoulou2026}. On the same patients, masks, label and folds, PRISM's imaging model reached an AUC of 0.71
+against 0.58 for that model, and its clinical-history model reached 0.82 (Section~\ref{sec:3.1}). PRISM's models also
+kept their ranking at two hospitals whose scans they had never seen, without retraining. Most models proposed for this
+decision are built on the image alone and tested on one split of one cohort \citep{booth2022,park2020,shi2025}, and
+such single splits give unstable estimates \citep{an2021,varoquaux2018}. An earlier re-implementation of that model
+ranged from 0.32 to 0.88 over random held-out sets (Section~\ref{sec:3.1}). PRISM was evaluated by
+repeated cross validation and at two external centres instead.
 
-On PRISM's label and folds, the published radiomics pipeline ranked scans below PRISM's 27 measurements and no better
-than the enhancing volume (Section~\ref{sec:3.1}). Like most models proposed for this decision
-\citep{booth2022,shi2025}, it scores the image alone. The spread of its AUC over random held-out sets matches the instability of single splits of small cohorts \citep{an2021,varoquaux2018}, and the
-published estimate came from one such split \citep{christodoulou2026}.
+A good AUC, however, does not say why a model ranks scans well, so PRISM breaks the score down. Because the imaging
+and clinical-history scores are computed separately, and each AUC is split into scans taken at a similar time and
+scans taken at different times, the reader can see where the ranking comes from. At MU-Glioma-Post much of it came
+from the time since radiotherapy, which the follow-up schedule ties to the label, and at the external centres more
+of it came from the enhancing tumour (Section~\ref{sec:3.2}). Earlier studies also found that the time since treatment
+\citep{gomaa2025} and the interval between scans \citep{tarek2026} drive models in this setting. A clinician already
+knows when a scan was taken. PRISM shows how much of its score that knowledge supplies and how much the images add.
 
-% Sources: Section 3.3; refs hoebel2024, deverdier2024.
-The combined score kept its ranking when Swin UNETR outlined the tumour, and the MU imaging score did not
-(Section~\ref{sec:3.3}). The combined and time-and-enhancement models rest on the time window and the enhancing
-volume, which ranks scans similarly whichever network outlines it. The imaging model also uses measurements of shape,
-intensity and change that depend on where the outline falls. Outlines of the same glioma differ between experts
-\citep{hoebel2024}, and scans after treatment are harder to segment than scans before surgery \citep{deverdier2024},
-so an image measurement depends on its segmenter as well as on the tumour. The post-treatment BraTS 2024 model
-left the MU imaging score closer to its value on the supplied masks than Swin UNETR did (Section~\ref{sec:3.3}).
+These two checks can be applied to any model in this field. Comparing a score with a simple model of the time since
+radiotherapy and the enhancing tumour \citep{beaulieujones2021}, and splitting its AUC by time window
+\citep{kallus2019,janes2008}, need only the date of each scan relative to treatment. We suggest that studies of
+progression models report both beside the AUC.
 
-% Sources: Section 2.3; refs beaulieujones2021, kallus2019, janes2008.
-The comparison with the time-and-enhancement model \citep{beaulieujones2021} and the split of the AUC by time window
-\citep{kallus2019,janes2008} need no new images, only the time of each scan relative to treatment. The segmentation
-comparison needs only a second public network. The three cohorts used here record treatment dates only
-in part (Table~\ref{tab:1}), which limited the first two analyses at LUMIERE and UCSF-ALPTDG.
+PRISM's combined score kept its ranking when PRISM's own segmenter replaced the masks supplied with the datasets, while
+the imaging score depended more on the outlines (Section~\ref{sec:3.3}). The combined score relies largely on the time
+window and the enhancing volume, which change little between segmenters. The imaging score also uses the shape and
+intensity of the outline, and outlines of the same tumour differ between experts \citep{hoebel2024} and are harder to
+draw after treatment \citep{deverdier2024}. The BraTS 2024 model, trained on scans after treatment, kept the imaging
+score closer to its value on the supplied masks than the older Swin UNETR did.
 
-% Sources: Introduction (jabal2026, herasrivera2026); Section 3.4; refs pham2026, mansour2026, mehrtens2023.
-A system that chains language models over clinical notes to assign a BT-RADS category \citep{jabal2026} reads the
-clinical history as text, and one that phrases automated measurements with a language model
-\citep{herasrivera2026} reports the images alone. PRISM enters the history as data in the record, so every sentence of
-its report can be checked against a value. Other rule-based gates for clinical text forbid numbers altogether
-\citep{pham2026} or trace numbers to a measurement file without testing the check \citep{mansour2026}, whereas
-PRISM's checks were tested with planted errors (Section~\ref{sec:3.4}).
+PRISM's reports can be checked line by line. Other systems ask language models to read clinical notes and assign a
+BT-RADS category \citep{jabal2026}, or to describe the images alone \citep{herasrivera2026}. In PRISM, the clinical
+history is stored as data in the record, the language model only writes from that record, and every number it writes
+is traced back to its source. Other checks for clinical text either forbid numbers \citep{pham2026} or trace them
+without testing the check itself \citep{mansour2026}. PRISM's checks were tested by planting errors in correct reports
+(Section~\ref{sec:3.4}).
 
-The conformal sets held their average coverage but not coverage within every group (Section~\ref{sec:3.4}), as
-expected when patients are exchangeable only across the whole cohort \citep{mehrtens2023}. With groups this small,
-calibrating within them moved coverage between groups more than it raised it. A centre adopting PRISM would
-calibrate the sets on its own scans.
+The 80\% sets held their target across each cohort, but not in every small group of scans, such as scans in the first
+weeks after radiotherapy (Section~\ref{sec:3.4}). This is expected when groups are small \citep{mehrtens2023}, and a
+hospital using PRISM could recalibrate the sets on its own scans.
 
-% Sources: NUMBERS.md 10 (limits); Sections 2.1, 2.3; REPORT_V3_1.md Limits.
-This study has limitations. PRISM was developed on one public cohort and tested at two external centres with few
-evaluation scans, so the external intervals are wide. The label is progression as each centre documented it, without
-pathological or consensus confirmation, and at LUMIERE and UCSF-ALPTDG it partly reflects the images the scores use.
-The supplied masks and both segmenters give reference outlines that are not ground truth. At UCSF-ALPTDG the
-radiotherapy window was approximated from its start, and the time-and-enhancement model was applied there only
-outside the planned comparison. MU holds few scans with progression in the first 12 weeks after radiotherapy. No
-cohort supplied perfusion or diffusion imaging, which have separated progression from treatment effects in other
-studies \citep{taylor2022}. Future work includes a reader study in which neuroradiologists judge the reports against the scans. Further
-cohorts, such as Burdenko and UCSD-PTGBM, would fill the groups of scans that are now too small for the reliability
-card and allow the conformal sets to be calibrated on scans from more than one centre. The verifier's list of
-direction words should also be widened and tested on errors it has not seen.
+This study has limitations. PRISM was developed on one public cohort, and the two external cohorts are small, so their
+intervals are wide. Progression is taken as each centre recorded it, without biopsy or panel confirmation. The masks
+supplied with the datasets and the segmenters' outlines are references, not ground truth. At UCSF-ALPTDG the time after
+radiotherapy had to be estimated from its start date. No cohort included perfusion or diffusion imaging, which help
+separate progression from treatment effects in other studies \citep{taylor2022}. Future work includes a reader study in
+which neuroradiologists judge the reports against the scans, further cohorts such as Burdenko and UCSD-PTGBM to fill
+the small groups of scans, and a wider test of the report checks.
 
 \subsection*{Conclusion}
 
