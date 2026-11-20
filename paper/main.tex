@@ -33,11 +33,10 @@ Machine learning models for glioma follow-up MRI report high accuracy, but a sin
 reads the tumour or the calendar. We built PRISM (Progression Reading with Independent Scores and Measurements),
 running on one local computer: a deep network segments each scan, separate logistic regressions score the images,
 the clinical history and both, conformal sets state each score's certainty, and a local large language model writes a
-report whose every number is checked against its source. On MU-Glioma-Post, time since radiotherapy and enhancing
-tumour volume alone ranked scans almost as well as the full model (AUC 0.80 against 0.82), and within a time window
-the images ranked at 0.68. Timing did not transfer, but the model did, reaching 0.77 at LUMIERE and 0.86 at
-UCSF-ALPTDG without retraining. All 406 held-out reports passed the checks. Studies should report what a score rests on beside its
-AUC.
+report whose every number is checked against its source. On MU-Glioma-Post, the combined model reached an AUC of
+0.82. Without retraining, it reached 0.77 at LUMIERE and 0.86 at UCSF-ALPTDG. Because the scores are kept separate,
+PRISM shows how much of each ranking comes from the images and how much from the clinical history. All 406 held-out
+reports passed the checks.
 \end{abstract}
 
 \begin{keywords}
