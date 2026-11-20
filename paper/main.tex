@@ -29,15 +29,14 @@
 % Sources: METHODS_RESULTS.md E4 (0.80, no clear gain); NUMBERS.md 4 (0.77, 0.86); NUMBERS.md 7 (406);
 % Section 4.5 and Table 5 (verifier: every value under the wrong region rejected).
 \begin{abstract}
-After treatment for glioblastoma, progression and treatment effects can look alike on follow-up MRI, and a single AUC
-cannot show whether a model ranks scans by what they show or by when they were taken. We present PRISM, a local
-system that outlines the tumour on each scan with a public segmentation network, computes 27 measurements of the
-tumour and its change, and scores the scan with three logistic regression models: one on the images, one on the
-clinical history and one on both. Each score carries an 80\% conformal set. A local language model writes the report
-from the scan's structured record, and rule-based checks test every number in it against that record. On
-MU-Glioma-Post, the time since radiotherapy and the enhancing tumour volume alone ranked scans at an AUC of 0.80, and
-the combined model reached 0.82. Among scans taken at a similar time, the images ranked at 0.68. Without retraining,
-the combined model reached 0.77 at LUMIERE and 0.86 at UCSF-ALPTDG. All 406 held-out reports passed the checks.
+Machine learning models for glioma follow-up MRI report high accuracy, but a single AUC cannot show whether a model
+reads the tumour or the calendar. We built PRISM, a local system that scores each follow-up scan separately from the
+images and from the clinical history, states how certain each score is, and writes a report whose every number is
+checked against its source. On MU-Glioma-Post, the time since radiotherapy and the enhancing tumour volume alone ranked
+scans almost as well as the full model (AUC 0.80 against 0.82), and among scans taken at a similar time the images
+ranked at 0.68. Timing did not carry over to other centres, but the model did: without retraining, it reached 0.77 at
+LUMIERE and 0.86 at UCSF-ALPTDG. All 406 held-out reports passed the checks. Keeping the evidence apart shows what a
+progression score rests on, and studies in this field should report it beside the AUC.
 \end{abstract}
 
 \begin{keywords}
