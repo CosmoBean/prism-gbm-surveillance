@@ -76,3 +76,19 @@ of the cavity inputs. The second- and third-place models, if time allows.
 - **Volumes and Dice:** `volumes_brats24_<cohort>.csv`.
 - **Measurements:** `outputs/features/seg_brats24/measurements_<cohort>.csv`.
 - **Results:** `docs/results/SEGMENTER_BRATS24.md`, with every deviation from this plan marked and dated.
+
+## Implementation choices (2026-11-20, before any label-linked result)
+
+- **Orientation and label check: passed.** Three scans per cohort; median WT Dice was 0.99 at MU, 0.85 at LUMIERE and
+  0.96 at UCSF, all above 0.70.
+  - Two LUMIERE scans had ET Dice 0: one released mask has 5 enhancing voxels; in the other the DeepBraTumIA mask
+    labels enhancement along the cavity wall, which the BraTS 2024 label rules exclude.
+  - LUMIERE's NETC includes the cavity, so its TC Dice is low by convention.
+- **Scope.** At about 190 s per scan per GPU, the whole of all three cohorts (1,789 scans) does not fit in the
+  allocation. The run covers every scan that the plan's models and evaluation sets use:
+  - MU: all scans of the 126 grade 4 patients (391), because the change inputs need each patient's earlier scans;
+  - LUMIERE: all studies of the 79 detection patients (579);
+  - UCSF: both scans of the 69 evaluation patients (138).
+  - P2 is reported on these scans.
+- **Runner:** `scripts/run_brats24.sh`, one container per GPU (`CUDA_VISIBLE_DEVICES` passed into the container
+  with `enroot --env`), cohorts in turn, resumable with `--skip-done`.

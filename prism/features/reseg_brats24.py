@@ -91,8 +91,9 @@ def stage(cohort: str, ids: list[str], d: Path) -> dict:
 def run_container(d: Path, gpu: int) -> float:
     for sub in ("out", "conv", "inf"):
         (d / sub).mkdir(parents=True, exist_ok=True)
-    env = dict(os.environ, ENROOT_DATA_PATH=ENROOT_DATA, NVIDIA_VISIBLE_DEVICES=str(gpu), CUDA_VISIBLE_DEVICES="0")
-    cmd = ["enroot", "start", "--rw",
+    # enroot does not pass the host environment into the container; --env NAME copies the named host variable in.
+    env = dict(os.environ, ENROOT_DATA_PATH=ENROOT_DATA, CUDA_VISIBLE_DEVICES=str(gpu))
+    cmd = ["enroot", "start", "--rw", "--env", "CUDA_VISIBLE_DEVICES",
            "--mount", f"{d / 'in'}:/mlcube_io0", "--mount", f"{d / 'out'}:/mlcube_io2",
            "--mount", f"{d / 'conv'}:/mlcube_project/converted_dataset",
            "--mount", f"{d / 'inf'}:/mlcube_project/inference",
@@ -147,11 +148,13 @@ def main(argv=None) -> None:
     ap.add_argument("--gpus", type=int, default=4)
     ap.add_argument("--gpu0", type=int, default=0, help="first GPU index (to run cohorts side by side)")
     ap.add_argument("--ids", nargs="+")
+    ap.add_argument("--ids-file", help="scan ids, one per line: the run's scope (writes the cohort's volumes csv)")
     ap.add_argument("--limit", type=int)
     ap.add_argument("--tag", default="full", help="work-folder name; checks use their own tag")
     ap.add_argument("--skip-done", action="store_true", help="leave out scans whose label map exists")
     a = ap.parse_args(argv)
-    ids = a.ids or all_ids(a.cohort)[: a.limit]
+    scoped = a.ids_file is not None
+    ids = (Path(a.ids_file).read_text().split() if scoped else a.ids or all_ids(a.cohort)[: a.limit])
     if a.skip_done:
         ids = [i for i in ids if not out_path(a.cohort, i).exists()]
     shards = [ids[k::a.gpus] for k in range(a.gpus) if ids[k::a.gpus]]
@@ -170,7 +173,7 @@ def main(argv=None) -> None:
     with ThreadPoolExecutor(len(shards)) as ex:
         res = list(ex.map(job, range(len(shards))))
     df = pd.DataFrame([r for rows, _, _ in res for r in rows])
-    full = a.ids is None and a.limit is None
+    full = scoped or (a.ids is None and a.limit is None)
     f = OUT / (f"volumes_brats24_{a.cohort}.csv" if full else f"check_brats24_{a.cohort}_{a.tag}.csv")
     f.parent.mkdir(parents=True, exist_ok=True)
     if full and a.skip_done and f.exists():
