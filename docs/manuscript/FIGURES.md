@@ -1,4 +1,67 @@
-# Manuscript figures and tables (results sections 1–3 + phase of care)
+# Manuscript figures and tables
+
+## Current figures (2026-11-20), in manuscript order
+
+Images are the PNGs drawn alongside each PDF in `figures/`; the paper includes the PDFs. Everything below this section
+is earlier planning, kept for history.
+
+### Figure 1. The task and the method
+`scripts/fig1_prism.py`: (a) one MU patient on real scans; (b) PRISM's segmenter; (c) the method in six stages;
+(d) the evaluation protocol.
+
+![Figure 1](figures/fig1_system.png)
+
+### Figure 2. When the evaluation scans were taken
+`scripts/fig_cohorts.py`: one panel per cohort. Time of each scan from the cohort's time zero, and weeks since the
+previous scan, by label; shared axes, scans beyond the axis counted at the edge.
+
+![Figure 2](figures/fig_cohorts.png)
+
+### Figure 3. Performance at the development centre and at two external centres
+`scripts/fig2_performance.py`: ROC curves with patient-bootstrap bands, AUC with 95% CI, and the gain over the
+time-and-enhancement model (MU, LUMIERE).
+
+![Figure 3](figures/fig2_performance.png)
+
+### Figure 4. Where the ranking comes from
+`scripts/generate_methods_figures.py`: AUC within one time window and across windows, per score and cohort.
+Candidate for the supplement.
+
+![Figure 4](figures/fig3_context_split.png)
+
+### Figure 5. Coverage within groups of comparable scans
+`scripts/generate_methods_figures.py`: coverage of the combined score's 80% sets by group, marginal and
+group-conditional. Candidate for the supplement.
+
+![Figure 5](figures/fig4_group_conformal.png)
+
+### Figure 6. Four patients' follow-up as PRISM records it
+`scripts/fig_case_strips.py`: the same axial T1c slice at every visit, lesion arrow, segmenter (solid) and released
+(dashed) outlines, the three scores, the combined 80% set and model agreement.
+
+![Figure 6](figures/fig_case_strips.png)
+
+### Figure 7. The report PRISM writes, and the check
+`scripts/fig5_report.py`: (a) the report for Patient 1's progression scan (strip a of Figure 6); (b) reports passing
+the checker for seven local language models.
+
+![Figure 7](figures/fig5_report.png)
+
+### Supplementary Figure S1. Calibration of the three scores
+`scripts/fig_calibration.py`: five equal-size bins per score; slope and intercept in the legend.
+
+![Supplementary Figure S1](figures/figS_calibration.png)
+
+### Supplementary Figure S2. The record fields cited by the example report
+`scripts/fig5_report.py`: each sentence of Figure 7a with the record fields it cites.
+
+![Supplementary Figure S2](figures/fig5_report_fields.png)
+
+---
+
+# Earlier planning (history)
+
+## Results sections 1–3 + phase of care
 
 ## Redesign after Tak et al. 2025 (2026-11-18)
 
