@@ -49,20 +49,42 @@ glioma surveillance, clinical decision support, external validation
 After surgery and chemoradiotherapy for glioblastoma, patients are followed with MRI every few months, and each scan
 feeds a decision: continue treatment, scan again sooner, or change treatment. The difficulty is that treatment can
 mimic progression. Pseudoprogression follows chemoradiotherapy in 20--30\% of patients \citep{wen2010}, and in one
-cohort scanned four weeks after radiotherapy, half of the scans that looked progressive were not \citep{taal2008}.
-Clinicians therefore read each scan against the time since treatment. RANO 2.0 asks for a repeat scan or histology
-before progression is called within 12 weeks of radiotherapy \citep{wen2023}, and structured reporting systems such as
-BT-RADS make the treatment history part of the report \citep{weinberg2018}. In practice, most centres still report
-follow-up scans in free text \citep{thust2018}.
+cohort scanned four weeks after radiotherapy, half of the scans that looked progressive were not \citep{taal2008}. It
+is more frequent when the MGMT promoter is methylated \citep{brandes2008}. Clinicians therefore read each scan against
+the time since treatment. RANO 2.0 takes the post-radiotherapy scan as the baseline and asks for a repeat scan or
+histology before progression is called within 12 weeks of radiotherapy \citep{wen2023}. Practice still varies: of 220
+European centres, 60\% reported follow-up scans in free text and 27\% applied RANO \citep{thust2018}. Structured
+reporting systems such as BT-RADS make the treatment history part of the report \citep{weinberg2018}, and after its
+adoption reports more often recorded treatment and MGMT status \citep{zhang2020} and were rated more consistent by
+referring clinicians \citep{gore2019}.
 
-Machine learning models proposed for this decision mostly score the image alone and report one AUC, often from a
-single split of one cohort \citep{booth2022,park2020,shi2025}. On the public MU-Glioma-Post cohort, for example, a
-radiomics model reported an AUC of 0.80 on 30 held-out patients \citep{christodoulou2026}. A single AUC cannot show
-what the ranking rests on. Models learn shortcuts, signals that predict the label in the development data without
-being what the reader cares about \citep{geirhos2020,zech2018,badgeley2019}, and in follow-up imaging the schedule ties
-the time of a scan to its outcome. Where clinical inputs have been compared with images on external data, the time
-since treatment was the strongest single input \citep{gomaa2025}. The useful question is therefore what a model adds
-beyond the evidence a clinician already holds \citep{pencina2008,beaulieujones2021}.
+Advanced imaging has not settled the question. Across 30 studies, diffusion and perfusion MRI reached pooled AUCs
+near 0.9 for separating pseudoprogression from progression \citep{taylor2022}, and adding them to a radiomics model
+raised its AUC in 61 patients \citep{kim2019}. In another cohort of 105 patients, however, they added nothing to a
+model of clinical data and MGMT status, and radiomics and deep learning models performed near chance
+\citep{leone2023}.
+
+Machine learning models proposed for this decision mostly score the image alone and report one AUC from a single
+split of one cohort. Studies of treatment response have small samples and a high risk of bias \citep{booth2022}, only
+29\% of 51 glioma radiomics studies were validated externally \citep{park2020}, and in a review of automated response
+assessment, 3 of 20 studies considered clinical characteristics and 5 used external test data \citep{shi2025}. Single
+random splits of small radiomics cohorts give unstable estimates \citep{an2021}, and most radiology algorithms lose
+performance on external data \citep{yu2022}. On the public MU-Glioma-Post cohort, a radiomics model reported an AUC of
+0.80 on 30 held-out patients \citep{christodoulou2026}. Where clinical inputs were compared with images on external
+data, the time since treatment was the strongest single input \citep{gomaa2025}. Longitudinal and interpretable
+designs have begun to appear: a temporal model of serial scans predicted recurrence of paediatric glioma across
+institutions \citep{tak2025}, and a concept bottleneck model on LUMIERE passes predicted tumour measurements through the
+RANO rules, although the interval between scans strongly affected its output \citep{tarek2026}.
+
+A single AUC cannot show what the ranking rests on. Models learn shortcuts, signals that predict the label in the
+development data without being what the reader cares about \citep{geirhos2020}: image models have recognised the
+hospital that acquired a radiograph \citep{zech2018} and predicted hip fracture largely from patient and healthcare
+variables \citep{badgeley2019}. In follow-up imaging the schedule ties the time of a scan to its outcome, so a score
+can rank scans well by recognising when they were taken. The useful question is what a model adds beyond the evidence
+a clinician already holds \citep{pencina2008,beaulieujones2021}. Heat maps drawn over a score after the fact do not
+answer it reliably: on chest radiographs every saliency method tested failed at least one test of trustworthiness
+\citep{arun2021}, and all localised findings less accurately than radiologists \citep{saporta2022}. For high-stakes
+decisions, a model whose inputs can be read directly is preferable \citep{rudin2019}.
 
 Image measurements depend on how the tumour is outlined. After surgery and radiotherapy the scan contains a resection
 cavity and treatment changes, which make segmentation harder than before surgery, and the BraTS 2024 challenge was
@@ -70,13 +92,18 @@ set up for this setting \citep{deverdier2024}. Experts disagree about the qualit
 segmentation \citep{hoebel2024}, so a volume measured from one set of outlines may not match another, even between
 scans a few weeks apart.
 
-The report is the last step, and it should be both honest about uncertainty and checkable. Conformal prediction turns
-a score into a set of possible outcomes that contains the true one at a chosen rate \citep{angelopoulos2023}, although
-the guarantee can fail under distribution shift \citep{mehrtens2023}. Language models now draft reports from automated
-measurements of brain tumours \citep{valerio2025,herasrivera2026}, but AI-written reports contain clinically
-significant errors \citep{tanno2025} and simplified oncology reports contain factual mistakes \citep{prucker2025}.
-Because patient records often cannot leave the hospital, the model should also run locally, and open-weight models
-run on site now read radiology reports as well as closed ones \citep{mukherjee2023,nowak2025}.
+The report is the last step, and it should be honest about uncertainty and checkable. Conformal prediction turns a
+score into a set of possible outcomes that contains the true one at a chosen rate without assumptions about the
+model \citep{angelopoulos2023}, although in medical image classification the guarantee fails within subgroups and
+under distribution shift \citep{mehrtens2023}. Language models now draft reports from automated measurements of brain
+tumours \citep{valerio2025,herasrivera2026} and other lesions \citep{mansour2026}, but they make errors a reader may
+not catch. AI-written radiology reports contain clinically significant errors \citep{tanno2025}, 6\% of oncologic CT
+reports simplified by an open-weight model contained factual errors in a prospective trial \citep{prucker2025}, and
+systems that write text from tables have long misstated the numbers they were given \citep{wiseman2017}. Automatic
+measures of factual accuracy disagree with one another \citep{gabriel2021}, so checkers for clinical text test each
+statement against the record \citep{zeba2026}, and checkers for radiology reports are tested on planted errors
+\citep{rao2025rexerr}. Because patient records often cannot leave the hospital, the model should also run locally, and
+open-weight models run on site now read radiology reports as well as closed ones \citep{mukherjee2023,nowak2025}.
 
 We present PRISM, a local system for glioma follow-up MRI built around these needs. PRISM works in six stages
 (Figure~\ref{fig:1}). It first outlines the enhancing tumour, necrosis, FLAIR hyperintensity and resection cavity
