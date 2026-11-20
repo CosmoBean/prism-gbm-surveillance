@@ -148,27 +148,26 @@ Section~\ref{sec:4} discusses what the results mean and their limits.
 \subsection{Cohorts and label}\label{sec:2.1}
 
 % Sources: TABLE1_COHORT.md; UCSF_DATA.md; UCSF_PLAN.md; DETECTION_TASK.md; INTENDED_USE.md; NUMBERS.md 2.2.
-We developed PRISM on MU-Glioma-Post \citep{mahmoud2025} and tested it without retraining on LUMIERE
-\citep{suter2022} and UCSF-ALPTDG \citep{fields2024}, with the tests and their rules fixed in advance
-(Table~\ref{tab:1}, Table~\ref{tab:2}). Grade 4 glioma was the primary population in all three cohorts. The task was
-to tell the scan at which progression was documented from scans without progression. At MU-Glioma-Post, the scan with
-progression is the first scan on or after the progression date in the clinical record, and a scan without progression
-must be followed by at least 120 days without progression. LUMIERE rates every scan, so the scan with progression is
-the first one rated as progressive disease, and the scans without progression are those rated stable or responding
-before it. UCSF-ALPTDG supplies two consecutive scans per patient and a progression date. We evaluated the second scan,
-labelled as progression when progression was dated within 30 days of it and as no progression when it was followed by
-at least 120 days without progression (Table~\ref{tab:eval}). Because the three centres define progression
-differently, we compared models with one another within each cohort.
+We used three public cohorts of patients followed with MRI after treatment for glioma. PRISM was developed on
+MU-Glioma-Post \citep{mahmoud2025} and tested without retraining on LUMIERE \citep{suter2022} and UCSF-ALPTDG
+\citep{fields2024} (Table~\ref{tab:1}). Grade 4 glioma was the primary population in all three, and the tests and
+their rules were fixed in advance (Table~\ref{tab:2}).
 
-% Sources: DETECTION_TASK.md; NUMBERS.md 2.2 and mismatch 7.
-At MU-Glioma-Post the intended use covers scans on or after a documented start of radiotherapy. The evaluation sets
-held 146 scans from 80 patients at MU-Glioma-Post, drawn from 181 detection scans of 92 patients among the cohort's
-126 grade 4 patients, 178 scans from 79 patients at LUMIERE and 69 scans from 69 patients at UCSF-ALPTDG. The 120-day
-rule leaves out scans whose follow-up was shorter, so on MU we also evaluated every score with all scans before
-progression as scans without progression, as the detection plan specified. The label is tied to time after
-radiotherapy. At MU, most scans with progression were taken later than 12 weeks after radiotherapy and most scans
-without progression within 12 weeks (Table~\ref{tab:1}, Figure~\ref{fig:cohorts}), so the time window alone separates
-many pairs of scans.
+The task was to tell a scan at which progression was documented from scans without progression. Each cohort records
+progression differently, so the label follows each cohort's own data (Table~\ref{tab:eval}). At MU-Glioma-Post, the
+scan with progression is the first scan on or after the progression date in the clinical record, and a scan without
+progression must be followed by at least 120 days without progression. At LUMIERE, which rates every scan, the scan
+with progression is the first rated as progressive disease, and scans without progression are those rated stable or
+responding before it. UCSF-ALPTDG supplies two consecutive scans per patient and a progression date; the second scan
+counts as progression when progression was dated within 30 days of it, and as no progression when it was followed by
+at least 120 days without progression. Because the labels differ, models are compared with one another within each
+cohort, not across cohorts.
+
+At MU-Glioma-Post, the models were fitted on 181 labelled scans from 92 of the cohort's 126 grade 4 patients, and
+performance was measured on the 146 of these scans (80 patients) taken after radiotherapy had started, the setting in
+which PRISM is meant to be used. The external evaluation sets held 178 scans from 79 patients at LUMIERE and 69 scans
+from 69 patients at UCSF-ALPTDG (Figure~\ref{fig:cohorts}). Because the 120-day rule leaves out scans with shorter follow-up, we also evaluated
+every score at MU-Glioma-Post with all scans before progression counted as scans without progression.
 
 % Sources: NUMBERS.md 2.2 and mismatch 7.
 \begin{table}[!htbp]
