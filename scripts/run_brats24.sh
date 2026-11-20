@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 # S4: BraTS24_1 label maps for the plan's scope (docs/results/SEGMENTER_BRATS24_PLAN.md), cohorts in turn on 4 GPUs.
-# LUMIERE runs in chunks of 36 scans (9 per GPU) so each finished chunk is kept if the allocation ends.
+# LUMIERE runs in four chunks; each finished chunk is kept if the allocation ends. Several nodes may run this script
+# at once: a node claims a chunk by creating outputs/features/seg_brats24/claims/<chunk> (mkdir is atomic on NFS).
+# COHORTS (default "ucsf mu lumiere") chooses which cohorts this node runs.
 # Resumable: rerun the script and finished scans are skipped.
 set -u
 cd "$(dirname "$0")/.."
@@ -14,5 +16,14 @@ run() {  # cohort tag ids-file
   .venv/bin/python -m prism.features.reseg_brats24 --cohort $1 --gpus 4 --tag $2 --ids-file $3 --skip-done
   echo "== $1 $2 exit $? $(date)"
 }
-for c in ucsf mu; do run $c full_$c outputs/features/seg_brats24/ids_$c.txt; done
-for f in outputs/features/seg_brats24/ids_lumiere_[0-9][0-9].txt; do run lumiere chunk_$(basename $f .txt) $f; done
+COHORTS=${COHORTS:-"ucsf mu lumiere"}
+mkdir -p outputs/features/seg_brats24/claims
+for c in $COHORTS; do
+  if [ $c != lumiere ]; then run $c full_$c outputs/features/seg_brats24/ids_$c.txt; continue; fi
+  for f in outputs/features/seg_brats24/ids_lumiere_[0-9][0-9].txt; do
+    k=$(basename $f .txt)
+    mkdir outputs/features/seg_brats24/claims/$k 2>/dev/null || { echo "== $k claimed elsewhere"; continue; }
+    echo "$(hostname) $(date)" > outputs/features/seg_brats24/claims/$k/by
+    run lumiere chunk_$k $f
+  done
+done

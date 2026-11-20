@@ -98,3 +98,7 @@ of the cavity inputs. The second- and third-place models, if time allows.
   - The change inputs use only earlier scans, so no labelled row or evaluation scan loses an input.
   - P3 uses the consecutive pairs within this scope.
   - Reason: the author's deadline (results by 08:00).
+- **LUMIERE scope narrowed (2026-11-20, before any LUMIERE map beyond the 3-scan check).** It now covers every study
+  up to and including each detection patient's last labelled study: 328 of 579 (full list in
+  `ids_lumiere_all_detection_patients.txt`). Same reason and the same argument as MU.
+  - Run in four chunks, shared between two GPU nodes, each claiming the next chunk.
