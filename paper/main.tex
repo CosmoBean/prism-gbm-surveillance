@@ -840,14 +840,14 @@ change. All passed the checker, and the verifier was tested on these reports (Su
 \figslot{fig5_report.pdf}{0.92\textheight}{One report PRISM wrote for a held-out scan, and reports passing the check
 for seven local models.}
 \caption{\textbf{The report PRISM writes, and the check.} (a) The report for the progression scan of the patient in
-strip C of Figure~\ref{fig:cases}, written for a patient not used to develop the prompt and accepted by the checker.
+strip (a) of Figure~\ref{fig:cases}, written for a patient not used to develop the prompt and accepted by the checker.
 The page follows the order of the BT-RADS follow-up template: the scan's timing and the flags raised; the attached
-segmentation slices and the volumes; the three scores against their cohort medians with their conformal sets; the
-reliability card; the language model's sentences verbatim, each with the record fields it cites; and the fixed
-limitations. Every value comes from the scan's record. (b) Reports passing the planned checker, of 406, for seven
+segmentation slices and the volumes; the two models' scores against their cohort medians, then the combined score, with their conformal sets; the
+reliability card; the language model's sentences verbatim; and the fixed limitations. The record fields each sentence cites are
+shown in Supplementary Figure S2. Every value comes from the scan's record. (b) Reports passing the planned checker, of 406, for seven
 local language models given the same prompt (Qwen3.5 2B, 4B and 9B, Gemma-4 E4B and 31B, Qwen3.8-27B used in PRISM,
-and Qwen3.5-35B-A3B). Dark bars show models for which at least 95\% passed in every cohort, and the model weight size
-is at the right. BT-RADS denotes the Brain Tumor Reporting and Data System.}
+and Qwen3.5-35B-A3B). Dark bars show models for which at least 95\% passed in every cohort, and the model weight size is
+in the second column. BT-RADS denotes the Brain Tumor Reporting and Data System.}
 \label{fig:5}
 \end{figure}
 
