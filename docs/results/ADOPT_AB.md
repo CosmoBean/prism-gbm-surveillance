@@ -1,3 +1,5 @@
+**Not adopted (2026-11-20, author's decision).** PRISM keeps its current models: I_pure for imaging, B1 + I_pure combined, the reduced forms externally, and the released masks, exactly as before 2026-11-19. This note and `prism/analyses/adopt_ab.py` record what adopting A and B would have changed, as a design analysis only. The adoption commits were reverted (code at 914ba1f reproduces these results; `adopt_ab.py` needs `system.mu_predict` / `mu_oof` from that commit). The A/B outputs are in `outputs/results/analyses/_AB_design_2026-11-19/`.
+
 # Adopting the stratified imaging model (A) and the offset combined model (B)
 
 Date: 2026-11-19. Decision: the author adopts the two S2 models as PRISM's imaging and combined models. Adoption

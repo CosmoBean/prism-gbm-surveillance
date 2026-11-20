@@ -15,6 +15,8 @@ or scans), the exact source (file, section or table) and the status.
 - Plans: UCSF `0e7c9fe`; system `e7cba80`; report v3.1 `4f7e7b9`; reduced confidence (exploratory) `3d20c41`;
   Christodoulou source check (exploratory) `9810dc4`. All five exist in `git log`.
 
+Design analysis, not adopted (2026-11-20): the stratified imaging model (A) and the offset combined model (B) are reported in `docs/results/STRATIFIED_OFFSET.md` and `docs/results/ADOPT_AB.md`. Every value here is for PRISM's current models.
+
 ---
 
 ## Mismatches (skeleton / STORY / OUTLINE vs sources)
@@ -99,52 +101,20 @@ Ordered by how much they could change a sentence. "Fix" is a suggestion for the 
 
 ---
 
-## 0. Adoption of the stratified imaging model (A) and the offset combined model (B), 2026-11-19
-
-Since 2026-11-19 PRISM's imaging model is A and its combined model is B (`docs/results/ADOPT_AB.md`, which holds the
-full old → new table for every number main.tex and supplement.tex state). Rows elsewhere in this file that name
-I_pure, B1 + I_pure, T, T_img, A-Ipure or A-T as the system's models are the values before adoption, unless they are
-marked "since 2026-11-19". Headline values:
-
-| Quantity | Before adoption | Since 2026-11-19 | Source |
-|---|---|---|---|
-| MU imaging AUC (MU-IU) | 0.709 (0.630-0.781) | 0.669 (0.580-0.741) | adopt_ab/auc_old_new.csv |
-| MU combined AUC | 0.821 (0.744-0.894) | 0.814 (0.733-0.895) | same |
-| LUMIERE imaging AUC | 0.655 (0.565-0.733) (T_img, all scans) | 0.642 (0.544-0.734) (system); T_img all scans 0.641 (0.541-0.734) | same |
-| LUMIERE combined (reduced) AUC | 0.773 (0.679-0.857) | 0.754 (0.664-0.827) | same |
-| UCSF imaging AUC | 0.726 (0.603-0.835) | 0.769 (0.660-0.870) | same |
-| UCSF combined (reduced) AUC | 0.856 (0.758-0.930) | 0.868 (0.781-0.940) | same |
-| Baselines (MU 0.797, LUMIERE 0.734), clinical-history models | unchanged | unchanged | E4 |
-| Combined - baseline, MU / LUMIERE | +0.023 (-0.034 to +0.083) / +0.039 (-0.014 to +0.100) | +0.016 (-0.021 to +0.048) / **+0.019 (+0.003 to +0.043)** | clinician_baseline/e4_reader_baseline.csv |
-| Imaging - baseline within a window, MU | +0.103 (-0.041 to +0.257) | +0.101 (+0.007 to +0.206) | same |
-| M1 MU imaging A_W / A_B; combined A_W / A_B | 0.68 / 0.73; 0.65 / 0.92 | 0.68 / 0.66; 0.62 / 0.94 | methods/m1_auc_split.csv |
-| Published pipeline - imaging model, released / BraTS21 masks | -0.129 (-0.231 to -0.022) / -0.101 (-0.187 to -0.014) | **-0.089 (-0.183 to +0.010) / -0.028 (-0.122 to +0.073)** | christodoulou_faithful(_brats21)/contrasts.csv |
-| Conformal coverage, combined, alpha 0.2 (MU / LUMIERE / UCSF) | 0.823 / 0.871 / 0.783 | **0.800 / 0.764 / 0.739** | system/conformal.csv |
-| Conformal coverage, imaging | 0.844 / 0.708 / 0.826 | 0.799 / 0.590 / 0.652 | same |
-| Combined singletons | 75% / 62% / 64% | 80% / 81% / 90% | same |
-| Disagreement S2, MU (combined AUC agree / disagree) | 0.901 / 0.594, +0.307 | 0.860 / 0.677, +0.183 (+0.077 to +0.288) | system/selective.csv |
-| Any flag, MU / LUMIERE | 91% / 93% | 90% / 92% | same |
-| Reports v3.1 (S5; MU / LUMIERE / UCSF) | 114/114, 162/162, 130/130 | 114/114, 162/162, 130/130 | report_v3_1/summary_eval.csv |
-| S6 / S7 | 220/220; 28/30 | 220/220; **27/30** | report_v3_1/summary_stress.csv |
-| Reports v3.2, v3.1 rerun, template (MU + LUMIERE) | 276/276 each | 276/276 each | report_v3_2/summary.csv |
-| Verifier false rejections, LM v3.2 | 1/276 | 2/276 (MU, rule V2) | verifier_mutation/false_rejections.csv |
-
----
-
 ## 1. Abstract (proposed text in main.tex; every number)
 
 | Claim in text | Value (CI) | Population | Source | Status |
 |---|---|---|---|---|
 | Timeline pathway, MU | 0.822 (0.749-0.902) | MU-IU, B1 | DETECTION_TASK.md, Primary table; CSV-checked | PLANNED (B1 is the baseline) |
-| Image pathway, MU | **since 2026-11-19 (A): 0.669 (0.580-0.741)**; before adoption 0.709 (0.630-0.781) | MU-IU, I_pure | DETECTION_TASK.md, EXPLORATORY "how much of imaging only"; system/checks.csv | EXPLORATORY model; used in the planned system |
-| Combined, MU | **since 2026-11-19 (B): 0.814 (0.733-0.895)**; before adoption 0.821 (0.744-0.894) | MU-IU, B1 + I_pure | DETECTION_TASK.md same table; system/checks.csv 0.8205 | EXPLORATORY model |
-| LUMIERE, locked | **since 2026-11-19 (B): 0.754 (0.664-0.827)**; before adoption 0.773 (0.679-0.857) | LUM, T, grade-4 trained | DETECTION_TASK.md, External test; lumiere.csv | PLANNED |
+| Image pathway, MU | 0.709 (0.630-0.781) | MU-IU, I_pure | DETECTION_TASK.md, EXPLORATORY "how much of imaging only"; system/checks.csv | EXPLORATORY model; used in the planned system |
+| Combined, MU (0.82) | 0.821 (0.744-0.894) | MU-IU, B1 + I_pure | DETECTION_TASK.md same table; system/checks.csv 0.8205 | EXPLORATORY model |
+| LUMIERE, locked (0.77) | 0.773 (0.679-0.857) | LUM, T, grade-4 trained | DETECTION_TASK.md, External test; lumiere.csv | PLANNED |
 | UCSF single-scan images (0.80) | 0.795 (0.686-0.887) | UCSF-P, A-Iscan | UCSF_RESULTS.md Part A primary; locked/auc.csv | PLANNED arm (primary question was A-Ipure) |
 | "About as high as models trained there" | 0.826 (0.729-0.909) trained; B - A +0.031 (-0.052 to +0.116) | UCSF-P, Iscan | UCSF_RESULTS.md Part B and Q3 | EXPLORATORY contrast for Iscan (Q3 was planned for Ipure only); see Mismatch 1 |
 | Audit: treatment timeline at MU | +0.114 (+0.035 to +0.196) overall; -0.016 (-0.134 to +0.109) within phase | MU-IU, B1 + I_pure vs clinical + I_pure | DETECTION_TASK.md, EXPLORATORY images + clinical | EXPLORATORY |
 | Audit: enhancing volume at UCSF | 0.878 (0.790-0.946); 27 of 29 progression scans rated "ET Increased" | UCSF-P | UCSF_AUDIT.md sections 4 and 6 | EXPLORATORY |
-| Conformal coverage, three centres | **since 2026-11-19 (B): 0.800 / 0.764 / 0.739** (LUMIERE and UCSF below 0.78); before adoption 0.823 / 0.871 / 0.783 | combined, alpha 0.2 | SYSTEM_RESULTS.md S1 | PLANNED (S1) |
-| Reports passed the check | 114/114, 162/162, 130/130 (also since 2026-11-19, rerun with A and B) | v3.1 | REPORT_V3_1.md; ADOPT_AB.md | PLANNED rule; second evaluation after a seen failure |
+| Conformal coverage, three centres | 0.823 / 0.871 / 0.783 | combined, alpha 0.2 | SYSTEM_RESULTS.md S1 | PLANNED (S1) |
+| Reports passed the check | 114/114, 162/162, 130/130 | v3.1 | REPORT_V3_1.md | PLANNED rule; second evaluation after a seen failure |
 
 ---
 
@@ -272,8 +242,6 @@ model. INTENDED_USE.md line 164; TRIAGE_FEASIBILITY.md line 153; DETECTION_DEEP.
 
 ## 3. Results 3.1: each pathway on MU-Glioma-Post
 
-Since 2026-11-19 the image pathway is A and the combined score is B (section 0). The I_pure and B1 + I_pure rows below are the models before adoption.
-
 All rows: MU-IU (62 / 84 / 80 patients, 146 scans), 5 x 5 CV, 1,000-draw patient bootstrap, CSV-checked (`detection/auc.csv`).
 Source for every row: DETECTION_TASK.md.
 
@@ -309,8 +277,6 @@ Contrasts: I - I_pure +0.097 (+0.047 to +0.153) overall, -0.013 (-0.057 to +0.03
 ---
 
 ## 4. Results 3.2: the pathways at two external centres
-
-Since 2026-11-19 the system's image pathway is A (A-Ipure at UCSF, T_img / 3-volume at LUMIERE) and its combined score is B on T / A-T (section 0). The T, T_img, A-Ipure and A-T rows below are the models before adoption, which remain reported analyses.
 
 ### LUMIERE (locked; fitted once on MU grade-4 detection rows, applied once)
 
@@ -428,8 +394,6 @@ Rule 4 (validity) met. UCSF: the deep scores track log ET volume (r about 0.8; s
 
 ## 6. Results 3.4: the confidence
 
-The tables below are before adoption. Since 2026-11-19 the system uses A and B; the new S1-S4, M2 and card values are in section 0 and `docs/results/ADOPT_AB.md`.
-
 All from SYSTEM_RESULTS.md unless noted; CSV-checked (`system/conformal.csv`, `selective.csv`). Sets: MU-IU 62 / 84 / 80 patients (146 scans, mean over 5 repeats); LUM 73 / 105 / 79; UCSF-P 29 / 40 / 69. Bootstrap seed 20261026. PLANNED unless stated.
 
 ### S1: coverage at alpha 0.2 (nominal 0.80; met if >= 0.78)
@@ -514,7 +478,7 @@ D4 flagged minus unflagged error: MU +0.30 (+0.17 to +0.43); LUMIERE +0.33 (+0.1
 |---|---|---|
 | **S5: faithful** | MU **114/114** (Wilson 0.97-1.00); LUMIERE **162/162** (0.98-1.00); UCSF **130/130** (0.97-1.00); all 406/406 (0.99-1.00); met | MU intended use, 60 patients; LUMIERE 69 patients not in development; UCSF 130 patients not in development |
 | **S6: tier stated** where evidence is thin | 71/71 MU; 19/19 LUMIERE; 130/130 UCSF; 220/220 | few cases / not tested |
-| **S7: follows a changed field** | **since 2026-11-19: 27/30** (agreement 5/6, ET change 4/6, others 6/6; redrawn set, 7 MU / 13 LUMIERE / 10 UCSF). Before adoption: **28/30** (agreement 6/6, card tier 6/6, conformal 6/6, out of range 6/6, ET change 4/6); met (>= 27); full check passes on all 30; both ET misses = the rule artefact (old change 0.0 cc); exploratory reading 30/30 | 30 perturbed records (7 MU, 13 LUMIERE, 10 UCSF), seed 1 |
+| **S7: follows a changed field** | **28/30** (agreement 6/6, card tier 6/6, conformal 6/6, out of range 6/6, ET change 4/6); met (>= 27); full check passes on all 30; both ET misses = the rule artefact (old change 0.0 cc); exploratory reading 30/30 | 30 perturbed records (7 MU, 13 LUMIERE, 10 UCSF), seed 1 |
 | Everything else, all 406 | 0 unparsed, 0 unsupported numbers, 0 invalid citations, 0 omitted or spurious flags, 0 forbidden content, 0 conformal / agreement errors; no report mentions RANO | |
 | Length and cost | median 317 (MU), 305 (LUMIERE), 290 (UCSF) words; 1.08 s per report batched on one H100 | |
 | Development (frozen prompt v3.4) | 58 records (MU 32, LUMIERE 16, UCSF 10): 58/58 after iteration 1; 2 of 4 allowed iterations used | |
@@ -587,18 +551,18 @@ Source: CHRISTODOULOU_REPLICATION.md. Their reported result: test AUC 0.80 (abst
 |---|---|---|---|---|---|
 | MU-1 | Does imaging add to timeline in detection (grade 4, IU)? | P >= 0.75 with lower bound >= 0.65, and P - B1 >= +0.03 with CI excluding 0 | P 0.837 (0.763-0.904) meets the first; P - B1 +0.015 (-0.032 to +0.063) fails the second | **No (NO-GO for detection on MU alone)** | DETECTION_TASK.md (commit 2b4c927) |
 | MU-2 | Do deep arms add? | stack beats P by >= 0.03 with CI excluding 0; G4 CI covers 0.5 | none adds; G4 0.483 (0.436-0.527) covers 0.5 | No; validity met | same |
-| LUM-1 | Does the locked T transport to LUMIERE? | external AUC >= 0.65 (below = transport failure flag) | T 0.773 (0.679-0.857); lower bound 0.679. **Since 2026-11-19, B: 0.754 (0.664-0.827)** | Yes (no transport failure), also for B | same |
-| UCSF-Q1 | Do MU image measurements transport? | A-Ipure AUC >= 0.65 with lower bound > 0.5 | 0.726 (0.603-0.835). **Since 2026-11-19, A: 0.769 (0.660-0.870)** | **Met** (also for A) | UCSF_PLAN.md (0e7c9fe) |
+| LUM-1 | Does the locked T transport to LUMIERE? | external AUC >= 0.65 (below = transport failure flag) | T 0.773 (0.679-0.857); lower bound 0.679 | Yes (no transport failure) | same |
+| UCSF-Q1 | Do MU image measurements transport? | A-Ipure AUC >= 0.65 with lower bound > 0.5 | 0.726 (0.603-0.835) | **Met** | UCSF_PLAN.md (0e7c9fe) |
 | UCSF-Q2 | Do images add to clinical data without a timeline? | A-B0 + Ipure - A-B0, CI excludes 0 | +0.248 (+0.096 to +0.392) | **Met** | same |
 | UCSF-Q3 | Does training on UCSF beat the locked model? | descriptive, B - A on Ipure | +0.137 (+0.033 to +0.257) | Yes (descriptive) | same |
 | UCSF-Q4 | Do deep networks learn on UCSF? | G1 or G3 above G4, G4 covers 0.5 | G1 - G4 +0.201 (+0.094 to +0.306); G4 0.541 (0.480-0.603) | **Met** | same |
-| S1 | Do conformal sets keep their coverage? | coverage >= 0.78 at alpha 0.2 on MU and each external cohort | before adoption: combined 0.823 / 0.871 / 0.783; images LUMIERE 0.708 and timeline UCSF 0.696 not met. **Since 2026-11-19 (A, B): combined 0.800 / 0.764 / 0.739; images 0.799 / 0.590 / 0.652; timeline 0.795 / 0.798 / 0.696** | Before: **met (combined)**. **Since adoption: combined met at MU only; not met at LUMIERE or UCSF** | SYSTEM_PLAN.md (e7cba80); ADOPT_AB.md |
-| S2 | Do flags pick out wrong scans? | AUC unflagged - flagged > 0 with CI excluding 0 (MU; also LUMIERE, UCSF) | disagreement: MU +0.307 met; LUMIERE and UCSF not met. any flag: MU -0.170 not met. **Since 2026-11-19: disagreement MU +0.183 (+0.077 to +0.288) met, LUMIERE +0.112 (-0.033 to +0.278), UCSF -0.016 not met; conformal {0,1} MU +0.152 (+0.016 to +0.301) met, LUMIERE +0.206 (-0.035 to +0.417) not met; any flag MU -0.294 (-0.545 to -0.022)** | **Met on MU for disagreement and conformal {0,1}; not met externally** | same |
-| S3 | Does abstaining beat matched removal? | retained AUC - composition-matched removal > 0, CI excluding 0 | disagreement MU +0.083 (+0.046 to +0.123) met; LUMIERE and UCSF not met; conformal {0,1} UCSF +0.073 met. **Since 2026-11-19: disagreement MU +0.045 (+0.022 to +0.077) met; LUMIERE, UCSF not met; conformal {0,1} UCSF +0.007 (-0.015 to +0.029) not met** | **Met on MU (disagreement)** | same |
+| S1 | Do conformal sets keep their coverage? | coverage >= 0.78 at alpha 0.2 on MU and each external cohort | combined 0.823 / 0.871 / 0.783; images LUMIERE 0.708 and timeline UCSF 0.696 not met | **Met (combined)** | SYSTEM_PLAN.md (e7cba80) |
+| S2 | Do flags pick out wrong scans? | AUC unflagged - flagged > 0 with CI excluding 0 (MU; also LUMIERE, UCSF) | disagreement: MU +0.307 met; LUMIERE and UCSF not met. any flag: MU -0.170 not met | **Met on MU for disagreement and conformal {0,1}; not met externally** | same |
+| S3 | Does abstaining beat matched removal? | retained AUC - composition-matched removal > 0, CI excluding 0 | disagreement MU +0.083 (+0.046 to +0.123) met; LUMIERE and UCSF not met; conformal {0,1} UCSF +0.073 met | **Met on MU (disagreement)** | same |
 | S4 | Do the card's tiers mean something? | descriptive: tested should have lower Brier and error | LUMIERE yes (0.187 vs 0.258; 0.289 vs 0.421); MU reversed (0.222 vs 0.147) | Descriptive | same |
 | S5 | Are reports faithful? | >= 95% of reports pass the checker in each cohort | v3: MU 114/114, LUMIERE **0/178**, UCSF 140/140 (**not met**); v3.1: 114/114, 162/162, 130/130 | v3 **not met**; v3.1 **met** (second evaluation) | SYSTEM_PLAN.md; REPORT_V3_1_PLAN.md (4f7e7b9) |
 | S6 | Is the tier stated where evidence is thin? | 100% | v3.1 220/220 | **Met** | same |
-| S7 | Do reports follow the record? | >= 27 of 30 perturbed records | v3 29/30; v3.1 28/30; **since 2026-11-19 v3.1 27/30** | **Met** (at the threshold since adoption) | same |
+| S7 | Do reports follow the record? | >= 27 of 30 perturbed records | v3 29/30; v3.1 28/30 | **Met** | same |
 | L1 | Smallest model with S5 >= 0.95 in every cohort | descriptive | Qwen3.8-27B (gemma-4-31B-it also) | Descriptive, secondary | REPORT_V3_1_PLAN.md |
 
 ---
@@ -622,7 +586,7 @@ Source: CHRISTODOULOU_REPLICATION.md. Their reported result: test AUC 0.80 (abst
 
 | Panel | Numbers | Section here |
 |---|---|---|
-| Fig 2 (AUC by pathway x cohort) | **Since 2026-11-19 (fig2_performance.py): images A / combined B: MU 0.669 (0.580-0.741) / 0.814 (0.733-0.895); LUMIERE 0.642 (0.544-0.734) / 0.754 (0.664-0.827); UCSF 0.769 (0.660-0.870) / 0.868 (0.781-0.940); gains over the baseline MU images -0.129 (-0.232 to -0.033), combined +0.016 (-0.021 to +0.048); LUMIERE images -0.092 (-0.183 to -0.010), combined +0.019 (+0.003 to +0.043) (section 0).** Before adoption: MU-IU: clinical 0.530, timeline 0.822, images 0.709, combined 0.821. LUMIERE locked: clinical NOT AVAILABLE, timeline 0.689, images 0.655, combined 0.773. UCSF locked: clinical 0.502, timeline 0.561 (approximate), images 0.726 (Ipure) or 0.795 (Iscan), combined 0.856. UCSF-trained: clinical 0.407, timeline 0.669, images 0.863 (Ipure) or 0.826 (Iscan), combined 0.871 | 3, 4 |
+| Fig 2 (AUC by pathway x cohort) | MU-IU: clinical 0.530, timeline 0.822, images 0.709, combined 0.821. LUMIERE locked: clinical NOT AVAILABLE, timeline 0.689, images 0.655, combined 0.773. UCSF locked: clinical 0.502, timeline 0.561 (approximate), images 0.726 (Ipure) or 0.795 (Iscan), combined 0.856. UCSF-trained: clinical 0.407, timeline 0.669, images 0.863 (Ipure) or 0.826 (Iscan), combined 0.871 | 3, 4 |
 | Fig 3A | +0.114 overall, -0.016 within phase | 5 |
 | Fig 3B | log ET 0.878; ET Increased 27 / 29 | 5 |
 | Fig 3C | 0.659, 0.709, 0.806 | 5 |
