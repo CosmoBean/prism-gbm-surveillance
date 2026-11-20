@@ -33,9 +33,9 @@ import numpy as np
 import pandas as pd
 
 from prism.analyses import report_v3 as R3
-from prism.config import REPO, RESULTS
+from prism.config import MASK_SUFFIX, REPO, RESULTS
 
-OUT = RESULTS / "analyses" / "report_v3_1"
+OUT = RESULTS / "analyses" / f"report_v3_1{MASK_SUFFIX}"
 SYSTEM = R3.SYSTEM
 DEV_SEED = 20261027
 N_DEV_EXT = 10
