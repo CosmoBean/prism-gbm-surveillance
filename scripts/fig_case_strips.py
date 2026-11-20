@@ -188,8 +188,11 @@ def draw(output: Path) -> dict[str, str]:
     ax.add_patch(Rectangle((x, ly - 2.6), 6.0, 2.3, fc=st.tint(st.HIST, 0.75), ec="none"))
     text(x + 7.2, ly - 1.5, "first 12 weeks\nafter RT", size=5.4, va="center")
     ax.plot([LEFT, LEFT + 4.0], [ly - 8.6, ly - 8.6], color=CONTOUR, lw=1.2)
-    text(LEFT + 5.2, ly - 7.6, "enhancing outline (released mask); T1c slice with most enhancement (without enhancement, most lesion).  "
-         "Agree: both models on the same side of their cohort medians.", size=5.4, colour=st.MUTED)
+    text(LEFT + 5.2, ly - 7.6, "PRISM's segmenter", size=5.4, colour=st.MUTED)
+    ax.plot([LEFT + 27.0, LEFT + 31.0], [ly - 8.6, ly - 8.6], color=RELEASED, lw=0.9, ls="--")
+    text(LEFT + 32.2, ly - 7.6, "released mask (enhancing tumour outlines).  T1c slice with most enhancement "
+         "(without enhancement, most lesion).\nAgree: both models on the same side of their cohort medians.", size=5.4,
+         colour=st.MUTED)
 
     st.save(fig, output, "fig_case_strips")
     return picks
