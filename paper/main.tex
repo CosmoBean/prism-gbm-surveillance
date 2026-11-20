@@ -183,10 +183,7 @@ PRISM's segmenter or are those released with the cohort; the results in this pap
 stated. The masks
 give 27 measurements of the tumour and its change ($\mathbf{x}_{\mathrm{img}}$); the treatment course as of the scan
 day and the patient's characteristics give the clinical-history inputs ($\mathbf{x}_{\mathrm{hist}}$). Three ridge
-logistic regressions score the scan. The imaging model is fitted with one intercept per time window after
-radiotherapy, and its score keeps only the image term, so it ranks scans within a window. The combined model takes the
-timing-and-enhancement baseline as a fixed offset, so its fitted term is what the images and the history add to that
-baseline. The evidence statements are the split-conformal set of the combined score, the agreement of the imaging and
+logistic regressions score the scan on each input set and on both. The evidence statements are the split-conformal set of the combined score, the agreement of the imaging and
 clinical-history scores, and the reliability card. Collation is deterministic code that gathers every score,
 measurement and statement into one record, each under a fixed key with its source. A local language model writes the
 report from the record alone, and a deterministic checker accepts it or rejects it without repair. Colours mark the models as in every figure; the two

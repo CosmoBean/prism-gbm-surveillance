@@ -9,7 +9,7 @@ prism/config.py), and PRISM's own segmentation of each scan by the BraTS 2021 Sw
 (outputs/features/seg_swin/mu, written by prism/features/reseg.py; plan docs/results/SEGMENTER_STAGE_PLAN.md). Weeks
 after radiotherapy, enhancing volumes and the label of each scan are computed here from those files with the paper's
 label rule; no model score is shown. Panels (b)-(d) are a methods schematic as specified in the Methods; the models in
-(c) are the adopted stratified imaging model and offset combined model (docs/results/ADOPT_AB.md). The input slices
+(c) are PRISM's current models (the stratified and offset forms of docs/results/ADOPT_AB.md were not adopted). The input slices
 in (b) and (c) are the patient's scans from (a). Colour follows the score as in every figure
 (scripts/figure_style.py); structure is black.
 """
@@ -517,11 +517,10 @@ def panel_c(c: Canvas, scans) -> None:
     x0, x1 = cols[2]
     models = [
         (y_img, "Imaging model", st.IMG,
-         r"$s = \boldsymbol{\beta}^{\top}\mathbf{x}_{\mathrm{img}}$, fitted with one",
-         "intercept per time window"),
+         r"$\hat p = \sigma(\beta_0 + \boldsymbol{\beta}^{\top}\mathbf{x}_{\mathrm{img}})$", "no dates"),
         (y_comb, "Combined model", st.COMB,
-         r"$\mathrm{logit}\,\hat p = \eta_{\mathrm{base}} + \boldsymbol{\beta}^{\top}\mathbf{z}$",
-         "baseline as a fixed offset"),
+         r"$\hat p = \sigma(\beta_0 + \boldsymbol{\beta}^{\top}\mathbf{z})$",
+         r"$\mathbf{z} = \mathbf{x}_{\mathrm{img}} \oplus \mathbf{x}_{\mathrm{hist}}$"),
         (y_hist, "Clinical-history model", st.HIST,
          r"$\hat p = \sigma(\beta_0 + \boldsymbol{\beta}^{\top}\mathbf{x}_{\mathrm{hist}})$", "")]
     for y, name, colour, eq, note in models:
@@ -589,7 +588,7 @@ def panel_c(c: Canvas, scans) -> None:
     x, y, w, h = rd
     c.document(x, y, w, h, BLACK, lines=0)
     c.text(x + 1.2, y + h - 4.2, "record", size=5.6, weight="bold")
-    c.text(x + 1.2, y + h - 7.6, "meas.enhancing_cc\nmodel.imaging.score\nmodel.combined.\n  increment\n"
+    c.text(x + 1.2, y + h - 7.6, "meas.enhancing_cc\nmodel.imaging.score\nmodel.combined.\n  score\n"
            "conformal.80\nagreement\ncard.tier\n… + source", size=3.9, family=MONO, colour=st.MUTED)
     c.text(cx, y - 1.4, "deterministic code;\nevery value under a\nfixed key, with its\nsource", size=4.8,
            ha="center")
