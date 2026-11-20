@@ -928,37 +928,37 @@ places the imaging score beside the clinical-history score, states how certain e
 traced to the scan's record.
 
 \section*{Acknowledgements}
-\todo{PENDING AUTHOR DECISION}.
+We thank the teams that created and shared the MU-Glioma-Post, LUMIERE and UCSF-ALPTDG datasets, and the patients
+whose scans they contain.
 
 \section*{Disclosure statement}
-\todo{PENDING AUTHOR DECISION: competing interests, or ``The authors report there are no competing interests to
-declare.''} If any author serves on the editorial or advisory board of this journal, state it here.
+The authors report there are no competing interests to declare.
 
 \section*{Declaration of generative AI use}
-\todo{DRAFT, PENDING AUTHOR CONFIRMATION:} Generative AI had two roles in this work. The system studied uses a local
+Generative AI had two roles in this work. The system studied uses a local
 language model (Qwen3.8-27B) to write reports from derived structured records; six additional open-weight models were
 evaluated with the same prompt. All models ran offline on the authors' computing cluster. Claude (Anthropic) assisted,
 under the authors' direction, with analysis code and manuscript drafting and editing. It also generated synthetic
-planted report errors without access to the verifier's rules. Claude was given mainly aggregate results; during earlier
-report development it also read derived records and generated reports for individual patients
-\todo{AUTHOR: confirm cohorts}. Gemma-4 31B was used as an automatic judge during that development. The authors
+planted report errors without access to the verifier's rules. Claude worked mainly with aggregate results; it also
+read derived records, reports and images of individual patients from the public MU-Glioma-Post cohort. Gemma-4 31B was used as an automatic judge during that development. The authors
 reviewed all code, results and text and take full responsibility for the article.
 
 \section*{Funding}
 No funding was obtained for this work.
 
 \section*{Ethics statement}
-\todo{PENDING AUTHOR DECISION: secondary analysis of datasets with identifiers removed (MU-Glioma-Post and LUMIERE, public;
-UCSF-ALPTDG under a data use agreement); state the institutional determination or waiver and cite the source
-datasets' approvals.} No registered protocol. Each test in Table~\ref{tab:2} had its analysis plan committed to the repository before it was
+This study is a secondary analysis of de-identified data. MU-Glioma-Post and LUMIERE are publicly released, and
+UCSF-ALPTDG was obtained under its provider's data use agreement. The data were collected under the approvals of the
+original studies \citep{mahmoud2025,suter2022,fields2024} and contain no identifiers, so no further institutional
+review was required. No registered protocol. Each test in Table~\ref{tab:2} had its analysis plan committed to the repository before it was
 run (Supplementary Section~S5); analyses not fixed in advance are marked as exploratory. There was no
 patient or public involvement.
 
 \section*{Data availability statement}
-\todo{PENDING AUTHOR DECISION: MU-Glioma-Post (TCIA, doi:10.7937/\allowbreak 7K9K-3C83) and LUMIERE (figshare;
-\citealp{suter2022}) are public; UCSF-ALPTDG is available from its provider under a data use agreement; state which
-derived tables, fold assignments and locked model files are released, with a DOI.} Code: \todo{PENDING: public
-repository link and release tag.}
+MU-Glioma-Post is available from The Cancer Imaging Archive (doi:10.7937/\allowbreak 7K9K-3C83) and LUMIERE from
+figshare \citep{suter2022}. UCSF-ALPTDG is available from its provider under a data use agreement \citep{fields2024}.
+The code of PRISM, the fold assignments and the fitted model files will be released in a public repository on
+acceptance.
 
 \section*{Supplemental material}
 Supplemental data for this article are provided as a separate file.
