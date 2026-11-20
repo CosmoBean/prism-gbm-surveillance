@@ -601,9 +601,10 @@ documented, with 95\% bands from bootstrap samples of patients; at MU the curves
 cross validation. Middle, the AUC with 95\% CI for the same scores, log enhancing volume alone and, at MU, the
 published radiomics pipeline run with its authors' code on PRISM's label and folds. MU used repeated cross validation
 in the intended use. LUMIERE and UCSF used models fitted once on MU and applied unchanged, with the reduced
-clinical-history inputs. Right, the gain of each model over the time-and-enhancement model with its paired 95\% CI;
-at UCSF the time-and-enhancement model was run only in the segmentation comparison (Section~\ref{sec:3.3}) and is not
-shown. Intervals come from bootstrap samples of patients. Enhancing volume alone is exploratory, and at LUMIERE it
+clinical-history inputs. Right, the gain of each model over the time-and-enhancement model with its paired 95\% CI.
+UCSF-ALPTDG records no end of radiotherapy, so there the time-and-enhancement model (\textdagger, open square) uses
+the approximated window and comes from the segmentation comparison (Section~\ref{sec:3.3}), outside the planned
+comparison. Intervals come from bootstrap samples of patients. Enhancing volume alone is exploratory, and at LUMIERE it
 uses the 163 scans with a recorded volume. The dashed grey line marks chance.}
 \label{fig:2}
 \end{figure}
@@ -645,7 +646,8 @@ $+$0.10), again with no clear gain.
 Timing did not carry over to the other centres, yet the combined model held, because there the enhancing tumour did
 more of the work. The days since surgery ranked LUMIERE scans at 0.61, and the days since the start of radiotherapy
 ranked UCSF-ALPTDG scans at 0.54 (both exploratory). At UCSF-ALPTDG, enhancing volume alone reached 0.88 (0.79--0.95),
-and the time-and-enhancement model, applied with the approximated window in the segmentation comparison, 0.87. The
+and the time-and-enhancement model, applied with the approximated window in the segmentation comparison, 0.87, which
+the combined model matched ($-0.01$, $-0.08$ to $0.05$; Figure~\ref{fig:2}c). The
 label there follows enhancement. UCSF-ALPTDG rated enhancement as increased at 27 of the 29 scans with progression
 and dated progression a median of 7 days after the scan (exploratory). Scans with progression had also been brought
 forward. The days since the previous scan ranked them at 0.28, that is 0.72 with shorter intervals ranked as
@@ -960,8 +962,8 @@ This study has limitations. PRISM was developed on one public cohort and tested 
 178 evaluation scans, so the external intervals are wide. The label is progression as each centre documented it, not
 a pathological or expert consensus reference, and at LUMIERE and UCSF-ALPTDG it partly reflects the images the scores
 use. The supplied masks and both segmenters give reference outlines that are not ground truth. At UCSF-ALPTDG the
-radiotherapy window was approximated from its start, and the time-and-enhancement model was run there only in the
-segmentation comparison. In the first 12 weeks after radiotherapy MU holds few scans with progression, and the report
+radiotherapy window was approximated from its start, and the time-and-enhancement model was applied there only
+outside the planned comparison. In the first 12 weeks after radiotherapy MU holds few scans with progression, and the report
 marks such scans as having few comparable cases. No cohort supplied perfusion or diffusion imaging, which have
 separated progression from treatment effects in other studies \citep{taylor2022}. No clinician has read the reports,
 and the checks establish agreement with the record, not clinical value. Pooling rare situations across further

@@ -65,6 +65,7 @@ AUC = {
         "Clinical-history model": (0.561, 0.420, 0.687),
         "Imaging model": (0.726, 0.603, 0.835),
         "Combined model": (0.856, 0.758, 0.930),
+        "Time-and-enhancement model": (0.866, 0.77, 0.94),   # approximate RT window (SEGMENTER_STAGE.md)
         "Enhancing volume alone": (0.878, 0.793, 0.948),
     },
 }
@@ -80,8 +81,15 @@ GAIN = {
         "Imaging model": (-0.08, -0.16, -0.00),
         "Combined model": (0.04, -0.01, 0.10),
     },
-    "UCSF-ALPTDG": None,
+    # UCSF: the model applied with the approximate radiotherapy flag (rt_phase), outside the planned comparison;
+    # paired patient bootstrap, 2,000 resamples, seed 20261120, on preds_released.npz and ucsf/locked/scores.csv.
+    "UCSF-ALPTDG": {
+        "Clinical-history model": (-0.305, -0.474, -0.136),
+        "Imaging model": (-0.141, -0.250, -0.046),
+        "Combined model": (-0.010, -0.078, 0.048),
+    },
 }
+APPROX = {"UCSF-ALPTDG"}   # cohorts where the time-and-enhancement model uses the approximate RT window
 SETTING = {"MU-Glioma-Post": "Development, cross validation",
            "LUMIERE": "External, locked MU models",
            "UCSF-ALPTDG": "External, locked MU models"}
@@ -107,7 +115,7 @@ def roc_data() -> dict:
     e = ~np.isnan(z["ucsf_y"].astype(float))
     uc = pd.read_csv(RES / "ucsf/locked/scores.csv").set_index("scan_id").loc[z["ucsf_scan_id"][e]]
     us = {"hist": uc["A-Tbase@grade4"].to_numpy()[None], **{k: z[f"ucsf_{k}"][None, e] for k in
-                                                           ("images", "combined")}}
+                                                           ("images", "combined", "baseline")}}
     out = {"MU-Glioma-Post": (z["mu_y"][ev].astype(int), z["mu_pid"][ev], mu),
            "LUMIERE": (z["lum_y"].astype(int), z["lum_pid"], lu),
            "UCSF-ALPTDG": (z["ucsf_y"][e].astype(int), z["ucsf_pid"][e], us)}
@@ -175,7 +183,7 @@ def draw(output: Path) -> None:
     data = roc_data()
     names_all = [x[0] for x in SCORES]
     rows = {c: [n for n in names_all if n in AUC[c]] for c in cohorts}
-    W, H = st.WIDTH, 6.45
+    W, H = st.WIDTH, 6.6
     unit, head, gap = 0.235 / H * 1.0, 0.30 / H, 0.42 / H   # row pitch, header band, gap below a block (fig frac)
     roc_h = 1.30 / H                                         # ROC panel height (square: 1.30 in)
     fig = plt.figure(figsize=(W, H))
@@ -198,18 +206,20 @@ def draw(output: Path) -> None:
             _, c, m, f = style(name)
             v = AUC[cohort][name]
             ax.errorbar(v[0], ypos, xerr=[[v[0] - v[1]], [v[2] - v[0]]], fmt=m, ms=4.2, color=c,
-                        mfc=c if f else "white", mec=c, mew=0.9, elinewidth=1.0, zorder=3)
+                        mfc=c if f and not (name.startswith("Time-and") and cohort in APPROX) else "white",
+                        mec=c, mew=0.9, elinewidth=1.0, zorder=3)
             ax.text(v[2] + 0.012, ypos, f"{v[0]:.2f}", fontsize=6, color=st.INK, va="center", ha="left")
         ax.axvline(0.5, color=st.RULE, lw=0.7, ls=(0, (3, 2)), zorder=1)
         ax.set(xlim=(0.3, 1.0), ylim=(-0.6, n - 0.4), yticks=range(n))
-        ax.set_yticklabels(list(reversed(names)))
+        ax.set_yticklabels([x + ("\u2020" if x.startswith("Time-and") and cohort in APPROX else "")
+                            for x in reversed(names)])
         for lab in ax.get_yticklabels():
             lab.set_color(style(lab.get_text())[1] if lab.get_text() in names_all[:3] else st.INK)
         ax.tick_params(axis="y", length=0)
         ax.set_xlabel("AUC (95% CI)", labelpad=1)
         g = GAIN[cohort]
         if g is not None:
-            bx = fig.add_axes([0.79, y0, 0.185, h])
+            bx = fig.add_axes([0.775, y0, 0.17, h])
             for i, name in enumerate(names):
                 if name in g:
                     ypos = n - 1 - i
@@ -217,18 +227,25 @@ def draw(output: Path) -> None:
                     w = g[name]
                     bx.errorbar(w[0], ypos, xerr=[[w[0] - w[1]], [w[2] - w[0]]], fmt=m, ms=4.2, color=c, mfc=c,
                                 mec=c, mew=0.9, elinewidth=1.0, zorder=3)
-                    bx.text(0.2, ypos, minus(f"{w[0]:+.2f}"), fontsize=6, color=st.INK, va="center", ha="right")
+                    bx.text(1.03, ypos, minus(f"{w[0]:+.2f}"), fontsize=6, color=st.INK, va="center", ha="left",
+                            transform=bx.get_yaxis_transform())
             bx.axvline(0, color=st.MUTED, lw=0.7, zorder=1)
-            bx.set(xlim=(-0.25, 0.2), ylim=(-0.6, n - 0.4), yticks=[], xticks=[-0.2, -0.1, 0, 0.1])
+            bx.set(xlim=(-0.5, 0.2), ylim=(-0.6, n - 0.4), yticks=[], xticks=[-0.4, -0.2, 0])
             bx.spines["left"].set_visible(False)
-            bx.set_xlabel("Gain over the time-and-enhancement model (AUC, 95% CI)", labelpad=1)
+            bx.set_xlabel("Difference in AUC (95% CI)", labelpad=1)
+        if r == 0:
+            fig.text(0.775, y, "Gain over the\ntime-and-enhancement model", fontsize=6.6, weight="bold",
+                     color=st.NAVY, va="top", ha="left")
         y = top - block - gap
     handles = [Line2D([], [], color=st.HIST, lw=1.0, label="Clinical-history model"),
                Line2D([], [], color=st.IMG, lw=1.0, label="Imaging model"),
                Line2D([], [], color=st.COMB, lw=1.0, label="Combined model"),
                Line2D([], [], color=BASE, lw=0.9, ls=(0, (2.5, 1.5)), label="Time-and-enhancement model"),
                Line2D([], [], ls=(0, (3, 2)), lw=0.7, color=st.RULE, label="Chance")]
-    fig.legend(handles=handles, loc="lower center", bbox_to_anchor=(0.5, 0.0), fontsize=6.3, ncol=5)
+    fig.legend(handles=handles, loc="lower center", bbox_to_anchor=(0.5, 0.022), fontsize=6.3, ncol=5)
+    fig.text(0.5, 0.004, "\u2020 UCSF-ALPTDG records no radiotherapy end dates: the time-and-enhancement model uses the "
+             "approximate radiotherapy window and was not in the planned comparison.", fontsize=5.8, color=st.MUTED,
+             ha="center", va="bottom")
     st.save(fig, output, "fig2_performance")
 
 
