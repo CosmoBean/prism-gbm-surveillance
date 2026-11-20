@@ -344,10 +344,7 @@ with an extra input marking that it was missing, and every input is standardised
 chosen from 0.01, 0.03, 0.1, 0.3, 1 and 3 by the lowest mean log loss in threefold cross validation within the
 training data, grouped by patient, and the model is refitted with that value on all training scans. Logistic
 regression turns a weighted sum of the inputs into a probability of progression, and the ridge (L2) penalty pulls the
-weights towards zero, which keeps them stable with many correlated inputs and few patients. Deep networks fine-tuned on
-MU did not add to a ridge model of the clinical history and image measurements (Table~\ref{tab:2}).
-
-At LUMIERE and UCSF-ALPTDG, PRISM applies reduced models, fitted on MU with only the inputs that all three cohorts
+weights towards zero, which keeps them stable with many correlated inputs and few patients. At LUMIERE and UCSF-ALPTDG, PRISM applies reduced models, fitted on MU with only the inputs that all three cohorts
 record, because neither external centre records the full treatment course (Table~\ref{tab:1}; inputs in
 Table~\ref{tab:models}). Both reduced models take a flag for scans in the first 12
 weeks after radiotherapy. On MU the flag is
@@ -504,68 +501,51 @@ unchanged, to six other local open-weight models of 2 to 35 billion parameters.}
 
 \subsection{Evaluation}\label{sec:2.3}
 
-% Sources: DETECTION_TASK.md; INTENDED_USE.md; UCSF_PLAN.md; SYSTEM_PLAN.md; METHODS_PLAN.md; NUMBERS.md 2.1;
-% prism/analyses/detection.py (fold_ids), prism/analyses/system.py (locked_models, _fit); refs varoquaux2018.
 \paragraph*{Development and external testing.} On MU, every model was evaluated by five repeats of fivefold cross
-validation grouped by patient. In each repeat, a model was fitted on the scans of four folds and scored the fifth, so
-every scan was scored once by a model that had not seen its patient. Models were fitted on all grade 4 detection scans
-of the training folds. The AUC was computed over the held-out scores of the 146 evaluation scans (Section~\ref{sec:2.1}) and
-averaged over the five repeats, because a single split of a small cohort gives an estimate with a wide error
-\citep{varoquaux2018}. Each model was then fitted once on all 181 MU training scans and applied to LUMIERE and UCSF-ALPTDG without retraining or recalibration. Which external tests were planned is given in Table~\ref{tab:2}.
+validation grouped by patient: in each repeat, a model was fitted on four folds of patients and scored the scans of the
+fifth. The AUC was computed over the held-out scores of the 146 evaluation scans (Section~\ref{sec:2.1}) and averaged
+over the five repeats, because a single split of a small cohort gives an estimate with a wide error
+\citep{varoquaux2018}. Each model was then fitted once on all 181 MU training scans and applied to LUMIERE and
+UCSF-ALPTDG without retraining or recalibration.
 \todo{SUPPLEMENT: At UCSF-ALPTDG every model was fixed in a written plan before any score was compared with the label.
 At LUMIERE the combined model and its comparison with the time-and-enhancement model were fixed in advance, and the
 other scores are exploratory.}
 
-% Sources: CLINICIAN_BASELINE_PLAN.md; METHODS_RESULTS.md E4; prism/analyses/clinician_baseline.py;
-% prism/analyses/timing_only.py and docs/results/TIMING_ONLY.md (timing alone); ref beaulieujones2021.
-\paragraph*{Time-and-enhancement model.} We compared every score with a reference model of what a clinician reading
-the scan already knows: the time window after radiotherapy, the log enhancing volume and its log ratio to the previous
-scan. The difference in AUC between a score and this model measures what the score adds \citep{beaulieujones2021}. The model is a ridge logistic
-regression, fitted in the same folds and in the same way as PRISM's models. On MU the window enters as
-indicators, with later scans as the reference. Externally the model takes the 12-week flag (above) in place of the
-window and adds a flag for whether a previous scan exists. Because the UCSF-ALPTDG flag assumes a six-week course, the
-model was used there only in the segmentation comparison and not in the planned comparison. The rule for reading the
-difference (Statistics, below) was fixed in advance.
+\paragraph*{Time-and-enhancement model.} As a reference for what a clinician reading the scan already knows
+\citep{beaulieujones2021}, a ridge logistic regression was fitted on the time window after radiotherapy, the log
+enhancing volume and its log ratio to the previous scan, in the same folds as PRISM's models. Externally it takes the
+12-week flag (Section~\ref{sec:2.2}) and a flag for whether a previous scan exists. At UCSF-ALPTDG, where the flag is
+approximated, it was used only in the segmentation comparison. Each score is compared with this model by the paired
+difference in AUC. Scans were also ranked by timing alone, by the days since the end of radiotherapy and by the visit
+number (exploratory, Table~\ref{tab:models}).
+\todo{SUPPLEMENT: On MU the window enters as indicators, with later scans as the reference. Timing alone also includes
+a ridge model on the days since the end of radiotherapy, the visit number, the days since diagnosis and the 12-week
+flag. Externally, where these dates are missing, the unfitted timing score is the days since surgery (LUMIERE) or
+since the start of radiotherapy (UCSF-ALPTDG).}
 
-To show how well timing alone ranks scans, we also scored them by the days since the end of radiotherapy and by the
-visit number, each used as a score without a fitted model, and by a ridge model on these two, the days since diagnosis
-and the 12-week flag (exploratory, Table~\ref{tab:models}). Externally, where these dates are missing, the unfitted
-score is the days since surgery (LUMIERE) or since the start of radiotherapy (UCSF-ALPTDG).
-
-% Sources: METHODS_PLAN.md M1; METHODS_RESULTS.md M1 and UCSF section; prism/analyses/methods.py (split_auc,
-% m1_stats, boot); prism/analyses/ucsf_external.py (rt_phase); refs kallus2019, janes2008, janes2009.
-\paragraph*{Splitting the AUC by time window.} We split each AUC by time window, because a difference in AUC does
-not show which pairs of scans a score ranks well. The AUC is the share of pairs, one scan with progression and one
-without, that a score ranks in the right order. In a pair within a window, both scans were taken in the same window
-after radiotherapy, so the window cannot tell them apart and the score must rank them on other information. In a pair
-across windows, the window alone can often order the scans, because the share of scans with progression differs
-between windows. Let $P$ and $N$ be the scans with and without progression, $s$ a score, and $c$ the time window of
-each scan. The AUC is
+\paragraph*{Splitting the AUC by time window.} The AUC is the share of pairs, one scan with progression and one
+without, that a score ranks correctly. We split these pairs into pairs from the same time window, which the window
+cannot separate, and pairs from different windows, which the window alone can often order. With $A_W$ and $A_B$ the
+AUC over the pairs within and across windows, and $w$ the share of pairs within a window,
 \begin{equation}
-\mathrm{AUC} = \frac{1}{|P|\,|N|} \sum_{i \in P} \sum_{j \in N} K(s_i, s_j), \qquad
-K(a, b) = \mathbb{1}[a > b] + \tfrac12\, \mathbb{1}[a = b].
+\mathrm{AUC} = w\, A_W + (1 - w)\, A_B .
 \end{equation}
-The pairs split into $W = \{(i, j) : c_i = c_j\}$, the pairs within a window, and its complement $B$, the pairs across
-windows. With $A_W$ and $A_B$ the same average taken over $W$ and over $B$, and $w = |W| / (|P|\,|N|)$ the share of
-pairs within a window,
-\begin{equation}
-\mathrm{AUC} = w\, A_W + (1 - w)\, A_B
-\end{equation}
-holds exactly. This is the decomposition of Kallus and Zhou \citep{kallus2019} with the pairs grouped into two sets,
-and $A_W$ is a pair-weighted analogue of the covariate-adjusted AUC \citep{janes2008,janes2009}. To show how much of
-$A_B$ the window alone could supply, we also scored every scan by the share of training scans with progression in its
-window (the window-only score), whose $A_W$ is close to 0.5. The window is the time window defined above at MU and the 12-week flag externally. Externally the window-only score
-takes MU's share for the matching window, and MU's
-overall share for scans without a dated course of radiotherapy. Scans without a value of a score are left out of that
-score's pairs. \todo{SUPPLEMENT: The identity was checked on every bootstrap sample.}
+This is the decomposition of Kallus and Zhou \citep{kallus2019} with the pairs grouped in two, and $A_W$ is a
+pair-weighted analogue of the covariate-adjusted AUC \citep{janes2008,janes2009}. The window is the time window at MU
+and the 12-week flag externally. A window-only score, the share of training scans with progression in the scan's
+window, shows how much of $A_B$ the window alone supplies.
+\todo{SUPPLEMENT: Formal definition. With $P$ and $N$ the scans with and without progression, $s$ a score and $c$ the
+window, $\mathrm{AUC} = \frac{1}{|P||N|}\sum_{i\in P}\sum_{j\in N} K(s_i,s_j)$ with $K(a,b) = \mathbb{1}[a>b] +
+\tfrac12\mathbb{1}[a=b]$; $W = \{(i,j): c_i = c_j\}$ and $B$ its complement. Externally the window-only score takes
+MU's share for the matching window, and MU's overall share for scans without a dated course of radiotherapy. Scans
+without a value of a score are left out of that score's pairs.}
+\todo{SUPPLEMENT: The identity was checked on every bootstrap sample.}
 
-% Sources: CHRISTODOULOU_FAITHFUL_PLAN.md (with deviations); CHRISTODOULOU_REPLICATION.md (faithful run);
-% prism/analyses/_christodoulou_vendor.py; refs christodoulou2026, vangriethuysen2017.
-\paragraph*{Published radiomics pipeline.} We compared PRISM's imaging model with the radiomics pipeline published on
-MU-Glioma-Post \citep{christodoulou2026}, run with its authors' public code and settings on the same patients, masks,
-label and folds as PRISM. The pipeline computes 4,892 radiomic features of shape, intensity and texture from the
-tumour region of the current scan with PyRadiomics \citep{vangriethuysen2017}, keeps the top 256 within each training
-set, and fits a gradient boosted tree model (LightGBM) tuned within the training set.
+\paragraph*{Published radiomics pipeline.} We ran the radiomics pipeline published on MU-Glioma-Post
+\citep{christodoulou2026} with its authors' public code and settings, on the same patients, masks, label and folds as
+PRISM, and compared it with PRISM's imaging model. The pipeline computes 4,892 radiomic features of the current scan
+with PyRadiomics \citep{vangriethuysen2017}, keeps the 256 best ranked within each training set, and fits a gradient
+boosted tree model (LightGBM).
 \todo{SUPPLEMENT: The features are taken from each of the four sequences, from the original image and from Laplacian
 of Gaussian and wavelet filtered versions of it. The tree model weights the two classes equally. It tunes the model's
 settings over 400 trials of a Bayesian search (Optuna), each trial scored by fivefold cross validation grouped by
@@ -576,39 +556,27 @@ folds of at least 30 scans. Our inner folds held 13 to 16 scans, so the features
 alone. We left the code unchanged.}
 \todo{SUPPLEMENT: extraction settings, the first re-implementation (sensitivity analysis) and the run with the
 authors' patient-level label (exploratory).}
-The authors' code labels every scan of a patient who ever progressed as progression. We kept PRISM's label, so the comparison is between two methods on one task and does not replicate the
-published estimate. The plan, committed before the run, stated that if the pipeline did not rank below PRISM's imaging
-model, we would withdraw the claim that the imaging model ranks scans better.
+The authors' code labels every scan of a patient who ever progressed as progression. We kept PRISM's label, so the
+comparison is between two methods on one task and does not replicate the published estimate. The plan, fixed before
+the run, required the pipeline to rank below the imaging model for that comparison to be reported as a difference.
 
-% Sources: MASK_SENSITIVITY_PLAN.md; METHODS_RESULTS.md E5; CHRISTODOULOU_BRATS_MASKS_PLAN.md (with deviations);
-% SEGMENTER_STAGE_PLAN.md; SEGMENTER_STAGE.md; SEGMENTER_BRATS24_PLAN.md.
-\paragraph*{Segmentation comparison.} In three planned analyses, we replaced the supplied masks with a segmentation
-network's masks and measured how much PRISM's results change.
-First, at MU we replaced every supplied mask with the Swin UNETR label map, kept the supplied cavity, and refitted the
-imaging, combined and time-and-enhancement models in the same folds. The published radiomics pipeline was run on the
-same label maps, with the authors' tumour region (every labelled voxel) and nothing else changed. Second, we ran PRISM
-from Swin UNETR alone at all three centres, with its 22 measurements. We refitted the
-imaging, reduced combined and time-and-enhancement models on MU and applied them without retraining at LUMIERE and
-UCSF-ALPTDG. This plan was committed before any segmenter-derived number was compared with a label at LUMIERE or
-UCSF-ALPTDG. Third, we repeated the second analysis with the BraTS 2024 model.
-
-Each analysis compares every score with its value on the supplied masks by the paired AUC difference, under the
-rules in Table~\ref{tab:2}. In the second and third analyses a segmenter may raise a score but not lower it.
+\paragraph*{Segmentation comparison.} Three planned analyses replaced the supplied masks with a segmenter's and
+refitted the models in the same folds: Swin UNETR at MU, with the supplied cavity kept; Swin UNETR alone at all three
+centres (22 measurements), fitted on MU and applied without retraining; and the BraTS 2024 model in the same way. The
+published pipeline was also run on the Swin UNETR masks at MU. Each score is compared with its value on the supplied
+masks by the paired difference in AUC, under the rules in Table~\ref{tab:2}.
 \todo{SUPPLEMENT: The first analysis required every paired CI to include zero. The second and third required every
 paired CI to include zero or lie above it, so that a segmenter may raise a score but not lower it. All three required
 the combined model's gain over the time-and-enhancement model to be read the same way under both mask sets, at MU in
 the first analysis and at MU and LUMIERE in the others. The published pipeline also had to rank below PRISM's imaging
-model on the Swin UNETR masks, or the comparison would be limited to the supplied masks.} We also report the Dice overlap of each segmenter
-with the supplied masks (0 for disjoint outlines, 1 for identical ones), and the median fold change in enhancing volume
-between consecutive scans at most 30 days apart at MU and LUMIERE. Before the run we
-expected one network applied to every scan to be at least as repeatable as the supplied masks.
+model on the Swin UNETR masks, or the comparison would be limited to the supplied masks.}
+Agreement with the supplied masks is measured by the Dice overlap, and the noise of the enhancing volume by its median
+fold change between consecutive scans at most 30 days apart, at MU and LUMIERE.
 
-% Sources: NUMBERS.md sections 6, 9, 13, 14; METHODS_PLAN.md; CLINICIAN_BASELINE_PLAN.md; REVIEW_ANALYSES_PLAN.md.
-\paragraph*{Tests fixed in advance.} Table~\ref{tab:2} lists each planned test, the rule fixed before it was run and
-the outcome, including the two tests that passed only after a revision. The primary results are the external AUCs,
-the gain over the time-and-enhancement model and the comparison with the published radiomics pipeline. The other
-tests each answer a separate question with its own rule, and we made no correction for multiple testing. Analyses that
-were not fixed in advance are marked exploratory where they appear.
+\paragraph*{Tests fixed in advance.} Table~\ref{tab:2} lists each planned test, its rule and its outcome. The primary
+results are the external AUCs, the gain over the time-and-enhancement model and the comparison with the published
+pipeline. The other tests answer separate questions, each with its own rule, and no correction was made for multiple
+testing. Analyses not fixed in advance are marked exploratory.
 
 % Sources: NUMBERS.md section 9; METHODS_RESULTS.md; CHRISTODOULOU_REPLICATION.md; SEGMENTER_STAGE.md.
 \begin{table}[!htbp]
@@ -650,21 +618,19 @@ model at UCSF (0.70) did not meet the coverage rule.
 \end{threeparttable}
 \end{table}
 
-% Sources: NUMBERS.md 2.3; SYSTEM_RESULTS.md; METHODS_RESULTS.md (bootstrap seeds, E6a); prism/analyses/detection.py
-% (bootstrap, ci); ref vancalster2019.
-\paragraph*{Statistics.} Every AUC carries a 95\% confidence interval (CI) from a bootstrap of patients. Each of 1,000
-samples draws patients with replacement and keeps all their scans, so the CI reflects the number of patients, not the
-larger number of scans. The CI is the 2.5th to 97.5th percentile of the AUC over the samples. The bootstrap resamples the held-out predictions without refitting the models, so the CI shows the uncertainty
-from the patients evaluated, not from model fitting. At MU each sample averages the AUC over the five repeats of cross
-validation, as the point estimate does. Analyses added later used 2,000 samples. \todo{SUPPLEMENT: The analyses with
+\paragraph*{Statistics.} Every AUC has a 95\% confidence interval (CI) from 1,000 bootstrap samples of patients
+(2,000 in later analyses). Each sample draws patients with replacement, keeps all their scans, and resamples the
+held-out predictions without refitting the models. At MU each sample averages the AUC over the five repeats of cross
+validation. Differences between scores are computed within the same samples. A difference whose CI lies above zero
+counts as a gain, and one whose CI includes zero as no clear difference. No P values are reported. Calibration is
+summarised by the calibration intercept and slope \citep{vancalster2019}.
+\todo{SUPPLEMENT: The analyses with
 2,000 samples are the time-and-enhancement model, the AUC split, the group-conditional sets, the segmentation
-comparison, and the analyses of calibration, of all scans before progression and of unknown marker status.} A
-difference between two scores is computed within the same samples, so variation common to both scores cancels. We
-report no P values. A difference whose CI lies above zero counts as a gain, and one whose CI includes zero counts as
-no clear difference, which does not show that the scores are equal. Calibration, the match between predicted
-probabilities and observed rates, is summarised by the calibration intercept (above 0 when the score predicts too low
-on average) and slope (below 1 when predictions are too extreme) \citep{vancalster2019}. \todo{SUPPLEMENT: The slope is
+comparison, and the analyses of calibration, of all scans before progression and of unknown marker status.}
+\todo{SUPPLEMENT: The slope is
 above 1 when the predictions are too compressed.}
+\todo{SUPPLEMENT: The calibration intercept is above 0 when the score predicts too low on average, and the slope below
+1 when the predictions are too extreme.}
 
 \section{Results}\label{sec:3}
 
