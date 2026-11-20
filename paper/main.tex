@@ -532,7 +532,7 @@ Published radiomics pipeline below the imaging model on MU folds & Otherwise the
 MU results unchanged with Swin UNETR masks (supplied cavity kept) & Every paired CI includes 0, time-and-enhancement reading unchanged & \textbf{No} for the imaging model's AUC. \textbf{Yes} for the combined model, the time-and-enhancement model and the reading & \ref{sec:3.3} \\
 Published radiomics pipeline below the imaging model on the Swin UNETR masks & Otherwise the claim is limited to the supplied masks & \textbf{Yes} & \ref{sec:3.1} \\
 Results at three centres unchanged with PRISM's Swin UNETR stage & Every paired CI includes 0 or lies above it, gain reading unchanged at MU and LUMIERE & \textbf{No} for the MU imaging model. \textbf{Yes} for the other eight scores and the reading & \ref{sec:3.3} \\
-Results at three centres unchanged with the BraTS 2024 stage & As for Swin UNETR & \todo{S4 PENDING} & \ref{sec:3.3} \\
+Results at three centres unchanged with the BraTS 2024 stage & As for Swin UNETR & \textbf{No} for the MU time-and-enhancement model, $-$0.02 ($-$0.04 to $-$0.003), and the LUMIERE gain reading. \textbf{Yes} for the other eight scores & \ref{sec:3.3} \\
 Image measurements and schedule inputs add to the clinical-history model on MU & Gain $\geq$ 0.03, CI above 0 & \textbf{No}. $+$0.02 ($-$0.03 to $+$0.06) & \ref{sec:3.2} \\
 MU AUCs unchanged with all scans before progression as negatives & Each changes by $<$ 0.05, time-and-enhancement reading unchanged & \textbf{No} for the imaging model, $-$0.054. \textbf{Yes} for the others and the reading & \ref{sec:3.1} \\
 Unknown IDH and MGMT status as its own category & Every paired CI includes 0 & \textbf{Yes} & \ref{sec:2.2} \\
@@ -682,15 +682,17 @@ interval lay below zero, so by the planned rule the segmentation stage did not r
 full. Keeping the supplied cavity gave the same fall, so the loss does not come from the missing cavity. The reading of the combined model against the
 time-and-enhancement model was the same under both mask sets at MU and LUMIERE, with no clear gain (Supplementary Section~S4).
 
-% Sources: SEGMENTER_BRATS24_PLAN.md (S4 running 2026-11-20); results to come in docs/results/SEGMENTER_BRATS24.md.
-\todo{S4 PENDING: With the BraTS 2024 post-treatment model, which also outlines the resection cavity, the median
-cavity Dice against the supplied masks was \_\_ at MU-Glioma-Post and \_\_ at UCSF-ALPTDG (other Dice in
-Table~\ref{tab:seg}). The imaging model's AUC at MU changed by \_\_ (\_\_ to \_\_), and the combined and
-time-and-enhancement models by at most \_\_ at every centre. The MU imaging loss seen with Swin UNETR [closed, so it
-came from outlining post-treatment scans with a network trained on scans before surgery | narrowed to \_\_ | persisted,
-so the MU imaging result depends on the supplied masks whichever public network outlines the tumour]. By the planned
-rule the BraTS 2024 stage [did | did not] reproduce the supplied-mask results, and the reading of the combined model
-against the time-and-enhancement model was [the same | different] at MU and LUMIERE.}
+% Sources: SEGMENTER_BRATS24.md (P1-P4, exploratory 22-input arm; commit 24059e9).
+With the BraTS 2024 post-treatment model, which also outlines the resection cavity, the median cavity Dice against
+the supplied masks was 0.92 at MU-Glioma-Post and 0.93 at UCSF-ALPTDG (other Dice in Table~\ref{tab:seg}). The MU
+imaging model changed by $-$0.03 ($-$0.07 to $+$0.02), so the loss seen with Swin UNETR narrowed and its interval now
+includes zero. By the planned rule the stage did not reproduce the supplied-mask results: the MU time-and-enhancement
+model lost 0.02 ($-$0.04 to $-$0.003), and at LUMIERE the same model rose by 0.07 with the BraTS 2024 enhancing volume,
+so the combined model fell below it there ($-$0.06, $-$0.12 to $-$0.002). At LUMIERE, whose supplied masks are
+automatic and follow a different label convention, agreement was lower (enhancing tumour Dice 0.64), and the enhancing
+volume changed far more between scans at most 30 days apart (median factor 14.4 against 2.6 with the supplied masks).
+Without the five cavity measurements, PRISM from the BraTS 2024 outlines matched the supplied-mask results (MU imaging
+0.71, LUMIERE combined 0.79; exploratory, Supplementary Section~S4).
 
 
 % Sources: SEGMENTER_STAGE.md P1 and P2 (s1_p1.csv, s1_p2_dice.csv); SEGMENTER_BRATS24_PLAN.md.
@@ -701,7 +703,7 @@ segmenter's enhancing tumour (ET) and whole tumour (WT) against the supplied mas
 Dice, and the paired AUC difference of each score, segmenter minus supplied masks, with 95\% CIs from 2,000
 bootstrap samples of patients. The combined model is the reduced combined model at every centre. Swin UNETR supplies
 22 measurements (no cavity), the BraTS 2024 model all 27. At LUMIERE the supplied masks have no separate cavity, and
-at UCSF-ALPTDG the time-and-enhancement model uses the approximated window.}
+at UCSF-ALPTDG the time-and-enhancement model uses the approximated window. BraTS 2024 Dice is over the scans it was run on (every scan of the evaluated patients).}
 \label{tab:seg}
 \footnotesize
 \zebrarows
@@ -714,10 +716,10 @@ MU-Glioma-Post & 0.80 [0.49--0.91] & 0.85 [0.74--0.93] & $-$0.08 ($-$0.15 to $-$
 LUMIERE & 0.74 [0.28--0.92] & 0.90 [0.79--0.95] & $+$0.00 ($-$0.09 to $+$0.09) & $-$0.02 ($-$0.09 to $+$0.04) & $+$0.04 ($+$0.02 to $+$0.08) \\
 UCSF-ALPTDG & 0.73 [0.00--0.88] & 0.78 [0.59--0.86] & $+$0.09 ($-$0.01 to $+$0.20) & $-$0.04 ($-$0.12 to $+$0.04) & $+$0.01 ($-$0.02 to $+$0.05) \\
 \addlinespace
-\multicolumn{6}{@{}l}{\textit{BraTS 2024 post-treatment model} \todo{S4 PENDING: cavity Dice at MU and UCSF in the text}} \\
-MU-Glioma-Post & \todo{S4} & \todo{S4} & \todo{S4} & \todo{S4} & \todo{S4} \\
-LUMIERE & \todo{S4} & \todo{S4} & \todo{S4} & \todo{S4} & \todo{S4} \\
-UCSF-ALPTDG & \todo{S4} & \todo{S4} & \todo{S4} & \todo{S4} & \todo{S4} \\
+\multicolumn{6}{@{}l}{\textit{BraTS 2024 post-treatment model}} \\
+MU-Glioma-Post & 0.94 [0.82--0.97] & 0.97 [0.94--0.98] & $-$0.03 ($-$0.07 to $+$0.02) & $+$0.02 ($-$0.02 to $+$0.05) & $-$0.02 ($-$0.04 to $-$0.003) \\
+LUMIERE & 0.64 [0.05--0.92] & 0.82 [0.67--0.91] & $+$0.01 ($-$0.06 to $+$0.09) & $-$0.03 ($-$0.09 to $+$0.04) & $+$0.07 ($+$0.03 to $+$0.12) \\
+UCSF-ALPTDG & 0.91 [0.85--0.94] & 0.92 [0.90--0.95] & $+$0.08 ($+$0.01 to $+$0.15) & $-$0.06 ($-$0.15 to $+$0.01) & $+$0.01 ($-$0.00 to $+$0.03) \\
 \bottomrule
 \end{tabularx}
 \end{table}
@@ -889,8 +891,8 @@ The combined score kept its ranking when Swin UNETR outlined the tumour, and the
 volume, which ranks scans similarly whichever network outlines it. The imaging model also uses measurements of shape,
 intensity and change that depend on where the outline falls. Outlines of the same glioma differ between experts
 \citep{hoebel2024}, and scans after treatment are harder to segment than scans before surgery \citep{deverdier2024},
-so an image measurement depends on its segmenter as well as on the tumour. \todo{S4 PENDING: one sentence on
-whether the post-treatment BraTS 2024 model narrows the MU imaging loss, written to match Section~\ref{sec:3.3}.}
+so an image measurement depends on its segmenter as well as on the tumour. With the post-treatment BraTS 2024 model the MU imaging loss narrowed to 0.03, with an interval that includes zero
+(Section~\ref{sec:3.3}).
 
 % Sources: Section 2.3; refs beaulieujones2021, kallus2019, janes2008.
 The comparison with the time-and-enhancement model \citep{beaulieujones2021} and the split of the AUC by time window

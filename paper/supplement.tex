@@ -191,9 +191,12 @@ over the time-and-enhancement model at LUMIERE moved from $+$0.04 to $-$0.03. Th
 time-and-enhancement model itself rose with Swin UNETR, by 0.04 (0.02 to 0.08). The reading, no clear gain, was the
 same under both mask sets (main Section 3.3).
 
-\textbf{BraTS 2024 post-treatment model.} \flag{[PENDING S4: between MU scans at most 30 days apart the enhancing
-volume changed by a median factor of \_\_ with the BraTS 2024 model. Against Swin UNETR directly, the imaging model
-differed by \_\_ (\_\_ to \_\_) at MU.]}
+\textbf{BraTS 2024 post-treatment model.} Between scans at most 30 days apart, the BraTS 2024 enhancing volume changed by a median factor of 2.10
+(1.29--6.17) at MU-Glioma-Post, against 2.21 with the supplied masks (14 pairs), and by 14.4 (5.2--39.5) at LUMIERE,
+against 2.60 (15 pairs). Against Swin UNETR directly, its imaging model differed by $+$0.05 ($-$0.01 to $+$0.11) at
+MU-Glioma-Post. Without the five cavity measurements (exploratory), the BraTS 2024 outlines gave an MU imaging AUC of
+0.71 and a LUMIERE reduced combined AUC of 0.79, against 0.71 and 0.77 with the supplied masks; dropping the cavity
+measurements raised the imaging model by 0.03 at MU and LUMIERE.
 
 \FloatBarrier
 \section{Reproducibility}\label{sec:S16}
