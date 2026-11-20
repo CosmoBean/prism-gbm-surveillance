@@ -41,7 +41,12 @@ from prism.report import seg_figure as SEG  # noqa: E402
 from prism.report.facts_v3_2 import check_v3_2, facts_v3_2  # noqa: E402
 from prism.report.sections_v3 import LIMITATIONS_V3_1  # noqa: E402
 
-RUN = REPO / "outputs" / "results" / "analyses" / "report_v3_2"
+from prism.config import MASK_SUFFIX  # noqa: E402
+
+# PRISM_MASKS=brats24_22: the primary pipeline (docs/results/SEGMENTER_SWITCH.md); reports and outlines from PRISM's
+# segmenter (BraTS24 maps). Default: the released-mask reference run.
+RUN = REPO / "outputs" / "results" / "analyses" / f"report_v3_2{MASK_SUFFIX}"
+SEG_MAPS = REPO / "outputs" / "features" / "seg_brats24" / "mu" if MASK_SUFFIX else None
 RECORD = "mu|grade4|PatientID_0014_Timepoint_6"
 PREVIOUS = "PatientID_0014_Timepoint_5"
 MONO = "DejaVu Sans Mono"
@@ -108,6 +113,13 @@ def slices():
     slice if the brains do not overlap), cropped to the brain."""
     cur = SEG.load_scan("mu", RECORD.split("|")[-1])
     prev = SEG.load_scan("mu", PREVIOUS)
+    if SEG_MAPS is not None:                                   # outline PRISM's segmenter, not the released mask
+        import nibabel as nib
+        for scan, sid in ((cur, RECORD.split("|")[-1]), (prev, PREVIOUS)):
+            pid, tp = sid.split("_Timepoint_")
+            lab = np.rint(SEG._canon(nib.load(str(SEG_MAPS / pid / f"Timepoint_{tp}.nii.gz")))).astype(np.int16)
+            scan.comp.clear()
+            scan.comp.update(SEG._comp(lab, "mu"))
     k, rule, _ = SEG.choose_slice(cur.comp, cur.brain)
     coreg = prev.t1c.shape == cur.t1c.shape and SEG.dice(prev.brain, cur.brain) >= SEG.COREG_DICE
     kp = k if coreg else SEG.choose_slice(prev.comp, prev.brain)[0]

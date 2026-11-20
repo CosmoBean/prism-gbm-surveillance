@@ -125,7 +125,8 @@ def _seg_table(cohort: str) -> pd.DataFrame:
 
 
 SEG_SOURCE = "PRISM segmenter (BraTS24_1 maps: ET, SNFH, NETC, RC); volumes in cc"
-SEG_IMAGES = "segmenter inputs (22 cavity-free measurements of the BraTS24_1 maps; SEGMENTER_SWITCH.md)"
+# Names start with the released-mask model keys so facts_v3.model_key maps them to the same "based on" text.
+SEG_IMAGES = "I_pure (PRISM's segmenter: the 22 cavity-free measurements of the BraTS24_1 maps; SEGMENTER_SWITCH.md)"
 
 
 def mu_job(job):
@@ -302,7 +303,7 @@ def lumiere_cohort_seg():
             "patient_id": L.patient_id.to_numpy(), "y": L.label_det.to_numpy(float), "S": S, "sets": sets, "ood": ood,
             "card_phase": np.array(["unknown"] * len(L)), "enh": enh, "comp_phase": np.array(["unknown"] * len(L)),
             "own": "lumiere", "eval": {"all": np.ones(len(L), bool)}, "median_set": np.ones(len(L), bool),
-            "meas": meas, "image_model": np.array(["segmenter inputs (22)"] * len(L)),
+            "meas": meas, "image_model": np.array([SEG_IMAGES] * len(L)),
             "check_t_img_all": S["p_images"][0], "early_flag": L.early_post_rt.to_numpy()}
 
 
@@ -453,14 +454,14 @@ def provenance(c, i, r=0):
                            "images": SEG_IMAGES if SEG else
                            "I_pure (volumes, morphology / relative intensity, log ratios to the previous "
                            "scan, ET / lesion ratio to the whole-history minimum)",
-                           "combined": "B1 + segmenter inputs (22)" if SEG else "B1 + I_pure"},
+                           "combined": "B1 + I_pure (PRISM's segmenter, 22 inputs)" if SEG else "B1 + I_pure"},
                 "conformal": f"patient split 70 / 30 inside the outer training fold, seed {10 * r + int(c['fold'][r, i])};"
                              " pathway refitted on the 70%", "population_model": c["pop"]}
     mid = {"lumiere": {"timeline": "Tbase@grade4", "images": str(c["image_model"][i]) if "image_model" in c else "",
                        "combined": "T@grade4"},
            "ucsf": {"timeline": "A-Tbase@grade4", "images": "A-Ipure@grade4", "combined": "A-T@grade4"}}[c["cohort"]]
     if SEG:
-        mid = {**mid, "images": SEG_IMAGES, "combined": "T_BASE + has_prev + log days from prev + segmenter inputs (22)"}
+        mid = {**mid, "images": SEG_IMAGES, "combined": mid["combined"] + " (PRISM's segmenter, 22 inputs)"}
     return {"scores": "locked MU grade-4 model (fitted once on the MU grade-4 detection training rows: positives + "
                       "primary negatives; c3.BASE_PRE + verified ridge, seed 0), applied once; no refit",
             "models": mid, "conformal": "one MU-calibrated model per pathway (MU patient split 70 / 30, seed 0), "

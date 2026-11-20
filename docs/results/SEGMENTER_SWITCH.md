@@ -47,3 +47,11 @@ Recorded before any rerun.
   - The five frozen files (facts and prompts v3.1/v3.2, checker) were checked to have the same git blob hashes as
     the original freeze of 2026-11-13.
   - That original `FROZEN_hashes.txt` was copied into `report_v3_2_brats24_22/` instead of writing a new one.
+- **2026-11-20, model descriptions in the switched records.** In segmenter mode the records described the models
+  with new names that the report facts did not recognise.
+  - The combined model was described with the clinical-history text, and the imaging model with a non-standard text.
+  - The checker passed those reports because they matched their records.
+  - Fix: the switched model names now start with the released-mask model keys, so they map to the same "based on"
+    texts (`system.py`).
+  - Records were rebuilt and the reports regenerated. The superseded run is kept in
+    `report_v3_2_brats24_22/_superseded_based_on_bug/`.
