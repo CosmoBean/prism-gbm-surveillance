@@ -191,12 +191,16 @@ over the time-and-enhancement model at LUMIERE moved from $+$0.04 to $-$0.03. Th
 time-and-enhancement model itself rose with Swin UNETR, by 0.04 (0.02 to 0.08). The reading, no clear gain, was the
 same under both mask sets (main Section 3.3).
 
-\textbf{BraTS 2024 post-treatment model.} Between scans at most 30 days apart, the BraTS 2024 enhancing volume changed by a median factor of 2.10
-(1.29--6.17) at MU-Glioma-Post, against 2.21 with the supplied masks (14 pairs), and by 14.4 (5.2--39.5) at LUMIERE,
-against 2.60 (15 pairs). Against Swin UNETR directly, its imaging model differed by $+$0.05 ($-$0.01 to $+$0.11) at
-MU-Glioma-Post. Without the five cavity measurements (exploratory), the BraTS 2024 outlines gave an MU imaging AUC of
-0.71 and a LUMIERE reduced combined AUC of 0.79, against 0.71 and 0.77 with the supplied masks; dropping the cavity
-measurements raised the imaging model by 0.03 at MU and LUMIERE.
+\textbf{BraTS 2024 post-treatment model.} Between scans at most 30 days apart, the BraTS 2024 enhancing volume
+changed by a median factor of 2.10 (1.29--6.17) at MU-Glioma-Post (14 pairs) and 14.4 (5.2--39.5) at LUMIERE (15
+pairs). With the supplied masks, the factors were 2.21 and 2.60.
+
+At MU-Glioma-Post, the imaging model on the BraTS 2024 outlines differed from the imaging model on the Swin UNETR
+outlines by $+$0.05 ($-$0.01 to $+$0.11).
+
+Without the five cavity measurements (exploratory), the BraTS 2024 outlines gave an MU imaging AUC of 0.71 and a
+LUMIERE reduced combined AUC of 0.79. The supplied masks gave 0.71 and 0.77. Dropping the cavity measurements raised
+the imaging model's AUC by 0.03 at MU and at LUMIERE.
 
 \FloatBarrier
 \section{Reproducibility}\label{sec:S16}
@@ -895,16 +899,15 @@ and every set holds both outcomes. When $\hat q < 0.5$, a score between $\hat q$
 The prompt asks for sentences in this order: the scan's timing; the volumes, called indicative; their change; each
 model's score and what it is based on; whether the two models agree; the combined score and what a score means; its
 80\% conformal set; the card's tier; and one sentence for each raised flag. Flags are raised for nearly every scan, so
-the report presents the agreement and the card as descriptions of the data that support the score, and not as
-warnings.
+the report presents the agreement and the card as descriptions of what the score rests on rather than as warnings.
 
 The first prompt asked for the rater's three-month mark at LUMIERE in words that contain the number 3, but the record
 entry held only ``yes'' or ``no''. The 3 was therefore in no cited entry, and the checker rejected every LUMIERE
 report. We changed this entry to hold the full sentence with its number, wrote every number word in the record as
 digits, made each line of the prompt appear only when its entry is in the record, and removed the mention of RANO.
 
-We also gave the same prompt, unchanged, to six other local open-weight models of 2 to 35 billion parameters (main
-Figure~8). Of these, only Gemma-4 31B also had every report pass. The reports regenerated with this paper's model
+Of six other local open-weight models of 2 to 35 billion parameters given the same prompt unchanged (main
+Figure~8), only Gemma-4 31B also had every report pass. The reports regenerated with this paper's model
 names are in Supplementary Section~S9.
 
 \subsection{Checks}\label{sec:S29.5}
@@ -914,9 +917,9 @@ report that leaves out a raised flag, any of the three scores, the enhancing vol
 few cases or none. It also rejects a report that calls an input out of range when no flag says so, misstates a
 conformal set or the agreement, or quotes a performance figure that is not on the card.
 
-The checker accepts a number that equals a number in any cited entry, and it does not read direction words. It
-therefore accepts a sentence that gives the FLAIR volume as the enhancing volume while citing both entries, or that
-writes ``larger'' where the record says ``smaller''. The verifier (Supplementary Section~S10.3) adds rules for both
+Because the checker accepts a number that equals a number in any cited entry and does not read direction words
+(main Section 2.2), it accepts a sentence that gives the FLAIR volume as the enhancing volume while citing both
+entries, or that writes ``larger'' where the record says ``smaller''. The verifier (Supplementary Section~S10.3) adds rules for both
 cases.
 
 \FloatBarrier
@@ -932,7 +935,7 @@ exploratory.
 
 \subsection{Time-and-enhancement model and timing alone}\label{sec:S30.2}
 
-On MU the time window enters the time-and-enhancement model as indicators, with scans later than 12 weeks after
+At MU the time window enters the time-and-enhancement model as indicators, with scans later than 12 weeks after
 radiotherapy as the reference. Besides the days since the end of radiotherapy and the visit number used directly,
 timing alone includes a ridge model on the days since the end of radiotherapy, the visit number, the days since
 diagnosis and the 12-week flag. Externally, where these dates are missing, the unfitted timing score is the days
@@ -973,11 +976,11 @@ re-implementation from the published description used original-image features on
 AUC and ran 40 search trials. It also reached 0.58 (0.50 to 0.66) in the intended use, and a logistic regression on
 its 256 features reached 0.64 (exploratory).
 
-With the authors' patient-level label, which marks every scan of a patient who ever progressed as progression, the
-earlier re-implementation was run once more (exploratory). Under repeated cross validation it reached 0.44 (0.38 to
+We also ran the earlier re-implementation with the authors' patient-level label, which marks every scan of a patient
+who ever progressed as progression (exploratory). Under repeated cross validation it reached 0.44 (0.38 to
 0.50) in patients with glioblastoma, below age, sex, IDH and MGMT status alone (0.57). With patients of all diagnoses
 labelled as the authors' code labels them, it reached 0.73 (0.66 to 0.78), against 0.81 (0.74 to 0.87) for the same
-four clinical inputs, and 0.75 on average over 100 held-out sets of 30 patients.
+four clinical inputs. Over 100 held-out sets of 30 patients, it averaged 0.75.
 
 \subsection{Timing alone}\label{sec:S31.2}
 
@@ -987,10 +990,11 @@ At MU the visit number alone ranked scans at 0.78 (exploratory).
 
 Four changes to the imaging model were tested at MU (exploratory; Table~S17). An imaging model fitted with a separate
 intercept for each time window, so that only differences within a window inform the image terms, kept the AUC within
-a window at MU and lowered the AUC across windows. A wider penalty grid changed the AUC within a window by $+$0.004.
+a window at MU and lowered the AUC across windows by 0.06 ($-$0.12 to $-$0.01). A wider penalty grid changed the AUC within a window by $+$0.004.
 Letting the enhancing volume carry a different weight in the first 12 weeks after radiotherapy changed it by
 $-$0.01. A combined model that adds the image and clinical terms to the time-and-enhancement model as a fixed offset
-ranked scans as the combined model did at all three centres. The AUC within a window of about 0.68 is what these
+ranked scans as the combined model did at all three centres; at LUMIERE its overall AUC differed by $-$0.02 ($-$0.07
+to $+$0.02). The AUC within a window of about 0.68 is what these
 measurements carry once timing is held fixed, in a cohort of 62 scans with progression.
 
 \begin{table}[!htbp]
@@ -1013,9 +1017,6 @@ Offset combined model & $-$0.04 ($-$0.09 to $+$0.01) & $-$0.01 ($-$0.05 to $+$0.
 \bottomrule
 \end{tabularx}
 \end{table}
-
-With a separate intercept per window, the AUC across windows at MU fell by 0.06 ($-$0.12 to $-$0.01). The offset
-combined model differed from the combined model by $-$0.02 ($-$0.07 to $+$0.02) in overall AUC at LUMIERE.
 
 \FloatBarrier
 \bibliography{refs}
