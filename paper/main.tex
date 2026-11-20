@@ -122,10 +122,10 @@ windows \citep{kallus2019}. This shows what each score adds to what the clinicia
 \item We fitted the models once, on 181 scans from 92 patients in MU-Glioma-Post, and applied them without retraining
 to 178 scans from 79 patients in LUMIERE and 69 scans from 69 patients in UCSF-ALPTDG. We ran the evaluation both from
 the masks supplied with each dataset and from PRISM's own segmentation.
-\item An open-weight language model, Qwen3.8-27B served with vLLM \citep{kwon2023}, writes the report from a record
-that holds each value with its source. A deterministic checker and a verifier test every number and direction in the
-report against that record. We tested the checks with 24 kinds of planted error, and every report written for a
-held-out scan passed them.
+\item PRISM generates the report with an open-weight language model, Qwen3.8-27B served with vLLM \citep{kwon2023},
+from a record that holds each value with its source. Two deterministic programs, a checker and a verifier, then test
+every number and direction in the report against that record. We tested them with 24 kinds of planted error, and
+every report written for a held-out scan passed them.
 \end{enumerate}
 
 Section~\ref{sec:2} describes the cohorts, PRISM's stages and the evaluation. Section~\ref{sec:3} reports the results
