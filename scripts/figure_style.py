@@ -28,7 +28,7 @@ CLIN = "#9A9FA8"     # clinical data alone (reference)
 ET = "#4A5260"       # enhancing volume alone (reference)
 
 # Structure and text.
-NAVY = "#1F3A5F"     # the system: box outlines, arrows, emphasis
+NAVY = "#3A3F47"     # structure: box outlines, headings, emphasis (neutral slate; no blue, author 2026-11-20)
 INK = "#1E2430"      # primary text
 MUTED = "#5E6673"    # secondary text
 RULE = "#C9CED6"     # hairlines, separators, chance lines

@@ -132,9 +132,10 @@ def fig5(output: Path) -> None:
     ha = draw(None, F, claims, imgs, rule, where, 400.0)        # dry run: the height panel (a) needs
     draw(output, F, claims, imgs, rule, where, ha)
     fields_figure(output, claims)
+    ladder_figure(output)
 
 
-HB = 37.0                       # panel (b) height
+HB = 0.0                        # no panel (b): the checker ladder is its own figure (ladder_figure)
 
 
 def draw(output, F, claims, imgs, rule, where, HA) -> float:
@@ -155,7 +156,8 @@ def draw(output, F, claims, imgs, rule, where, HA) -> float:
         text(6.0, y, s.upper(), size=HEAD, colour=st.NAVY, weight="bold")
         return y - line_h(HEAD) - 1.6
 
-    st.panel_header(fig, 0.998, "a", "A report PRISM wrote for a held-out scan (MU-Glioma-Post)")
+    fig.text(0.004, 0.998, "A report PRISM wrote for a held-out scan (MU-Glioma-Post)", fontsize=7, weight="bold",
+             ha="left", va="top", color=st.INK)
     top = H - 6.0
 
     # ---------------------------------------------------------------- header: scan, comparison, flags
@@ -343,32 +345,35 @@ def draw(output, F, claims, imgs, rule, where, HA) -> float:
     ax.add_patch(FancyBboxPatch((2.0, y), W - 4.0, top - y, boxstyle="round,pad=0,rounding_size=1.5",
                                 fc="none", ec=st.NAVY, lw=0.7, zorder=0))
 
-    # ================================================================ (b) model-size ladder
-    st.panel_header(fig, (HB - 0.5) / H, "b", "Reports passing the checker, of 406, by local language model")
-    ladder = [("Qwen 2B", 3.6, 21, False), ("Qwen 4B", 8.0, 306, False), ("Gemma E4B", 14.5, 117, False),
-              ("Qwen 9B", 16.8, 368, False), ("Qwen 27B (used)", 50.2, 406, True),
-              ("Gemma 31B", 57.9, 406, True), ("Qwen 35B-A3B", 64.7, 389, False)]
-    dark, light = st.NAVY, st.tint(st.NAVY, 0.72)
-    x_name, x_gib, b0, b1 = 40.0, 58.0, 64.0, 150.0
-    bx = lambda k: b0 + (b1 - b0) * k / 406
-    yb = HB - 6.0
-    text(x_name, yb, "Language model", size=NOTE, colour=st.MUTED, ha="right")
-    text(x_gib, yb, "Weights (GiB)", size=NOTE, colour=st.MUTED, ha="right")
-    text(b0, yb, "Reports passing the checker (of 406)", size=NOTE, colour=st.MUTED)
-    yb -= line_h(NOTE) + 0.8
-    rule_line(yb + 0.3, 10.0, b1 + 10.0)
-    row = 3.2
-    for i, (name, gib, k, ok) in enumerate(ladder):
-        cy = yb - 1.9 - i * row
-        ax.add_patch(plt.Rectangle((b0, cy - 1.15), bx(k) - b0, 2.3, fc=dark if ok else light, ec="none"))
-        text(x_name, cy, name, ha="right", va="center", weight="bold" if ok else "normal")
-        text(x_gib, cy, f"{gib:.1f}", ha="right", va="center", colour=st.MUTED)
-        text(bx(k) + 1.2, cy, f"{k}", va="center")
-    yl = yb - 1.9 - len(ladder) * row + 1.0
-    text(b0, yl, "Dark: at least 95% passing in every cohort. Same prompt for every model, no per-model tuning.",
-         size=NOTE, colour=st.MUTED)
     st.save(fig, output, "fig5_report")
     return HA
+
+
+def ladder_figure(output: Path) -> None:
+    """Reports passing the checker, of 406, by local language model (same prompt, no per-model tuning)."""
+    ladder = [("Qwen3.5 2B", 3.6, 21, False), ("Qwen3.5 4B", 8.0, 306, False), ("Gemma-4 E4B", 14.5, 117, False),
+              ("Qwen3.5 9B", 16.8, 368, False), ("Qwen3.8 27B (used)", 50.2, 406, True),
+              ("Gemma-4 31B", 57.9, 406, True), ("Qwen3.5 35B-A3B", 64.7, 389, False)]
+    fig = plt.figure(figsize=(st.WIDTH, 2.0))
+    ax = fig.add_axes([0.40, 0.20, 0.52, 0.68])
+    n = len(ladder)
+    for i, (name, gib, k, ok) in enumerate(ladder):
+        yv = n - 1 - i
+        ax.barh(yv, k, height=0.62, color=st.INK if ok else st.tint(st.INK, 0.72), lw=0)
+        ax.text(k + 5, yv, f"{k}", va="center", ha="left", fontsize=6.5, color=st.INK)
+        fig.text(0.385, 0.20 + 0.68 * (yv + 0.5) / n, f"{gib:.1f}", va="center", ha="right", fontsize=6.5,
+                 color=st.MUTED)
+    ax.set(xlim=(0, 406), ylim=(-0.5, n - 0.5), yticks=range(n), xticks=[0, 100, 200, 300, 406])
+    ax.set_yticklabels([x[0] for x in reversed(ladder)])
+    for lab, (_, _, _, ok) in zip(ax.get_yticklabels(), reversed(ladder)):
+        lab.set_weight("bold" if ok else "normal")
+    ax.tick_params(axis="y", length=0, pad=52)
+    ax.spines["left"].set_visible(False)
+    ax.set_xlabel("Reports passing the checker (of 406)", labelpad=2)
+    fig.text(0.385, 0.92, "Weights (GiB)", va="bottom", ha="right", fontsize=6.3, color=st.MUTED)
+    fig.text(0.40, 0.92, "Dark: at least 95% passing in every cohort. Same prompt for every model, no per-model "
+             "tuning.", va="bottom", ha="left", fontsize=6.3, color=st.MUTED)
+    st.save(fig, output, "fig_llm_checker")
 
 
 def fields_figure(output: Path, claims) -> None:

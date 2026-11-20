@@ -828,10 +828,10 @@ did not progress with the models disagreeing at one scan or more.}
 
 % Sources: REPORT_V3_1.md (S5--S7); REPORT_V3.md; NUMBERS.md 7 and 16 (R4).
 All 406 reports written by Qwen3.8-27B for patients not used to develop the prompt passed the checker (114 at MU, 162
-at LUMIERE and 130 at UCSF-ALPTDG). Because this pass rate was measured after the revision prompted by the LUMIERE
+at LUMIERE and 130 at UCSF-ALPTDG; Figure~\ref{fig:5} shows one). Because this pass rate was measured after the revision prompted by the LUMIERE
 failures, it is exploratory. All 220 reports in groups with few cases or none said so. When one field was changed in
 30 records, 28 reports followed the change, against a planned minimum of 27. Of six other local models given the same
-prompt, only Gemma-4 31B also had every report pass (Figure~\ref{fig:5}b). The reports for the 276 MU and LUMIERE
+prompt, only Gemma-4 31B also had every report pass (Figure~\ref{fig:llm}). The reports for the 276 MU and LUMIERE
 records were then generated again with the record fields and prompt renamed to this paper's model names and no other
 change. All passed the checker, and the verifier was tested on these reports (Supplementary Section~S9).
 
@@ -839,18 +839,26 @@ change. All passed the checker, and the verifier was tested on these reports (Su
 % and the language model's output for MU PatientID_0029 Timepoint 4 (report v3.2, accepted by the checker).
 \begin{figure}[!htbp]
 \centering
-\figslot{fig5_report.pdf}{0.92\textheight}{One report PRISM wrote for a held-out scan, and reports passing the check
-for seven local models.}
-\caption{\textbf{The report PRISM writes, and the check.} (a) The report for the progression scan of the patient in
-strip (a) of Figure~\ref{fig:cases}, written for a patient not used to develop the prompt and accepted by the checker.
-The page follows the order of the BT-RADS follow-up template: the scan's timing and the flags raised; the attached
-segmentation slices and the volumes; the two models' scores against their cohort medians, then the combined score, with their conformal sets; the
-reliability card; the language model's sentences verbatim; and the fixed limitations. The record fields each sentence cites are
-shown in Supplementary Figure S2. Every value comes from the scan's record. (b) Reports passing the planned checker, of 406, for seven
-local language models given the same prompt (Qwen3.5 2B, 4B and 9B, Gemma-4 E4B and 31B, Qwen3.8-27B used in PRISM,
-and Qwen3.5-35B-A3B). Dark bars show models for which at least 95\% passed in every cohort, and the model weight size is
-in the second column. BT-RADS denotes the Brain Tumor Reporting and Data System.}
+\figslot{fig5_report.pdf}{0.92\textheight}{One report PRISM wrote for a held-out scan.}
+\caption{\textbf{The report PRISM writes.} The report for the progression scan of the patient in strip (a) of
+Figure~\ref{fig:cases}, written for a patient not used to develop the prompt and accepted by the checker. The page
+follows the order of the BT-RADS follow-up template: the scan's timing and the flags raised; the attached
+segmentation slices and the volumes; the two models' scores against their cohort medians, then the combined score,
+with their conformal sets; the reliability card; the language model's sentences verbatim; and the fixed limitations.
+The record fields each sentence cites are shown in Supplementary Figure S2. Every value comes from the scan's record.
+BT-RADS denotes the Brain Tumor Reporting and Data System.}
 \label{fig:5}
+\end{figure}
+
+% Drawn by scripts/fig5_report.py (ladder_figure); counts from the language-model comparison (NUMBERS.md).
+\begin{figure}[!htbp]
+\centering
+\figslot{fig_llm_checker.pdf}{0.25\textheight}{Reports passing the checker for seven local language models.}
+\caption{\textbf{Reports passing the checker, by local language model.} Reports passing the planned checker, of 406,
+for seven local language models given the same prompt with no per-model tuning (Qwen3.5 2B, 4B and 9B, Gemma-4 E4B
+and 31B, Qwen3.8-27B used in PRISM, and Qwen3.5-35B-A3B). Dark bars show models for which at least 95\% passed in
+every cohort; the size of each model's weights is in the second column.}
+\label{fig:llm}
 \end{figure}
 
 % Sources: METHODS_RESULTS.md M3, its diagnostics and E3; Supplementary Section S10.
