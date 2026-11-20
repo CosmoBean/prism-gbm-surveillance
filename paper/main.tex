@@ -104,28 +104,29 @@ also run locally, and open-weight models run on site can label radiology reports
 their findings as well as closed models \citep{nowak2025}.
 
 We present PRISM (Progression Reading with Independent Scores and Measurements), a system for glioma follow-up MRI
-that runs on one local computer (Figure~\ref{fig:1}). PRISM outlines the tumour on each scan with a public
-segmentation network trained on BraTS data, either Swin UNETR \citep{hatamizadeh2022} or the first-placed BraTS 2024
-post-treatment model \citep{ferreira2024}, and computes 27 measurements of the tumour's volume, shape, intensity and
-change since earlier scans. Three ridge logistic regressions \citep{pedregosa2011} then score the scan: one from the
-image measurements, which never sees a date, one from the clinical history, and one from both. With each score, PRISM
-gives the set of outcomes it cannot rule out, built to contain the true outcome for 80\% of scans
-\citep{angelopoulos2023}. It also states whether the imaging and clinical-history scores agree and how the models
-performed on similar earlier scans.
-
-An open-weight language model, Qwen3.8-27B served with vLLM \citep{kwon2023}, writes the report from a record that
-holds each of these values with its source. In other recent systems, language-model agents read the clinical notes
-and assign a BT-RADS category \citep{jabal2026}. PRISM's language model makes no decision. It writes up the record, and
-a deterministic checker and a verifier test every number and direction in the report against that record. No patient
-data leave the computer.
-
-We fitted the models once, on 181 scans from 92 patients in MU-Glioma-Post, and applied them without retraining to
-178 scans from 79 patients in LUMIERE and 69 scans from 69 patients in UCSF-ALPTDG. To see what each score adds to what
-the clinician already knows, we compared it with a reference model of the time since radiotherapy and the enhancing
-tumour volume. We also split its AUC into pairs of scans taken in the same time window after radiotherapy and pairs
-taken in different windows \citep{kallus2019}. We ran the evaluation both from the masks supplied with each dataset
-and from PRISM's own segmentation, to see how the results depend on the outlines. Finally, we tested the report checks
-with 24 kinds of planted error, and every report written for a held-out scan passed them.
+that runs on one local computer (Figure~\ref{fig:1}). In other recent systems, language-model agents read the clinical
+notes and assign a BT-RADS category \citep{jabal2026}. PRISM's language model makes no decision: it writes up values
+computed elsewhere, so every sentence it writes can be checked. Our contributions are:
+\begin{enumerate}
+\item PRISM outlines the tumour on each scan with a public segmentation network trained on BraTS data, either Swin
+UNETR \citep{hatamizadeh2022} or the first-placed BraTS 2024 post-treatment model \citep{ferreira2024}. It computes 27
+measurements of the tumour's volume, shape, intensity and change since earlier scans. No patient data leave the
+computer.
+\item Three ridge logistic regressions \citep{pedregosa2011} score each scan: one from the image measurements, which
+never sees a date, one from the clinical history, and one from both. With each score, PRISM gives the set of outcomes
+it cannot rule out, built to contain the true outcome for 80\% of scans \citep{angelopoulos2023}. It also states
+whether the imaging and clinical-history scores agree and how the models performed on similar earlier scans.
+\item We compare each score with a reference model of the time since radiotherapy and the enhancing tumour volume, and
+split its AUC into pairs of scans taken in the same time window after radiotherapy and pairs taken in different
+windows \citep{kallus2019}. This shows what each score adds to what the clinician already knows.
+\item We fitted the models once, on 181 scans from 92 patients in MU-Glioma-Post, and applied them without retraining
+to 178 scans from 79 patients in LUMIERE and 69 scans from 69 patients in UCSF-ALPTDG. We ran the evaluation both from
+the masks supplied with each dataset and from PRISM's own segmentation.
+\item An open-weight language model, Qwen3.8-27B served with vLLM \citep{kwon2023}, writes the report from a record
+that holds each value with its source. A deterministic checker and a verifier test every number and direction in the
+report against that record. We tested the checks with 24 kinds of planted error, and every report written for a
+held-out scan passed them.
+\end{enumerate}
 
 Section~\ref{sec:2} describes the cohorts, PRISM's stages and the evaluation. Section~\ref{sec:3} reports the results
 at the three centres, what the scores rest on, the effect of segmentation, and the conformal sets and report checks.
