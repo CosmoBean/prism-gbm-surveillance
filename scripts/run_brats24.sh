@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # S4: BraTS24_1 label maps for the plan's scope (docs/results/SEGMENTER_BRATS24_PLAN.md), cohorts in turn on 4 GPUs.
+# LUMIERE runs in chunks of 36 scans (9 per GPU) so each finished chunk is kept if the allocation ends.
 # Resumable: rerun the script and finished scans are skipped.
 set -u
 cd "$(dirname "$0")/.."
@@ -8,9 +9,10 @@ export PYTHONPATH=. PRISM_SKIP_UCSF=0
 : "${PRISM_ENROOT_DATA:?set PRISM_ENROOT_DATA to the folder holding brats24_1_g0..g3}"
 : "${PRISM_BRATS24_WORK:?set PRISM_BRATS24_WORK to a node-local work folder}"
 export PRISM_ENROOT_DATA PRISM_BRATS24_WORK
-for c in ucsf mu lumiere; do
-  echo "== $c $(date)"
-  .venv/bin/python -m prism.features.reseg_brats24 --cohort $c --gpus 4 --tag full_$c \
-      --ids-file outputs/features/seg_brats24/ids_$c.txt --skip-done
-  echo "== $c exit $? $(date)"
-done
+run() {  # cohort tag ids-file
+  echo "== $1 $2 $(date)"
+  .venv/bin/python -m prism.features.reseg_brats24 --cohort $1 --gpus 4 --tag $2 --ids-file $3 --skip-done
+  echo "== $1 $2 exit $? $(date)"
+}
+for c in ucsf mu; do run $c full_$c outputs/features/seg_brats24/ids_$c.txt; done
+for f in outputs/features/seg_brats24/ids_lumiere_[0-9][0-9].txt; do run lumiere chunk_$(basename $f .txt) $f; done
