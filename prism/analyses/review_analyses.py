@@ -6,10 +6,6 @@ the reader baseline; E6b scans shortly before progression (primary-trained model
 E6c unknown IDH / MGMT as its own category (indicator per marker); E6d the reduced combined model (T) on MU.
 MU: 5x5 grouped CV, intended use, no refit in the bootstrap; LUMIERE: locked models. One 2,000-sample patient
 bootstrap per cohort, seed 20261117.
-Since 2026-11-19 (docs/results/ADOPT_AB.md) the imaging score is A (AUCs on its within-window score, calibration on
-its shown probability with the window intercept) and every combined model is B (offset combined model): the combined
-model, the combined model with unknown-status indicators, and the reduced combined model (E6d, offset = the reduced
-baseline fitted in the same fold), all from prism.analyses.system / stratified_offset.
 
     PRISM_SKIP_UCSF=1 PYTHONPATH=. .venv/bin/python -m prism.analyses.review_analyses [--workers 20] [--n-boot 2000]
     -> outputs/results/analyses/review_analyses/   (aggregate CSV only)
@@ -36,8 +32,8 @@ from prism.config import RESULTS
 OUT = RESULTS / "analyses" / "review_analyses"
 SEED = 20261117
 PW = S.PW
-MU_REF = {"timeline": 0.822, "images": 0.6688, "combined": 0.8137, "reader": 0.797}  # before adoption 0.709 / 0.821
-LUM_REF = {"combined": 0.7537}                                                       # before adoption 0.773
+MU_REF = {"timeline": 0.822, "images": 0.709, "combined": 0.821, "reader": 0.797}
+LUM_REF = {"combined": 0.773}
 CAL = ("timeline", "images", "combined", "reader")
 UNK = ["idh_unknown", "mgmt_unknown"]
 EPS = 1e-6
@@ -99,7 +95,7 @@ def stats(y, sets: dict, P: dict, cal_set: str):
             out[("auc", sname, k)] = float(np.mean(auc(y[m], P[k][:, m])))
     m = sets[cal_set][0]
     for k in CAL:
-        v = calib_mean(y[m], P.get(f"{k}_prob", P[k])[:, m])   # images: A's shown probability
+        v = calib_mean(y[m], P[k][:, m])
         for j, s in enumerate(("cal_intercept", "cal_slope", "brier", "brier_prevalence")):
             out[(s, cal_set, k)] = float(v[j])
     return out
@@ -174,7 +170,6 @@ def mu_all_designs():
 
 
 def mu_job(job):
-    from prism.analyses import stratified_offset as SO
     from prism.experiments import c3_radiomics as c3
     r, k = job
     threadpool_limits(1)
@@ -182,16 +177,7 @@ def mu_job(job):
     d, X = mu_all_designs()
     f = D.fold_ids(d, r)
     tr, te = np.where(f != k)[0], np.where(f == k)[0]
-    o = S.mu_predict("grade4", tr, te, r)
-    out = {p: o[p] for p in PW}
-    out["images_prob"] = o["images_prob"]
-    for p in ("reader", "timeline_unk"):
-        out[p] = c3.fit_predict(c3.BASELINES[0], d, X[p], {}, None, tr, te, seed=r)
-    Rb = X["reader"]
-    out["combined_unk"] = SO.fit_B(X["combined_unk"], Rb, d, tr, r)[0](X["combined_unk"].iloc[te], Rb.iloc[te])
-    T = X["reduced_combined"]
-    out["reduced_combined"] = SO.fit_B(T, T[S.BASE_LOCKED], d, tr, r)[0](T.iloc[te], T[S.BASE_LOCKED].iloc[te])
-    return r, te, out
+    return r, te, {p: c3.fit_predict(c3.BASELINES[0], d, Xa, {}, None, tr, te, seed=r) for p, Xa in X.items()}
 
 
 # ---------------------------------------------------------------- cohorts
@@ -200,7 +186,7 @@ def run_mu(workers, n_boot):
     n = len(d)
     with ProcessPoolExecutor(workers) as ex:
         res = list(ex.map(mu_job, [(r, k) for r in range(5) for k in range(5)]))
-    P = {p: np.full((5, n), np.nan) for p in res[0][2]}
+    P = {p: np.full((5, n), np.nan) for p in X}
     for r, te, pr in res:
         for p, v in pr.items():
             P[p][r, te] = v
@@ -254,13 +240,10 @@ def run_lumiere(workers, n_boot):
     LX = D.lumiere_detection()[1]
     cols = ["early_post_rt", "log_et_cc", "logratio_prev_et", "has_prev"]
     rows_ = np.arange(len(dm))
-    from prism.analyses import stratified_offset as SO
-    BL = S.BASE_LOCKED
     P = {p: c["S"][f"p_{p}"] for p in PW}
-    P["images_prob"] = c["S"]["prob_images"]
     P["reader"] = S._fit(XX["T"][cols], dm, rows_)(LX[cols])[None, :]
     # current coding reproduces the locked scores
-    assert np.allclose(SO.fit_B(XX["T"], XX["T"][BL], dm, rows_, 0)[0](LX, LX[BL]), P["combined"][0])
+    assert np.allclose(S._fit(XX["T"], dm, rows_)(LX), P["combined"][0])
     assert np.allclose(S._fit(XX["T"][D.T_BASE], dm, rows_)(LX), P["timeline"][0])
     # unknown as its own category
     dmo = demographics()
@@ -274,11 +257,11 @@ def run_lumiere(workers, n_boot):
     LXu.index = LX.index
     Tu = pd.concat([XX["T"], unknown_mu(dm)], axis=1)
     P["timeline_unk"] = S._fit(Tu[D.T_BASE + UNK], dm, rows_)(LXu)[None, :]
-    P["combined_unk"] = SO.fit_B(Tu, Tu[BL], dm, rows_, 0)[0](LXu, LXu[BL])[None, :]
+    P["combined_unk"] = S._fit(Tu, dm, rows_)(LXu)[None, :]
     for p, ref in LUM_REF.items():
         a = float(auc(y, P[p])[0])
         assert abs(a - ref) < 1e-3, (p, a)
-    sets = {"all": (np.ones(len(y), bool), [k for k in P if not k.endswith("_prob")])}
+    sets = {"all": (np.ones(len(y), bool), list(P))}
     est = stats(y, sets, P, "all")
     B = bootstrap(y, pid, sets, P, "all", n_boot, workers)
     rows = rows_for("lumiere", "E6a", est, B, [(s, "all", k) for k in CAL

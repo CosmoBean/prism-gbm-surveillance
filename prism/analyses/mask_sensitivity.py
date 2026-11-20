@@ -33,8 +33,7 @@ SETS = ("released", "brats21")
 SCORES = ("timeline", "images", "combined", "reader")
 GAINS = ("images", "combined")
 STAT = {"auc": 0, "a_within": 2, "a_across": 3}
-REF = {"timeline": 0.822, "images": 0.6688, "combined": 0.8137, "reader": 0.797}  # E4 on the released masks; since
-# 2026-11-19 images = A, combined = B (ADOPT_AB.md; before adoption 0.709 / 0.821), via clinician_baseline.mu_job
+REF = {"timeline": 0.822, "images": 0.709, "combined": 0.821, "reader": 0.797}  # M1 / E4 on the released masks
 
 
 def new_table():
