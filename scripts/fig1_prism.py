@@ -370,6 +370,46 @@ def unet_glyph(c: Canvas, x, y, colour, w=15.0, h=8.0):
               ls=(0, (1.6, 1.0)), zorder=3)
 
 
+def mednext_glyph(c: Canvas, x, y, colour, w=15.0, h=8.0):
+    """MedNeXt: the same U shape, each stage an inverted bottleneck (narrow, wide, narrow) with large kernels."""
+    hs = [1.0, 0.72, 0.48, 0.72, 1.0]
+    step = w / len(hs)
+    for i, f in enumerate(hs):
+        hh = h * f
+        col = st.tint(colour, 0.25 + 0.45 * (1 - f)) if i < 3 else st.tint(colour, 0.78)
+        for j, (dx, g) in enumerate([(0.0, 0.62), (0.22, 1.0), (0.44, 0.62)]):
+            c.ax.add_patch(Rectangle((x + i * step + dx * step, y - hh * g / 2), step * 0.18, hh * g,
+                                     fc=col, ec="white", lw=0.3, zorder=4))
+    t = np.linspace(0, np.pi, 30)
+    rx = (w - step) / 2
+    c.ax.plot(x + step * 0.3 + rx - rx * np.cos(t), y + h / 2 + 1.0 + 1.2 * np.sin(t), color=st.MUTED, lw=0.4,
+              ls=(0, (1.6, 1.0)), zorder=3)
+
+
+def swin_glyph(c: Canvas, x, y, colour, w=15.0, h=8.0):
+    """Swin UNETR: a transformer encoder over a grid of image patches (windows outlined), then a convolutional
+    decoder."""
+    n, g = 4, h * 0.95
+    cell = g / n
+    x0, y0 = x, y - g / 2
+    for i in range(n):
+        for j in range(n):
+            c.ax.add_patch(Rectangle((x0 + i * cell, y0 + j * cell), cell, cell, fc=st.tint(colour, 0.75),
+                                     ec="white", lw=0.3, zorder=4))
+    for i in (0, 2):                                      # 2 x 2 attention windows
+        for j in (0, 2):
+            c.ax.add_patch(Rectangle((x0 + i * cell, y0 + j * cell), 2 * cell, 2 * cell, fc="none", ec=colour,
+                                     lw=0.6, zorder=5))
+    c.ax.add_patch(Rectangle((x0 + cell, y0 + cell), 2 * cell, 2 * cell, fc="none", ec=colour, lw=0.5,
+                             ls=(0, (1.2, 0.8)), zorder=5))   # shifted window
+    dx = x0 + g + 1.0
+    c.arrow((dx - 0.6, y), (dx + 0.6, y), st.MUTED, 0.4, ms=2.5)
+    rest = x + w - dx - 0.6
+    for i, f in enumerate([0.5, 0.75, 1.0]):              # decoder plates growing back to full size
+        hh = h * f
+        c.slab(dx + 1.0 + i * rest / 3, y - hh / 2, rest / 3 * 0.62, hh, 1.6, st.tint(colour, 0.78), alpha=1.0)
+
+
 def panel_b(c: Canvas, seq) -> None:
     from matplotlib.colors import to_rgb
     top = TB
@@ -391,6 +431,7 @@ def panel_b(c: Canvas, seq) -> None:
         c.arrow((31.0, ry), (33.5, ry), BLACK, 0.6, ms=4)
     c.text(cx[0] + 7.5, top - 4.6, "BraTS 2024 data\n(1,350 cases)", size=4.8, ha="center", weight="bold")
     c.text(cx[1] + 7.5, top - 4.6, "plus synthetic images\n(15,651 cases)", size=4.8, ha="center", weight="bold")
+    draw = {"nnU-Net": unet_glyph, "Swin UNETR": swin_glyph, "MedNeXt-L": mednext_glyph}
     for r, (ry, (name, kind)) in enumerate(zip(rows, ARCHS)):
         c.text(34.0, ry + 2.4, name, size=5.2, weight="bold", colour=st.IMG)
         c.text(34.0, ry - 0.2, kind, size=4.4, colour=st.MUTED)
@@ -399,7 +440,8 @@ def panel_b(c: Canvas, seq) -> None:
                 c.box(x - 1.2 + k * 0.9, ry - 4.4 + k * 0.9, x + 15.4 + k * 0.9, ry + 4.8 + k * 0.9,
                       edge=st.tint(st.IMG, 0.55), face="white", lw=0.4, r=0.6, z=1)
             c.box(x - 1.2, ry - 4.4, x + 15.4, ry + 4.8, edge=st.IMG, face="white", lw=0.5, r=0.6, z=2)
-            unet_glyph(c, x, ry - 0.4, st.IMG, w=14.0, h=6.0)
+            c.text(x - 0.4, ry + 4.4, name, size=4.2, weight="bold", colour=st.IMG, va="top")
+            draw[name](c, x + 0.4, ry - 1.4, st.IMG, w=13.2, h=4.6)
             c.text(x + 15.0, ry - 3.0, "×5", size=4.4, colour=st.MUTED, ha="right")
     gx0, gx1 = cx[0] - 3.0, cx[1] + 19.6                 # the 30 networks, enclosed; one arrow to the mean
     c.box(gx0, rows[-1] - 6.4, gx1, rows[0] + 7.6, edge=st.MUTED, face="none", lw=0.5, ls=(0, (2, 1.5)), r=1.0, z=0)
