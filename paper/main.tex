@@ -59,8 +59,8 @@ repeat scan or histology before progression is called within 12 weeks of radioth
 Advanced MRI helps in some studies but has not solved the problem. In a meta-analysis of 30 small studies, 13 at high
 risk of bias, diffusion and perfusion MRI reached pooled AUCs of 0.90--0.93 \citep{taylor2022}, and adding them
 improved a radiomics model in 61 patients \citep{kim2019}. In 105 patients with suspected pseudoprogression, however,
-they did not significantly improve on clinical data and MGMT status \citep{leone2023}. PRISM therefore works from
-conventional MRI and the clinical record, the same evidence used in routine follow-up.
+they did not significantly improve on clinical data and MGMT status \citep{leone2023}. PRISM works from conventional
+MRI and the clinical record, the evidence available at every routine follow-up.
 
 Machine learning models for this decision are mostly built on the image alone and tested on a single split of one
 cohort. Studies of treatment response have small samples and a high risk of bias \citep{booth2022}, 29\% of 51 glioma
@@ -588,7 +588,7 @@ combined model, which reached 0.80 on MU. The imaging model reached 0.71 (0.63--
 exploratory) at LUMIERE and 0.73 (0.60--0.84) at UCSF-ALPTDG, where the images from one scan alone reached 0.80
 (0.69--0.89). With all MU scans before progression counted as scans without progression, adding 89 scans, the
 clinical-history, imaging and combined models reached 0.81, 0.65 and 0.78. The scores rank scans at each centre, but
-their probabilities need local recalibration. On MU the calibration slopes were about 0.75, with CIs including 1,
+their probabilities need local recalibration (Supplementary Figure S1). On MU the calibration slopes were about 0.75, with CIs including 1,
 whereas the imaging score at LUMIERE had a calibration intercept of 0.41 and the combined model at UCSF-ALPTDG a slope
 of 3.3, which a centre would correct on its own scans.
 
@@ -811,16 +811,17 @@ with the three scores, the set and the agreement statement as the record holds t
 \centering
 \figslot{fig_case_strips.pdf}{0.85\textheight}{Four MU patients, scan by scan: T1c slices, weeks after radiotherapy,
 the three scores, the 80\% set and the agreement statement.}
-\caption{\textbf{Four patients' follow-up as PRISM records it.} Each strip is one MU-Glioma-Post patient: the T1c
-slice with most enhancement at each evaluation scan (without enhancement, most lesion), with the enhancing tumour
-outlined by PRISM's segmenter (solid) and the supplied mask (dashed), the weeks after the end of
-radiotherapy and between scans, and under each scan the clinical-history, imaging and combined scores (shade follows
-the score), the combined score's 80\% conformal set and whether the clinical-history and imaging models fall on the same
-side of their cohort medians. Scores are out of fold, from the first of the five repeats of cross validation, and rank
-scans; they are not probabilities for the patient. Among grade 4 patients with at least three evaluation scans, each
-strip shows the first patient in identifier order who (A) progressed with the models agreeing at every scan, (B) did
-not progress with the models agreeing at every scan, (C) progressed with the models disagreeing at the progression
-scan, and (D) did not progress with the models disagreeing at one scan or more.}
+\caption{\textbf{Four patients' follow-up as PRISM records it.} Each strip is one MU-Glioma-Post patient: the same
+axial T1c slice at each evaluation scan (the slice with most enhancing tumour over the patient's scans; without
+enhancement, most lesion), with the enhancing tumour outlined by PRISM's segmenter (solid) and the released mask
+(dashed) and an arrow at the lesion, the weeks after the end of radiotherapy and between scans, and under each scan
+the clinical-history, imaging and combined scores (shade follows the score), the combined score's 80\% conformal set
+(the outcomes it keeps) and whether the clinical-history and imaging models fall on the same side of their cohort
+medians. Scores are out of fold, from the first of the five repeats of cross validation, and rank scans; they are not
+probabilities for the patient. Among grade 4 patients with at least three evaluation scans, each strip shows the
+first patient in identifier order who (a) progressed with the models agreeing at every scan, (b) did not progress
+with the models agreeing at every scan, (c) progressed with the models disagreeing at the progression scan, and (d)
+did not progress with the models disagreeing at one scan or more.}
 \label{fig:cases}
 \end{figure}
 
