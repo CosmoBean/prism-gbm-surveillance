@@ -45,17 +45,15 @@ glioma surveillance, brain tumour segmentation, large language models, conformal
 
 \section{Introduction}\label{sec:1}
 
-After surgery and chemoradiotherapy for glioblastoma, patients are followed with MRI every few months, and each scan
-feeds a decision: continue treatment, scan again sooner, or change treatment. The difficulty is that treatment can
-mimic progression. Pseudoprogression follows chemoradiotherapy in 20--30\% of patients \citep{wen2010}, and in one
-cohort scanned four weeks after radiotherapy, half of the scans that looked progressive were not \citep{taal2008}. It
-is more frequent when the MGMT promoter is methylated \citep{brandes2008}. Clinicians therefore read each scan against
-the time since treatment. RANO 2.0 takes the post-radiotherapy scan as the baseline and asks for a repeat scan or
-histology before progression is called within 12 weeks of radiotherapy \citep{wen2023}. Practice still varies: of 220
-European centres, 60\% reported follow-up scans in free text and 27\% applied RANO \citep{thust2018}. Structured
-reporting systems such as BT-RADS make the treatment history part of the report \citep{weinberg2018}, and after its
-adoption reports more often recorded treatment and MGMT status \citep{zhang2020} and were rated more consistent by
-referring clinicians \citep{gore2019}.
+Gliomas are the most common malignant primary brain tumours in adults, and glioblastoma, the most aggressive of them,
+accounts for about half of all malignant primary brain tumours \citep{ostrom2023}. Even with surgery, radiotherapy and
+temozolomide, median survival is about 15 months \citep{stupp2005}. After treatment, patients are followed with MRI
+every few months, and each scan feeds a decision: continue treatment, scan again sooner, or change treatment. The
+difficulty is that treatment can mimic progression. Pseudoprogression follows chemoradiotherapy in 20--30\% of
+patients \citep{wen2010}, more often when the MGMT promoter is methylated \citep{brandes2008}, and in one cohort
+scanned four weeks after radiotherapy, half of the scans that looked progressive were not \citep{taal2008}. Clinicians
+therefore read each scan against the time since treatment, and RANO 2.0 asks for a repeat scan or histology before
+progression is called within 12 weeks of radiotherapy \citep{wen2023}.
 
 Advanced imaging has not settled the question. Across 30 studies, diffusion and perfusion MRI reached pooled AUCs
 near 0.9 for separating pseudoprogression from progression \citep{taylor2022}, and adding them to a radiomics model
@@ -91,7 +89,11 @@ set up for this setting \citep{deverdier2024}. Experts disagree about the qualit
 segmentation \citep{hoebel2024}, so a volume measured from one set of outlines may not match another, even between
 scans a few weeks apart.
 
-The report is the last step, and it should be honest about uncertainty and checkable. Conformal prediction turns a
+The report is the last step, and it should be honest about uncertainty and checkable. Reports of follow-up scans still
+vary: of 220 European centres, 60\% reported them in free text and 27\% applied RANO \citep{thust2018}. Structured
+systems such as BT-RADS put the treatment history in the report \citep{weinberg2018}, and after its adoption reports
+more often recorded treatment and MGMT status \citep{zhang2020} and were rated more consistent by referring
+clinicians \citep{gore2019}. Conformal prediction turns a
 score into a set of possible outcomes that contains the true one at a chosen rate without assumptions about the
 model \citep{angelopoulos2023}, although in medical image classification the guarantee fails within subgroups and
 under distribution shift \citep{mehrtens2023}. Language models now draft reports from automated measurements of brain
