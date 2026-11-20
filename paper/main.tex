@@ -108,10 +108,10 @@ that runs on one local computer (Figure~\ref{fig:1}). In other recent systems, l
 notes and assign a BT-RADS category \citep{jabal2026}. PRISM's language model makes no decision: it writes up values
 computed elsewhere, so every sentence it writes can be checked. Our contributions are:
 \begin{enumerate}
-\item A local pipeline that segments the tumour on each scan with a public network trained on BraTS data, either Swin
-UNETR \citep{hatamizadeh2022} or the top-ranked model of the BraTS 2024 post-treatment challenge
-\citep{ferreira2024}, and derives 27 measurements of tumour volume, shape, intensity and change from earlier scans,
-without patient data leaving the computer.
+\item A local pipeline that segments the tumour on each scan with a pretrained model, used without fine-tuning:
+either Swin UNETR trained on BraTS 2021 \citep{hatamizadeh2022} or the top-ranked model of the BraTS 2024
+post-treatment challenge \citep{ferreira2024}. From each segmentation, PRISM derives 27 measurements of tumour volume,
+shape, intensity and change from earlier scans, without patient data leaving the computer.
 \item Separate imaging and clinical-history scores, each reported with its uncertainty. Three ridge logistic
 regressions \citep{pedregosa2011} score each scan from the image measurements alone, which contain no dates, from the
 clinical history, and from the two combined. Each score is accompanied by the set of outcomes it cannot exclude,
