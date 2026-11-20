@@ -108,20 +108,21 @@ that runs on one local computer (Figure~\ref{fig:1}). In other recent systems, l
 notes and assign a BT-RADS category \citep{jabal2026}. PRISM's language model makes no decision: it writes up values
 computed elsewhere, so every sentence it writes can be checked. Our contributions are:
 \begin{enumerate}
-\item PRISM outlines the tumour on each scan with a public segmentation network trained on BraTS data, either Swin
-UNETR \citep{hatamizadeh2022} or the first-placed BraTS 2024 post-treatment model \citep{ferreira2024}. It computes 27
-measurements of the tumour's volume, shape, intensity and change since earlier scans. No patient data leave the
-computer.
-\item Three ridge logistic regressions \citep{pedregosa2011} score each scan: one from the image measurements, which
-never sees a date, one from the clinical history, and one from both. With each score, PRISM gives the set of outcomes
-it cannot rule out, built to contain the true outcome for 80\% of scans \citep{angelopoulos2023}. It also states
-whether the imaging and clinical-history scores agree and how the models performed on similar earlier scans.
-\item We compare each score with a reference model of the time since radiotherapy and the enhancing tumour volume, and
-split its AUC into pairs of scans taken in the same time window after radiotherapy and pairs taken in different
-windows \citep{kallus2019}. This shows what each score adds to what the clinician already knows.
-\item We fitted the models once, on 181 scans from 92 patients in MU-Glioma-Post, and applied them without retraining
-to 178 scans from 79 patients in LUMIERE and 69 scans from 69 patients in UCSF-ALPTDG. We ran the evaluation both from
-the masks supplied with each dataset and from PRISM's own segmentation.
+\item A local pipeline that outlines the tumour on each scan with a public segmentation network trained on BraTS data,
+either Swin UNETR \citep{hatamizadeh2022} or the first-placed BraTS 2024 post-treatment model \citep{ferreira2024},
+and computes 27 measurements of its volume, shape, intensity and change since earlier scans, with no patient data
+leaving the computer.
+\item Separate scores from the images and from the clinical history, each given with its uncertainty. Three ridge
+logistic regressions \citep{pedregosa2011} score each scan from the image measurements, which never see a date, from
+the clinical history, and from both. Each score comes with the set of outcomes it cannot rule out, built to contain
+the true outcome for 80\% of scans \citep{angelopoulos2023}, together with whether the two scores agree and how the
+models performed on similar earlier scans.
+\item A way to see what each score adds to what the clinician already knows, by comparing it with a reference model
+of the time since radiotherapy and the enhancing tumour volume, and by splitting its AUC into pairs of scans taken in
+the same time window after radiotherapy and pairs taken in different windows \citep{kallus2019}.
+\item External validation without retraining: fitted once on 181 scans from 92 patients in MU-Glioma-Post, the models
+were applied unchanged to 178 scans from 79 patients in LUMIERE and 69 scans from 69 patients in UCSF-ALPTDG, both
+from the masks supplied with each dataset and from PRISM's own segmentation.
 \item Report generation that can be verified deterministically. The language model, Qwen3.8-27B served with vLLM
 \citep{kwon2023}, writes only from a record that holds each value with its source, and a rule-based checker and
 verifier test every number and direction in the report against that record. Every report written for a held-out scan
