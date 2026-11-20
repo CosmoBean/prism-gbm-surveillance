@@ -48,75 +48,80 @@ glioma surveillance, brain tumour segmentation, large language models, conformal
 Gliomas make up about a quarter of all primary brain tumours, and glioblastoma alone about half of the malignant
 ones \citep{ostrom2023}. Even with surgery, radiotherapy and temozolomide, median survival is about 15 months
 \citep{stupp2005}. After treatment, patients are followed with MRI every few months, and each scan feeds a decision:
-continue treatment, scan again sooner, or change treatment. Treatment can mimic progression. Pseudoprogression
-follows chemoradiotherapy in 20--30\% of patients \citep{wen2010}, more often when the MGMT promoter is methylated
-\citep{brandes2008}, and in one cohort, half of the patients whose first scan after radiotherapy looked progressive
-had pseudoprogression \citep{taal2008}. Clinicians therefore read each scan against the time since treatment, and
-RANO 2.0 asks for a repeat scan or histology before progression is called within 12 weeks of radiotherapy
-\citep{wen2023}.
+continue treatment, scan again sooner, or change treatment.
+
+Reading these scans is hard because treatment can look like progression. Pseudoprogression follows chemoradiotherapy
+in 20--30\% of patients \citep{wen2010}, more often when the MGMT promoter is methylated \citep{brandes2008}, and in
+one cohort half of the patients whose first scan after radiotherapy looked progressive had pseudoprogression
+\citep{taal2008}. Clinicians therefore read each scan against the time since treatment, and RANO 2.0 asks for a
+repeat scan or histology before progression is called within 12 weeks of radiotherapy \citep{wen2023}.
 
 Advanced MRI helps in some studies but has not solved the problem. In a meta-analysis of 30 small studies, 13 at high
 risk of bias, diffusion and perfusion MRI reached pooled AUCs of 0.90--0.93 \citep{taylor2022}, and adding them
 improved a radiomics model in 61 patients \citep{kim2019}. In 105 patients with suspected pseudoprogression, however,
-they did not significantly improve on clinical data and MGMT status, and radiomics and deep learning models performed
-near chance \citep{leone2023}. PRISM therefore works from conventional MRI (T1, contrast-enhanced T1, T2 and FLAIR)
-together with the clinical record.
+they did not significantly improve on clinical data and MGMT status \citep{leone2023}. Most follow-up therefore still
+rests on conventional MRI and the clinical record, which is what PRISM uses.
 
-Machine learning models for this decision mostly score the image alone and report one AUC from a single split of one
+Machine learning models for this decision are mostly built on the image alone and tested on a single split of one
 cohort. Studies of treatment response have small samples and a high risk of bias \citep{booth2022}, 29\% of 51 glioma
-radiomics studies were validated externally \citep{park2020}, and in a review of automated response assessment, 3 of
-20 studies considered clinical characteristics \citep{shi2025}. Single splits of small cohorts give unstable estimates
+radiomics studies were validated externally \citep{park2020}, and 3 of 20 studies of automated response assessment
+considered clinical characteristics \citep{shi2025}. Single splits of small cohorts give unstable estimates
 \citep{an2021}, and most deep learning algorithms for radiological diagnosis lose performance on external data
 \citep{yu2022}. On MU-Glioma-Post, the public cohort used here, a radiomics model reported an AUC of 0.80 on 30
-held-out patients \citep{christodoulou2026}. Elsewhere, on an external test set, a model of clinical data alone
-matched one using MRI \citep{gomaa2025}, and on LUMIERE the interval between scans strongly affected a model built on
-the RANO rules \citep{tarek2026}. A model can learn such shortcuts, signals that predict the label without being what
-the reader cares about \citep{geirhos2020,zech2018,badgeley2019}, so the useful measure is what it adds beyond the
-evidence a clinician already holds \citep{pencina2008,beaulieujones2021}. Saliency maps drawn over a score after the
-fact do not show this reliably \citep{arun2021,saporta2022}, and a model that is interpretable by design is preferable
-to a black box explained afterwards \citep{rudin2019}.
+held-out patients \citep{christodoulou2026}.
 
-The image measurements depend on how the tumour is outlined. After surgery and radiotherapy the scan contains a
-resection cavity and treatment changes, which make segmentation harder, and the BraTS 2024 challenge was set up for
-this setting \citep{deverdier2024}. Experts disagree about the quality of the same glioma segmentation
+A single AUC does not show what drives a model's predictions. Models learn shortcuts, signals that predict the label
+without being what the reader cares about \citep{geirhos2020,zech2018,badgeley2019}. In this setting, a model of
+clinical data alone matched one using MRI on an external test set \citep{gomaa2025}, and the interval between scans
+strongly affected a model built on the RANO rules \citep{tarek2026}. The useful measure is what a model adds beyond
+the evidence a clinician already holds \citep{pencina2008,beaulieujones2021}. Saliency maps drawn after the fact do
+not show this reliably \citep{arun2021,saporta2022}, so a model that is interpretable by design is preferable
+\citep{rudin2019}.
+
+The image measurements themselves depend on how the tumour is outlined. After surgery and radiotherapy the scan
+contains a resection cavity and treatment changes, which make segmentation harder, and the BraTS 2024 challenge was
+set up for this setting \citep{deverdier2024}. Experts disagree about the quality of the same glioma segmentation
 \citep{hoebel2024}, so measured volumes depend on whose outlines are used.
 
-The report should state its uncertainty and be checkable. Conformal prediction turns a score into a set of possible
+A score is also more useful when it states its uncertainty. Conformal prediction turns a score into a set of possible
 outcomes that contains the true one at a chosen rate \citep{angelopoulos2023}, although the guarantee does not hold
-within subgroups or under distribution shift \citep{mehrtens2023}. Reporting practice varies: of 220 European
-centres, 60\% assessed follow-up scans qualitatively, 27\% applied RANO and 23\% used a reporting template
-\citep{thust2018}. After BT-RADS, a structured system that puts the treatment history in the report
-\citep{weinberg2018}, was adopted, reports mentioned bevacizumab and MGMT status more often \citep{zhang2020} and were
-rated more consistent by the clinicians and radiologists caring for these patients \citep{gore2019}. Language models
-now draft reports from automated measurements of brain tumours \citep{valerio2025,herasrivera2026} and other lesions
-\citep{mansour2026}. Such reports can contain errors a reader may not catch: AI-written chest radiograph reports
+within subgroups or under distribution shift \citep{mehrtens2023}.
+
+Finally, the result reaches the clinician as a report, and reports vary. Of 220 European centres, 60\% assessed
+follow-up scans qualitatively, 27\% applied RANO and 23\% used a reporting template \citep{thust2018}. After the
+structured BT-RADS system was adopted \citep{weinberg2018}, reports mentioned bevacizumab and MGMT status more often
+\citep{zhang2020} and were rated more consistent by the clinicians and radiologists caring for these patients
+\citep{gore2019}. Language models now draft such reports from automated measurements of brain tumours
+\citep{valerio2025,herasrivera2026} and other lesions \citep{mansour2026}.
+
+Reports written by language models can contain errors that a reader may not catch. AI-written chest radiograph reports
 contained clinically significant errors \citep{tanno2025}, 6\% of oncology CT reports simplified by an open-weight
 model contained factual errors \citep{prucker2025}, and systems that write text from tables misstate numbers
 \citep{wiseman2017}. Automatic measures of factual accuracy track human judgement poorly \citep{gabriel2021}, so
 checkers test each statement against the patient record \citep{zeba2026}, and errors can be planted in reports to
 test such checkers \citep{rao2025rexerr}. Because patient records often cannot leave the hospital, the model should
-run locally, and open-weight models run on site can label radiology reports \citep{mukherjee2023} and extract their
-findings as well as closed models \citep{nowak2025}.
+also run locally, and open-weight models run on site can label radiology reports \citep{mukherjee2023} and extract
+their findings as well as closed models \citep{nowak2025}.
 
 We present PRISM (Progression Reading with Independent Scores and Measurements), a system for glioma follow-up MRI
-that runs on one local computer (Figure~\ref{fig:1}). PRISM outlines the tumour with a fixed public segmentation
-network, either a Swin UNETR trained on BraTS 2021 \citep{hatamizadeh2022}, which marks the enhancing tumour, necrosis
-and FLAIR hyperintensity, or the first-placed BraTS 2024 post-treatment model \citep{ferreira2024}, which also marks
-the resection cavity, or it takes the masks supplied with the dataset. From the outlines of the current and earlier
-scans it computes 27 measurements of volume, shape, intensity and change. Three ridge logistic regressions
-\citep{pedregosa2011} score the scan, one from the image measurements alone (with no dates), one from the clinical
-history and one from the two combined. Each score comes with an 80\% split-conformal set, a statement of whether the
-image and clinical-history scores agree, and the models' measured performance in comparable earlier scans. Every value
-is collated into one JSON record under a fixed key, with its source. An open-weight language model (Qwen3.8-27B,
-served locally with vLLM \citep{kwon2023}) writes the report from that record alone, under a JSON schema that makes
-each sentence list the record keys it uses; it sees no images and has no tools. A deterministic checker and a verifier
-then test every number, flag and direction in the report against the record, and accept or reject it. Unlike systems
-in which language-model agents read clinical notes and assign a BT-RADS category \citep{jabal2026}, PRISM gives the
-language model the clinical history as data and no decision to make, which is what makes every sentence checkable.
+that addresses each of these points and runs on one local computer (Figure~\ref{fig:1}). PRISM outlines the tumour
+with a fixed public segmentation network, either a Swin UNETR trained on BraTS 2021 \citep{hatamizadeh2022}, which
+marks the enhancing tumour, necrosis and FLAIR hyperintensity, or the first-placed BraTS 2024 post-treatment model
+\citep{ferreira2024}, which also marks the resection cavity, or it takes the masks supplied with the dataset. From the
+outlines of the current and earlier scans it computes 27 measurements of volume, shape, intensity and change. Three
+ridge logistic regressions \citep{pedregosa2011} score the scan: one from the image measurements alone, with no dates,
+one from the clinical history, and one from the two combined. Each score comes with an 80\% split-conformal set, a
+statement of whether the image and clinical-history scores agree, and the models' measured performance on comparable
+earlier scans. Every value is collated into one JSON record under a fixed key, with its source. An open-weight
+language model (Qwen3.8-27B, served with vLLM \citep{kwon2023}) writes the report from that record alone, under a
+JSON schema that makes each sentence list the record keys it uses. A deterministic checker and a verifier then test
+every number, flag and direction in the report against the record. Unlike systems in which language-model agents read
+clinical notes and assign a BT-RADS category \citep{jabal2026}, PRISM gives the language model the clinical history
+as data and no decision to make, which is what makes every sentence checkable.
 
 In this study, we developed PRISM and validated it on three public cohorts. Our contributions are:
 \begin{itemize}
-\item \textbf{An end-to-end local system for follow-up MRI.} PRISM segments each scan with a BraTS-trained network,
+\item \textbf{A pipeline from MRI to a checked report.} PRISM segments each scan with a BraTS-trained network,
 derives 27 longitudinal measurements, scores the scan with three ridge logistic regressions and split-conformal sets,
 and writes a schema-constrained report with a 27-billion-parameter open-weight language model. Every stage runs on one
 computer, so no patient data leave the hospital.
