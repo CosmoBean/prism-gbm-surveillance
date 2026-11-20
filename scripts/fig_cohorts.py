@@ -1,10 +1,12 @@
 """Cohort characteristics, modelled on Tak et al. 2025 (NEJM AI) Figure 2: how the evaluation scans differ between
 cohorts before any model is shown.
 
-One row per cohort. (a) When each evaluation scan was taken, split by label: weeks after the end of radiotherapy at MU
-(first 12 weeks shaded); LUMIERE and UCSF have no radiotherapy end dates, so weeks after surgery (UCSF: after the
-first surgery, which the release counts as the diagnosis). (b) Weeks since the patient's
-previous scan, split by label. (c) Scans, patients and the share of progression scans.
+One panel per cohort (a MU, b LUMIERE, c UCSF), headed by its scans, patients and share of progression scans, as in
+Figure 2. Left: when each evaluation scan was taken, split by label: weeks after the end of radiotherapy at MU (first
+12 weeks shaded); LUMIERE and UCSF have no radiotherapy end dates, so weeks after surgery (UCSF: after the first
+surgery, which the release counts as the diagnosis). The time zero is named on each axis. Right: weeks since the
+patient's previous scan. Both columns share one axis across cohorts; the few scans beyond it are drawn at the edge
+as arrowheads and counted.
 
 Evaluation sets as in the paper: MU, the grade-4 intended-use scans (146 scans, 80 patients); LUMIERE, all 178
 labelled scans of 79 patients; UCSF-ALPTDG, the labelled grade-4 second scans (one per patient). Times and intervals come from the system records
@@ -57,30 +59,39 @@ def evaluation_scans(cohort: str) -> pd.DataFrame:
     return df
 
 
-def strip(ax, df, col, rng):
-    """Two rows of jittered dots (progression above), with each row's median as a short bar."""
+def strip(ax, df, col, rng, xmax):
+    """Two rows of jittered dots (progression above), each row's median as a short bar; values beyond xmax are drawn
+    at the edge as arrowheads and counted."""
     for y, lab, colour, face in [(1, 1, PROG, PROG), (0, 0, NOPROG, "white")]:
         v = df.loc[df.label == lab, col].dropna().to_numpy()
-        yy = y + rng.uniform(-0.22, 0.22, len(v))
-        ax.scatter(v, yy, s=7, marker="o", facecolor=face, edgecolor=colour, linewidth=0.5, zorder=3)
+        inside, over = v[v <= xmax], v[v > xmax]
+        yy = y + rng.uniform(-0.22, 0.22, len(inside))
+        ax.scatter(inside, yy, s=7, marker="o", facecolor=face, edgecolor=colour, linewidth=0.5, zorder=3)
+        if len(over):
+            ax.scatter([xmax * 1.012], [y], s=14, marker=">", facecolor=face, edgecolor=colour, linewidth=0.5,
+                       zorder=3, clip_on=False)
+            ax.text(xmax * 1.03, y, f"+{len(over)}", fontsize=5.6, color=colour, va="center", ha="left")
         if len(v):
             m = float(np.median(v))
             ax.plot([m, m], [y - 0.36, y + 0.36], color=colour, lw=1.4, zorder=4, solid_capstyle="butt")
     ax.set_yticks([0, 1], ["No progression", "Progression"])
     ax.set_ylim(-0.6, 1.6)
+    ax.set_xlim(0, xmax)
     ax.spines["left"].set_visible(False)
     ax.tick_params(axis="y", length=0)
 
 
 def draw(output: Path) -> dict:
     cohorts = [("mu", "MU-Glioma-Post", "weeks after the end of radiotherapy"),
-               ("lumiere", "LUMIERE", "weeks after surgery (no radiotherapy dates)"),
+               ("lumiere", "LUMIERE", "weeks after surgery (no radiotherapy dates recorded)"),
                ("ucsf", "UCSF-ALPTDG", "weeks after the first surgery (no radiotherapy end dates)")]
+    T_MAX, I_MAX = 240, 60
     rng = np.random.default_rng(20261119)
-    fig = plt.figure(figsize=(st.WIDTH, 5.1))
-    gs = fig.add_gridspec(len(cohorts), 3, width_ratios=[2.3, 1.5, 1.0], left=0.12, right=0.985, top=0.88,
-                          bottom=0.08, wspace=0.28, hspace=0.95)
+    H = 4.65
+    fig = plt.figure(figsize=(st.WIDTH, H))
     summary = {}
+    row_h, head, gap = 0.80 / H, 0.20 / H, 0.50 / H
+    y = 1 - 0.06 / H
     for i, (key, name, tlabel) in enumerate(cohorts):
         df = evaluation_scans(key)
         n, npat, npos = len(df), df.patient_id.nunique(), int((df.label == 1).sum())
@@ -88,33 +99,28 @@ def draw(output: Path) -> dict:
                             median_weeks={int(k): round(float(v), 1) for k, v in df.groupby("label").weeks.median().items()},
                             median_interval_weeks={int(k): round(float(v) / 7, 1) for k, v in
                                                    df.groupby("label").interval_days.median().items()})
-        ax = fig.add_subplot(gs[i, 0])
+        st.panel_header(fig, y, "abc"[i], f"{name}  \u00b7  {n} scans, {npat} patients, {npos} with progression "
+                                          f"({100 * npos / n:.0f}%)")
+        y0 = y - head - row_h
+        ax = fig.add_axes([0.13, y0, 0.50, row_h])
         if key == "mu":
             ax.axvspan(0, 12, color=st.tint(st.HIST, 0.75), lw=0, zorder=1)
-            ax.text(6, 1.62, "first 12 weeks", fontsize=5.6, color=st.HIST, ha="center", va="bottom")
-        strip(ax, df, "weeks", rng)
-        ax.set_xlim(left=min(0, df.weeks.min() - 2))
-        ax.set_xlabel(tlabel)
-        fig.text(0.004, ax.get_position().y1 + 0.045, name, fontsize=7, weight="bold", ha="left", va="bottom")
-
-        ax2 = fig.add_subplot(gs[i, 1])
+            ax.text(13.5, 1.45, "first 12 weeks", fontsize=5.6, color=st.HIST, ha="left", va="center")
+        strip(ax, df, "weeks", rng, T_MAX)
+        ax.set_xlabel(tlabel, labelpad=1)
+        ax2 = fig.add_axes([0.70, y0, 0.26, row_h])
         df["interval_weeks"] = df.interval_days / 7
-        strip(ax2, df, "interval_weeks", rng)
+        strip(ax2, df, "interval_weeks", rng, I_MAX)
         ax2.set_yticklabels([])
-        ax2.set_xlim(left=0)
-        ax2.set_xlabel("weeks since the previous scan")
-
-        ax3 = fig.add_subplot(gs[i, 2])
-        ax3.barh([0], [n - npos], color="white", edgecolor=NOPROG, lw=0.6, height=0.5)
-        ax3.barh([0], [npos], left=[n - npos], color=PROG, height=0.5)
-        ax3.set_xlim(0, 180); ax3.set_ylim(-0.6, 1.6); ax3.set_yticks([])
-        ax3.spines["left"].set_visible(False)
-        ax3.set_xlabel("evaluation scans")
-        ax3.text(0, 0.55, f"{n} scans, {npat} patients\n{npos} progression ({100 * npos / n:.0f}%)", fontsize=6.2,
-                 ha="left", va="bottom", color=st.INK)
-        if i == 0:
-            for a, letter in [(ax, "a"), (ax2, "b"), (ax3, "c")]:
-                st.letter(fig, a.get_position().x0 - (0.1 if a is ax else 0.012), 0.995, letter)
+        ax2.set_xlabel("weeks since the previous scan", labelpad=1)
+        y = y0 - gap
+    from matplotlib.lines import Line2D
+    handles = [Line2D([], [], ls="", marker="o", ms=3.5, mfc=PROG, mec=PROG, label="progression scan"),
+               Line2D([], [], ls="", marker="o", ms=3.5, mfc="white", mec=NOPROG, mew=0.6, label="no-progression scan"),
+               Line2D([], [], ls="", marker="|", ms=7, mew=1.4, color=st.INK, label="median"),
+               Line2D([], [], ls="", marker=">", ms=4, mfc="white", mec=st.INK, mew=0.6,
+                      label="beyond the axis (count)")]
+    fig.legend(handles=handles, loc="lower center", bbox_to_anchor=(0.5, 0.0), ncol=4, fontsize=6.3)
     st.save(fig, output, "fig_cohorts")
     return summary
 

@@ -226,20 +226,6 @@ Time-and-enhancement model, AUC split, group calibration & Run & Run & AUC split
 \end{tabularx}
 \end{table}
 
-% Drawn by scripts/fig_cohorts.py from the system records and the supplied dates (after Tak et al. 2025, Figure 2).
-\begin{figure}[!htbp]
-\centering
-\figslot{fig_cohorts.pdf}{0.55\textheight}{For MU, LUMIERE and UCSF, the time of each evaluation scan and the interval
-since the previous scan, by label, and the share of progression scans.}
-\caption{\textbf{When the evaluation scans were taken.} One row per cohort. (a) The time of each scan, split by label:
-at MU-Glioma-Post in weeks after the end of radiotherapy, with the first 12 weeks shaded; at LUMIERE, which
-records no radiotherapy dates, in weeks after surgery; and at UCSF-ALPTDG, which records no end of radiotherapy, in
-weeks after the first surgery. (b) Weeks since the patient's previous scan. (c) Evaluation scans with and without
-progression. Each point is one scan (filled, progression; open, no progression), and the vertical bar marks the
-median. MU shows the 146 scans of the intended use and UCSF the second scan of each grade 4 patient.}
-\label{fig:cohorts}
-\end{figure}
-
 \subsection{PRISM}\label{sec:2.2}
 
 % Sources: SYSTEM_PLAN.md section 1.
@@ -285,6 +271,21 @@ by patient, then fitted once and applied unchanged at LUMIERE and UCSF, under ru
 compared with an external label, except the LUMIERE imaging and reduced clinical-history scores, added afterwards
 (Table~\ref{tab:models}).}
 \label{fig:1}
+\end{figure}
+
+% Drawn by scripts/fig_cohorts.py from the system records and the supplied dates (after Tak et al. 2025, Figure 2).
+\begin{figure}[!htbp]
+\centering
+\figslot{fig_cohorts.pdf}{0.50\textheight}{For MU, LUMIERE and UCSF, the time of each evaluation scan and the interval
+since the previous scan, by label.}
+\caption{\textbf{When the evaluation scans were taken.} One panel per cohort, headed by its evaluation scans,
+patients and share of progression scans. Left, the time of each scan, split by label: at MU-Glioma-Post in weeks
+after the end of radiotherapy, with the first 12 weeks shaded; at LUMIERE, which records no radiotherapy dates, in
+weeks after surgery; and at UCSF-ALPTDG, which records no end of radiotherapy, in weeks after the first surgery.
+Right, weeks since the patient's previous scan. Each column shares one axis across cohorts; scans beyond it are drawn
+at the edge and counted. Each point is one scan (filled, progression; open, no progression), and the vertical bar
+marks the median. MU shows the 146 scans of the intended use and UCSF the second scan of each grade 4 patient.}
+\label{fig:cohorts}
 \end{figure}
 
 % Sources: NUMBERS.md 2.1, 3, 4; DETECTION_TASK.md; UCSF_PLAN.md; CLINICIAN_BASELINE_PLAN.md; CHRISTODOULOU_REPLICATION.md;
@@ -594,20 +595,21 @@ of 3.3, which a centre would correct on its own scans.
 % Sources: NUMBERS.md 3, 4, 11; METHODS_RESULTS.md E4; CHRISTODOULOU_REPLICATION.md. Drawn by scripts/fig2_performance.py.
 \begin{figure}[!htbp]
 \centering
-\figslot{fig2_performance.pdf}{0.62\textheight}{One row per cohort: AUC of each score, and the gain of each PRISM model over the time-and-enhancement model.}
-\caption{\textbf{Performance at the development centre and at two external centres.} (a)--(c) Left, the AUC with 95\%
-CI for detecting the scan at which progression was documented, for PRISM's three models, the time-and-enhancement
-model, log enhancing volume alone and, at MU, the published radiomics pipeline run with its authors' code on PRISM's
-label and folds. MU used repeated cross validation in the intended use. LUMIERE and UCSF used models fitted once on MU
-and applied unchanged, with the reduced clinical-history inputs. Right, the gain of each model over the
-time-and-enhancement model with its paired 95\% CI; at UCSF the time-and-enhancement model was run only in the
-segmentation comparison (Section~\ref{sec:3.3}) and is not shown. Intervals come from
-bootstrap samples of patients. Enhancing volume alone is exploratory, and at LUMIERE it uses the 163 scans with a
-recorded volume. The dashed line marks chance.}
+\figslot{fig2_performance.pdf}{0.62\textheight}{One row per cohort: ROC curves, AUC of each score, and the gain of each PRISM model over the time-and-enhancement model.}
+\caption{\textbf{Performance at the development centre and at two external centres.} (a)--(c) Left, ROC curves of
+PRISM's three models and the time-and-enhancement model (dashed) for detecting the scan at which progression was
+documented, with 95\% bands from bootstrap samples of patients; at MU the curves are averaged over the five repeats of
+cross validation. Middle, the AUC with 95\% CI for the same scores, log enhancing volume alone and, at MU, the
+published radiomics pipeline run with its authors' code on PRISM's label and folds. MU used repeated cross validation
+in the intended use. LUMIERE and UCSF used models fitted once on MU and applied unchanged, with the reduced
+clinical-history inputs. Right, the gain of each model over the time-and-enhancement model with its paired 95\% CI;
+at UCSF the time-and-enhancement model was run only in the segmentation comparison (Section~\ref{sec:3.3}) and is not
+shown. Intervals come from bootstrap samples of patients. Enhancing volume alone is exploratory, and at LUMIERE it
+uses the 163 scans with a recorded volume. The dashed grey line marks chance.}
 \label{fig:2}
 \end{figure}
 % Figure 2 follows Tak et al. 2025 Figure 3 (one row per cohort; AUC with CIs; comparison with the baseline).
-% Drawn by scripts/fig2_performance.py from verified aggregates only.
+% Drawn by scripts/fig2_performance.py from verified aggregates; ROC curves from per-scan scores that reproduce them.
 
 % Sources: CHRISTODOULOU_REPLICATION.md (faithful run; first re-implementation: Reading, 100 splits; faithful run on
 % the BraTS21 masks); METHODS_RESULTS.md E4.
