@@ -19,12 +19,12 @@ intended-use evaluation set, in patient-ID order, the first
 The strips are labelled Patient 1-4 in this order.
 
 Data
-  - Records: outputs/results/analyses/system/records_mu.jsonl (prism/analyses/system.py, write_records). MU scores
+  - Records: outputs/results/analyses/system_brats24_22/records_mu.jsonl (primary pipeline, PRISM_MASKS=brats24_22) (prism/analyses/system.py, write_records). MU scores
     are out-of-fold (repeat 0 of the 5 x 5 cross validation); the patient was not in training. Key "timeline" is the
     clinical-history model.
   - Labels: records_mu_EVALUATION_ONLY.csv (label, eval_intended_use), joined by record_id; never in a record.
   - Images, masks and dates: data/mu-glioma-post (load_clinical, scan_days from fig1_prism); PRISM's segmentation
-    from outputs/features/seg_swin/mu; IDH and MGMT from outputs/data/mu_cohort.csv.
+    from outputs/features/seg_brats24/mu (BraTS24_1); IDH and MGMT from outputs/data/mu_cohort.csv.
 
 Example paper: docs/literature/examples/tak2025_nejmai.md (local, gitignored); notes in tak2025_NOTES.md.
 """
@@ -41,12 +41,13 @@ import pandas as pd
 from matplotlib.patches import Rectangle
 
 import figure_style as st
-from fig1_prism import CONTOUR, ET_LABEL, MU, SEG, load_clinical, scan_days
+from fig1_prism import CONTOUR, ET_LABEL, MU, load_clinical, scan_days
 
 RELEASED = "#7FD3F0"  # the mask released with the cohort, for comparison
 
 REPO = Path(__file__).resolve().parents[1]
-RECORDS = REPO / "outputs" / "results" / "analyses" / "system"
+RECORDS = REPO / "outputs" / "results" / "analyses" / "system_brats24_22"   # primary pipeline (SEGMENTER_SWITCH.md)
+SEG = REPO / "outputs" / "features" / "seg_brats24" / "mu"                   # PRISM's segmenter: BraTS24_1 maps (ET = 3)
 COHORT = REPO / "outputs" / "data" / "mu_cohort.csv"
 SCORES = [("timeline", "Clinical history", st.HIST), ("images", "Imaging", st.IMG), ("combined", "Combined", st.COMB)]
 SET_WORDS = {"{0}": "no progression", "{1}": "progression", "{0, 1}": "both", "{}": "neither"}

@@ -20,7 +20,7 @@ from matplotlib.lines import Line2D
 import figure_style as st
 
 REPO = Path(__file__).resolve().parents[1]
-DEFAULT_AGG = REPO / "outputs/results/analyses/methods"
+DEFAULT_AGG = REPO / "outputs/results/analyses/methods_brats24_22"   # primary pipeline (SEGMENTER_SWITCH.md)
 OUTPUT = REPO / "docs/manuscript/figures"
 WIDTH = st.WIDTH
 
