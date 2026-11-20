@@ -32,7 +32,7 @@ Combined at MU is the full combined model; at LUMIERE and UCSF it is the reduced
 |---|---|---|---|
 | MU | +0.04 (+0.02) | −0.07 (−0.09) | +0.04 (+0.02) |
 | LUMIERE | −0.12, CI below 0 (−0.05) | −0.11 (−0.08) | −0.02 (+0.04) |
-| UCSF† | — | −0.08 (−0.14) | −0.07, CI below 0 (−0.01) |
+| UCSF† | −0.31, CI below 0 (−0.30) | −0.08 (−0.14) | −0.07, CI below 0 (−0.01) |
 
 **Enhancing volume alone:** MU 0.61, LUMIERE 0.70.
 
