@@ -1,0 +1,36 @@
+\paragraph*{Confidence statements.} Each score comes with an 80\% set of possible outcomes, a statement of whether the
+imaging and clinical-history scores agree, and the measured performance of the models in comparable scans. A conformal
+set names the outcomes a score cannot rule out \citep{angelopoulos2023}. Write $\hat p(1) = \hat p$ for a scan's score
+and $\hat p(0) = 1 - \hat p$. For each calibration scan $i$ with outcome $y_i$ the nonconformity score is
+$s_i = 1 - \hat p_i(y_i)$. Because a patient contributes several scans, each calibration scan is weighted by one over
+the number of that patient's calibration scans. With $\alpha = 0.2$ and $n$ calibration patients, the threshold $\hat
+q$ is the smallest $s_i$ whose cumulative weight reaches $(1 - \alpha)(n + 1)$, and a new scan receives
+\begin{equation}
+C(\hat p) = \{\, y \in \{0, 1\} : 1 - \hat p(y) \le \hat q \,\}.
+\end{equation}
+As planned, each model was refitted on 70\% of the training patients and calibrated on the other 30\%, inside each
+training fold on MU and once on all MU training patients for the external cohorts. The combined score's set is the
+one evaluated as primary. If a new patient is exchangeable with the calibration patients, about 80\% of their sets
+contain the true outcome, on average over scans but not necessarily within a subgroup
+\citep{romano2020,barber2021limits}. The weighting by patient makes even the average coverage approximate, and
+coverage carries over to an external cohort only if its scans are exchangeable with MU's \citep{mehrtens2023}.
+
+% Sources: METHODS_PLAN.md M2; Supplementary Section S10.
+Group-conditional (Mondrian) sets \citep{vovk2022book} compute $\hat q$ separately within each group of comparable
+scans. Our groups cross the time window with the state of the enhancing tumour (absent below 0.1\,cc, without
+comparison when there is no previous scan, increased when it grew by at least 1\,cc and 40\%, or not increased). Most
+groups are small, so each scan is calibrated at the finest of three levels that holds at least 10 calibration
+patients (its group, then its enhancement state over all windows, then all calibration scans), a fixed fallback of the
+kind used for small Mondrian groups \citep{johansson2015,ding2023}. Because group calibration can raise coverage in a
+group simply by making sets larger, we compared it after the planned run with marginal sets at the $\alpha$ that gives
+the same share of sets holding both outcomes (exploratory).
+
+The record carries two further descriptive statements. The agreement statement says whether the clinical-history and
+imaging scores fall on the same side of their cohort medians. The reliability card, after model cards
+\citep{mitchell2019}, gives for the scan's group how many scans with and without progression the models were tested
+on and, with at least 10 of each (the tested tier), their AUCs, and otherwise only the counts (few cases). The card
+counts the cohort's tested scans. Recomputed without the patient's own scans, it changed the tier of one MU scan.
+
+% Sources: prism/report/facts_v3_1.py; prism/report/prompts_v3_1.py; prism/report/checker.py; prism/report/verifier.py
+% (v1.1); REPORT_V3.md; REPORT_V3_1.md; METHODS_PLAN.md M3; METHODS_RESULTS.md M3; Supplementary S8; refs zeba2026,
+% wiseman2017, gabriel2021, rao2025rexerr, weinberg2018, kwon2023.

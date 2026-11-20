@@ -1,0 +1,38 @@
+\paragraph*{Record, report and checks.} All values go into one record with their sources. A local language model
+writes the report from that record alone, and two rule-based programs check every number and every direction against
+it. Every score, measurement and statement sits in the record under a fixed key. The language model, Qwen3.8-27B
+served with vLLM \citep{kwon2023} under greedy decoding, runs on the computer that runs PRISM, so the record never
+leaves it. Decoding is constrained to a JSON schema in which every sentence carries its section and the keys of the
+record fields it uses. The model sees no images, has no tools and does no arithmetic. The report page follows the
+content of the BT-RADS follow-up template \citep{weinberg2018}, with the measurements in tables and a short narrative,
+and without the template's category or advice, which PRISM does not give (Supplementary Section~S8). Because the
+supplied volumes are noisy (Section~\ref{sec:3.3}), the report calls them indicative.
+
+The checker, frozen before any evaluation report was generated, rejects a report that cannot be parsed, cites a field
+that does not exist, states a number found in no cited field, omits a raised flag, misstates the conformal set or the
+agreement, omits the card's tier where evidence is thin, leaves out a score, quotes a performance figure absent from
+the card, or offers a diagnosis, a response category, advice or words of certainty. A rejected report is not
+repaired. Such rule-based checks compare generated text with a source record \citep{zeba2026}, as extractive
+evaluations of data-to-text systems do with a learned extractor \citep{wiseman2017}. Every LUMIERE report failed the
+checker at the first evaluation, because a sentence about the rater's three-month flag stated a number held in no
+field. We revised the record fields and the prompt once, on development patients, and generated the evaluation
+reports again. Because the checker accepts a number that equals a number in any cited field, it accepts a sentence
+that gives the FLAIR volume as the enhancing volume while citing both fields, or that writes ``larger'' where the
+record says ``smaller''.
+
+% Sources: METHODS_RESULTS.md M3; METHODS_PLAN.md M3; CHECKER_MUTATION.md.
+The verifier closes these gaps with two rules that bind a claim to what it refers to. A sentence is split into clauses
+at commas, semicolons, colons and the word ``and'', and each number and direction word in a clause is assigned to the
+nearest tumour region or score named in it. The first rule requires every such number to equal, up to its written
+rounding, a cited value of that region or score. The second requires every direction word on a fixed list (larger,
+increased, grew, rose, higher, and their opposites) to agree with the cited direction of its region. As first
+written, the rules read the region only from the names of cited fields and rejected every evaluation report, because
+most fields are sentences such as ``enhancing tumour 3.5\,cc larger than at the previous scan''. We let the rules read
+the region from the text of a cited field as well, tested this change only on synthetic records and the 48 MU and
+LUMIERE reports used to develop the prompt, froze it, and ran it again on the evaluation reports. To measure the
+verifier we planted one error at a time in correct reports, with 24 kinds of error, as error injection is used to
+evaluate factuality checks \citep{gabriel2021,rao2025rexerr}. Three binding errors were held out of rule writing.
+Because we wrote both the rules and these errors, a separate language model that had not seen the rules then wrote
+further errors in its own words, with correct paraphrases as controls (exploratory). Both programs test whether a
+report agrees with its record. Neither tests whether the record, or the report, is clinically correct.
+

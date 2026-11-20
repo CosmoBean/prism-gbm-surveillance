@@ -1,0 +1,46 @@
+\subsection{Evaluation}\label{sec:2.3}
+
+% Sources: DETECTION_TASK.md; UCSF_PLAN.md; SYSTEM_PLAN.md; METHODS_PLAN.md; refs varoquaux2018.
+\paragraph*{Development and testing without retraining.} Each cohort played one role (Table~\ref{tab:eval}). On MU we
+evaluated every model by five repeats of fivefold cross validation grouped by patient and report the mean pooled
+held-out AUC, because single splits are unstable in small cohorts \citep{varoquaux2018}. We then fitted each model
+once on all 181 grade 4 detection scans of MU, including the 35 without a documented start of radiotherapy, and
+applied it unchanged to LUMIERE and UCSF-ALPTDG. At UCSF-ALPTDG every model was planned before any score was compared
+with the label. At LUMIERE the combined model was planned and the other scores are exploratory.
+
+% Sources: CLINICIAN_BASELINE_PLAN.md; METHODS_RESULTS.md E4; ref beaulieujones2021.
+\paragraph*{The time-and-enhancement model.} We judged each score against a simple model of the time since
+radiotherapy and the enhancing tumour volume, which measures what a score adds to evidence a clinician already holds
+\citep{beaulieujones2021}. It is a ridge logistic regression on the time window after radiotherapy, the log enhancing
+volume and its change since the previous scan, fitted with the same pipeline and folds as PRISM's models and applied
+unchanged in the same way. At LUMIERE the window is the rater's flag. The plan fixed the reading in advance. A gain
+whose 95\% CI lies above zero counts as a gain, and one whose CI includes zero is reported as no clear gain. To see how
+far time alone goes, we also scored scans by timing alone (exploratory, Table~\ref{tab:models}): the days since the
+end of radiotherapy and the visit number without any fitted model, and a ridge model on every timestamp input of the
+clinical-history model.
+
+% Sources: METHODS_PLAN.md M1; prism/analyses/methods.py; refs kallus2019, janes2008, janes2009.
+\paragraph*{Splitting the AUC by time window.} We split each score's AUC into pairs of scans taken at a similar time
+and pairs taken at different times. Let $P$ and $N$ be the scans with and without progression, $s$ a score, and $c$
+the time window of each scan. The AUC is the share of pairs ranked correctly,
+\begin{equation}
+\mathrm{AUC} = \frac{1}{|P|\,|N|} \sum_{i \in P} \sum_{j \in N} K(s_i, s_j), \qquad
+K(a, b) = \mathbb{1}[a > b] + \tfrac12\, \mathbb{1}[a = b].
+\end{equation}
+The pairs split into $W = \{(i, j) : c_i = c_j\}$, two scans from the same window, and its complement $B$. With
+$A_W$ and $A_B$ the same average over $W$ and over $B$, and $w = |W| / (|P|\,|N|)$,
+\begin{equation}
+\mathrm{AUC} = w\, A_W + (1 - w)\, A_B
+\end{equation}
+holds exactly \citep{kallus2019}. $A_W$ is the ranking with the window held fixed, a pair weighted analogue of the
+covariate adjusted AUC \citep{janes2008,janes2009}. A score with $A_B$ above $A_W$ ranks pairs across windows better
+than pairs within one, which can come from the window or from real differences between the tumours of different
+windows. To show how much of $A_B$ the window alone could supply, we also scored every scan by the progression rate of
+its window in the training folds (the window only score). At MU the window comes from the treatment dates (during
+radiotherapy, within 12 weeks after its end, and later). At LUMIERE it is the rater's flag for scans within three
+months of radiotherapy, and at UCSF-ALPTDG it is computed from the start of radiotherapy, assuming a six week course.
+Externally, the window only score takes MU's rate for the matching window. The identity was checked on every
+bootstrap sample.
+
+% Sources: CHRISTODOULOU_FAITHFUL_PLAN.md (with deviations); CHRISTODOULOU_REPLICATION.md (faithful run);
+% ref christodoulou2026.

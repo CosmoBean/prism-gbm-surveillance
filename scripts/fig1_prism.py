@@ -106,20 +106,23 @@ def sequence_slices(patient: str, n: int) -> dict:
 
 
 def patient_scans():
-    """The patient's post-radiotherapy scans: weeks after RT end, enhancing volume (cc), label, and a T1c slice
-    with its enhancing mask, cropped around the lesion. Label rule as in the paper: progression scan = the scan
-    dated within 14 days of documented progression; no progression = followed by >= 120 days without progression."""
+    """The patient's post-radiotherapy scans up to and including the progression scan: weeks after RT end, enhancing
+    volume (cc), label, and a T1c slice with its enhancing mask, cropped around the lesion. Label rule as in the paper
+    (Section 2.1): the progression scan is the first scan on or after the documented progression date; a scan without
+    progression must be followed by >= 120 days without progression; any other scan is not labelled."""
     clin = load_clinical()
     row = clin[clin["Patient_ID"] == PATIENT].iloc[0]
     rt = float(row["Number of days from Diagnosis to Radiation Therapy end date"])
     prog = float(row["Number of days from Diagnosis to date of First Progression"])
     scans = []
     for n, day in sorted(scan_days(row).items()):
-        if day < rt or day > prog + 14 or not (MU / "MU-Glioma-Post" / PATIENT / f"Timepoint_{n}").exists():
+        if day < rt or not (MU / "MU-Glioma-Post" / PATIENT / f"Timepoint_{n}").exists():
             continue
-        label = ("Progression" if abs(day - prog) <= 14 else
+        label = ("Progression" if day >= prog else
                  "No progression" if prog - day >= 120 else "Not labelled")
         scans.append(dict(tp=n, weeks=(day - rt) / 7, label=label, **scan_slice(PATIENT, n)))
+        if day >= prog:
+            break
     return scans
 
 
@@ -301,7 +304,7 @@ def panel_a(c: Canvas, scans) -> None:
     c.line([42.0, 45.0], [top - 41.0, top - 41.0], DB, 0.6, ls=(0, (2, 1.5)))
 
     n = len(scans)
-    iw, gap = 24.0, 9.5
+    iw, gap = 19.0, 7.5
     ix0 = 52.0
     iy0 = top - 15.0 - iw
     xs = [ix0 + k * (iw + gap) for k in range(n)]
@@ -327,7 +330,7 @@ def panel_a(c: Canvas, scans) -> None:
     # the time axis, to scale, with the first 12 weeks shaded and "Follow-up" style labels
     ty = iy0 - 7.5
     tx0, tx1 = 47.0, W - 3.0
-    wmax = 38.0
+    wmax = 44.0
     wx = lambda w: ix0 + (W - 8.0 - ix0) * w / wmax
     c.ax.add_patch(Rectangle((wx(0), ty - 1.3), wx(12) - wx(0), 2.6, fc=st.tint(st.HIST, 0.75), ec="none",
                              zorder=2))
@@ -343,7 +346,7 @@ def panel_a(c: Canvas, scans) -> None:
     c.line([2.4, 5.4], [top - 46.0, top - 46.0], CONTOUR, 1.2)
     c.text(6.2, top - 45.0, "PRISM's segmenter", size=5.0, colour=st.MUTED)
     c.line([2.4, 5.4], [top - 49.0, top - 49.0], RELEASED, 0.9, ls="--")
-    c.text(6.2, top - 48.0, "released mask (cc)", size=5.0, colour=st.MUTED)
+    c.text(6.2, top - 48.0, "supplied mask (cc)", size=5.0, colour=st.MUTED)
     c.rule(TB + 0.6)
 
 
@@ -491,7 +494,7 @@ def panel_c(c: Canvas, scans) -> None:
         sx = x0 + k * 11.8
         c.scan(sx, y_img - 6.0, 10.6, scans[k - 2])
         c.text(sx + 5.3, y_img - 6.6, label, size=4.8, colour=st.MUTED, ha="center")
-    c.text(x0, y_img - 10.4, "four MRI sequences;\nsegmenter masks (b)\nor released masks", size=5.0)
+    c.text(x0, y_img - 10.4, "four MRI sequences;\nsegmenter masks (b)\nor supplied masks", size=5.0)
     c.document(x0 + 1.0, y_hist - 5.0, 8.0, 10.5, st.HIST, lines=5)
     c.text(x0 + 10.6, y_hist + 5.2, "treatment\ncourse as of\nthe scan day;\nage, sex,\nIDH, MGMT", size=5.0)
 
