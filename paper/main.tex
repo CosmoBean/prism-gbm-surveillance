@@ -237,10 +237,11 @@ PRISM processes each scan in six stages (Figure~\ref{fig:1}c), described below i
 \centering
 \figslot{fig1_system.pdf}{0.85\textheight}{One MU patient's follow-up on real scans; PRISM's segmenter; the method in six stages; the evaluation protocol.}
 \caption{\textbf{The task and the method.} (a) One MU-Glioma-Post patient's scans after radiotherapy, by weeks after
-its end, with the enhancing tumour outlined by PRISM's segmenter (solid) and by the supplied mask (dashed); volumes are
-the segmenter's, with the supplied mask's in brackets. Scans followed by at least 120 days without progression are
+its end, with the enhancing tumour outlined by PRISM's segmenter (solid) and by the released mask (dashed); volumes are
+the segmenter's, with the released mask's in brackets. Scans followed by at least 120 days without progression are
 labelled no progression, and the first scan after documented progression, at 40.9 weeks, is the progression scan.
-(b) PRISM's Swin UNETR segmenter \citep{hatamizadeh2022}, shown on that scan. (c) The six stages of PRISM at one scan
+(b) PRISM's segmenter, the first-place BraTS 2024 post-treatment ensemble of 30 networks
+\citep{ferreira2024}, shown on that scan. (c) The six stages of PRISM at one scan
 (Section~\ref{sec:2.2}). (d) Development on MU-Glioma-Post and testing without retraining at LUMIERE and UCSF-ALPTDG
 (Section~\ref{sec:2.3}).}
 \label{fig:1}
