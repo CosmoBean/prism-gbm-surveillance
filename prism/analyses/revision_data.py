@@ -8,10 +8,6 @@ the same model specification from fivefold cross validation grouped by patient o
 shuffled with seed 10 x repeat + fold on MU, seed 0 externally). Threshold: conformal.threshold (patient weights);
 set = {y : 1 - p_displayed(y) <= q}.
 
-Since 2026-11-19 (docs/results/ADOPT_AB.md) the displayed imaging probability is A's (window intercept + within-window
-score) and the combined score is B's; the inner fits use the same models (system.mu_predict; externally
-stratified_offset.fit_A / fit_B on the MU rows).
-
 R2 (leave one patient out). For each scan, its situation's counts, tier and AUCs are recomputed from the card's own
 cohort table without any scan of the scan's patient. Flags are recomputed with that tier.
 
@@ -55,10 +51,8 @@ def _q(oof, y, pid):
 
 
 # ---------------------------------------------------------------- R1, MU
-DISP = {"timeline": "timeline", "images": "images_prob", "combined": "combined"}  # displayed probability
-
-
 def mu_job(job):
+    from prism.experiments import c3_radiomics as c3
     pop, r, k = job
     threadpool_limits(1)
     warnings.filterwarnings("ignore")
@@ -68,14 +62,12 @@ def mu_job(job):
     tr, te = np.where(f != k)[0], np.where(f == k)[0]
     inner = inner_folds(pid[tr], 10 * r + k)
     out = {"r": r, "k": k, "te": te}
-    o = S.mu_predict(pop, tr, te, r)
-    oof = {p: np.full(len(tr), np.nan) for p in S.PW}
-    for j in range(INNER):
-        oj = S.mu_predict(pop, tr[inner != j], tr[inner == j], r)
-        for p in S.PW:
-            oof[p][inner == j] = oj[DISP[p]]
-    for p in S.PW:
-        out[p] = (o[DISP[p]], _q(oof[p], y[tr], pid[tr]))
+    for p, Xa in X.items():
+        p_te = c3.fit_predict(c3.BASELINES[0], d, Xa, {}, None, tr, te, seed=r)
+        oof = np.full(len(tr), np.nan)
+        for j in range(INNER):
+            oof[inner == j] = c3.fit_predict(c3.BASELINES[0], d, Xa, {}, None, tr[inner != j], tr[inner == j], seed=r)
+        out[p] = (p_te, _q(oof, y[tr], pid[tr]))
     return out
 
 
@@ -105,25 +97,13 @@ def lumiere_r1():
     Xl = {"timeline": LX[D.T_BASE], "images": LX[timg], "combined": LX, "images_scan": LX[S.VOL3]}
     rows = np.arange(len(dm))
     y, pid = dm.label_120.to_numpy(), dm.patient_id.to_numpy()
-    from prism.analyses import stratified_offset as SO
     inner = inner_folds(pid, 0)
-    win = S.mu_situation(dm)[0]
-    kinds = {"timeline": "plain", "images": "A", "images_scan": "A", "combined": "B"}
-    c = S.lumiere_cohort()
-    wl = c["wext"]
-
-    def inner_fit(name, Xa, tr, idx):
-        if kinds[name] == "A":
-            return SO.fit_A(Xa, dm, tr, win)[1](Xa.iloc[idx], win[idx])
-        if kinds[name] == "B":
-            return SO.fit_B(Xa, Xa[S.BASE_LOCKED], dm, tr, 0)[0](Xa.iloc[idx], Xa[S.BASE_LOCKED].iloc[idx])
-        return S._fit(Xa, dm, tr)(Xa.iloc[idx])
     full, q = {}, {}
     for name, Xa in Xmu.items():
-        full[name] = lambda Z, name=name: c["models"][name]["prob"](Z, wl)
+        full[name] = S._fit(Xa, dm, rows)
         oof = np.full(len(dm), np.nan)
         for j in range(INNER):
-            oof[inner == j] = inner_fit(name, Xa, rows[inner != j], np.where(inner == j)[0])
+            oof[inner == j] = S._fit(Xa, dm, rows[inner != j])(Xa.iloc[np.where(inner == j)[0]])
         q[name] = _q(oof, y, pid)
     nop = L.prev_scan_id.eq("").to_numpy()
     n = len(L)
@@ -228,7 +208,7 @@ def main(argv=None):
     rows += coverage_rows("mu", "registered (split, refitted model)", c["y"], regP, reg, m,
                           c["S"]["p_combined"])
     P, sets = mu_r1(a.workers)
-    dev = max(float(np.nanmax(np.abs(P[p] - c["S"]["prob_images" if p == "images" else f"p_{p}"]))) for p in S.PW)
+    dev = max(float(np.nanmax(np.abs(P[p] - c["S"][f"p_{p}"]))) for p in S.PW)
     print(f"MU displayed-score check: max deviation {dev:.2e}", flush=True)
     assert dev < 1e-9
     rows += coverage_rows("mu", "cross-conformal (displayed model)", c["y"], P, sets, m, c["S"]["p_combined"])
@@ -239,7 +219,7 @@ def main(argv=None):
     rows += coverage_rows("lumiere", "registered (split, refitted model)", L["y"], regP, reg, m,
                           L["S"]["p_combined"])
     P, sets, q = lumiere_r1()
-    dev = max(float(np.nanmax(np.abs(P[p] - L["S"]["prob_images" if p == "images" else f"p_{p}"]))) for p in S.PW)
+    dev = max(float(np.nanmax(np.abs(P[p] - L["S"][f"p_{p}"]))) for p in S.PW)
     print(f"LUMIERE displayed-score check: max deviation {dev:.2e}", flush=True)
     assert dev < 1e-9
     rows += coverage_rows("lumiere", "cross-conformal (displayed model)", L["y"], P, sets, m,
