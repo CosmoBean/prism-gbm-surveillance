@@ -33,7 +33,22 @@ import pandas as pd
 from matplotlib.patches import FancyBboxPatch, Rectangle
 
 import figure_style as st
-from fig1_prism import CONTOUR, load_clinical, scan_days, scan_slice, show_scan
+from fig1_prism import CONTOUR, load_clinical, scan_days, scan_slice
+
+RELEASED = "#7FD3F0"  # the mask released with the cohort, for comparison
+
+
+def show_scan(iax, scan):
+    """One slice with the released mask (dashed) and PRISM's segmentation. Kept here since fig1_prism.py (9fb7afb)
+    no longer defines it; same drawing as before."""
+    iax.imshow(scan["img"], cmap="gray", vmin=0, vmax=1, interpolation="bilinear")
+    if scan["msk"].any():
+        iax.contour(scan["msk"].astype(float), levels=[0.5], colors=[RELEASED], linewidths=0.45, linestyles="--")
+    if scan["net"].any():
+        iax.contour(scan["net"].astype(float), levels=[0.5], colors=[CONTOUR], linewidths=0.6)
+    iax.set_xticks([]); iax.set_yticks([])
+    for sp in iax.spines.values():
+        sp.set_visible(False)
 
 REPO = Path(__file__).resolve().parents[1]
 RECORDS = REPO / "outputs" / "results" / "analyses" / "system"
