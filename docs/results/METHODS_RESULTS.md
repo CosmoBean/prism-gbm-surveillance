@@ -87,7 +87,7 @@ correct reports pass) and the development reports (language model 47 / 48, templ
 applied once to the evaluation reports.
 
 False rejections (v1.1, evaluation reports, all passing the frozen checker): language model MU 1 / 114 (rule V2),
-LUMIERE 0 / 162; template 0 / 276. Not adjudicated (the reports are not read in a hosted context).
+LUMIERE 0 / 162; template 0 / 276. Adjudicated 2026-11-20: the one rejected report (MU PatientID_0105 Timepoint 3, claim 11) is correct. It copies card.situation verbatim ("enhancing tumour present, not increased since the previous scan"); rule V2 matched "increased" and ignores negation, so the rejection is false.
 
 Planted errors, share rejected (frozen checker -> verifier):
 | operator | synthetic (52 records) | real, language model | real, template |
