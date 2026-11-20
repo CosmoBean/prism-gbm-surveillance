@@ -1026,7 +1026,7 @@ class TestStressContract(unittest.TestCase):
 
 
 class TestRenderedReports(unittest.TestCase):
-    MODEL_ONLY_HEADINGS = ("## 2. The two pathways", "## 3. The combined score", "## 4. How much to trust this here")
+    MODEL_ONLY_HEADINGS = ("## 2. Model predictions", "## 3. Match with previously seen scans")
 
     def test_facts_only_markdown_has_no_model_only_headings_or_tables(self):
         rec = record()

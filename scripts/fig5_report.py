@@ -276,21 +276,20 @@ def draw(output, F, claims, imgs, rule, where, HA) -> float:
 
     y -= 2.4
     hy = y
-    y = head(y, "2  The two models")
+    y = head(y, "2  Model predictions")
     y = score_rows(hy, TWO_MODELS, True)                       # column heads on the section-heading line
     agree = F["models.agreement_statement"]
     text(6.0, y + 0.6, agree[0].upper() + agree[1:] + ".", size=NOTE, colour=st.MUTED)
     y -= line_h(NOTE) + 1.6
-    y = head(y, "3  The combined score")
-    y = score_rows(y + line_h(HEAD) + 1.6, COMBINED, False)
+    y = score_rows(y + line_h(HEAD) + 0.6, COMBINED, False)                  # the combined score continues section 2
     text(6.0, y + 0.6, "Grey tick: median of the model's scores in the MU-Glioma-Post evaluation scans. A conformal "
                        "set lists the outcomes the score cannot rule out.", size=NOTE, colour=st.MUTED)
     y -= line_h(NOTE) + 0.6
     rule_line(y)
 
-    # ---------------------------------------------------------------- 4 reliability card
+    # ---------------------------------------------------------------- 3 reliability card
     y -= 1.8
-    y = head(y, "4  How much to trust this here")
+    y = head(y, "3  Match with previously seen scans")
     lab = 30.0
     text(6.0, y, "Situation", colour=st.MUTED)
     sl = wrap(F["card.situation"], BODY, W - 6.0 - lab)
