@@ -19,7 +19,7 @@ TABLE = [{"cohort": "mu", "cell": "later_post_rt|et_not_increased", "n_scans": 5
           "n_patients": 9, "tier": "few cases", **{f"{p}_{k}": None for p in R.PATHWAYS
                                                     for k in ("auc", "auc_lo", "auc_hi")}}]
 TOP = {"schema", "record_id", "cohort", "scan_id", "patient_id", "population", "population_flags", "phase_of_care",
-       "situation", "scores", "measurements", "card", "conformal", "flags", "provenance"}
+       "situation", "scores", "model", "measurements", "card", "conformal", "flags", "provenance"}
 
 
 def cohort(n=6, R_=2):
@@ -29,6 +29,14 @@ def cohort(n=6, R_=2):
                       "grade4": True, "intended_use": True, "phase": "later_post_rt", "label_120": y,
                       "label_det": np.nan_to_num(y), "neg_primary": y == 0, "neg_secondary": True})
     Sc = {f"{a}_{p}": rng.uniform(0.05, 0.95, (R_, n)) for a in ("p", "pc") for p in S.PW}
+    # A and B (ADOPT_AB.md): within-window image score, window intercept, shown probability, B's increment
+    Sc["p_images"] = rng.normal(0, 1, (R_, n))
+    Sc["icpt_images"] = np.tile(np.array([0.5, -2.9] * (n // 2)), (R_, 1))
+    Sc["prob_images"] = 1 / (1 + np.exp(-(Sc["icpt_images"] + Sc["p_images"])))
+    Sc["pcs_images"] = Sc["p_images"].copy()
+    Sc["incr_combined"] = rng.normal(0, 0.3, (R_, n))
+    Sc["offset_combined"] = rng.normal(0, 1, (R_, n))
+    Sc["b0_combined"] = np.zeros((R_, n))
     sets = {}
     for kind in ("std", "mon"):
         for p in S.PW:
@@ -107,6 +115,24 @@ class Records(unittest.TestCase):
         none = S._meas({"et": 1.0}, [], "x")
         self.assertIsNone(none["previous"])
         self.assertIsNone(none["change_from_earlier_minimum_cc"])
+
+
+class AdoptAB(unittest.TestCase):
+    """ADOPT_AB.md rules 2-4: shown probability, mapped median, model block."""
+    def test_model_block_and_agreement(self):
+        c = cohort()
+        for i in range(len(c["scan_id"])):
+            r = S._clean(S.build_record(c, i, TABLE, None))
+            m = r["model"]
+            self.assertAlmostEqual(r["scores"]["images"], m["images"]["probability"])
+            self.assertAlmostEqual(m["images"]["probability"],
+                                   1 / (1 + np.exp(-(m["images"]["window_intercept"] + m["images"]["within_window_score"]))))
+            self.assertEqual(r["card"]["agreement"]["images_side"],
+                             "above" if m["images"]["within_window_score"] > m["images"]["cohort_median_within_window_score"]
+                             else "below")
+            self.assertAlmostEqual(m["combined"]["score"], r["scores"]["combined"])
+            self.assertIn("increment", m["combined"])
+            self.assertIn("source", m["combined"])
 
 
 class Evaluation(unittest.TestCase):
