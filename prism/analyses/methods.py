@@ -11,6 +11,10 @@ finest level with >= 10 calibration patients: 1 its group, 2 its enhancement sta
 set). Unknown time externally starts at level 2. Calibration as registered (MU 70 / 30 patient split inside each outer
 training fold, refitted on the 70%; external MU split seed 0).
 
+Since 2026-11-19 (docs/results/ADOPT_AB.md) the imaging score is A's within-window score and the combined score is
+B's probability, and the conformal models are A's probability and B, all from prism.analyses.system (mu_job and the
+locked models of lumiere_cohort / ucsf_cohort), so M1 and M2 use the system's scores and sets.
+
     PRISM_SKIP_UCSF=1 PYTHONPATH=. .venv/bin/python -m prism.analyses.methods [--workers 20] [--n-boot 2000]
     -> outputs/results/analyses/methods/   (aggregate CSVs only)
 """
@@ -37,7 +41,9 @@ SEED = 20261115
 ALPHA = 0.2
 MIN_PAT = 10
 PW = S.PW
-WITHIN_REF = {"timeline": 0.64, "images": 0.68}      # registered MU within-phase AUCs (paper section 4.4)
+WITHIN_REF = {"timeline": 0.64, "images": 0.68}      # MU within-phase AUCs (clinical-history; A: S2 Q1, 0.68)
+MU_REF = {"timeline": 0.822, "images": 0.6688, "combined": 0.8137}   # system.EXPECTED (ADOPT_AB.md)
+UCSF_REF = {"timeline": 0.561, "images": 0.7690, "combined": 0.8681}
 
 
 # ---------------------------------------------------------------- M1 statistics
@@ -104,22 +110,10 @@ def m1_table(cohort, y, scores, c, pid, n_boot):
 
 # ---------------------------------------------------------------- MU jobs (scores, calibration rows)
 def mu_job(job):
-    from prism.experiments import c3_radiomics as c3
+    """The system's fold job (system.mu_job): ranking scores p_, conformal-model probabilities on the calibration
+    rows (pccal_) and the test rows (pc_)."""
     r, k = job
-    threadpool_limits(1)
-    warnings.filterwarnings("ignore")
-    d, X = S.mu_designs("grade4")
-    y, pid = d.label_120.to_numpy(), d.patient_id.to_numpy()
-    f = D.fold_ids(d, r)
-    tr, te = np.where(f != k)[0], np.where(f == k)[0]
-    proper, cal = cf.patient_split(pid[tr], 0.3, seed=10 * r + k)
-    cr = tr[cal][~np.isnan(y[tr[cal]])]
-    out = {"r": r, "k": k, "te": te, "cr": cr, "tr_lab": tr[~np.isnan(y[tr])]}
-    for p, Xa in X.items():
-        out[f"p_{p}"] = c3.fit_predict(c3.BASELINES[0], d, Xa, {}, None, tr, te, seed=r)
-        pc = c3.fit_predict(c3.BASELINES[0], d, Xa, {}, None, tr[proper], np.concatenate([cr, te]), seed=r)
-        out[f"pccal_{p}"], out[f"pc_{p}"] = pc[:len(cr)], pc[len(cr):]
-    return out
+    return S.mu_job(("grade4", r, k))
 
 
 # ---------------------------------------------------------------- M2
@@ -224,7 +218,7 @@ def run_mu(workers, n_boot):
     # reproduction: displayed AUCs equal the system's
     from sklearn.metrics import roc_auc_score
     chk = {p: float(np.mean([roc_auc_score(y[ev], P[p][r, ev]) for r in range(5)])) for p in PW}
-    for p, ref in (("timeline", 0.822), ("images", 0.709), ("combined", 0.821)):
+    for p, ref in MU_REF.items():
         assert abs(chk[p] - ref) < 1e-3, (p, chk[p])
     et = X["images"]["log_et_cc"].to_numpy(float) if "log_et_cc" in X["images"] else None
     scores = {p: P[p][:, ev] for p in PW}
@@ -271,10 +265,7 @@ def run_lumiere(n_boot):
     rows_ = np.arange(len(dm))
     proper, cal = cf.patient_split(pm, 0.3, seed=0)
     cr = rows_[cal][~np.isnan(ym[cal])]
-    timg = [cc for cc in X["T"].columns if cc not in D.T_BASE + ["has_prev", "log_days_from_prev"]]
-    Xmu = {"timeline": X["T"][D.T_BASE], "images": X["T"][timg], "combined": X["T"], "images_scan": X["T"][S.VOL3]}
-    LX = D.lumiere_detection()[1]
-    Xl = {"timeline": LX[D.T_BASE], "images": LX[timg], "combined": LX, "images_scan": LX[S.VOL3]}
+    Xmu, Xl, wl = c["Xmu"], c["Xext"], c["wext"]   # the system's locked designs and windows
     nop = L.prev_scan_id.eq("").to_numpy()
     enh = c["enh"]
     n = len(L)
@@ -284,9 +275,9 @@ def run_lumiere(n_boot):
         lev = np.zeros((1, n), int)
         sm, sr = [np.zeros((1, n), bool) for _ in range(2)], [np.zeros((1, n), bool) for _ in range(2)]
         for name, m in parts:
-            conf = S._fit(Xmu[name], dm, rows_[proper])
-            pcal = conf(Xmu[name].iloc[cr])
-            pte = conf(Xl[name])
+            conf = c["models"][name]["conf"]   # the system's conformal model (70% proper split, seed 0)
+            pcal = conf(Xmu[name].iloc[cr], cph[cr])
+            pte = conf(Xl[name], wl)
             Lv, a0, a1, b0, b1 = mondrian_sets(pcal, ym[cr], pm[cr], g1_mu[cr], enh_mu[cr], pte,
                                                np.array(["unknown|" + e for e in enh]), enh, start2=True)
             lev[0, m], sm[0][0, m], sm[1][0, m], sr[0][0, m], sr[1][0, m] = Lv[m], a0[m], a1[m], b0[m], b1[m]
@@ -321,7 +312,7 @@ def run_ucsf(n_boot):
     scores["enhancing_volume"] = np.log(et + 1e-3)[None, :]
     from sklearn.metrics import roc_auc_score
     chk = {p: float(roc_auc_score(y, scores[p][0])) for p in PW}
-    for p, ref in (("timeline", 0.561), ("images", 0.726), ("combined", 0.856)):
+    for p, ref in UCSF_REF.items():
         assert abs(chk[p] - ref) < 1e-3, (p, chk[p])
     t1, n1 = m1_table("ucsf", y, scores, ph, pid, n_boot)
     # M2: MU calibration rows (registered split seed 0) and their groups
@@ -337,9 +328,9 @@ def run_ucsf(n_boot):
     g1 = np.array([f"{a}|{b}" for a, b in zip(c["card_phase"], c["enh"])])
     rows, extras = [], []
     for p in PW:
-        conf = S._fit(A4[names[p]], d4, rows_[proper])
-        pcal = conf(A4[names[p]].iloc[cr])
-        pte = conf(A[names[p]][keep].reset_index(drop=True))
+        conf = c["models"][p]["conf"]   # the system's conformal model (70% proper split, seed 0)
+        pcal = conf(c["Xmu"][p].iloc[cr], cph[cr])
+        pte = conf(c["Xext"][p], c["wext"])
         Lv, a0, a1, b0, b1 = mondrian_sets(pcal, y4[cr], p4[cr], g1_mu[cr], enh_mu[cr], pte, g1, c["enh"],
                                            start2=False)
         assert (b0 == c["sets"][("std", p, 0.2, 0)][0]).all() and (b1 == c["sets"][("std", p, 0.2, 1)][0]).all(), p

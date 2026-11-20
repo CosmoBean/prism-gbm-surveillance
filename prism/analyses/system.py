@@ -147,6 +147,20 @@ def mu_predict(pop, tr, rows, r) -> dict:
     return o
 
 
+def mu_oof(pop="grade4", keys=("images", "combined")):
+    """Out-of-fold A / B (mu_predict keys) over the 5 x 5 folds, (5, n) per key, with the frame's scan ids."""
+    d, _ = mu_designs(pop)
+    out = {k: np.full((5, len(d)), np.nan) for k in keys}
+    for r in range(5):
+        f = D.fold_ids(d, r)
+        for k in range(5):
+            tr, te = np.where(f != k)[0], np.where(f == k)[0]
+            o = mu_predict(pop, tr, te, r)
+            for key in keys:
+                out[key][r, te] = o[key]
+    return d.scan_id.to_numpy(), out
+
+
 def mu_job(job):
     pop, r, k = job
     threadpool_limits(1)
@@ -387,7 +401,8 @@ def lumiere_cohort():
             "card_phase": np.array(["unknown"] * len(L)), "enh": enh, "comp_phase": np.array(["unknown"] * len(L)),
             "own": "lumiere", "eval": {"all": np.ones(len(L), bool)}, "median_set": np.ones(len(L), bool),
             "meas": meas, "image_model": np.where(nop, "images_scan (3 current volumes; no previous scan)", "T_img"),
-            "check_t_img_all": t_img_all, "early_flag": L.early_post_rt.to_numpy()}
+            "check_t_img_all": t_img_all, "early_flag": L.early_post_rt.to_numpy(),
+            "models": models, "Xmu": Xmu, "Xext": Xl, "wext": wl, "use": {"images": ("images_scan", nop)}}
 
 
 def ucsf_cohort():
@@ -421,7 +436,8 @@ def ucsf_cohort():
             "sets": sets, "ood": ood, "card_phase": np.array([R.phase_cell(p) for p in uk.rt_phase]),
             "enh": np.array([R.enhancement_state(a, b) for a, b in zip(e2, e1)]), "comp_phase": uk.rt_phase.to_numpy(),
             "own": "ucsf_locked", "eval": {"scan2_pm30": pm30 | neg}, "median_set": pm30 | neg, "meas": meas,
-            "check_scores": {p: S[f"p_{p}"][0] for p in PW}}
+            "check_scores": {p: S[f"p_{p}"][0] for p in PW},
+            "models": models, "Xmu": {p: A4[a] for p, a in names.items()}, "Xext": Xu, "wext": wu, "use": {}}
 
 
 # ---------------------------------------------------------------- flags and records

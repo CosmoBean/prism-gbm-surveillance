@@ -90,7 +90,25 @@ def _use_mask_source() -> None:
     expected_files._prism_masks = MASK_SOURCE
     V.expected_files = expected_files
 K_FEATURES = 256
-CONTRASTS = [("CHF", "B1"), ("CHF", "I_pure"), ("CHF", "I_scan")]
+CONTRASTS = [("CHF", "B1"), ("CHF", "I_pure"), ("CHF", "I_scan"), ("CHF", "A_I_pure")]
+# A_I_pure: PRISM's imaging model since 2026-11-19, the stratified imaging model A (within-window score; inputs I_pure;
+# docs/results/ADOPT_AB.md), out of fold from prism.analyses.system.mu_oof on the same folds. Added as an arm; the
+# bootstrap draws and every other arm are unchanged.
+
+
+def _a_oof(d, src=None):
+    """A's out-of-fold within-window score on frame d. src: a mask_sensitivity preds_<set>.npz (p_images = A on that
+    measurement table) instead of computing it on the released table here."""
+    if src is None:
+        from prism.analyses import system as S
+        sid, o = S.mu_oof("grade4", ("images",))
+        P = o["images"]
+    else:
+        z = np.load(src, allow_pickle=True)
+        sid, P = z["scan_id"], z["p_images"]
+    m = pd.DataFrame(P.T, index=sid).reindex(d.scan_id.to_numpy())
+    assert m.notna().all().all(), "A has no score for some scan of the frame"
+    return m.to_numpy().T
 META = ("scan_id", "subject_id", "timepoint", "roi")
 
 
@@ -269,6 +287,7 @@ def evaluate(n_boot: int):
     cal = o[[f"CHF#r{r}" for r in range(5)]].to_numpy().T
     raw = o[[f"CHFraw#r{r}" for r in range(5)]].to_numpy().T
     oofs = {"CHF": cal, **CR.ridge_oofs("grade4")}
+    oofs["A_I_pure"] = _a_oof(d)
     saved = pd.read_csv(D.OUT / "oof_grade4_primary.csv.gz")
     assert (saved.scan_id.to_numpy() == d.scan_id.to_numpy()).all()
     dev = np.nanmax(np.abs(saved[[f"B1#r{r}" for r in range(5)]].to_numpy().T - oofs["B1"]))
@@ -306,7 +325,9 @@ BRATS_SEED = 20261115
 BRATS_REF = {"CHF_released": 0.580, "B1": 0.822, "I_pure_brats21": 0.627, "I_pure_released": 0.709}
 BRATS_CONTRASTS = [("CHF_brats21", "I_pure_brats21"), ("CHF_brats21", "B1"), ("CHF_brats21", "CHF_released"),
                    ("CHF_brats21", "I_scan_brats21"), ("CHF_released", "I_pure_released"),
-                   ("I_pure_brats21", "I_pure_released")]
+                   ("I_pure_brats21", "I_pure_released"),
+                   ("CHF_brats21", "A_I_pure_brats21"), ("CHF_released", "A_I_pure_released"),
+                   ("A_I_pure_brats21", "A_I_pure_released")]  # A arms added 2026-11-19 (ADOPT_AB.md)
 
 
 def _maskcheck_one(pt):
@@ -405,6 +426,9 @@ def evaluate_brats21(n_boot: int):
     oofs = {"CHF_brats21": cal, "CHF_released": o_rel[[f"CHF#r{r}" for r in range(5)]].to_numpy().T,
             "B1": rel["B1"], "I_pure_brats21": z["I_pure"], "I_scan_brats21": z["I_scan"],
             "I_pure_released": rel["I_pure"]}
+    from prism.analyses import mask_sensitivity as MS
+    oofs["A_I_pure_brats21"] = _a_oof(d, MS.OUT / "preds_brats21.npz")
+    oofs["A_I_pure_released"] = _a_oof(d, MS.OUT / "preds_released.npz")
     saved = pd.read_csv(D.OUT / "oof_grade4_primary.csv.gz")
     dev = float(np.nanmax(np.abs(saved[[f"B1#r{r}" for r in range(5)]].to_numpy().T - rel["B1"])))
     dev_b1 = float(np.nanmax(np.abs(z["B1"] - rel["B1"])))

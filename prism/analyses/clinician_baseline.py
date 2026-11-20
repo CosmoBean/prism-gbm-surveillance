@@ -28,8 +28,10 @@ from prism.config import RESULTS
 
 OUT = RESULTS / "analyses" / "clinician_baseline"
 STATS = ("auc", "w", "a_within", "a_across")
-MU_REF = {"timeline": 0.822, "images": 0.709, "combined": 0.821}
-LUM_REF = {"timeline": 0.689, "combined": 0.773}
+# since 2026-11-19 (docs/results/ADOPT_AB.md): images = A's within-window score, combined = B, from system.mu_predict
+# and system.lumiere_cohort (before adoption: MU images 0.709, combined 0.821; LUMIERE combined 0.773)
+MU_REF = {"timeline": 0.822, "images": 0.6688, "combined": 0.8137}
+LUM_REF = {"timeline": 0.689, "images": 0.6421, "combined": 0.7537}
 
 
 def mu_reader_design(d, X):
@@ -45,10 +47,12 @@ def mu_job(job):
     threadpool_limits(1)
     warnings.filterwarnings("ignore")
     d, X = S.mu_designs("grade4")
-    X = dict(X, reader=mu_reader_design(d, X))
     f = D.fold_ids(d, r)
     tr, te = np.where(f != k)[0], np.where(f == k)[0]
-    return r, te, {p: c3.fit_predict(c3.BASELINES[0], d, Xa, {}, None, tr, te, seed=r) for p, Xa in X.items()}
+    o = S.mu_predict("grade4", tr, te, r)
+    out = {p: o[p] for p in PW}
+    out["reader"] = c3.fit_predict(c3.BASELINES[0], d, mu_reader_design(d, X), {}, None, tr, te, seed=r)
+    return r, te, out
 
 
 def table(cohort, y, scores, c, pid, n_boot):
