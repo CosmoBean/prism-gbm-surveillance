@@ -41,11 +41,15 @@ group-conditional. Candidate for the supplement.
 
 ![Figure 6](figures/fig_case_strips.png)
 
-### Figure 7. The report PRISM writes, and the check
-`scripts/fig5_report.py`: (a) the report for Patient 1's progression scan (strip a of Figure 6); (b) reports passing
-the checker for seven local language models.
+### Figure 7. The report PRISM writes
+`scripts/fig5_report.py`: the report for Patient 1's progression scan (strip a of Figure 6).
 
 ![Figure 7](figures/fig5_report.png)
+
+### Figure 8. Reports passing the checker, by local language model
+`scripts/fig5_report.py` (`ladder_figure`): reports passing the checker, of 406, for seven local language models.
+
+![Figure 8](figures/fig_llm_checker.png)
 
 ### Supplementary Figure S1. Calibration of the three scores
 `scripts/fig_calibration.py`: five equal-size bins per score; slope and intercept in the legend.
@@ -53,7 +57,7 @@ the checker for seven local language models.
 ![Supplementary Figure S1](figures/figS_calibration.png)
 
 ### Supplementary Figure S2. The record fields cited by the example report
-`scripts/fig5_report.py`: each sentence of Figure 7a with the record fields it cites.
+`scripts/fig5_report.py`: each sentence of Figure 7 with the record fields it cites.
 
 ![Supplementary Figure S2](figures/fig5_report_fields.png)
 
