@@ -46,7 +46,10 @@ Combined at MU is the full combined model; at LUMIERE and UCSF it is the reduced
 - LUMIERE progression scans 0.63 (released 0.77).
 - UCSF overall 0.80 (0.78).
 
-**Reports:** rerun pending.
+**Reports** (Qwen3.8-27B, frozen prompt and checker, `report_v3_2_brats24_22/`):
+- **Pass rate:** 276 of 276 MU and LUMIERE evaluation reports passed the checker (v3.2 prompt; v3.1 also 276/276).
+- **Card tiers:** all 83 required tier statements were made.
+- **UCSF:** not rerun; its record set was lost in the 11-02 reset.
 
 ## 2. Reference: released masks (current paper numbers)
 

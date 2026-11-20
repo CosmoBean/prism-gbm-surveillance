@@ -39,3 +39,11 @@ Recorded before any rerun.
 - The reports (Qwen3.8-27B), the checker and the verifier.
 - Figures 3–8, S1 and S2, and every number in the Results.
 - Changing the segmenter's name in the abstract needs author approval (LOCKED.md).
+
+## Deviations during the rerun
+
+- **2026-11-20, report freeze.** The `freeze` step was run after generation by mistake, and its guard refused to
+  run.
+  - The five frozen files (facts and prompts v3.1/v3.2, checker) were checked to have the same git blob hashes as
+    the original freeze of 2026-11-13.
+  - That original `FROZEN_hashes.txt` was copied into `report_v3_2_brats24_22/` instead of writing a new one.
