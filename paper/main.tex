@@ -132,8 +132,8 @@ comes from the tumour or from the treatment course.
 \item \textbf{An evaluation of what each score adds.} We compare every score with a reference model of the time since
 radiotherapy and the enhancing tumour volume, and split its AUC into pairs of scans from the same time window and from
 different windows \citep{kallus2019}. This measures what the images add beyond what a clinician already knows.
-\item \textbf{External validation without retraining.} Fitted once on 126 patients from MU-Glioma-Post, the models were
-applied unchanged to 79 patients from LUMIERE and 69 from UCSF-ALPTDG, from the supplied masks and from PRISM's own
+\item \textbf{External validation without retraining.} Fitted once on 181 scans from 92 patients in MU-Glioma-Post, the
+models were applied unchanged to 178 scans from 79 patients in LUMIERE and 69 scans from 69 patients in UCSF-ALPTDG, from the supplied masks and from PRISM's own
 segmentation.
 \item \textbf{A report checked against its record.} A deterministic checker and a verifier test every number and
 direction in the report against the record. We test the checks themselves with 24 kinds of planted error, and all 406
