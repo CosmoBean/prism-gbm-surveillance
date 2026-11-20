@@ -180,7 +180,7 @@ BrainSegFounder & 0.81 [0.56, 0.91] & 0.86 & 0.94 / 0.92 \\
 
 Short-gap consistency ($\leq$ 30 d, 54 pairs): median ET fold change 2.57 with the released masks and 2.17
 with the SwinUNETR masks ($\Delta$ median |log ratio| $-$0.17 [$-$0.46, $-$0.02]); WT unchanged. The mask
-sensitivity analysis of the main text replaces every MU mask with the SwinUNETR label map (main Section 3.3).
+sensitivity analysis of the main text replaces every MU mask with the SwinUNETR label map (main Section 2.3).
 
 \FloatBarrier
 \section{Reproducibility}\label{sec:S16}
@@ -450,7 +450,7 @@ to not tested. No scan at MU or LUMIERE moved between tested and few cases, so t
 
 \paragraph{Reports with this paper's model names, and a template.} The record keys and the prompt were renamed
 (clinical-history model, imaging model) with no other change. A small adapter maps the new names back before the
-unchanged checker runs. Through the adapter, the checker mutation test of the main text (main Section 4.5) gave the same result, mutant for mutant.
+unchanged checker runs. Through the adapter, the checker mutation test of the main text (main Section 3.4) gave the same result, mutant for mutant.
 The renamed prompt passed all 48 development reports at the first run and was frozen before the evaluation reports were
 generated. The fixed template writes one set sentence per line of the prompt from the record's values.
 
