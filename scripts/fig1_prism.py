@@ -1,12 +1,13 @@
 """Figure 1: the task and the method, drawn in the visual language of Tak et al. 2025 (NEJM AI, Figure 1): database and
 patient icons, one patient's real scans on a time axis, the network as stacked slabs, models as network glyphs.
-(a) One MU-Glioma-Post patient's follow-up against the time since radiotherapy; (b) PRISM's segmenter, the Swin UNETR,
-and the inside of a Swin stage; (c) PRISM at one follow-up scan, from inputs to the checked report, with the collation
+(a) One MU-Glioma-Post patient's follow-up against the time since radiotherapy; (b) PRISM's segmenter, the BraTS 2024
+post-treatment ensemble (Ferreira et al., arXiv:2411.04632; facts read from its container: 3 architectures x 2 training
+sets x 5 folds, equal-weight mean of the probability maps, > 0.5 per region, WT and RC parts < 50 voxels removed); (c) PRISM at one follow-up scan, from inputs to the checked report, with the collation
 of every value into the record as its own stage; (d) the evaluation protocol.
 
 Panel (a) reads the public MU-Glioma-Post images, masks and clinical workbook (data/mu-glioma-post, see
-prism/config.py), and PRISM's own segmentation of each scan by the BraTS 2021 Swin UNETR
-(outputs/features/seg_swin/mu, written by prism/features/reseg.py; plan docs/results/SEGMENTER_STAGE_PLAN.md). Weeks
+prism/config.py), and PRISM's own segmentation of each scan by the BraTS 2024 ensemble
+(outputs/features/seg_brats24/mu, written by prism/features/reseg_brats24.py; docs/results/SEGMENTER_SWITCH.md). Weeks
 after radiotherapy, enhancing volumes and the label of each scan are computed here from those files with the paper's
 label rule; no model score is shown. Panels (b)-(d) are a methods schematic as specified in the Methods; the models in
 (c) are PRISM's current models (the stratified and offset forms of docs/results/ADOPT_AB.md were not adopted). The input slices
@@ -31,9 +32,9 @@ REPO = Path(__file__).resolve().parents[1]
 MU = REPO / "data" / "mu-glioma-post"
 PATIENT = "PatientID_0204"        # early enhancement that resolved, then progression
 ET_LABEL = 3                      # enhancing tumour in the released masks (prism/config.py)
-CONTOUR = "#F2C14E"               # PRISM's segmentation (Swin UNETR, BraTS 2021)
+CONTOUR = "#F2C14E"               # PRISM's segmentation (BraTS 2024 ensemble)
 RELEASED = "#7FD3F0"              # the mask released with the cohort, for comparison
-SEG = REPO / "outputs" / "features" / "seg_swin" / "mu"
+SEG = REPO / "outputs" / "features" / "seg_brats24" / "mu"   # BraTS24 maps: 1 NETC, 2 SNFH, 3 ET, 4 RC
 MONO = "DejaVu Sans Mono"
 BLACK = "#000000"
 DB = "#3B3F47"                    # database and patient icons (Tak's dark grey)
@@ -127,7 +128,7 @@ def patient_scans():
 
 
 SEQ_LABELS = [("t2f", "FLAIR"), ("t1c", "T1c"), ("t1n", "T1"), ("t2w", "T2")]
-LABEL_RGB = {3: "#F2C14E", 1: "#D65F5F", 2: "#7BC67B"}   # enhancing, necrosis, FLAIR hyperintensity
+LABEL_RGB = {3: "#F2C14E", 1: "#D65F5F", 2: "#7BC67B", 4: "#F29CB7"}   # enhancing, necrosis, FLAIR, cavity
 
 
 class Canvas:
@@ -346,131 +347,122 @@ def panel_a(c: Canvas, scans) -> None:
     c.line([2.4, 5.4], [top - 46.0, top - 46.0], CONTOUR, 1.2)
     c.text(6.2, top - 45.0, "PRISM's segmenter", size=5.0, colour=st.MUTED)
     c.line([2.4, 5.4], [top - 49.0, top - 49.0], RELEASED, 0.9, ls="--")
-    c.text(6.2, top - 48.0, "supplied mask (cc)", size=5.0, colour=st.MUTED)
+    c.text(6.2, top - 48.0, "released mask (cc)", size=5.0, colour=st.MUTED)
     c.rule(TB + 0.6)
 
 
 # ==================================================================== (b) the segmenter
+ARCHS = [("nnU-Net", "convolutional U-Net"), ("Swin UNETR", "transformer encoder"),
+         ("MedNeXt-L", "ConvNeXt-style, kernel 5")]
+
+
+def unet_glyph(c: Canvas, x, y, colour, w=15.0, h=8.0):
+    """A small U-Net: plates shrinking to the bottleneck and growing back, with one skip arc."""
+    hs = [1.0, 0.72, 0.48, 0.72, 1.0]
+    step = w / len(hs)
+    for i, f in enumerate(hs):
+        hh = h * f
+        col = st.tint(colour, 0.25 + 0.45 * (1 - f)) if i < 3 else st.tint(colour, 0.78)
+        c.slab(x + i * step, y - hh / 2, step * 0.62, hh, 1.6, col, alpha=1.0)
+    t = np.linspace(0, np.pi, 30)
+    rx = (w - step) / 2
+    c.ax.plot(x + step * 0.3 + rx - rx * np.cos(t), y + h / 2 + 1.0 + 1.2 * np.sin(t), color=st.MUTED, lw=0.4,
+              ls=(0, (1.6, 1.0)), zorder=3)
+
+
 def panel_b(c: Canvas, seq) -> None:
     from matplotlib.colors import to_rgb
     top = TB
-    c.header(top, "b", "PRISM's segmenter: a Swin UNETR applied to every scan")
-    base = top - 29.0                                   # vertical centre line of the network
+    c.header(top, "b", "PRISM's segmenter: the BraTS 2024 post-treatment ensemble applied to every scan")
+    base = top - 28.0                                   # vertical centre line of the ensemble
     # ---- inputs: the four sequences stacked along a diagonal (Tak's scans along a time arrow)
     s = 12.5
     for k, (key, name) in enumerate(SEQ_LABELS):
         x, y = 2.0 + k * 3.6, base + 7.5 - k * 5.4
         c.image(x, y - s / 2, s, s, seq[key])
         c.text(x + 0.6, y + s / 2 - 0.5, name, size=4.6, colour="white", weight="bold")
-    c.arrow((26.0, base - 2.0), (31.5, base - 2.0), BLACK, 0.8)
-    c.text(28.8, base - 3.4, "4 ch.\n128³", size=4.6, colour=st.MUTED, ha="center")
+    c.arrow((26.0, base - 2.0), (30.5, base - 2.0), BLACK, 0.8)
 
-    # ---- encoder slabs (shrinking), bottleneck, decoder slabs (growing), skip arcs
-    enc = [("embed", 48, 64), ("stage 1", 96, 32), ("stage 2", 192, 16), ("stage 3", 384, 8), ("stage 4", 768, 4)]
-    hs = [24.0, 19.0, 14.5, 10.5, 7.0]
-    x = 33.0
-    pos = []
-    for i, (name, ch, res) in enumerate(enc):
-        w = 2.2 + 0.5 * i
-        h = hs[i]
-        col = st.tint(st.IMG, 0.62 - 0.14 * i)
-        for j in range(2):                               # two plates per stage: the two Swin blocks
-            c.slab(x + j * 1.9, base - h / 2, w, h, 3.0, col)
-        pos.append((x + 1.9 + w / 2, h))
-        c.text(x + 2.0, base - h / 2 - 1.8, f"{ch}×{res}³", size=4.5, colour=st.MUTED, ha="center")
-        c.text(x + 2.0, base + h / 2 + 2.2, name, size=4.6, ha="center", va="bottom")
-        if i < 4:
-            c.arrow((x + 1.9 + w + 0.3, base), (x + 7.0, base), BLACK, 0.6, ms=4)
-        x += 9.0
-    c.text(33.0, top - 4.2, "Swin Transformer encoder", size=5.8, colour=st.IMG, weight="bold")
-    dx = x + 1.0
-    dec = [(384, 8), (192, 16), (96, 32), (48, 64)]
-    dpos = []
-    for i, (ch, res) in enumerate(dec):
-        h = hs[3 - i]
-        w = 2.2
-        col = st.tint(st.IMG, 0.80)
-        c.slab(dx, base - h / 2, w, h, 3.0, col, alpha=1.0)
-        c.ax.add_patch(Polygon([(dx, base - h / 2), (dx + w, base - h / 2 + 1.05), (dx + w, base + h / 2 + 1.05),
-                                (dx, base + h / 2)], closed=True, fc="none", ec=st.IMG, lw=0.5, zorder=5))
-        dpos.append((dx + w / 2, h))
-        c.text(dx + 1.1, base - h / 2 - 1.8, f"{ch}×{res}³", size=4.5, colour=st.MUTED, ha="center")
-        if i:
-            c.arrow((dx - 5.6, base), (dx - 0.2, base), BLACK, 0.6, ms=4)
-        dx += 8.0
-    c.arrow((pos[-1][0] + 2.4, base), (dpos[0][0] - 1.3, base), BLACK, 0.6, ms=4)
-    c.text(dpos[0][0] - 1.0, top - 4.2, "Convolutional decoder", size=5.8, colour=st.IMG, weight="bold")
-    for i in range(4):                                   # skip connections as arcs over the top
-        (xa, ha_), (xb, hb_) = pos[3 - i], dpos[i]
-        ya = base + ha_ / 2 + 4.6
-        t = np.linspace(0, np.pi, 40)
-        rx, ry = (xb - xa) / 2, 2.2 + 0.6 * i
-        c.ax.plot((xa + xb) / 2 - rx * np.cos(t), ya + ry * np.sin(t), color=st.MUTED, lw=0.5,
-                  ls=(0, (2, 1.2)), zorder=3)
-        c.arrow(((xa + xb) / 2 + rx - 0.01, ya + 0.3), (xb, ya - 0.2), st.MUTED, 0.5, ms=3.5)
-    c.text(pos[2][0] + 3.0, base + hs[0] / 2 + 6.6, "skip connections", size=4.6, colour=st.MUTED, va="bottom")
-    # head and output
-    hx = dx
-    c.box(hx, base - 3.0, hx + 9.0, base + 3.0, edge=BLACK, r=0.8)
-    c.text(hx + 4.5, base + 1.2, "1×1×1\nconv", size=4.6, ha="center")
-    c.text(hx + 4.5, base - 5.6, "TC, WT, ET", size=4.6, ha="center", weight="bold")
-    c.arrow((dx - 8.0 + 2.4, base), (hx, base), BLACK, 0.6, ms=4)
-    c.arrow((hx + 9.0, base), (hx + 12.0, base), BLACK, 0.8)
+    # ---- six networks: three architectures (rows) x two training sets (columns), five folds each
+    rows = [base + 11.0, base, base - 11.0]
+    cx = [56.0, 77.0]
+    c.line([31.0, 31.0], [rows[0], rows[-1]], BLACK, 0.6)
+    for ry in rows:
+        c.arrow((31.0, ry), (33.5, ry), BLACK, 0.6, ms=4)
+    c.text(cx[0] + 7.5, top - 4.6, "BraTS 2024 data\n(1,350 cases)", size=4.8, ha="center", weight="bold")
+    c.text(cx[1] + 7.5, top - 4.6, "plus synthetic images\n(15,651 cases)", size=4.8, ha="center", weight="bold")
+    for r, (ry, (name, kind)) in enumerate(zip(rows, ARCHS)):
+        c.text(34.0, ry + 2.4, name, size=5.2, weight="bold", colour=st.IMG)
+        c.text(34.0, ry - 0.2, kind, size=4.4, colour=st.MUTED)
+        for col, x in enumerate(cx):
+            for k in (2, 1):                              # two ghost plates behind: the other folds
+                c.box(x - 1.2 + k * 0.9, ry - 4.4 + k * 0.9, x + 15.4 + k * 0.9, ry + 4.8 + k * 0.9,
+                      edge=st.tint(st.IMG, 0.55), face="white", lw=0.4, r=0.6, z=1)
+            c.box(x - 1.2, ry - 4.4, x + 15.4, ry + 4.8, edge=st.IMG, face="white", lw=0.5, r=0.6, z=2)
+            unet_glyph(c, x, ry - 0.4, st.IMG, w=14.0, h=6.0)
+            c.text(x + 15.0, ry - 3.0, "×5", size=4.4, colour=st.MUTED, ha="right")
+    gx0, gx1 = cx[0] - 3.0, cx[1] + 19.6                 # the 30 networks, enclosed; one arrow to the mean
+    c.box(gx0, rows[-1] - 6.4, gx1, rows[0] + 7.6, edge=st.MUTED, face="none", lw=0.5, ls=(0, (2, 1.5)), r=1.0, z=0)
+    c.text(gx0, rows[-1] - 7.4, "each network in five folds: 6 × 5 = 30 networks, fixed weights",
+           size=4.6, colour=st.MUTED)
+    c.arrow((gx1, base), (104.0 - 3.4, base), BLACK, 0.6, ms=4)
+
+    # ---- ensemble: equal-weight mean of the 30 probability maps, then regions and the volume rule
+    ex = 104.0
+    c.ax.add_patch(Circle((ex, base), 3.4, fc="white", ec=BLACK, lw=0.7, zorder=5))
+    c.text(ex, base + 0.1, "mean", size=4.8, ha="center", va="center", weight="bold")
+    c.text(ex, base - 4.4, "of the 30\nprobability\nmaps", size=4.4, ha="center", colour=st.MUTED)
+    bx0, bx1 = 111.0, 128.0
+    c.arrow((ex + 3.4, base), (bx0, base), BLACK, 0.6, ms=4)
+    c.box(bx0, base - 7.0, bx1, base + 7.0, edge=BLACK, r=0.8)
+    c.text((bx0 + bx1) / 2, base + 5.6, "> 0.5 per region\n(WT, TC, ET, RC);\nWT and RC parts\n"
+           "< 50 voxels\nremoved", size=4.5, ha="center")
+    c.arrow((bx1, base), (bx1 + 3.0, base), BLACK, 0.8)
     ow = 19.0
-    ox = hx + 12.4
+    ox = bx1 + 3.4
     iax = c.image(ox, base - ow / 2, ow, ow, seq["t1c"])
     rgba = np.zeros(seq["label"].shape + (4,))
     for lab, colour in LABEL_RGB.items():
         rgba[seq["label"] == lab] = (*to_rgb(colour), 0.6)
     iax.imshow(rgba, interpolation="nearest")
-    for k, (lab, name) in enumerate([(3, "enhancing"), (1, "necrosis"), (2, "FLAIR\nhyperintensity")]):
-        ly = base + ow / 2 - 1.6 - k * 3.0
+    for k, (lab, name) in enumerate([(3, "enhancing"), (1, "necrosis"), (2, "FLAIR\nhyperintensity"),
+                                     (4, "resection\ncavity")]):
+        ly = base + ow / 2 - 1.6 - k * 4.0
         c.ax.add_patch(Rectangle((ox + ow + 1.0, ly - 0.7), 1.4, 1.4, fc=LABEL_RGB[lab], ec="none"))
         c.text(ox + ow + 3.0, ly + 0.8, name, size=4.6, colour=st.MUTED)
-    c.text(ox, base - ow / 2 - 1.2, "62 M parameters; trained on\nBraTS 2021 and fixed, with no\n"
-                                    "tuning on any cohort", size=4.6, colour=st.MUTED)
+    c.text(ox, base - ow / 2 - 1.2, "first place, BraTS 2024 adult\nglioma post-treatment; trained\n"
+                                    "and fixed, with no tuning\non any cohort", size=4.6, colour=st.MUTED)
 
-    # ---- inside each Swin stage: two successive blocks, in a row, and the windows
-    iy = TC + 6.0
-    c.text(33.0, iy + 7.0, "Inside each stage, two successive Swin blocks:", size=5.0, colour=st.INK)
-    cells = ["LN", "W-MSA", "+", "LN", "MLP", "+", "LN", "SW-MSA", "+", "LN", "MLP", "+"]
-    x = 33.0
-    cw = {"LN": 4.2, "MLP": 5.2, "W-MSA": 7.6, "SW-MSA": 8.4, "+": 2.0}
-    prev = None
-    centres = []
-    for k, name in enumerate(cells):
-        w = cw[name]
-        if name == "+":
-            c.ax.add_patch(Circle((x + 1.0, iy), 1.0, fc="white", ec=st.IMG, lw=0.6, zorder=5))
-            c.text(x + 1.0, iy + 0.05, "+", size=5.4, colour=st.IMG, ha="center", va="center", weight="bold")
-        else:
-            face = st.IMG if "MSA" in name else (st.tint(st.IMG, 0.6) if name == "MLP" else st.tint(st.IMG, 0.9))
-            c.box(x, iy - 1.5, x + w, iy + 1.5, edge=st.IMG, face=face, lw=0.5, r=0.6, z=5)
-            c.text(x + w / 2, iy + 0.05, name, size=4.6, ha="center", va="center",
-                   colour="white" if "MSA" in name else st.INK)
-        centres.append((x, x + w))
-        if prev is not None:
-            c.arrow((prev, iy), (x, iy), st.IMG, 0.5, ms=3.5)
-        prev = x + w
-        x += w + 1.6
-    for a, b in [(0, 2), (3, 5), (6, 8), (9, 11)]:          # residual connections, below the row
-        xa, xb = centres[a][0] - 0.8, (centres[b][0] + centres[b][1]) / 2
-        c.line([xa, xa, xb], [iy, iy - 3.0, iy - 3.0], st.IMG, 0.5)
-        c.arrow((xb, iy - 3.0), (xb, iy - 1.0), st.IMG, 0.5, ms=3.5)
-    c.text(prev + 2.0, iy + 1.8, r"$\hat{z}^{l} = \mathrm{W\text{-}MSA}(\mathrm{LN}(z^{l-1})) + z^{l-1}$" "\n"
-           r"$z^{l} = \mathrm{MLP}(\mathrm{LN}(\hat{z}^{l})) + \hat{z}^{l}$", size=4.8)
-    # regular and shifted windows (patch grid 8 x 8, windows of 4 x 4 patches)
-    g = 7.6
-    for r, (lab, cuts) in enumerate([("7³ windows", [0.5]), ("shifted", [0.25, 0.75])]):
-        gx, gy = W - 2.0 - 2 * g - 3.0 + r * (g + 3.0), TC + 3.0
-        for t in np.linspace(0, 1, 9):
-            c.line([gx + t * g, gx + t * g], [gy, gy + g], st.RULE, 0.3)
-            c.line([gx, gx + g], [gy + t * g, gy + t * g], st.RULE, 0.3)
-        c.ax.add_patch(Rectangle((gx, gy), g, g, fc="none", ec=st.IMG, lw=0.7, zorder=4))
-        for t in cuts:
-            c.line([gx + t * g, gx + t * g], [gy, gy + g], st.IMG, 0.7)
-            c.line([gx, gx + g], [gy + t * g, gy + t * g], st.IMG, 0.7)
-        c.text(gx + g / 2, gy + g + 0.4, lab, size=4.6, colour=st.MUTED, ha="center", va="bottom")
+    # ---- the building block of each architecture, in a row
+    iy = TC + 5.6
+    c.text(2.0, iy + 6.4, "The building block of each architecture:", size=5.0, colour=st.INK)
+    chains = [("nnU-Net", ["conv 3³", "norm", "LReLU"], False, "× 2"),
+              ("MedNeXt", ["depthwise\nconv 5³", "GroupNorm", "1×1×1\n×4 ch.", "GELU", "1×1×1"], True, ""),
+              ("Swin UNETR", ["LN", "W-MSA", "LN", "MLP"], False, "each with a residual;\nthen shifted windows")]
+    x = 2.0
+    for name, cells, resid, note in chains:
+        c.text(x, iy + 0.1, name, size=4.8, weight="bold", colour=st.IMG, va="center")
+        x += {"nnU-Net": 10.0, "MedNeXt": 10.6, "Swin UNETR": 13.0}[name]
+        start = x
+        prev = None
+        for cell in cells:
+            w = 2.4 + 0.95 * max(len(t) for t in cell.split("\n"))
+            face = st.IMG if "MSA" in cell else (st.tint(st.IMG, 0.6) if cell in ("MLP", "GELU", "LReLU")
+                                                  else st.tint(st.IMG, 0.9))
+            c.box(x, iy - 2.0, x + w, iy + 2.0, edge=st.IMG, face=face, lw=0.5, r=0.6, z=5)
+            c.text(x + w / 2, iy + 0.05, cell, size=4.2, ha="center", va="center",
+                   colour="white" if "MSA" in cell else st.INK)
+            if prev is not None:
+                c.arrow((prev, iy), (x, iy), st.IMG, 0.5, ms=3.5)
+            prev = x + w
+            x += w + 1.2
+        if resid:                                           # residual connection, below the row
+            c.line([start - 0.6, start - 0.6, prev + 0.6], [iy, iy - 3.4, iy - 3.4], st.IMG, 0.5)
+            c.arrow((prev + 0.6, iy - 3.4), (prev + 0.6, iy - 0.2), st.IMG, 0.5, ms=3.5)
+        if note:
+            c.text(prev + 1.4, iy + 0.1, note, size=4.4, colour=st.MUTED, va="center")
+            x += 7.0
+        x += 6.0
     c.rule(TC + 0.6)
 
 
@@ -494,19 +486,19 @@ def panel_c(c: Canvas, scans) -> None:
         sx = x0 + k * 11.8
         c.scan(sx, y_img - 6.0, 10.6, scans[k - 2])
         c.text(sx + 5.3, y_img - 6.6, label, size=4.8, colour=st.MUTED, ha="center")
-    c.text(x0, y_img - 10.4, "four MRI sequences;\nsegmenter masks (b)\nor supplied masks", size=5.0)
+    c.text(x0, y_img - 10.4, "four MRI sequences;\nsegmenter masks (b)", size=5.0)
     c.document(x0 + 1.0, y_hist - 5.0, 8.0, 10.5, st.HIST, lines=5)
     c.text(x0 + 10.6, y_hist + 5.2, "treatment\ncourse as of\nthe scan day;\nage, sex,\nIDH, MGMT", size=5.0)
 
     # ---- 2 features as vectors of cells
     x0, x1 = cols[1]
     cwid, ch = 3.0, 1.15
-    tints = [0.0] * 6 + [0.35] * 13 + [0.62] * 8
+    tints = [0.0] * 5 + [0.35] * 10 + [0.62] * 7
     for k, a in enumerate(tints):
         c.ax.add_patch(Rectangle((x0 + 1.0, y_img + 8.0 - (k + 1) * ch * 0.62), cwid, ch * 0.62,
                                  fc=st.tint(st.IMG, a), ec="white", lw=0.25, zorder=5))
-    c.text(x0 + 5.4, y_img + 8.2, r"$\mathbf{x}_{\mathrm{img}}$ (27)", size=5.8, colour=st.IMG, weight="bold")
-    c.text(x0 + 5.4, y_img + 4.4, "6 volumes\n13 shape and\n    intensity\n8 change since\n    earlier scans",
+    c.text(x0 + 5.4, y_img + 8.2, r"$\mathbf{x}_{\mathrm{img}}$ (22)", size=5.8, colour=st.IMG, weight="bold")
+    c.text(x0 + 5.4, y_img + 4.4, "5 volumes\n10 shape and\n    intensity\n7 change since\n    earlier scans",
            size=4.9)
     for k in range(12):
         c.ax.add_patch(Rectangle((x0 + 1.0, y_hist + 4.5 - (k + 1) * 0.78), cwid, 0.78,
