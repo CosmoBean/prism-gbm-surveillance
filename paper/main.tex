@@ -698,13 +698,12 @@ neither did deep networks tuned on MU (Table~\ref{tab:2}). \todo{SUPPLEMENT: The
 
 % Sources: SKELETON_2026-11-20.md timestamp-only check (LUMIERE days since surgery, UCSF days from RT start, UCSF days
 % since previous scan); UCSF_AUDIT.md sections 3--6; UCSF_RESULTS.md Part C; NUMBERS.md 4, 5, 12C; SEGMENTER_STAGE.md P1.
-At the external centres, timing ranked scans less well and the enhancing tumour better. The days since surgery ranked
-LUMIERE scans at 0.61, and the days since the start of radiotherapy ranked UCSF-ALPTDG scans at 0.54 (exploratory).
-At UCSF-ALPTDG, enhancing volume alone reached 0.88 (0.79--0.95) and the time-and-enhancement model 0.87, which the
+At UCSF-ALPTDG, enhancing volume alone ranked scans at 0.88 (0.79--0.95) and timing, the days since the start of
+radiotherapy, at 0.54. At LUMIERE the two were close: enhancing volume alone reached 0.66 and the days since surgery
+0.61 (both centres exploratory). At UCSF-ALPTDG the time-and-enhancement model reached 0.87, which the
 combined model matched ($-0.01$, $-0.08$ to $0.05$; Figure~\ref{fig:2}c). UCSF-ALPTDG rated enhancement as increased
 at 27 of the 29 scans with progression and dated progression a median of 7 days after the scan. Scans with progression
-had also been brought forward. Ranking scans by a shorter interval since the previous scan reached 0.72, and the reduced combined model holds this interval as an input. At LUMIERE, whose label is an expert's
-rating of the scan itself, enhancing volume alone reached 0.66.
+had also been brought forward. Ranking scans by a shorter interval since the previous scan reached 0.72, and the reduced combined model holds this interval as an input.
 
 % Sources: METHODS_RESULTS.md M1, E1, E4 and UCSF section; SKELETON_2026-11-20.md (all timestamps within window).
 Within a time window at MU, the imaging model ranked 0.68 (0.58--0.77) of pairs correctly, against 0.73 across
@@ -772,7 +771,7 @@ Swin UNETR agreed with the supplied masks at a median enhancing tumour Dice of 0
 With Swin UNETR outlines, the imaging model's AUC at MU fell to 0.63, and the combined and time-and-enhancement models
 changed by at most 0.04 at every centre (Table~\ref{tab:seg}). The MU loss was the only one of the nine changes whose
 interval lay below zero, so by the planned rule the segmentation stage did not reproduce the supplied-mask results in
-full. Keeping the supplied cavity gave the same fall. The reading of the combined model against the
+full. Keeping the supplied cavity gave the same fall, so the loss does not come from the missing cavity. The reading of the combined model against the
 time-and-enhancement model was the same under both mask sets at MU and LUMIERE, with no clear gain.
 \todo{SUPPLEMENT: At LUMIERE the size of that gain moved from $+$0.04 to $-$0.03, mainly because the
 time-and-enhancement model rose with Swin UNETR, by 0.04 (0.02--0.08).}
@@ -828,9 +827,11 @@ without progression. At MU the group of scans later than 12 weeks after radiothe
 covered at 68\% (55\% to 81\%).
 
 % Sources: METHODS_RESULTS.md M2 and E2, UCSF section; Supplementary Section S10.
-At MU, calibrating within groups raised coverage no more than equally large marginal sets did (Figure~\ref{fig:4}).
-In the later group with increased enhancement, coverage rose to 72\%, and to 74\% with marginal sets enlarged to the same share of sets
-holding both outcomes. Group calibration held both outcomes in 31\% of MU sets, against 25\%, and left 4\% empty. At
+In the two least covered MU groups, sets calibrated within groups covered no more scans than marginal sets enlarged
+to the same share of sets holding both outcomes (Figure~\ref{fig:4}). In the later group with increased enhancement
+(24 scans), coverage rose to 72\% within groups and to 74\% with the enlarged marginal sets. Calibration within groups
+moved coverage from early scans without a previous scan, which the marginal sets over-covered, to the largest later
+group (Supplementary Section~S10.2). Group calibration held both outcomes in 31\% of MU sets, against 25\%, and left 4\% empty. At
 UCSF-ALPTDG it did not lift the least covered group, later scans without increased enhancement (61\% marginal, 54\%
 within groups).
 
@@ -881,8 +882,8 @@ did not progress with the models disagreeing at one scan or more.}
 All 406 reports written by Qwen3.8-27B for patients not used to develop the prompt passed the checker (114 at MU, 162
 at LUMIERE and 130 at UCSF-ALPTDG; Figure~\ref{fig:5} shows one). This pass rate was measured after the prompt
 revision and is exploratory. All 220 reports in groups with few cases or none said so. When one entry was changed in
-30 records, 28 reports followed the change, against a planned minimum of 27. Figure~\ref{fig:llm} gives the pass
-rates of six other local models given the same prompt. \todo{SUPPLEMENT: Of six other local models given the same
+30 records, 28 reports followed the change, against a planned minimum of 27. Of six other local models given the same prompt, only
+Gemma-4 31B passed every report (Figure~\ref{fig:llm}). \todo{SUPPLEMENT: Of six other local models given the same
 prompt, only Gemma-4 31B also had every report pass. The reports for the 276 MU and LUMIERE records were then
 generated again with the record fields and prompt renamed to this paper's model names and no other change. All passed
 the checker, and the verifier was tested on these reports (Supplementary Section~S9).}
