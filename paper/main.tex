@@ -55,11 +55,12 @@ scanned four weeks after radiotherapy, half of the scans that looked progressive
 therefore read each scan against the time since treatment, and RANO 2.0 asks for a repeat scan or histology before
 progression is called within 12 weeks of radiotherapy \citep{wen2023}.
 
-Advanced imaging has not settled the question. Across 30 studies, diffusion and perfusion MRI reached pooled AUCs
-near 0.9 for separating pseudoprogression from progression \citep{taylor2022}, and adding them to a radiomics model
-raised its AUC in 61 patients \citep{kim2019}. In another cohort of 105 patients, however, they added nothing to a
-model of clinical data and MGMT status, and radiomics and deep learning models performed near chance
-\citep{leone2023}.
+Advanced MRI helps in some studies but has not solved the problem. Across 30 studies, diffusion and perfusion
+imaging separated pseudoprogression from progression with pooled AUCs near 0.9 \citep{taylor2022}, and adding them
+improved a radiomics model in 61 patients \citep{kim2019}. In a cohort of 105 patients, however, they added nothing
+to clinical data and MGMT status, and radiomics and deep learning models performed near chance \citep{leone2023}.
+PRISM therefore works from conventional MRI (T1, contrast-enhanced T1, T2 and FLAIR) together with the clinical
+record.
 
 Machine learning models proposed for this decision mostly score the image alone and report one AUC from a single
 split of one cohort. Studies of treatment response have small samples and a high risk of bias \citep{booth2022}, only
