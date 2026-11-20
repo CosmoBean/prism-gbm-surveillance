@@ -637,15 +637,16 @@ above 1 when the predictions are too compressed.}
 \subsection{Performance at three centres}\label{sec:3.1}
 
 % Sources: DETECTION_TASK.md; UCSF_RESULTS.md Part A--C; NUMBERS.md 3, 4, 12F, 15; METHODS_RESULTS.md E6a, E6d.
-Without retraining, the combined model ranked scans at an AUC of 0.77 (0.68--0.86) at LUMIERE and 0.86 (0.76--0.93)
-at UCSF-ALPTDG, against 0.82 (0.74--0.89) at MU (Figure~\ref{fig:2}). The externally applied model is the reduced
-combined model, which reached 0.80 on MU. The imaging model reached 0.71 (0.63--0.78) on MU, 0.65 (0.56--0.73,
-exploratory) at LUMIERE and 0.73 (0.60--0.84) at UCSF-ALPTDG, where the images from one scan alone reached 0.80
-(0.69--0.89). With all MU scans before progression counted as scans without progression, adding 89 scans, the
-clinical-history, imaging and combined models reached 0.81, 0.65 and 0.78. The scores rank scans at each centre, but
-their probabilities need local recalibration (Supplementary Figure S1). On MU the calibration slopes were about 0.75, with CIs including 1,
-whereas the imaging score at LUMIERE had a calibration intercept of 0.41 and the combined model at UCSF-ALPTDG a slope
-of 3.3, which a centre would correct on its own scans.
+Without retraining, the combined model reached an AUC of 0.77 (0.68--0.86) at LUMIERE and 0.86 (0.76--0.93) at
+UCSF-ALPTDG, against 0.82 (0.74--0.89) at MU (Figure~\ref{fig:2}). The reduced combined model, the form applied
+externally, reached 0.80 on MU. The imaging model reached 0.71 (0.63--0.78) on MU, 0.65 (0.56--0.73; exploratory) at
+LUMIERE and 0.73 (0.60--0.84) at UCSF-ALPTDG, where the images from one scan alone reached 0.80 (0.69--0.89). With
+all MU scans before progression counted as scans without progression (89 more scans), the clinical-history, imaging
+and combined models reached 0.81, 0.65 and 0.78.
+
+The probabilities needed recalibration at the external centres. The imaging score at LUMIERE had a calibration
+intercept of 0.41, and the combined model at UCSF-ALPTDG a slope of 3.3 (Supplementary Figure S1). On MU the
+calibration slopes were about 0.75, with CIs including 1.
 
 % Sources: NUMBERS.md 3, 4, 11; METHODS_RESULTS.md E4; CHRISTODOULOU_REPLICATION.md. Drawn by scripts/fig2_performance.py.
 \begin{figure}[!htbp]
@@ -669,79 +670,77 @@ uses the 163 scans with a recorded volume. The dashed grey line marks chance.}
 
 % Sources: CHRISTODOULOU_REPLICATION.md (faithful run; first re-implementation: Reading, 100 splits; faithful run on
 % the BraTS21 masks); METHODS_RESULTS.md E4.
-The published radiomics pipeline, run with its authors' code on the same MU scans, masks, label and folds, reached
-0.58 (0.50--0.66), below PRISM's imaging model by 0.13 (0.02--0.23) and below the time-and-enhancement model, which
-reached 0.80. Its tuning AUC within the training folds averaged 0.70 and did not carry to the held-out folds. An
-earlier re-implementation from the published description, with fewer features and 40 search trials, also reached
-0.58, a logistic regression on its 256 features 0.64, and enhancing volume alone 0.62 (exploratory), so on MU the
-selected radiomic features ranked scans no better than the enhancing volume. The comparison held on a second set of
-masks. With every MU mask taken from Swin UNETR, the pipeline reached 0.53 and ranked below the imaging model on the
-same masks by 0.10 (0.01--0.19). Single held-out sets vary widely at this size. Over 100 random held-out sets of 18 of
-our 92 grade 4 patients, the earlier re-implementation ranged from 0.32 to 0.88 on the intended use scans (mean 0.63),
-so the published estimate, from one held-out set and a different label, cannot be compared with ours.
+The published radiomics pipeline reached 0.58 (0.50--0.66) on MU, below PRISM's imaging model by 0.13 (0.02--0.23)
+and below the time-and-enhancement model (Figure~\ref{fig:2}). Enhancing volume alone reached 0.62 (exploratory).
+With Swin UNETR masks, the pipeline reached 0.53 and ranked below the imaging model on the same masks by 0.10
+(0.01--0.19). \todo{SUPPLEMENT: Its tuning AUC within the training folds averaged 0.70 and did not carry to the
+held-out folds. An earlier re-implementation from the published description, with fewer features and 40 search
+trials, also reached 0.58, and a logistic regression on its 256 features 0.64 (exploratory).}
+
+Single held-out sets of this size varied widely. Over 100 random held-out sets of 18 of the 92 grade 4 patients, an
+earlier re-implementation of the pipeline ranged from 0.32 to 0.88 on the intended use scans (mean 0.63).
 
 \subsection{What the ranking rests on}\label{sec:3.2}
 
 % Sources: METHODS_RESULTS.md E4; NUMBERS.md 3 (single inputs, B0, P - B1); SKELETON_2026-11-20.md timestamp-only check
 % (exploratory, 2026-11-20); DETECTION_DEEP.md.
-At MU, the time since the end of radiotherapy alone, without any fitted model, ranked scans at 0.77, and the
-time-and-enhancement model at 0.80 (0.71--0.88), so the combined model added little there: $+$0.02 ($-$0.03 to
-$+$0.08). These timing scores are exploratory. The visit number alone reached 0.78, and a ridge model on every
-timestamp reached 0.76 (0.66--0.84). The time since radiotherapy is a legitimate clinical input, which clinicians
-already weigh. At MU it carries much of the label, because 56 of the 62 scans with progression were taken later than
-12 weeks after radiotherapy and 51 of the 84 scans without progression within 12 weeks, when clinicians ask for
-confirmation before they call progression. The patient's characteristics
-alone, without dates, reached 0.53 (0.45--0.61), so the clinical-history model's ranking comes from the dates. The
-planned test of whether image measurements and schedule inputs add to the clinical-history model was not met, and
-deep networks tuned on MU did not add to it either (Table~\ref{tab:2}). At LUMIERE, the time-and-enhancement model,
-applied unchanged, reached 0.73 (0.64--0.81), and the combined model ranked scans above it by 0.04 ($-$0.01 to
-$+$0.10), again with no clear gain.
+The combined model ranked scans above the time-and-enhancement model by 0.02 ($-$0.03 to $+$0.08) at MU and 0.04
+($-$0.01 to $+$0.10) at LUMIERE, with no clear gain at either centre (Figure~\ref{fig:2}). The time-and-enhancement
+model reached 0.80 (0.71--0.88) at MU and 0.73 (0.64--0.81) at LUMIERE.
+
+At MU, the time since the end of radiotherapy alone ranked scans at 0.77, and a ridge model on every timestamp at
+0.76 (0.66--0.84; both exploratory). Most scans with progression were taken later
+than 12 weeks after radiotherapy, and most without progression within 12 weeks (Table~\ref{tab:1}). The patient's
+characteristics alone, without dates, reached 0.53 (0.45--0.61), so the clinical-history model's ranking comes from the
+dates. Image measurements and schedule inputs did not add to the clinical-history model by the planned rule, and
+neither did deep networks tuned on MU (Table~\ref{tab:2}). \todo{SUPPLEMENT: The visit number alone reached 0.78
+(exploratory).}
 
 % Sources: SKELETON_2026-11-20.md timestamp-only check (LUMIERE days since surgery, UCSF days from RT start, UCSF days
 % since previous scan); UCSF_AUDIT.md sections 3--6; UCSF_RESULTS.md Part C; NUMBERS.md 4, 5, 12C; SEGMENTER_STAGE.md P1.
-Timing did not carry over to the other centres, yet the combined model held, because there the enhancing tumour did
-more of the work. The days since surgery ranked LUMIERE scans at 0.61, and the days since the start of radiotherapy
-ranked UCSF-ALPTDG scans at 0.54 (both exploratory). At UCSF-ALPTDG, enhancing volume alone reached 0.88 (0.79--0.95),
-and the time-and-enhancement model, applied with the approximated window in the segmentation comparison, 0.87, which
-the combined model matched ($-0.01$, $-0.08$ to $0.05$; Figure~\ref{fig:2}c). The
-label there follows enhancement. UCSF-ALPTDG rated enhancement as increased at 27 of the 29 scans with progression
-and dated progression a median of 7 days after the scan (exploratory). Scans with progression had also been brought
-forward. The days since the previous scan ranked them at 0.28, that is 0.72 with shorter intervals ranked as
-progression, and the reduced combined model holds this interval as an input. LUMIERE's label is an expert's rating
-of the scan itself, and there enhancing volume alone reached 0.66 (exploratory).
+At the external centres, timing ranked scans less well and the enhancing tumour better. The days since surgery ranked
+LUMIERE scans at 0.61, and the days since the start of radiotherapy ranked UCSF-ALPTDG scans at 0.54 (exploratory).
+At UCSF-ALPTDG, enhancing volume alone reached 0.88 (0.79--0.95) and the time-and-enhancement model 0.87, which the
+combined model matched ($-0.01$, $-0.08$ to $0.05$; Figure~\ref{fig:2}c). UCSF-ALPTDG rated enhancement as increased
+at 27 of the 29 scans with progression and dated progression a median of 7 days after the scan. Scans with progression
+had also been brought forward. Ranking scans by a shorter interval since the previous scan reached 0.72, and the reduced combined model holds this interval as an input. At LUMIERE, whose label is an expert's
+rating of the scan itself, enhancing volume alone reached 0.66.
 
 % Sources: METHODS_RESULTS.md M1, E1, E4 and UCSF section; SKELETON_2026-11-20.md (all timestamps within window).
-Among scans taken at a similar time after radiotherapy, the images ranked progression at about 0.68
-(Figure~\ref{fig:3}). At MU, 38\% of pairs fell within one window. The imaging model ranked 0.68 (0.58--0.77) of the
-pairs within a window correctly and 0.73 across windows, a difference whose interval includes zero. The ridge model on
-timestamps ranked pairs within a window at 0.49 (0.37--0.60), at chance. The clinical-history model ranked 0.93
-(0.88--0.97) of the pairs across windows correctly and 0.64 (0.51--0.78) of the pairs within one, and ranking scans by
-their window's progression rate alone also ranked 0.93 of the pairs across windows correctly. The clinical-history
-score therefore ranks mainly across windows, and the combined model followed it (0.65 within, 0.92 across). Adding
-clinical history to images raised the AUC by 0.11 (0.03--0.19) at MU and 0.12 (0.04--0.21) at LUMIERE, and at both
-centres the whole gain lay in pairs across windows. Within one window, the imaging model ranked scans above the
-time-and-enhancement model by 0.10 ($-$0.04 to $+$0.26) at MU. Nine in ten pairs within a window come from the later
-window, so the within window AUC is close to the AUC of scans taken later than 12 weeks after radiotherapy
-(exploratory, Supplementary Section~S10).
+Within a time window at MU, the imaging model ranked 0.68 (0.58--0.77) of pairs correctly, against 0.73 across
+windows, a difference whose interval includes zero (Figure~\ref{fig:3}). The ridge model on timestamps ranked pairs
+within a window at 0.49 (0.37--0.60), at chance. Within a window, the imaging model ranked scans above the
+time-and-enhancement model by 0.10 ($-$0.04 to $+$0.26). \todo{SUPPLEMENT: At MU, 38\% of pairs fell within one
+window. Nine in ten pairs within a window come from the later window, so the within window AUC is close to the AUC of
+scans taken later than 12 weeks after radiotherapy (exploratory, Supplementary Section~S10).}
+
+The clinical-history model ranked mainly across windows, 0.93 (0.88--0.97) of those pairs against 0.64 (0.51--0.78)
+within one, and ranking scans by their window's progression rate alone also reached 0.93 across windows. The combined
+model followed it (0.65 within, 0.92 across). Adding clinical history to images raised the AUC by 0.11 (0.03--0.19)
+at MU and 0.12 (0.04--0.21) at LUMIERE, and at both centres the whole gain lay in pairs across windows.
 
 % Sources: METHODS_RESULTS.md M1 (LUMIERE, UCSF).
-At LUMIERE the window is the rater's flag, and only one of the scans the rater flagged as within three months of
-radiotherapy had progression (Table~\ref{tab:1}). The reduced models take the flag as an input, so the reduced
-clinical-history model's across window AUC of 0.96, against 0.59 within one, shows mainly how much the flag carries.
-There the imaging model ranked scans better within a window (0.71) than across (0.51). At UCSF-ALPTDG nearly nine in
-ten pairs fell within one window, almost all later than 12 weeks after radiotherapy, so the within window AUCs
-(combined 0.87, imaging 0.73) are close to the overall ones and the pairs across windows are too few to read.
+At LUMIERE, the imaging model ranked scans better within a window (0.71) than across (0.51). At UCSF-ALPTDG most
+pairs fell within one window, so the within window AUCs (combined 0.87, imaging 0.73) are close to the overall ones.
+\todo{SUPPLEMENT: At LUMIERE the window is the rater's flag, and only one of the scans the rater flagged as within
+three months of radiotherapy had progression (Table~\ref{tab:1}). The reduced models take the flag as an input, so the
+reduced clinical-history model's across window AUC of 0.96, against 0.59 within one, shows mainly how much the flag
+carries. At UCSF-ALPTDG nearly nine in ten pairs fell within one window, almost all later than 12 weeks after
+radiotherapy, and the pairs across windows are too few to read.}
 
 % Sources: STRATIFIED_OFFSET.md Q1, Q2; IMAGING_S3.md (exploratory design analyses, 2026-11-20).
-No change to the imaging model raised its ranking within a window (exploratory). An imaging model fitted with a
-separate intercept for each window, so that only within-window differences inform the image terms, kept the
-within-window AUC at MU ($-$0.00, $-$0.09 to $+$0.08) and lowered the across-window AUC. A wider penalty grid changed
-it by $+$0.004 ($-$0.005 to $+$0.014), and letting the enhancing volume carry a different weight in the first 12 weeks
-after radiotherapy by $-$0.01 ($-$0.10 to $+$0.07). A combined model that adds the image and clinical terms to the
-time-and-enhancement model as a fixed offset ranked scans as the combined model did at all three centres. The
-within-window AUC of about 0.68 is therefore what these measurements carry once timing is held fixed, in a cohort of
-62 scans with progression \todo{SUPPLEMENT: stratified and offset models (STRATIFIED\_OFFSET.md) and the wider penalty
-and window-by-enhancement terms (IMAGING\_S3.md), with all paired differences}.
+No change to the imaging model raised its AUC within a window at MU (exploratory). The changes tested were a separate
+intercept for each window, a wider penalty grid, a different weight for the enhancing volume in the first 12 weeks
+after radiotherapy, and a combined model that adds the image and clinical terms to the time-and-enhancement model as a
+fixed offset. \todo{SUPPLEMENT: An imaging model fitted with a separate intercept for each window, so that only
+within-window differences inform the image terms, kept the within-window AUC at MU ($-$0.00, $-$0.09 to $+$0.08) and
+lowered the across-window AUC. A wider penalty grid changed it by $+$0.004 ($-$0.005 to $+$0.014), and letting the
+enhancing volume carry a different weight in the first 12 weeks after radiotherapy by $-$0.01 ($-$0.10 to $+$0.07). A
+combined model that adds the image and clinical terms to the time-and-enhancement model as a fixed offset ranked scans
+as the combined model did at all three centres. The within-window AUC of about 0.68 is what these measurements carry
+once timing is held fixed, in a cohort of 62 scans with progression.}
+\todo{SUPPLEMENT: stratified and offset models (STRATIFIED\_OFFSET.md) and the wider penalty
+and window-by-enhancement terms (IMAGING\_S3.md), with all paired differences}
 
 % Sources: scripts/generate_methods_figures.py; METHODS_RESULTS.md M1.
 \begin{figure}[!htbp]
@@ -762,36 +761,33 @@ samples of patients.}
 \subsection{Effect of segmentation}\label{sec:3.3}
 
 % Sources: SEGMENTER_STAGE.md P2, P3; METHODS_RESULTS.md E5; NUMBERS.md 15.
-The enhancing volume is a noisy measurement. Between MU scans at most 30 days apart, during which the tumour should
-change little, it changed by a median factor of 2.6 with the supplied masks and 2.2 with Swin UNETR (54 pairs), a
-difference whose interval excludes zero. At LUMIERE, where only 52 such pairs exist, the supplied masks were the more
-repeatable (2.3 against 3.1), with an interval including zero. Swin UNETR agreed with the supplied masks at a median
-enhancing tumour Dice of 0.73 to 0.80 across the centres (Table~\ref{tab:seg}). Many UCSF-ALPTDG scans hold little or
-no enhancement, which gives its Dice a long lower tail.
+The enhancing volume changed by a median factor of 2.6 between MU scans at most 30 days apart with the supplied
+masks, and by 2.2 with Swin UNETR (54 pairs), a difference whose interval excludes zero. At LUMIERE (52 pairs) the
+factors were 2.3 with the supplied masks and 3.1 with Swin UNETR, with an interval including zero.
+
+Swin UNETR agreed with the supplied masks at a median enhancing tumour Dice of 0.73 to 0.80 across the centres
+(Table~\ref{tab:seg}). Many UCSF-ALPTDG scans hold little or no enhancement, which gives its Dice a long lower tail.
 
 % Sources: SEGMENTER_STAGE.md P1; METHODS_RESULTS.md E5.
-With PRISM's own Swin UNETR outlines, the combined and time-and-enhancement models changed by at most 0.04 at every
-centre, but the imaging model fell from 0.71 to 0.63 at MU (Table~\ref{tab:seg}). The MU loss was the only change
-among the nine whose interval lay below zero, so by the planned rule the segmentation stage did not reproduce the
-supplied-mask results in full. The loss is not explained by the missing cavity, because the analysis that kept the
-supplied cavity gave the same fall. The imaging model held at LUMIERE and rose at UCSF-ALPTDG, with an interval
-including zero. The reading of the combined model against the time-and-enhancement model was the same under both
-mask sets at MU and LUMIERE, with no clear gain. At LUMIERE the size of that gain moved from $+$0.04 to $-$0.03,
-mainly because the time-and-enhancement model rose with Swin UNETR, by 0.04 (0.02--0.08).
+With Swin UNETR outlines, the imaging model's AUC at MU fell to 0.63, and the combined and time-and-enhancement models
+changed by at most 0.04 at every centre (Table~\ref{tab:seg}). The MU loss was the only one of the nine changes whose
+interval lay below zero, so by the planned rule the segmentation stage did not reproduce the supplied-mask results in
+full. Keeping the supplied cavity gave the same fall. The reading of the combined model against the
+time-and-enhancement model was the same under both mask sets at MU and LUMIERE, with no clear gain.
+\todo{SUPPLEMENT: At LUMIERE the size of that gain moved from $+$0.04 to $-$0.03, mainly because the
+time-and-enhancement model rose with Swin UNETR, by 0.04 (0.02--0.08).}
 
 % Sources: SEGMENTER_BRATS24_PLAN.md (S4 running 2026-11-20); results to come in docs/results/SEGMENTER_BRATS24.md.
-\todo{S4 PENDING: With the BraTS 2024 post-treatment model, which also outlines the resection cavity and so supplies
-all 27 measurements, median Dice against the supplied masks was \_\_ for the enhancing tumour, \_\_ for the whole
-tumour and \_\_ for the cavity at MU-Glioma-Post, \_\_, \_\_ and \_\_ at UCSF-ALPTDG, and \_\_ and \_\_ for the
-enhancing and whole tumour at LUMIERE, whose masks have no separate cavity (Table~\ref{tab:seg}). Against the
-supplied masks, the imaging model changed by \_\_ (\_\_ to \_\_) at MU, \_\_ (\_\_ to \_\_) at LUMIERE and \_\_
-(\_\_ to \_\_) at UCSF-ALPTDG, and the combined and time-and-enhancement models by at most \_\_. The MU imaging loss
-seen with Swin UNETR [closed: 0.71 against \_\_, so the loss came from outlining post-treatment scans with a network
-trained on scans before surgery | narrowed to \_\_ | persisted at \_\_, so the MU imaging result depends on the
-supplied masks whichever public network outlines the tumour]. By the planned rule the BraTS 2024 stage [did | did
-not] reproduce the supplied-mask results, and the reading of the combined model against the time-and-enhancement model
-was [the same | different] at MU and LUMIERE. Between MU scans at most 30 days apart the enhancing volume changed by a
-median factor of \_\_. Against Swin UNETR directly, the imaging model differed by \_\_ (\_\_ to \_\_) at MU.}
+\todo{S4 PENDING: With the BraTS 2024 post-treatment model, which also outlines the resection cavity, the median
+cavity Dice against the supplied masks was \_\_ at MU-Glioma-Post and \_\_ at UCSF-ALPTDG (other Dice in
+Table~\ref{tab:seg}). The imaging model's AUC at MU changed by \_\_ (\_\_ to \_\_), and the combined and
+time-and-enhancement models by at most \_\_ at every centre. The MU imaging loss seen with Swin UNETR [closed, so it
+came from outlining post-treatment scans with a network trained on scans before surgery | narrowed to \_\_ | persisted,
+so the MU imaging result depends on the supplied masks whichever public network outlines the tumour]. By the planned
+rule the BraTS 2024 stage [did | did not] reproduce the supplied-mask results, and the reading of the combined model
+against the time-and-enhancement model was [the same | different] at MU and LUMIERE.}
+\todo{SUPPLEMENT: S4: Between MU scans at most 30 days apart the enhancing volume changed by a median factor of \_\_
+with the BraTS 2024 model. Against Swin UNETR directly, the imaging model differed by \_\_ (\_\_ to \_\_) at MU.}
 
 % Sources: SEGMENTER_STAGE.md P1 and P2 (s1_p1.csv, s1_p2_dice.csv); SEGMENTER_BRATS24_PLAN.md.
 \begin{table}[!htbp]
@@ -825,19 +821,18 @@ UCSF-ALPTDG & \todo{S4} & \todo{S4} & \todo{S4} & \todo{S4} & \todo{S4} \\
 \subsection{Certainty and reports}\label{sec:3.4}
 
 % Sources: NUMBERS.md 6 and 12B; SYSTEM_RESULTS.md S1.
-The 80\% sets of the combined score contained the true outcome in 82\%, 87\% and 78\% of scans at MU, LUMIERE and
-UCSF-ALPTDG, meeting the planned coverage rule on point estimates, and named a single outcome in 75\%, 62\% and 64\%
-of scans. Within subgroups coverage varied. At UCSF-ALPTDG the sets covered 97\% of scans with progression and 65\%
-(51\% to 79\%, exploratory CI) of scans without progression, and at MU the group of scans later than 12 weeks after
-radiotherapy with increased enhancement was covered at 68\% (55\% to 81\%).
+The combined score's 80\% sets contained the true outcome in 82\%, 87\% and 78\% of scans at MU, LUMIERE and
+UCSF-ALPTDG, and named a single outcome in 75\%, 62\% and 64\% of scans. Coverage varied within subgroups
+(exploratory). At UCSF-ALPTDG the sets covered 97\% of scans with progression and 65\% (51\% to 79\%) of scans
+without progression. At MU the group of scans later than 12 weeks after radiotherapy with increased enhancement was
+covered at 68\% (55\% to 81\%).
 
 % Sources: METHODS_RESULTS.md M2 and E2, UCSF section; Supplementary Section S10.
-Calibrating within groups changed which groups were covered more than how well the worst ones were
-(Figure~\ref{fig:4}). In the later group with increased enhancement, coverage rose to 72\%, but a marginal set
-enlarged to the same share of sets holding both outcomes covered it at 74\% (exploratory), so the gain came from
-larger sets. Group calibration held both outcomes more often (31\% of MU sets against 25\%) and left 4\% of MU sets
-empty. At UCSF-ALPTDG it did not lift the least covered group, later scans without increased enhancement (61\%
-marginal, 54\% within groups).
+At MU, calibrating within groups raised coverage no more than equally large marginal sets did (Figure~\ref{fig:4}).
+In the later group with increased enhancement, coverage rose to 72\%, and to 74\% with marginal sets enlarged to the same share of sets
+holding both outcomes. Group calibration held both outcomes in 31\% of MU sets, against 25\%, and left 4\% empty. At
+UCSF-ALPTDG it did not lift the least covered group, later scans without increased enhancement (61\% marginal, 54\%
+within groups).
 
 % Sources: scripts/generate_methods_figures.py; METHODS_RESULTS.md M2.
 \begin{figure}[!htbp]
@@ -853,15 +848,15 @@ dates, so its groups differ by enhancement state only; at UCSF the window assume
 \end{figure}
 
 % Sources: SYSTEM_RESULTS.md S2--S4; REVISION_DATA.md R2; NUMBERS.md 6.
-The agreement statement and the reliability card describe the evidence at each scan. Disagreement between the
-clinical-history and imaging models (planned test, cohort medians) marked scans that the combined score ranked less
-well at MU, where its AUC was 0.90 among scans on which the two models agreed and 0.59 where they disagreed. At LUMIERE
-the direction was the same (0.83 against 0.72), with an interval including zero, and at UCSF-ALPTDG the two groups did
-not differ. The card reached its tested tier for 37\% of MU scans, 89\% at LUMIERE and none at UCSF-ALPTDG, and no
-group in the first 12 weeks after radiotherapy at MU held more than three scans with progression. At least one flag of
-the record was raised for 91\% of MU scans and 93\% at LUMIERE, so PRISM presents the agreement and the card as
-descriptions of the evidence rather than as warnings. Figure~\ref{fig:cases} follows four MU patients scan by scan,
-with the three scores, the set and the agreement statement as the record holds them.
+Where the clinical-history and imaging models disagreed, the combined score ranked MU scans less well, at an AUC of
+0.59 against 0.90 where they agreed. At LUMIERE the direction was the same (0.72 against 0.83), with an interval
+including zero, and at UCSF-ALPTDG the two groups did not differ. Figure~\ref{fig:cases} follows four MU patients scan
+by scan, with the three scores, the set and the agreement statement as the record holds them.
+
+The reliability card reached its tested tier for 37\% of MU scans, 89\% at LUMIERE and none at UCSF-ALPTDG. No group
+in the first 12 weeks after radiotherapy at MU held more than three scans with progression. At least one flag was
+raised for 91\% of MU scans and 93\% at LUMIERE. \todo{SUPPLEMENT: Because flags are raised for nearly every scan, PRISM
+presents the agreement and the card as descriptions of the evidence rather than as warnings.}
 
 % Drawn by scripts/fig_case_strips.py from records_mu.jsonl and the supplied images (after Tak et al. 2025, Figure 4).
 \begin{figure}[!htbp]
@@ -884,12 +879,13 @@ did not progress with the models disagreeing at one scan or more.}
 
 % Sources: REPORT_V3_1.md (S5--S7); REPORT_V3.md; NUMBERS.md 7 and 16 (R4).
 All 406 reports written by Qwen3.8-27B for patients not used to develop the prompt passed the checker (114 at MU, 162
-at LUMIERE and 130 at UCSF-ALPTDG; Figure~\ref{fig:5} shows one). Because this pass rate was measured after the revision prompted by the LUMIERE
-failures, it is exploratory. All 220 reports in groups with few cases or none said so. When one field was changed in
-30 records, 28 reports followed the change, against a planned minimum of 27. Of six other local models given the same
-prompt, only Gemma-4 31B also had every report pass (Figure~\ref{fig:llm}). The reports for the 276 MU and LUMIERE
-records were then generated again with the record fields and prompt renamed to this paper's model names and no other
-change. All passed the checker, and the verifier was tested on these reports (Supplementary Section~S9).
+at LUMIERE and 130 at UCSF-ALPTDG; Figure~\ref{fig:5} shows one). This pass rate was measured after the prompt
+revision and is exploratory. All 220 reports in groups with few cases or none said so. When one entry was changed in
+30 records, 28 reports followed the change, against a planned minimum of 27. Figure~\ref{fig:llm} gives the pass
+rates of six other local models given the same prompt. \todo{SUPPLEMENT: Of six other local models given the same
+prompt, only Gemma-4 31B also had every report pass. The reports for the 276 MU and LUMIERE records were then
+generated again with the record fields and prompt renamed to this paper's model names and no other change. All passed
+the checker, and the verifier was tested on these reports (Supplementary Section~S9).}
 
 % Sources: NUMBERS.md section 11 (Fig 5b); REPORT_V3_1.md. Panel (a) drawn by scripts/fig5_report.py from the record
 % and the language model's output for MU PatientID_0029 Timepoint 4 (report v3.2, accepted by the checker).
@@ -919,19 +915,17 @@ every cohort; the size of each model's weights is in the second column.}
 
 % Sources: METHODS_RESULTS.md M3, its diagnostics and E3; Supplementary Section S10.
 The verifier rejected every planted direction error and every misplaced value, including the held-out ones, but not a
-swapped tier word, which matches none of its rules (Table~\ref{tab:verifier}). The checker had accepted every flipped
-direction word, every change rewritten with the opposite direction and every swap of the enhancing and FLAIR volumes.
-Of the 572 variants written by the separate language model, the verifier rejected every value placed under the wrong
-region or score and no correct paraphrase. Direction errors phrased in words outside its fixed list (such as regressed
-or receded) fall outside its rules, and we kept these errors as a test for a wider list rather than tune the list on
-them. Both checks test agreement with the record, not clinical accuracy. A report that passes states what its record
-holds, and the record itself rests on the measurements and the masks.
+swapped tier word, which matches none of its rules (Table~\ref{tab:verifier}). The checker had accepted every
+direction error and every swap of the enhancing and FLAIR volumes. Of the 572 variants written by the separate
+language model, the verifier rejected every value placed under the wrong region or score and no correct paraphrase. It
+missed most direction errors phrased in words outside its fixed list, such as regressed or receded.
+\todo{SUPPLEMENT: We kept these errors as a test for a wider list rather than tune the list on them.}
 
 % Sources: METHODS_RESULTS.md M3; NUMBERS.md 16 (R3).
-Of the 276 MU and LUMIERE reports of each writer that had passed the checker, the verifier rejected one written by the
-language model at MU and none written by a fixed template that copies each field into a set sentence. That report
-failed the direction rule \todo{AUTHOR: result of reading this report}. The checks apply equally to both writers, and
-the language model's reports were a quarter shorter (median 308 against 413 words).
+Of the reports that had passed the checker, the verifier rejected one of the 276 MU and LUMIERE reports written by the
+language model, at MU, and none of the 276 written by the fixed template. That report failed the direction rule
+\todo{AUTHOR: result of reading this report}. The language model's reports were a quarter shorter than the template's
+(median 308 against 413 words).
 
 % Sources: METHODS_RESULTS.md M3 (verifier_mutation mutants.csv).
 \begin{table}[!htbp]
