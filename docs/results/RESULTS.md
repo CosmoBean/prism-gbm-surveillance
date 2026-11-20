@@ -47,7 +47,7 @@ Combined at MU is the full combined model; at LUMIERE and UCSF it is the reduced
 - UCSF overall 0.80 (0.78).
 
 **Reports** (Qwen3.8-27B, frozen prompt and checker, `report_v3_2_brats24_22/`):
-- **Pass rate:** 276 of 276 MU and LUMIERE evaluation reports passed the checker (v3.2 prompt; v3.1 also 276/276).
+- **Pass rate:** 276 of 276 MU and LUMIERE evaluation reports passed the checker (MU 114/114, LUMIERE 162/162; v3.2 prompt; v3.1 also 276/276), from the corrected records (third run; see SEGMENTER_SWITCH.md).
 - **Card tiers:** all 83 required tier statements were made.
 - **UCSF:** not rerun; its record set was lost in the 11-02 reset.
 
