@@ -2,7 +2,7 @@
 
 All 49 references in the Introduction exist and were checked twice, independently. The full verdicts are in
 [RESULTS.md](RESULTS.md). Four author names in `paper/refs.bib` are already corrected (commit 6c05632). The sentences
-below say more than their source and are **not yet applied**. They wait for the author's approval.
+below said more than their source. **All 15 were applied on 2026-11-20** in the Introduction rewrite.
 
 | # | Key | Current text | Proposed text | Why |
 |---|---|---|---|---|

@@ -45,108 +45,94 @@ glioma surveillance, brain tumour segmentation, large language models, conformal
 
 \section{Introduction}\label{sec:1}
 
-Gliomas are the most common malignant primary brain tumours in adults, and glioblastoma, the most aggressive of them,
-accounts for about half of all malignant primary brain tumours \citep{ostrom2023}. Even with surgery, radiotherapy and
-temozolomide, median survival is about 15 months \citep{stupp2005}. After treatment, patients are followed with MRI
-every few months, and each scan feeds a decision: continue treatment, scan again sooner, or change treatment. The
-difficulty is that treatment can mimic progression. Pseudoprogression follows chemoradiotherapy in 20--30\% of
-patients \citep{wen2010}, more often when the MGMT promoter is methylated \citep{brandes2008}, and in one cohort
-scanned four weeks after radiotherapy, half of the scans that looked progressive were not \citep{taal2008}. Clinicians
-therefore read each scan against the time since treatment, and RANO 2.0 asks for a repeat scan or histology before
-progression is called within 12 weeks of radiotherapy \citep{wen2023}.
+Gliomas make up about a quarter of all primary brain tumours, and glioblastoma alone about half of the malignant
+ones \citep{ostrom2023}. Even with surgery, radiotherapy and temozolomide, median survival is about 15 months
+\citep{stupp2005}. After treatment, patients are followed with MRI every few months, and each scan feeds a decision:
+continue treatment, scan again sooner, or change treatment. Treatment can mimic progression. Pseudoprogression
+follows chemoradiotherapy in 20--30\% of patients \citep{wen2010}, more often when the MGMT promoter is methylated
+\citep{brandes2008}, and in one cohort, half of the patients whose first scan after radiotherapy looked progressive
+had pseudoprogression \citep{taal2008}. Clinicians therefore read each scan against the time since treatment, and
+RANO 2.0 asks for a repeat scan or histology before progression is called within 12 weeks of radiotherapy
+\citep{wen2023}.
 
-Advanced MRI helps in some studies but has not solved the problem. Across 30 studies, diffusion and perfusion
-imaging separated pseudoprogression from progression with pooled AUCs near 0.9 \citep{taylor2022}, and adding them
-improved a radiomics model in 61 patients \citep{kim2019}. In a cohort of 105 patients, however, they added nothing
-to clinical data and MGMT status, and radiomics and deep learning models performed near chance \citep{leone2023}.
-PRISM therefore works from conventional MRI (T1, contrast-enhanced T1, T2 and FLAIR) together with the clinical
-record.
+Advanced MRI helps in some studies but has not solved the problem. In a meta-analysis of 30 small studies, 13 at high
+risk of bias, diffusion and perfusion MRI reached pooled AUCs of 0.90--0.93 \citep{taylor2022}, and adding them
+improved a radiomics model in 61 patients \citep{kim2019}. In 105 patients with suspected pseudoprogression, however,
+they did not significantly improve on clinical data and MGMT status, and radiomics and deep learning models performed
+near chance \citep{leone2023}. PRISM therefore works from conventional MRI (T1, contrast-enhanced T1, T2 and FLAIR)
+together with the clinical record.
 
-Machine learning models proposed for this decision mostly score the image alone and report one AUC from a single
-split of one cohort. Studies of treatment response have small samples and a high risk of bias \citep{booth2022}, only
-29\% of 51 glioma radiomics studies were validated externally \citep{park2020}, and in a review of automated response
-assessment, 3 of 20 studies considered clinical characteristics and 5 used external test data \citep{shi2025}. Single
-random splits of small radiomics cohorts give unstable estimates \citep{an2021}, and most radiology algorithms lose
-performance on external data \citep{yu2022}. On the public MU-Glioma-Post cohort, a radiomics model reported an AUC of
-0.80 on 30 held-out patients \citep{christodoulou2026}. Where clinical inputs were compared with images on external
-data, the time since treatment was the strongest single input \citep{gomaa2025}. Longitudinal and interpretable
-designs have begun to appear: a temporal model of serial scans predicted recurrence of paediatric glioma across
-institutions \citep{tak2025}, and a concept bottleneck model on LUMIERE passes predicted tumour measurements through the
-RANO rules, although the interval between scans strongly affected its output \citep{tarek2026}.
+Machine learning models for this decision mostly score the image alone and report one AUC from a single split of one
+cohort. Studies of treatment response have small samples and a high risk of bias \citep{booth2022}, 29\% of 51 glioma
+radiomics studies were validated externally \citep{park2020}, and in a review of automated response assessment, 3 of
+20 studies considered clinical characteristics \citep{shi2025}. Single splits of small cohorts give unstable estimates
+\citep{an2021}, and most deep learning algorithms for radiological diagnosis lose performance on external data
+\citep{yu2022}. On MU-Glioma-Post, the public cohort used here, a radiomics model reported an AUC of 0.80 on 30
+held-out patients \citep{christodoulou2026}. Elsewhere, on an external test set, a model of clinical data alone
+matched one using MRI \citep{gomaa2025}, and on LUMIERE the interval between scans strongly affected a model built on
+the RANO rules \citep{tarek2026}. A model can learn such shortcuts, signals that predict the label without being what
+the reader cares about \citep{geirhos2020,zech2018,badgeley2019}, so the useful measure is what it adds beyond the
+evidence a clinician already holds \citep{pencina2008,beaulieujones2021}. Saliency maps drawn over a score after the
+fact do not show this reliably \citep{arun2021,saporta2022}, and a model that is interpretable by design is preferable
+to a black box explained afterwards \citep{rudin2019}.
 
-A single AUC cannot show what the ranking rests on. Models learn shortcuts, signals that predict the label in the
-development data without being what the reader cares about \citep{geirhos2020}: image models have recognised the
-hospital that acquired a radiograph \citep{zech2018} and predicted hip fracture largely from patient and healthcare
-variables \citep{badgeley2019}. In follow-up imaging the schedule ties the time of a scan to its outcome, so a score
-can rank scans well by recognising when they were taken. The useful question is what a model adds beyond the evidence
-a clinician already holds \citep{pencina2008,beaulieujones2021}. Heat maps drawn over a score after the fact do not
-answer it reliably: on chest radiographs every saliency method tested failed at least one test of trustworthiness
-\citep{arun2021}, and all localised findings less accurately than radiologists \citep{saporta2022}. For high-stakes
-decisions, a model whose inputs can be read directly is preferable \citep{rudin2019}.
+The image measurements depend on how the tumour is outlined. After surgery and radiotherapy the scan contains a
+resection cavity and treatment changes, which make segmentation harder, and the BraTS 2024 challenge was set up for
+this setting \citep{deverdier2024}. Experts disagree about the quality of the same glioma segmentation
+\citep{hoebel2024}, so measured volumes depend on whose outlines are used.
 
-Image measurements depend on how the tumour is outlined. After surgery and radiotherapy the scan contains a resection
-cavity and treatment changes, which make segmentation harder than before surgery, and the BraTS 2024 challenge was
-set up for this setting \citep{deverdier2024}. Experts disagree about the quality of the same glioma
-segmentation \citep{hoebel2024}, so a volume measured from one set of outlines may not match another, even between
-scans a few weeks apart.
+The report should state its uncertainty and be checkable. Conformal prediction turns a score into a set of possible
+outcomes that contains the true one at a chosen rate \citep{angelopoulos2023}, although the guarantee does not hold
+within subgroups or under distribution shift \citep{mehrtens2023}. Reporting practice varies: of 220 European
+centres, 60\% assessed follow-up scans qualitatively, 27\% applied RANO and 23\% used a reporting template
+\citep{thust2018}. After BT-RADS, a structured system that puts the treatment history in the report
+\citep{weinberg2018}, was adopted, reports mentioned bevacizumab and MGMT status more often \citep{zhang2020} and were
+rated more consistent by the clinicians and radiologists caring for these patients \citep{gore2019}. Language models
+now draft reports from automated measurements of brain tumours \citep{valerio2025,herasrivera2026} and other lesions
+\citep{mansour2026}. Such reports can contain errors a reader may not catch: AI-written chest radiograph reports
+contained clinically significant errors \citep{tanno2025}, 6\% of oncology CT reports simplified by an open-weight
+model contained factual errors \citep{prucker2025}, and systems that write text from tables misstate numbers
+\citep{wiseman2017}. Automatic measures of factual accuracy track human judgement poorly \citep{gabriel2021}, so
+checkers test each statement against the patient record \citep{zeba2026}, and errors can be planted in reports to
+test such checkers \citep{rao2025rexerr}. Because patient records often cannot leave the hospital, the model should
+run locally, and open-weight models run on site can label radiology reports \citep{mukherjee2023} and extract their
+findings as well as closed models \citep{nowak2025}.
 
-The report is the last step, and it should be honest about uncertainty and checkable. Reports of follow-up scans still
-vary: of 220 European centres, 60\% reported them in free text and 27\% applied RANO \citep{thust2018}. Structured
-systems such as BT-RADS put the treatment history in the report \citep{weinberg2018}, and after its adoption reports
-more often recorded treatment and MGMT status \citep{zhang2020} and were rated more consistent by referring
-clinicians \citep{gore2019}. Conformal prediction turns a
-score into a set of possible outcomes that contains the true one at a chosen rate without assumptions about the
-model \citep{angelopoulos2023}, although in medical image classification the guarantee fails within subgroups and
-under distribution shift \citep{mehrtens2023}. Language models now draft reports from automated measurements of brain
-tumours \citep{valerio2025,herasrivera2026} and other lesions \citep{mansour2026}, but they make errors a reader may
-not catch. AI-written radiology reports contain clinically significant errors \citep{tanno2025}, 6\% of oncologic CT
-reports simplified by an open-weight model contained factual errors in a prospective trial \citep{prucker2025}, and
-systems that write text from tables have long misstated the numbers they were given \citep{wiseman2017}. Automatic
-measures of factual accuracy disagree with one another \citep{gabriel2021}, so checkers for clinical text test each
-statement against the record \citep{zeba2026}, and checkers for radiology reports are tested on planted errors
-\citep{rao2025rexerr}. Because patient records often cannot leave the hospital, the model should also run locally, and
-open-weight models run on site now read radiology reports as well as closed ones \citep{mukherjee2023,nowak2025}.
-
-We present PRISM (Progression Reading with Independent Scores and Measurements), a local system for glioma follow-up
-MRI built around these needs. PRISM works in six stages
-(Figure~\ref{fig:1}). It first outlines the enhancing tumour, necrosis, FLAIR hyperintensity and resection cavity
-with a fixed public segmentation network, either a Swin UNETR trained on BraTS 2021 \citep{hatamizadeh2022} or the
-first-placed BraTS 2024 post-treatment model, or it takes the masks supplied with the dataset. From the outlines of
-the current and earlier scans it computes 27 measurements: volumes, shape, intensity and change. Three penalised
-logistic regression models \citep{pedregosa2011} score the scan, one on the image measurements, one on the clinical
-history and one on both; the imaging model is never given dates. Beside each score PRISM states an 80\% conformal set,
-whether the imaging and clinical-history scores agree, and how the models performed in comparable scans. Every value
-is collated into one structured record under a fixed key, with its source. An open-weight language model
-(Qwen3.8-27B, served locally with vLLM \citep{kwon2023}) writes the report from that record alone, under a JSON schema
-that makes each sentence name the record entries it uses. It sees no images, has no tools and decides nothing. Two
-rule-based programs then check every number and every direction in the report against the record and accept or
-reject it. Related systems use a language model to phrase automated measurements \citep{herasrivera2026}, or chain
-language-model agents that read clinical notes and assign a BT-RADS category \citep{jabal2026}. In PRISM the clinical
-history enters the record as data, which is what makes every sentence checkable.
+We present PRISM (Progression Reading with Independent Scores and Measurements), a system for glioma follow-up MRI
+that runs on one local computer (Figure~\ref{fig:1}). PRISM outlines the tumour with a fixed public segmentation
+network, either a Swin UNETR trained on BraTS 2021 \citep{hatamizadeh2022}, which marks the enhancing tumour, necrosis
+and FLAIR hyperintensity, or the first-placed BraTS 2024 post-treatment model \citep{ferreira2024}, which also marks
+the resection cavity, or it takes the masks supplied with the dataset. From the outlines of the current and earlier
+scans it computes 27 measurements of volume, shape, intensity and change. Three ridge logistic regressions
+\citep{pedregosa2011} score the scan, one from the image measurements alone (with no dates), one from the clinical
+history and one from the two combined. Each score comes with an 80\% split-conformal set, a statement of whether the
+image and clinical-history scores agree, and the models' measured performance in comparable earlier scans. Every value
+is collated into one JSON record under a fixed key, with its source. An open-weight language model (Qwen3.8-27B,
+served locally with vLLM \citep{kwon2023}) writes the report from that record alone, under a JSON schema that makes
+each sentence list the record keys it uses; it sees no images and has no tools. A deterministic checker and a verifier
+then test every number, flag and direction in the report against the record, and accept or reject it. Unlike systems
+in which language-model agents read clinical notes and assign a BT-RADS category \citep{jabal2026}, PRISM gives the
+language model the clinical history as data and no decision to make, which is what makes every sentence checkable.
 
 Our contributions are:
 \begin{itemize}
-\item \textbf{A system that keeps the evidence apart.} For each follow-up scan, PRISM scores the images, the clinical
-history and both separately, states how certain each score is, and writes a report from one record that holds every
-value with its source.
-\item \textbf{A way to see what a score rests on.} We compare each score with a simple model of the time since
-radiotherapy and the enhancing tumour volume, and split its AUC into scans taken at a similar time and scans taken at
-different times. On MU-Glioma-Post this showed that timing and the enhancing tumour carry much of the ranking, and
-that the images rank scans at about 0.68 within a time window.
-\item \textbf{Transfer without retraining.} The models were fitted once on MU-Glioma-Post and applied unchanged at
-LUMIERE and UCSF-ALPTDG, from the supplied masks and from PRISM's own segmentation.
-\item \textbf{A report that is checked.} Every number and direction in the report is tested against the record by
-rule-based programs, and we measure what these checks catch and what they miss.
+\item \textbf{A local pipeline from MRI to a checked report.} Segmentation (Swin UNETR or the BraTS 2024 post-treatment
+ensemble), 27 longitudinal measurements, three ridge logistic regressions with split-conformal sets, a JSON record with
+the source of every value, and a schema-constrained report from a 27-billion-parameter open-weight model, all on one
+computer.
+\item \textbf{An evaluation that separates the evidence.} Every score is compared with a reference model of the time
+since radiotherapy and the enhancing tumour volume, and its AUC is split into pairs of scans from the same time window
+and pairs from different windows \citep{kallus2019}.
+\item \textbf{External validation without retraining.} The models were fitted once on MU-Glioma-Post (126 patients)
+and applied unchanged to LUMIERE (79 patients) and UCSF-ALPTDG (69 patients), from the supplied masks and from PRISM's
+own segmentation.
+\item \textbf{Report checks that are themselves tested.} A deterministic checker and a verifier test every number and
+direction in the report against the record, and we measure what they catch with 24 kinds of planted error.
 \end{itemize}
 
-The rest of the paper follows the system from data to report. Section~\ref{sec:2} describes the cohorts and the
-label, PRISM's stages (segmentation and measurements, the three models, the confidence statements, and the record,
-report and checks), and how we evaluated it, including the time-and-enhancement model, the AUC split by time window,
-the published radiomics pipeline, the segmentation comparison and the tests fixed in advance. Section~\ref{sec:3}
-reports how the models ranked scans at the three centres, what that ranking rests on, how it changes with the
-segmentation, how often the conformal sets held, and what the report checks caught. Section~\ref{sec:4} discusses
-what these results mean for reading follow-up scans and for evaluating models in this setting, and states the
-limitations.
+Section~\ref{sec:2} describes the cohorts, PRISM's stages and the evaluation. Section~\ref{sec:3} reports the results
+at the three centres, what the scores rest on, the effect of segmentation, and the conformal sets and report checks.
+Section~\ref{sec:4} discusses what the results mean and their limits.
 
 \section{Methods}\label{sec:2}
 
