@@ -164,7 +164,7 @@ checked against the record. Table~\ref{tab:models} lists every score in the pape
 % MU images from data/mu-glioma-post (patient PatientID_0204; labels by the paper's rule, computed in the script).
 \begin{figure}[!htbp]
 \centering
-\figslot{fig1_system.pdf}{0.66\textheight}{One MU patient's follow-up on real scans; PRISM's segmenter; the method in five stages; the evaluation protocol.}
+\figslot{fig1_system.pdf}{0.6\textheight}{One MU patient's follow-up on real scans; PRISM's segmenter; the method in six stages; the evaluation protocol.}
 \caption{\textbf{The task and the method.} (a) One MU-Glioma-Post patient's scans after radiotherapy. Each panel is
 the T1c axial slice with the most enhancement. The enhancing tumour is outlined as PRISM's segmenter, a Swin UNETR
 trained on BraTS 2021 \citep{hatamizadeh2022}, draws it (solid) and as the mask released with the cohort draws it
@@ -174,20 +174,22 @@ labelled by the paper's rule: progression documented at the scan, or no progress
 the scan at 24.7 weeks meets neither and is not labelled. (b) PRISM's segmenter, shown on the patient's last scan. A
 Swin UNETR \citep{hatamizadeh2022} takes the four sequences as channels. Its Swin Transformer encoder applies
 self-attention within shifted local windows and halves the resolution at each stage, and its convolutional decoder
-restores it through skip connections from every stage. Each Swin stage holds two successive blocks (right):
+restores it through skip connections from every stage. Each Swin stage holds two successive blocks (below):
 layer normalisation, multi-head self-attention within 7\textsuperscript{3} windows, and a multilayer perceptron, each
 with a residual connection; the second block shifts the windows by half a window, so that information passes between
-neighbouring windows. Three sigmoid outputs give the tumour core, the whole tumour
-and the enhancing tumour, from which follow the enhancing, necrosis and FLAIR masks. The network was trained on
-BraTS 2021 and is applied unchanged to every scan. (c) What PRISM computes at one follow-up scan. The masks come from
+neighbouring windows. Three sigmoid outputs (tumour core, whole tumour, enhancing tumour) give the
+enhancing, necrosis and FLAIR masks. (c) What PRISM computes at one follow-up scan, in six stages. The masks come from
 PRISM's segmenter or are those released with the cohort; the results in this paper use the released masks unless
 stated. The masks
 give 27 measurements of the tumour and its change ($\mathbf{x}_{\mathrm{img}}$); the treatment course as of the scan
 day and the patient's characteristics give the clinical-history inputs ($\mathbf{x}_{\mathrm{hist}}$). Three ridge
-logistic regressions score the scan on each input set and on both. The evidence statements are the split-conformal
-set of the combined score, the agreement of the imaging and clinical-history scores, and the reliability card. Every
-value enters one record under a fixed key; a local language model writes the report from the record alone, and a
-deterministic checker accepts it or rejects it without repair. Colours mark the models as in every figure; the two
+logistic regressions score the scan. The imaging model is fitted with one intercept per time window after
+radiotherapy, and its score keeps only the image term, so it ranks scans within a window. The combined model takes the
+timing-and-enhancement baseline as a fixed offset, so its fitted term is what the images and the history add to that
+baseline. The evidence statements are the split-conformal set of the combined score, the agreement of the imaging and
+clinical-history scores, and the reliability card. Collation is deterministic code that gathers every score,
+measurement and statement into one record, each under a fixed key with its source. A local language model writes the
+report from the record alone, and a deterministic checker accepts it or rejects it without repair. Colours mark the models as in every figure; the two
 input slices are this patient's last two scans. (d) Models were developed on MU by repeated cross validation grouped
 by patient, then fitted once and applied unchanged at LUMIERE and UCSF, under rules fixed before any score was
 compared with an external label, except the LUMIERE imaging and reduced clinical-history scores, added afterwards
