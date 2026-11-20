@@ -6,8 +6,8 @@ Model    BraTS24_1 (Ferreira et al., 1st place, adult glioma post-treatment): nn
 Input    the four sequences named BraTS-GLI-{i:05d}-100-{t1c,t1n,t2f,t2w}.nii.gz. MU and UCSF as stored (240 x 240 x
          155, 1 mm, LPS); LUMIERE DeepBraTumIA atlas images reoriented to LPS, as for the Swin UNETR stage (S1), and
          the label map mapped back to the stored grid.
-Run      one container per GPU (NVIDIA_VISIBLE_DEVICES), each with its own input, output and scratch mounts, so the
-         ensemble's working folders inside the image never collide.
+Run      one container copy per GPU (brats24_1_g<k> on node-local disk; CUDA_VISIBLE_DEVICES passed in with
+         enroot --env), each with its own input, output and scratch mounts.
 Output   $PRISM_OUTPUTS/features/seg_brats24/<cohort>/<patient>/<timepoint>.nii.gz and volumes_brats24_<cohort>.csv
          (voxels per label, Dice ET / TC / WT / RC against the released mask; RC only where the mask has one).
 
@@ -31,10 +31,12 @@ import pandas as pd
 from prism.config import LABEL_ET, LABEL_NETC, LABEL_SNFH, OUTPUTS, mu_scan_paths
 from prism.features import reseg as R
 
-ENROOT_DATA = os.environ.get("PRISM_ENROOT_DATA", "/project/community/sbandred/containers/data")
-CONTAINER = "brats24_1"
+# One unpacked copy of the image per GPU on node-local disk (enroot allows one writable instance per container, and
+# its rootfs lock is unreliable on NFS): brats24_1_g0 ... brats24_1_g3, made with `enroot create` from the .sqsh.
+ENROOT_DATA = os.environ.get("PRISM_ENROOT_DATA", "/tmp/enroot/data")
+CONTAINER = "brats24_1_g{gpu}"
 OUT = OUTPUTS / "features" / "seg_brats24"
-WORK = Path(os.environ.get("PRISM_BRATS24_WORK", "/project/community/sbandred/brats24_work"))
+WORK = Path(os.environ.get("PRISM_BRATS24_WORK", "/tmp/brats24_work"))
 LABEL_RC = 4
 SEQ = {"t1c": "t1c", "t1n": "t1", "t2f": "flair", "t2w": "t2"}     # BraTS suffix -> our channel name
 
@@ -89,15 +91,15 @@ def stage(cohort: str, ids: list[str], d: Path) -> dict:
 
 
 def run_container(d: Path, gpu: int) -> float:
-    for sub in ("out", "conv", "inf"):
+    for sub in ("out", "conv", "inf", "tmp"):
         (d / sub).mkdir(parents=True, exist_ok=True)
     # enroot does not pass the host environment into the container; --env NAME copies the named host variable in.
     env = dict(os.environ, ENROOT_DATA_PATH=ENROOT_DATA, CUDA_VISIBLE_DEVICES=str(gpu))
-    cmd = ["enroot", "start", "--rw", "--env", "CUDA_VISIBLE_DEVICES",
+    cmd = ["enroot", "start", "--rw", "--env", "CUDA_VISIBLE_DEVICES", "--mount", f"{d / 'tmp'}:/tmp",
            "--mount", f"{d / 'in'}:/mlcube_io0", "--mount", f"{d / 'out'}:/mlcube_io2",
            "--mount", f"{d / 'conv'}:/mlcube_project/converted_dataset",
            "--mount", f"{d / 'inf'}:/mlcube_project/inference",
-           CONTAINER, "infer", "--data_path=/mlcube_io0", "--output_path=/mlcube_io2"]
+           CONTAINER.format(gpu=gpu), "infer", "--data_path=/mlcube_io0", "--output_path=/mlcube_io2"]
     t = time.time()
     with open(d / "container.log", "w") as fh:
         subprocess.run(cmd, env=env, stdout=fh, stderr=subprocess.STDOUT, check=True)
