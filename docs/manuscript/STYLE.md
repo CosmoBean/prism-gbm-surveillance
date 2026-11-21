@@ -294,3 +294,38 @@ Add each reaction as a dated, one-line rule.
   score"; the author finds it confusing and misleading. Call it the "clinical-history model". Call the image pathway
   the "imaging model", and say "model", not "pathway", for each. Keep "clinical data alone" for the baseline with the
   same patient variables and no treatment dates.
+- 2026-11-15 (author): do not mention "phase of care"; it takes away. Say "time after radiotherapy" or "time window"
+  where the idea is needed.
+- 2026-11-15 (author): no LIME or SHAP. Interpretability methods are a black box of their own; the paper says
+  "inspectable" (every value has a source and is checked), never "interpretable" or "explainable".
+- 2026-11-15 (author): bottom line up front. Decide what the paper is about first, then the contributions, each a
+  technical object with how it is measured; everything else supports them. Venue: methods / medical AI, technically
+  oriented, not simplistic.
+- 2026-11-15 (author): a 27B parameter model runs on a laptop; do not present local model size as a deployment barrier.
+- 2026-11-15 (author, later): the paper is the system, told as one argument, not an analysis report or three
+  separate techniques. Feature the cross-site validation (models locked, then applied unchanged). Keep the within- and
+  across-window split inside the audit trail and out of the abstract. Answer "what would the clinician miss without
+  the model" with measured proxies, never as a claim of clinical benefit. Pareto: cover enough, and do it right and
+  reproducibly.
+- 2026-11-17: "clinical decision support" is allowed only as intended use ("a system intended for clinical decision
+  support"); it supersedes the 2026-11-03 ban. Never "faithful" for the reports; say what the checks catch and miss.
+  A pass rate measured after a revision prompted by evaluation failures is called exploratory. Evidence the reader
+  baseline models is "available to any reader", never "a reader already weighs" (the baseline is not a clinician).
+- 2026-11-17 (author): "I do not want any candidly negative analysis against our own claims to be present in the
+  paper." No commentary that argues against the paper's claims ("cannot show", "a defect", "too many to serve as
+  warnings", "part of the AUC comes from ..."). Planned-test outcomes stay (Table 2, the reader baseline), stated
+  neutrally and framed by the argument: the separate scores show what the ranking rests on. Exploratory negatives on
+  superseded pipelines and sub-analyses go to the supplement or out. Title: "auditable system", not "auditable
+  separation". Method statements must match the current code, not an earlier audit.
+- 2026-11-17: Figures share one house style (`scripts/figure_style.py`; colour follows the score; Figure 1 is a
+  methods schematic with no results). "Remove any stale entries that do not add to the paper": the supplement keeps
+  only content the current paper rests on; earlier-study analyses stay in `docs/results/` and git history.
+- 2026-11-18 (author): title "PRISM: an auditable local system for glioma follow-up MRI" (keep "local system"). Keep titles short; no adjectives
+  that are not needed. "Auditable" is defined once in the Introduction (inputs reported separately; every report number
+  traced to its record entry and checked).
+- 2026-11-18 (author): put the best foot forward. The abstract runs premise, system, what the separation exposed,
+  transfer, checked reports. Development history (prompt revisions, rule revisions) is stated once in Methods, never
+  in the abstract or headings. Claim only what holds without a caveat. The radiomics comparison is not in the abstract.
+- 2026-11-18 (author, guiding professor): the Introduction is longer (about seven paragraphs) with a real
+  literature review that sets up the abstract's premises; this replaces the "three or four paragraphs, no list of
+  contributions" recipe. Contributions follow the abstract's spine.

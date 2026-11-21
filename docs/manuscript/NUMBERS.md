@@ -626,3 +626,60 @@ Prose cautions:
 - **"Each step raised AUC".** Mismatch 8 is now resolved: the middle step's CI includes 0, so do not write "each step
   raised AUC" with CI support.
 - **A threshold fixed on MU does not transfer.** At UCSF it calls 90% of scans positive.
+
+## 13. Implementation and computational cost (revision 2026-11-13, Section 2.5)
+
+| Quantity | Value | Source |
+|---|---|---|
+| Software | Python 3.11.14, scikit-learn 1.7.2, NumPy 2.2.6, pandas 2.3.3 | `.venv` on 2026-11-13 |
+| Language model serving | vLLM 0.31.0, bf16, one H100 80 GB, weights 50.2 GiB, model load about 2 min | REPORT_V3.md (Serving), REPORT_V3_1.md |
+| Report time | 1.08 s per report, batched | REPORT_V3_1.md |
+| Measurement extraction from masks and images | median 1.88 s per scan (max 2.07 s), 20 MU index scans, one core | `prism/analyses/timing.py` (2026-11-13) |
+| Model fit with penalty search, synthetic data of MU's shape (181 scans; 14, 27 and 41 inputs) | 0.03 to 0.07 s (under 0.1 s) | `prism/analyses/timing.py`, one core of Intel Xeon Platinum 8481C |
+| Scoring | about 2 to 2.5 µs per scan, scored as a batch | same |
+| Conformal threshold | 0.13 to 0.14 ms | same |
+| Re-segmentation agreement with MU masks | ET Dice median 0.80 (IQR 0.49-0.91) | Mismatch 6 above; Supplementary S14 |
+| MU positives scanned on the progression day | 48 of 64 | section 5 (UCSF_AUDIT.md section 3) |
+
+## 14. Checker mutation test (revision 2026-11-13; plan 4f854cb; CHECKER_MUTATION.md; synthetic records)
+
+| Quantity | Value |
+|---|---|
+| Synthetic records; correct reports wrongly rejected | 52; 0 of 52 |
+| Mutants with a targeted error rejected | 1,252 of 1,280 (97.8%) |
+| Misses | 28, all "tested" written for a few cases situation (wrong tier phrase operator 24 of 52 rejected) |
+| Blind spots (no rule) | direction word flipped 0 of 52 rejected; enhancing and FLAIR volumes swapped 0 of 52 rejected |
+
+## 15. Inputs: segmentation agreement and short-gap change (Section 4.1 of the revision)
+
+| Quantity | Value | Source |
+|---|---|---|
+| Re-segmentation of 594 MU scans (BraTS 2021 SwinUNETR) vs released masks | Dice ET median 0.80 [0.49-0.91], WT 0.85 [0.74-0.93]; Pearson log volume ET 0.92, WT 0.91 | Supplementary S14; RESEGMENTATION.md |
+| Detection with new masks (planned rule: gain >= 0.05, CI > 0) | 0.681 -> 0.665, difference -0.016 (-0.057 to +0.025); not met | same |
+| Consecutive MU scans <= 30 d apart (54 pairs), released masks | median ET fold change 2.57 | Supplementary S14; RESEGMENTATION.md; DIAGNOSTICS_IMAGING.md (re-resection) |
+| Secondary negatives (all scans before progression), clinical-history model, intended use | 0.807 (0.759-0.858), 62 / 173 | NUMBERS.md 3 line "Secondary negatives"; DETECTION_TASK.md |
+| Same pairs with one consistent segmenter (BraTS 2021 SwinUNETR) | median ET fold change 2.17 | Supplementary S14 ("2.57 -> 2.17") |
+| IDH / MGMT used at scans before the diagnosis date | 8 grade 4 scans (7 patients), 11 scans in all gliomas, 1-58 d before diagnosis | Supplementary S4; AUDIT_SYSTEM.md section 2 (supersedes "markers masked before diagnosis" in 2.1 for these scans) |
+
+Note (2026-11-13): Table 1 shows MU age 62.5 (council round 2, decision 16); TABLE1_COHORT.md shows 62 [53-70].
+Resolved after the data was restored: the median age at diagnosis of the 126 grade 4 patients in `mu_cohort.csv` is
+62.5 (IQR 53-69.75). Table 1 is correct.
+
+## 16. Analyses with the restored data (revision 2026-11-13; plan 0df79e9; REVISION_DATA.md; MU and LUMIERE only)
+
+| Quantity | MU | LUMIERE | Source |
+|---|---|---|---|
+| Registered numbers reproduce (system checks, card checks, conformal coverage, tab:hides errors) | yes | yes | REVISION_DATA.md R0 |
+| Combined 80% set, displayed score with cross-validated calibration: coverage | 0.800 | 0.787 | R1 |
+| same: coverage of progression / no progression scans | 0.755 / 0.833 | 0.685 / 0.857 | R1 |
+| same: set holds both outcomes | 14% | 20% | R1 (registered 25%, 38%) |
+| same: error where both / other scans (cohort median rule) | 40% / 23% | 43% / 27% | R1 (registered 37/22, 48/20) |
+| R1 adoption rule (MU >= 0.78, LUMIERE >= 0.75) | met | met | R1 |
+| Registered split sets: AUC of the refitted model vs displayed | 0.800 vs 0.821 | 0.776 vs 0.773 | R1 |
+| Card without the scan's patient: scans whose tier changed | 1 of 146 (few cases to not tested) | 0 of 178 | R2 |
+| Reports v3.2 (model names of the paper): pass | 114/114 | 162/162 | R4 |
+| Reports v3.2: tier stated where required; old names used | 71/71; 0 | 19/19; 0 | R4 |
+| Reports v3.1 regenerated: pass | 114/114 | 162/162 | R4 |
+| Template baseline: pass | 114/114 | 162/162 | R3 |
+| Median words, language model (v3.2) vs template | 308 vs 413 (both cohorts) | | R3 |
+| Flesch reading ease, v3.2 vs template | 48.5 vs 39.4 (both cohorts) | | R3 |

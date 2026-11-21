@@ -287,3 +287,111 @@ Test sets: 86 (GBM) and 88 (as coded) scans on average, 74 and 56 positive.
   were kept unchanged; their LoG/wavelet features on one "core" ROI, L1-consensus ranking, `class_weight="balanced"`
   and 400 trials were not reproduced. Clinical and follow-up arms are untuned L2 logistic regressions (C = 1,
   standardised; no age is missing). Nothing was installed.
+
+## Faithful run (2026-11-16)
+
+Plan: [CHRISTODOULOU_FAITHFUL_PLAN.md](CHRISTODOULOU_FAITHFUL_PLAN.md) (b1ce85b, before any code); deviations recorded
+there before results (e636073). Code: `prism/analyses/christodoulou_faithful.py` with the authors' extraction, ranking
+and LightGBM functions vendored verbatim in `prism/analyses/_christodoulou_vendor.py` (BSD 3-Clause, commit 643c888;
+only paths, data plumbing and thread counts differ). Outputs (git-ignored):
+`outputs/features/radiomics_christodoulou.csv`, `outputs/results/analyses/christodoulou_faithful/` (auc.csv,
+contrasts.csv, within_phase.csv, brier.csv, fold_info.csv, top_features.json, oof_grade4.csv.gz, extraction_info.json,
+fit_info.json, eval_info.json, PLAN_snapshot.md).
+
+**Set-up.** Their extraction on all 594 MU scans with four sequences and a mask (none failed): N4 in the mask, 1 mm
+BSpline, z-score in the mask, one region (`tumorMask > 0`), Original + LoG (σ 0.5-3) + Wavelet, 4,892 features per scan.
+Per outer fold (5 × 5, `D.fold_ids`, grade 4, 132-155 training rows): their L1 logistic consensus ranking → top 256
+(256 in every fold; 486-533 features ranked, 75-110 with a non-zero median coefficient; permutation importance never
+ran, see deviations) → their LightGBM pipeline (`class_weight="balanced"`, tuned Spearman filter, 221-256 features
+reach the booster) with Optuna 400 trials on their pooled out-of-fold AUC of a 5-fold StratifiedGroupKFold by
+patient (seed 42) → Platt on the out-of-fold probabilities → refit on all training rows → held-out fold. Mean best
+inner AUC 0.70 (0.59-0.80). B1, I_scan and I_pure refitted on the same folds (`christodoulou_replication.ridge_oofs`);
+checks before reporting: B1 equals the detection run's saved predictions (max deviation < 1e-9), B1 0.822 and I_pure
+0.709 in the intended use. 1,000-draw patient bootstrap (seed 20261021).
+
+**Runtime.** Extraction 2 h 36 min wall on 20 CPUs (median 282 s per scan); fits 14 min wall (25 folds, 3.6 CPU-hours;
+4-14 min per fold); evaluation < 2 min.
+
+| grade 4 | pos/neg/patients | **CHF (faithful)** | B1 (clinical history) | I_scan | I_pure (imaging) |
+|---|---|---|---|---|---|
+| **intended use** | 62/84/80 | **0.580 (0.502–0.662)** | 0.822 (0.749–0.902) | 0.659 (0.567–0.733) | 0.709 (0.630–0.781) |
+| all detection scans | 64/117/92 | **0.594 (0.528–0.663)** | 0.845 (0.781–0.906) | 0.657 (0.580–0.731) | 0.712 (0.640–0.781) |
+
+| paired difference | intended use | all scans |
+|---|---|---|
+| **CHF − I_pure** | **−0.129 (−0.231 to −0.022)** | −0.118 (−0.202 to −0.034) |
+| CHF − B1 | −0.242 (−0.341 to −0.145) | −0.251 (−0.334 to −0.174) |
+| CHF − I_scan | −0.079 (−0.169 to +0.020) | −0.063 (−0.144 to +0.022) |
+| CHF − I_pure, phase-stratified | −0.119 (−0.253 to +0.017) | −0.113 (−0.243 to +0.016) |
+| CHF − B1, phase-stratified | −0.082 (−0.244 to +0.070) | −0.074 (−0.226 to +0.079) |
+
+Repeat-to-repeat SD of CHF: 0.02. Brier (mean over repeats), intended use: raw 0.287 → Platt 0.248 (reference p(1 − p)
+0.244); all scans 0.266 → 0.225 (reference 0.229).
+
+**Reading (rule fixed in the plan).**
+- The published pipeline run with the authors' own code and settings reaches **0.580 (0.502–0.662)** in the intended
+  use, the same as the first re-implementation (0.579). LoG and wavelet features, their ranking, class weights and 400
+  trials do not change the result; the inner tuning AUC (0.70) does not carry to the held-out folds.
+- It is below the imaging model, −0.129 (−0.231 to −0.022), and below the clinical-history model, −0.242. The paper's
+  claim that the imaging model ranks scans better than the radiomics pipeline stands; it is not withdrawn.
+- Per the plan, this faithful run replaces the first re-implementation as the paper's comparison, and the first
+  re-implementation moves to the supplement as a sensitivity analysis. (Paper not edited here.)
+
+## Faithful run on the BraTS21 masks (2026-11-16)
+
+Plan: [CHRISTODOULOU_BRATS_MASKS_PLAN.md](CHRISTODOULOU_BRATS_MASKS_PLAN.md) (cab32b3, before any extraction);
+deviations recorded there before results (e97973b). Code: `christodoulou_faithful.py --masks brats21` (f857e7a;
+default unchanged). Outputs (git-ignored): `outputs/features/radiomics_christodoulou_brats21.csv`,
+`outputs/results/analyses/christodoulou_faithful_brats21/` (maskcheck.json, extraction_info.json, fold_info.csv,
+oof_grade4.csv.gz, ridge_brats21.npz, auc.csv, contrasts.csv, within_phase.csv, brier.csv, eval_info.json,
+PLAN_snapshot.md).
+
+**Set-up.** Only the mask changes: every MU mask is the BraTS21 SwinUNETR label map of E5, region `> 0`. Their
+extraction ran on the same 594 scans; 580 succeeded and the 14 empty maps failed (5 of them in the evaluation sets,
+kept with the pipeline's median imputation; see deviations). The released `> 0` region holds the cavity in 520 scans
+(median 10% of it); 81% of those cavity voxels lie inside the BraTS21 region; Dice of the two regions 0.90. Fits as in
+the faithful run: 25 outer folds, their ranking (454-501 features ranked, 83-145 non-zero, permutation importance never
+ran), top 256, their LightGBM with 400 Optuna trials and Platt; mean best inner AUC 0.68 (0.59-0.75). Comparators: B1
+(mask-free), I_pure and I_scan refitted on the E5 BraTS21 measurement table, same folds. One 2,000-sample patient
+bootstrap per set, seed 20261115, shared by every arm.
+
+**Reproduction checks (asserted before anything was reported), intended use:** faithful released-mask predictions
+0.5802 (0.580); B1 0.8220 (0.822; identical under both tables and equal to the detection run, max deviation < 1e-9);
+I_pure on the BraTS21 table 0.6273 (E5: 0.627); I_pure on the released table 0.7090 (0.709).
+
+**Runtime.** Extraction about 2 h 26 min wall on 20 CPUs in two `srun` steps (median 214 s per scan); fits 13 min wall
+(25 folds, 3.1 CPU-hours); evaluation 41 s.
+
+| grade 4 | pos/neg/patients | **CHF, BraTS21 masks** | CHF, released masks | B1 (clinical history) | I_pure, BraTS21 | I_scan, BraTS21 | I_pure, released |
+|---|---|---|---|---|---|---|---|
+| **intended use** | 62/84/80 | **0.527 (0.454–0.600)** | 0.580 (0.501–0.658) | 0.822 (0.748–0.895) | 0.627 (0.554–0.704) | 0.556 (0.468–0.653) | 0.709 (0.631–0.781) |
+| all detection scans | 64/117/92 | **0.545 (0.477–0.610)** | 0.594 (0.522–0.659) | 0.845 (0.784–0.907) | 0.642 (0.570–0.713) | 0.561 (0.474–0.643) | 0.712 (0.638–0.780) |
+
+| paired difference | intended use | all scans |
+|---|---|---|
+| **1. CHF (BraTS21) − I_pure (BraTS21)** | **−0.101 (−0.187 to −0.014)** | −0.096 (−0.172 to −0.014) |
+| 2. CHF (BraTS21) − B1 | −0.295 (−0.395 to −0.192) | −0.299 (−0.387 to −0.211) |
+| 3. CHF, BraTS21 − released masks | −0.054 (−0.127 to +0.021) | −0.048 (−0.109 to +0.022) |
+| CHF (BraTS21) − I_scan (BraTS21) | −0.029 (−0.126 to +0.072) | −0.016 (−0.098 to +0.069) |
+| CHF (released) − I_pure (released), this bootstrap | −0.129 (−0.225 to −0.031) | −0.118 (−0.209 to −0.031) |
+| I_pure, BraTS21 − released (E5, this bootstrap) | −0.082 (−0.155 to −0.012) | −0.070 (−0.136 to −0.008) |
+| 1, phase-stratified | −0.048 (−0.165 to +0.073) | −0.047 (−0.153 to +0.066) |
+| 2, phase-stratified | −0.121 (−0.274 to +0.031) | −0.113 (−0.268 to +0.045) |
+| 3, phase-stratified | −0.039 (−0.135 to +0.049) | −0.039 (−0.131 to +0.051) |
+
+Repeat-to-repeat SD of CHF (BraTS21): 0.03. Brier, CHF on the BraTS21 masks (mean over repeats): intended use raw
+0.302 (0.264–0.343) → Platt 0.255 (0.232–0.280), difference −0.047 (−0.078 to −0.017), reference p(1 − p) 0.244; all
+scans 0.281 → 0.231, difference −0.050 (−0.078 to −0.023), reference 0.229.
+
+**Reading (rule fixed in the plan).**
+- **Outcome 1, primary: the CI lies below zero.** On the BraTS21 masks the published pipeline reaches 0.527
+  (0.454–0.600) in the intended use, below PRISM's imaging model on the same masks by −0.101 (−0.187 to −0.014). By
+  the rule, the paper says the imaging model ranked scans better than the published pipeline on both mask sets
+  (released: −0.129; BraTS21: −0.101).
+- **Outcome 2:** the pipeline is below the clinical-history model by −0.295 (−0.395 to −0.192).
+- **Outcome 3:** the pipeline did not improve with the second mask set; it moved from 0.580 to 0.527, −0.054
+  (−0.127 to +0.021). Both image pipelines lost ground on the BraTS21 masks (imaging model −0.082).
+- Not part of the rule, reported as they came out: within a treatment phase neither margin over the pipeline holds
+  (outcome 1 phase-stratified −0.048, −0.165 to +0.073; on the released masks it was −0.119, −0.251 to +0.016), and
+  the pipeline does not differ from the scan-only imaging arm I_scan (−0.029). Five evaluation scans with empty
+  BraTS21 maps (one progression) carry imputed radiomic features. (Paper not edited here.)

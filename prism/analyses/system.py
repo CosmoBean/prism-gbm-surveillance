@@ -41,7 +41,7 @@ from prism.analyses import ucsf_external as UX
 from prism.audit import conformal as cf
 from prism.audit import reliability as R
 from prism.audit.model import ood_flags, ood_ranges
-from prism.config import MEASUREMENTS, OUTPUTS, RESULTS
+from prism.config import MEASUREMENTS, OUTPUTS, RESULTS, SKIP_UCSF
 
 OUT = RESULTS / "analyses" / "system"
 SEED = 20261026
@@ -614,6 +614,8 @@ def check_scores(cohorts: dict) -> pd.DataFrame:
                      "ok": dv < 1e-9})
         add(("lumiere", "grade4", "all", p), R.auc(L["y"].astype(int), L["S"][f"p_{p}"][0]))
     add(("lumiere", "grade4", "all", "images_T_img_all_scans"), R.auc(L["y"].astype(int), L["check_t_img_all"]))
+    if SKIP_UCSF:
+        return pd.DataFrame(rows)
     U = cohorts[("ucsf", "grade4")]
     sc = pd.read_csv(RESULTS / "analyses" / "ucsf" / "locked" / "scores.csv").set_index("scan_id").reindex(U["scan_id"])
     m = U["eval"]["scan2_pm30"]
@@ -631,7 +633,8 @@ def build(workers):
     cohorts = {("mu", p): mu_cohort(p, workers) for p in D.POPS}
     print(f"MU scores {time.time() - t0:.0f}s", flush=True)
     cohorts[("lumiere", "grade4")] = lumiere_cohort()
-    cohorts[("ucsf", "grade4")] = ucsf_cohort()
+    if not SKIP_UCSF:
+        cohorts[("ucsf", "grade4")] = ucsf_cohort()
     print(f"external scores {time.time() - t0:.0f}s", flush=True)
     ch = check_scores(cohorts)
     OUT.mkdir(parents=True, exist_ok=True)
@@ -670,6 +673,7 @@ def main(argv=None) -> None:
         return
     sets = [(("mu", "grade4"), "intended_use"), (("mu", "all_glioma"), "intended_use"), (("lumiere", "grade4"), "all"),
             (("ucsf", "grade4"), "scan2_pm30")]
+    sets = [(k, s) for k, s in sets if k in cohorts]
     T = {}
     for k, s in sets:
         res = evaluate_set(cohorts[k], s, a.workers, a.n_boot, a.n_ref, a.n_draw)

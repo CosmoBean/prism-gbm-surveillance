@@ -1,159 +1,315 @@
-"""Figure 1: PRISM as a flowchart (A), and how it was evaluated (B).
+"""Figure 1: the task and the method. (a) One MU-Glioma-Post patient's follow-up, on real scans, against the time
+since radiotherapy (modelled on Tak et al. 2025, NEJM AI, Figure 1A); (b) what PRISM computes at one follow-up scan,
+stage by stage; (c) the evaluation protocol.
 
-Drawn, not data: the MRI slices come from `schematic_slice` (no patient image), and every value is the synthetic
-example of Figure 5 (enhancing 4.0 -> 6.0 cc, FLAIR 31.0 cc, clinical history 0.21, imaging 0.64, combined 0.33, few cases
-1 of 9). Panel B carries only cohort and report counts (NUMBERS.md 1, 7). Plain journal style: hairlines, square
-corners, one sans-serif face, colour only for the two models and the combined score.
+Panel (a) reads the public MU-Glioma-Post images, masks and clinical workbook (data/mu-glioma-post, see
+prism/config.py). Weeks after radiotherapy, enhancing volumes and the label of each scan are computed here from those
+files with the paper's label rule; no model score is shown. Panels (b) and (c) are a methods schematic as specified in
+the Methods (Sections 2.1-2.3, 3.1-3.5); the two input slices in (b) are the patient's last two scans from (a).
+Colour follows the score as in every figure (scripts/figure_style.py); navy marks the system's own stages.
 """
 from __future__ import annotations
 
-import textwrap
 from pathlib import Path
 
 import matplotlib.pyplot as plt
-from matplotlib.patches import FancyArrowPatch, Rectangle
+from matplotlib.patches import FancyArrowPatch, FancyBboxPatch, Rectangle
+
+import figure_style as st
+
+W, H0, PT = 180.0, 113.0, 53.0   # drawing units (about 1 mm each); H0 = panels (b)-(c), PT = panel (a)
+H = H0 + PT                       # W / H equals the figure aspect
+REPO = Path(__file__).resolve().parents[1]
+MU = REPO / "data" / "mu-glioma-post"
+PATIENT = "PatientID_0204"        # early enhancement that resolved, then progression (selection in the docstring)
+ET_LABEL = 3                      # enhancing tumour in the released masks (prism/config.py)
+CONTOUR = "#F2C14E"
+MONO = "DejaVu Sans Mono"
+BLACK = "#000000"        # Figure 1 structure (boxes, arrows, stage labels) in black, not the house navy
+
+
+def patient_scans():
+    """The patient's post-radiotherapy scans: weeks after RT end, enhancing volume (cc), label, and a T1c slice
+    with its enhancing mask, cropped around the lesion. Label rule as in the paper: progression scan = the scan
+    dated within 14 days of documented progression; no progression = followed by >= 120 days without progression."""
+    import re
+    import nibabel as nib
+    import numpy as np
+    import pandas as pd
+    clin = pd.read_excel(MU / "MU-Glioma-Post_ClinicalData-July2025.xlsx", sheet_name="MU Glioma Post")
+    row = clin[clin["Patient_ID"] == PATIENT].iloc[0]
+    rt = float(row["Number of days from Diagnosis to Radiation Therapy end date"])
+    prog = float(row["Number of days from Diagnosis to date of First Progression"])
+    tps = {int(m.group(1)): c for c in clin.columns if (m := re.search(r"Timepoint_(\d+)", str(c)))}
+    scans = []
+    for n, col in sorted(tps.items()):
+        day = pd.to_numeric(row[col], errors="coerce")
+        d = MU / "MU-Glioma-Post" / PATIENT / f"Timepoint_{n}"
+        if np.isnan(day) or day < rt or day > prog + 14 or not d.exists():
+            continue
+        t1c = np.asarray(nib.load(str(d / f"{PATIENT}_Timepoint_{n}_brain_t1c.nii.gz")).dataobj, dtype=np.float32)
+        mask = np.asarray(nib.load(str(d / f"{PATIENT}_Timepoint_{n}_tumorMask.nii.gz")).dataobj)
+        label = ("Progression" if abs(day - prog) <= 14 else
+                 "No progression" if prog - day >= 120 else "Not labelled")
+        scans.append(dict(tp=n, weeks=(day - rt) / 7, et_cc=float((mask == ET_LABEL).sum()) / 1000,
+                          label=label, t1c=t1c, et=(mask == ET_LABEL)))
+    for s in scans:                     # the visits are not co-registered: each scan's slice with most enhancement
+        z = int(np.argmax(s["et"].sum(axis=(0, 1))))
+        img = s["t1c"][:, :, z]
+        ys, xs = np.nonzero(img > 0)
+        cy, cx = (ys.min() + ys.max()) // 2, (xs.min() + xs.max()) // 2
+        half = max(ys.max() - ys.min(), xs.max() - xs.min()) // 2 + 4
+        lo, hi = np.percentile(img[img > 0], [1, 99.5])
+        crop = lambda a: np.rot90(a[max(cy - half, 0):cy + half, max(cx - half, 0):cx + half])   # anterior up
+        s["img"], s["msk"] = crop(np.clip((img - lo) / (hi - lo), 0, 1)), crop(s["et"][:, :, z])
+        del s["t1c"], s["et"]
+    return scans
+
+
+def show_scan(iax, scan):
+    iax.imshow(scan["img"], cmap="gray", vmin=0, vmax=1, interpolation="bilinear")
+    if scan["msk"].any():
+        iax.contour(scan["msk"].astype(float), levels=[0.5], colors=[CONTOUR], linewidths=0.6)
+    iax.set_xticks([]); iax.set_yticks([])
+    for sp in iax.spines.values():
+        sp.set_visible(False)
 
 
 def fig1(output: Path) -> None:
-    from generate_system_first_figures import C, LETTER_X, WIDTH, panel, save, schematic_slice, title
+    scans = patient_scans()
 
-    ink, grey, rule, serif = "#1a1a1a", "#5f5f5f", "#9e9e9e", "Liberation Serif"
-    W, H = 180.0, 118.0                      # drawing units; square because W/H equals the figure aspect
-    fig = plt.figure(figsize=(WIDTH, WIDTH * H / W))
+    fig = plt.figure(figsize=(st.WIDTH, st.WIDTH * H / W))
     ax = fig.add_axes([0, 0, 1, 1])
     ax.set(xlim=(0, W), ylim=(0, H)); ax.axis("off")
-    to_fig = lambda x, y: (x / W, y / H)
 
-    def text(x, y, s, size=6.6, colour=ink, **kw):
-        kw.setdefault("ha", "left"); kw.setdefault("va", "center")
-        return ax.text(x, y, s, fontsize=size, color=colour, linespacing=1.2, **kw)
+    def text(x, y, s, size=6.0, colour=st.INK, **kw):
+        kw.setdefault("ha", "left"); kw.setdefault("va", "top")
+        return ax.text(x, y, s, fontsize=size, color=colour, linespacing=1.35, **kw)
 
-    def arrow(a, b, colour=ink, lw=0.8):
-        ax.add_patch(FancyArrowPatch(a, b, arrowstyle="-|>", mutation_scale=6, color=colour, lw=lw,
-                                     shrinkA=0, shrinkB=0, zorder=4))
+    def arrow(a, b, colour=BLACK, lw=0.7, style="-|>", **kw):
+        ax.add_patch(FancyArrowPatch(a, b, arrowstyle=style, mutation_scale=5.5, color=colour, lw=lw,
+                                     shrinkA=0, shrinkB=0, zorder=4, **kw))
 
-    def rect(x0, y0, x1, y1, edge=rule, lw=0.5, face="white", ls="-", accent=None):
-        ax.add_patch(Rectangle((x0, y0), x1 - x0, y1 - y0, fc=face, ec=edge, lw=lw, ls=ls, zorder=2))
-        if accent:
-            ax.add_patch(Rectangle((x0, y0), 1.0, y1 - y0, fc=accent, ec="none", zorder=3))
+    def box(x0, y0, x1, y1, edge=BLACK, face="white", lw=0.7, ls="-"):
+        ax.add_patch(FancyBboxPatch((x0, y0), x1 - x0, y1 - y0, boxstyle="round,pad=0,rounding_size=1.3",
+                                    fc=face, ec=edge, lw=lw, ls=ls, zorder=2))
 
-    def heading(x, y, name, lines="", size=6.8):
-        text(x, y, name, size=size, weight="bold", va="top")
-        if lines:
-            text(x, y - 3.6, lines, size=6.5, colour=grey, va="top")
+    def card(x0, y0, x1, y1, title, colour, body="", size=6.0, face=None, mono=None):
+        """Outlined box: a bold title in the box's colour, a plain body, an optional monospace line."""
+        box(x0, y0, x1, y1, edge=colour, face=face or "white")
+        text(x0 + 1.8, y1 - 1.6, title, size=6.4, colour=colour, weight="bold")
+        y = y1 - 5.6
+        if body:
+            text(x0 + 1.8, y, body, size=size)
+            y -= 2.85 * (body.count("\n") + 1) * size / 6.0
+        if mono:
+            text(x0 + 1.8, y - 0.6, mono, size=5.6, colour=st.MUTED, family=MONO)
 
-    # ---------------------------------------------------------------- Panel A
-    text(4.5, 113.0, "At each follow up MRI after treatment, has the tumour progressed?", size=8.5, weight="bold",
-         va="baseline")
-    panel_a = text(0.6, 113.0, "A", size=10, weight="bold", va="baseline")
+    # ================================================================ (a) one patient's follow-up
+    st.panel_header(fig, 0.995, "a", "One patient's follow-up after radiotherapy (MU-Glioma-Post)")
+    n = len(scans)
+    iw, gap_x, ix0 = 27.0, 9.0, 40.0                 # image width, gap, left edge of the first image
+    iy0 = H - 8.0 - iw                              # image bottom
+    for k, sc in enumerate(scans):
+        x = ix0 + k * (iw + gap_x)
+        iax = fig.add_axes([x / W, iy0 / H, iw / W, iw / H])
+        show_scan(iax, sc)
+        colour = BLACK if sc["label"] == "Progression" else (st.INK if sc["label"] == "No progression" else st.MUTED)
+        text(x + iw / 2, H - 4.6, sc["label"], size=6.2, colour=colour, ha="center",
+             weight="bold" if sc["label"] == "Progression" else "normal",
+             style="italic" if sc["label"] == "Not labelled" else "normal")
+        text(x + iw / 2, iy0 - 1.2, f"{sc['weeks']:.1f} weeks after RT\nenhancing {sc['et_cc']:.1f} cc", size=5.6,
+             ha="center")
+        if k:
+            px = x - gap_x
+            ax.annotate("", xy=(x - 0.8, iy0 + iw / 2), xytext=(px + 0.8, iy0 + iw / 2),
+                        arrowprops=dict(arrowstyle="-|>", color=st.MUTED, lw=0.6, mutation_scale=5))
+            text(px + gap_x / 2, iy0 + iw / 2 + 1.0, f"{sc['weeks'] - scans[k - 1]['weeks']:.0f} wk", size=5.4,
+                 colour=st.MUTED, ha="center", va="bottom")
+    # time axis, to scale: weeks since the end of radiotherapy, with the first 12 weeks shaded
+    tx0, tx1, ty = ix0, ix0 + n * iw + (n - 1) * gap_x, iy0 - 10.5
+    wmax = 36.0
+    wx = lambda w: tx0 + (tx1 - tx0) * w / wmax
+    ax.add_patch(Rectangle((wx(0), ty - 1.4), wx(12) - wx(0), 2.8, fc=st.tint(st.HIST, 0.75), ec="none", zorder=2))
+    ax.plot([tx0, tx1], [ty, ty], color=st.INK, lw=0.6, zorder=3)
+    for w in range(0, int(wmax) + 1, 6):
+        ax.plot([wx(w), wx(w)], [ty - 0.7, ty], color=st.INK, lw=0.5)
+        text(wx(w), ty - 1.2, str(w), size=5.4, colour=st.MUTED, ha="center")
+    for k, sc in enumerate(scans):
+        xc = ix0 + k * (iw + gap_x) + iw / 2
+        ax.plot([xc, wx(sc["weeks"])], [iy0 - 6.6, ty + 0.4], color=st.RULE, lw=0.5, zorder=1)
+        ax.add_patch(plt.Circle((wx(sc["weeks"]), ty), 0.75, fc=BLACK, ec="white", lw=0.3, zorder=4))
+    text(wx(6), ty + 2.0, "first 12 weeks", size=5.4, colour=st.HIST, ha="center", va="bottom")
+    text((tx0 + tx1) / 2, ty - 4.0, "weeks after the end of radiotherapy", size=5.6, colour=st.MUTED, ha="center")
+    text(2.0, H - 8.6, "T1c MRI, the axial slice\nwith most enhancement;\nenhancing tumour from\nthe released mask", size=5.8)
+    ax.plot([2.4, 5.4], [H - 21.4, H - 21.4], color=CONTOUR, lw=1.2)
+    text(6.4, H - 20.4, "enhancing outline", size=5.4, colour=st.MUTED)
+    text(2.0, H - 25.0, "Label: progression\ndocumented at this scan,\nor no progression for\n\u2265 120 days after it",
+         size=5.4, colour=st.MUTED)
+    ax.plot([1.0, W - 1.0], [H0 + 1.2, H0 + 1.2], color=st.RULE, lw=0.5)
 
-    # Stage tags, and the bracket that marks what PRISM adds: two models kept apart, reported side by side.
-    for x, s in [(1.0, "1  Inputs"), (44.0, "2  Measure"), (81.0, "3  Score"), (114.0, "4  Confidence"),
-                 (151.0, "5  Report")]:
-        text(x, 100.5, s, size=6.8, colour=grey, va="baseline")
-    ax.plot([44, 44, 106, 106], [103.2, 104.6, 104.6, 103.2], color=ink, lw=0.6)
-    text(75.0, 106.0, "PRISM keeps image and clinical-history evidence apart and reports them side by side", size=6.6,
-         ha="center", va="bottom", style="italic")
+    # ================================================================ (a) the pipeline at one scan
+    st.panel_header(fig, (H0 - 0.6) / H, "b", "PRISM at one follow-up scan")
 
-    # Lane 1, images: previous and current scan -> segmentation and measurement -> image score.
-    for x0, name, scale, seed in [(1.0, "previous", 0.82, 3), (20.0, "current", 1.0, 4)]:
-        f0, f1 = to_fig(x0, 78.0), to_fig(x0 + 17.0, 95.0)
-        iax = fig.add_axes([f0[0], f0[1], f1[0] - f0[0], f1[1] - f0[1]])
-        schematic_slice(iax, scale, seed=seed)
-        for t in list(iax.texts):
-            t.remove()
-        text(x0 + 8.5, 76.0, name, size=6.5, colour=grey, ha="center", va="top")
-    text(1.0, 70.0, "T1-contrast and FLAIR MRI", size=6.5, colour=grey, style="italic", va="top")
+    cols = [(2.0, 28.0), (32.0, 68.0), (72.0, 103.0), (107.0, 140.0), (144.0, 179.0)]
+    stages = ["Inputs", "Features", "Models", "Evidence statements", "Record and report"]
+    sy = H0 - 9.0
+    for i, ((x0, x1), name) in enumerate(zip(cols, stages)):
+        ax.add_patch(plt.Circle((x0 + 2.0, sy), 1.9, fc=BLACK, ec="none", zorder=3))
+        text(x0 + 2.0, sy, str(i + 1), size=5.8, colour="white", weight="bold", ha="center", va="center")
+        text(x0 + 5.2, sy, name, size=6.6, colour=BLACK, weight="bold", va="center")
+        ax.plot([x0, x1], [sy - 3.0, sy - 3.0], color=st.RULE, lw=0.5)
 
-    rect(44, 78, 74, 95, accent=C["images"])
-    heading(46.5, 93.2, "Segmentation", "enhancing tumour\n4.0 → 6.0 cc\nFLAIR 31.0 cc")
-    arrow((38.5, 86.5), (44, 86.5), C["images"])
+    top = sy - 5.5             # top of the content rows
+    # Lane centres: imaging above, clinical history below, the combined model between them.
+    y_img, y_comb, y_hist = top - 11.0, top - 30.0, top - 49.0
 
-    # Lane 2, clinical history: treatment dates and clinical record -> position in treatment -> clinical-history score.
-    ty = 55.0
-    ax.plot([1.0, 38.0], [ty, ty], color=ink, lw=0.6)
-    ax.add_patch(Rectangle((9.0, ty - 1.0), 8.0, 2.0, fc="#d9d9d9", ec="none"))
-    for x, s, w in [(5.0, "surgery", 0.6), (13.0, "chemoRT", 0.6), (33.0, "scan", 1.3)]:
-        ax.plot([x, x], [ty - 1.0, ty + 1.0], color=ink, lw=w)
-        text(x, ty + 2.6 if s != "chemoRT" else ty - 2.8, s, size=6.5, colour=grey, ha="center")
-    rect(1.0, 42.5, 38.0, 48.5)
-    text(19.5, 45.5, "age  ·  sex  ·  IDH  ·  MGMT", size=6.5, ha="center")
-    text(1.0, 40.5, "treatment dates, clinical record", size=6.5, colour=grey, style="italic", va="top")
+    # ---- 1 Inputs
+    x0, x1 = cols[0]
+    for k, label in enumerate(["previous", "current"]):
+        sx = x0 + k * 14.5
+        iax = fig.add_axes([sx / W, (top - 13.0) / H, 13.0 / W, 13.0 / H])
+        show_scan(iax, scans[k - 2])
+        text(sx + 6.5, top - 13.6, label, size=5.6, colour=st.MUTED, ha="center")
+    text(x0, top - 17.4, "T1c and FLAIR MRI,\nreleased masks (enhancing,\nFLAIR, necrosis, cavity)", size=5.8)
 
-    rect(44, 42, 74, 59, accent=C["timeline"])
-    heading(46.5, 57.2, "Position in treatment", "8 weeks after the end\nof radiotherapy,\nwith the clinical record")
-    arrow((38.5, 51.0), (44, 51.0), C["timeline"])
+    ty = y_hist + 7.0          # treatment course as of the scan day
+    ax.plot([x0 + 0.5, x1 - 1.0], [ty, ty], color=st.INK, lw=0.6)
+    ax.add_patch(Rectangle((x0 + 7.5, ty - 0.9), 9.0, 1.8, fc=st.tint(st.HIST, 0.7), ec="none", zorder=3))
+    for x, s, below in [(x0 + 3.0, "surgery", False), (x0 + 12.0, "RT", True), (x1 - 3.0, "scan", False)]:
+        ax.plot([x, x], [ty - 1.2, ty + 1.2], color=st.INK, lw=0.9 if s == "scan" else 0.6, zorder=4)
+        text(x, ty - 2.0 if below else ty + 3.6, s, size=5.6, colour=st.MUTED, ha="center")
+    text(x0, ty + 8.6, "Treatment course\nas of the scan day", size=5.8)
+    text(x0, ty - 5.4, "Age, sex, IDH and\nMGMT status", size=5.8)
 
-    # Scores: three separately fitted models; the combined model sees both lanes.
-    scores = [("images", 86.5, "Imaging", 0.64), ("combined", 68.5, "Combined", 0.33),
-              ("timeline", 50.5, "Clinical history", 0.21)]
-    sx0, sx1 = 81.0, 106.0
-    for key, y, name, value in scores:
-        rect(sx0, y - 5.5, sx1, y + 5.5, accent=C[key])
-        text(sx0 + 2.5, y + 2.4, name, size=6.8, weight="bold")
-        ax.add_patch(Rectangle((sx0 + 2.5, y - 3.2), 15.0, 1.8, fc="#e6e6e6", ec="none", zorder=3))
-        ax.add_patch(Rectangle((sx0 + 2.5, y - 3.2), 15.0 * value, 1.8, fc=C[key], ec="none", zorder=3))
-        text(sx0 + 18.5, y - 2.3, f"{value:.2f}", size=6.6)
-    arrow((74, 86.5), (sx0, 86.5), C["images"])
-    arrow((74, 50.5), (sx0, 50.5), C["timeline"])
-    arrow((74, 81.0), (sx0, 71.0), C["images"])
-    arrow((74, 56.0), (sx0, 66.0), C["timeline"])
-    text(sx0, 38.6, "example values (Figure 5)", size=6.5, colour=grey, style="italic", va="top")
+    # ---- 2 Features
+    x0, x1 = cols[1]
+    bt, bb = top, y_comb + 4.0
+    card(x0, bb, x1, bt, "Imaging features", st.IMG)
+    text(x1 - 1.8, bt - 1.6, r"$\mathbf{x}_{\mathrm{img}} \in \mathbb{R}^{27}$", size=6.2, ha="right")
+    seg = [(6, "6", 0.0), (13, "13", 0.35), (8, "8", 0.62)]
+    bx0, bw, by = x0 + 1.8, x1 - x0 - 3.6, bt - 9.6
+    xx = bx0
+    for n, label, amount in seg:
+        w = bw * n / 27
+        ax.add_patch(Rectangle((xx, by), w - 0.4, 2.6, fc=st.tint(st.IMG, amount), ec="none", zorder=3))
+        text(xx + (w - 0.4) / 2, by + 1.3, label, size=5.6, colour="white" if amount < 0.5 else st.INK,
+             ha="center", va="center", weight="bold")
+        xx += w
+    text(bx0, by - 1.6, "6  log volumes: four compartments,\n    core and whole lesion\n"
+                        "13 shape; T1c and FLAIR intensity\n    relative to normal brain\n"
+                        "8  change since the previous scan\n    and since the smallest volume", size=5.7)
 
-    # All three scores feed one confidence statement.
-    cx = 110.0
-    for _, y, _, _ in scores:
-        ax.plot([sx1, cx], [y, y], color=ink, lw=0.8)
-    ax.plot([cx, cx], [50.5, 86.5], color=ink, lw=0.8)
-    arrow((cx, 68.5), (114.0, 68.5))
+    hb, ht = y_hist - 8.0, y_comb - 4.0
+    card(x0, hb, x1, ht, "Clinical-history features", st.HIST,
+         "days since diagnosis and surgery;\nradiotherapy start, end, dose,\nfractions; chemotherapy started;\n"
+         "time window after RT: during,\n≤ 12 weeks, later, unknown;\nage, sex, IDH, MGMT", size=5.7)
+    text(x1 - 1.8, ht - 1.6, r"$\mathbf{x}_{\mathrm{hist}}$", size=6.2, ha="right")
+    arrow((cols[0][1] - 0.5, y_img + 2.0), (x0, y_img + 2.0))
+    arrow((cols[0][1] - 0.5, y_hist - 1.0), (x0, y_hist - 1.0))
 
-    rect(114, 42, 145, 95, face="#f6f6f6")
-    conf = [(93.0, "80% conformal set", "{progression,\n no progression}", "both outcomes"),
-            (75.0, "Model agreement", "disagree", "imaging above, clinical\nhistory below their\ncohort medians"),
-            (57.0, "Reliability card", "few cases", "1 of 9 such scans was\nprogression")]
-    for y, name, value, detail in conf:
-        text(116.0, y, name, size=6.8, weight="bold", va="top")
-        v = text(116.0, y - 3.6, value, size=6.6, va="top")
-        text(116.0, y - 3.6 - 3.0 * (value.count("\n") + 1) - 0.6, detail, size=6.5, colour=grey, va="top")
+    # ---- 3 Models
+    x0, x1 = cols[2]
+    mh = 6.4
+    models = [(y_img, "Imaging model", st.IMG, r"$\mathbf{x}_{\mathrm{img}}$, no dates"),
+              (y_comb, "Combined model", st.COMB, r"$\mathbf{x}_{\mathrm{img}} \oplus \mathbf{x}_{\mathrm{hist}}$"),
+              (y_hist, "Clinical-history model", st.HIST, r"$\mathbf{x}_{\mathrm{hist}}$")]
+    for y, name, colour, inputs in models:
+        box(x0, y - mh, x1, y + mh, edge=colour, face=st.tint(colour, 0.9))
+        text(x0 + 1.8, y + mh - 1.6, name, size=6.4, colour=colour, weight="bold")
+        text(x0 + 1.8, y - 0.4, r"$\hat p = \sigma(\beta_0 + \boldsymbol{\beta}^{\top}\mathbf{z})$", size=6.2)
+        text(x0 + 1.8, y - 3.6, "on " + inputs, size=5.7, colour=st.MUTED)
+    fx = cols[1][1]
+    arrow((fx, y_img), (x0, y_img), st.IMG)
+    arrow((fx, y_hist), (x0, y_hist), st.HIST)
+    arrow((fx, y_comb + 6.0), (x0, y_comb + 2.0), st.IMG)
+    arrow((fx, y_comb - 6.0), (x0, y_comb - 2.0), st.HIST)
+    text(x0, y_hist - mh - 1.6,
+         "Ridge (L2) logistic regression;\nstandardised inputs; median\nimputation with an indicator;\n"
+         "penalty by 3-fold patient-\ngrouped CV (log loss)", size=5.7, colour=st.MUTED)
 
-    # Report chain: record -> local language model -> checker -> report.
-    chain = [(84.5, 95.0, "Record for the scan", "every value with\nits source", "-"),
-             (65.0, 79.0, "Local language model", "writes the text, sees\nno images, does no\narithmetic", "--"),
-             (42.0, 59.0, "Checker", "every number and flag\nmust be in the record,\nor the text is rejected", "-")]
-    for y0, y1, name, detail, ls in chain:
-        rect(151, y0, 179.5, y1, edge=ink if ls == "--" else rule, ls=ls)
-        heading(153.0, y1 - 1.8, name, detail)
-    arrow((145, 89.5), (151, 89.5))
-    arrow((165.5, 84.5), (165.5, 79.0))
-    arrow((165.5, 65.0), (165.5, 59.0))
-    arrow((165.5, 42.0), (165.5, 36.0))
+    # ---- 4 Evidence statements
+    x0, x1 = cols[3]
+    eb = y_hist - 14.0
+    gap = 1.6
+    span = (top - eb - 2 * gap) / 3
+    e3 = (eb, eb + span); e2 = (e3[1] + gap, e3[1] + gap + span); e1 = (e2[1] + gap, top)
+    card(x0, e1[0], x1, e1[1], "Split-conformal set", BLACK,
+         r"$s_i = 1 - \hat p_i(y_i)$, weighted 1/scans" "\nper patient; $\\alpha = 0.2$\n"
+         r"$C(\hat p) = \{y : 1 - \hat p(y) \leq \hat q\,\}$" "\nrefit 70% / calibrate 30% of\ntraining patients",
+         size=5.7)
+    card(x0, e2[0], x1, e2[1], "Model agreement", BLACK,
+         r"$\mathbb{1}[\hat p_{\mathrm{img}} > m_{\mathrm{img}}] = \mathbb{1}[\hat p_{\mathrm{hist}} > m_{\mathrm{hist}}]$"
+         "\n$m$: score median in the cohort's\nevaluation scans", size=5.7)
+    card(x0, e3[0], x1, e3[1], "Reliability card", BLACK,
+         "situation = time window ×\nenhancement state; tested if\n≥ 10 scans of each outcome,\n"
+         "otherwise few cases", size=5.7)
+    mx = cols[2][1]
+    jx = mx + 2.0
+    for y, _, colour, _ in models:
+        ax.plot([mx, jx], [y, y], color=BLACK, lw=0.7)
+    ax.plot([jx, jx], [y_hist, y_img], color=BLACK, lw=0.7)
+    for y in ((e1[0] + e1[1]) / 2, (e2[0] + e2[1]) / 2, (e3[0] + e3[1]) / 2):
+        arrow((jx, y), (x0, y))
 
-    # The output a clinician reads: a synthetic report card.
-    rx0, rx1, ry0, ry1 = 114.0, 179.5, 3.0, 36.0
-    rect(rx0, ry0, rx1, ry1, edge=ink, lw=1.0)
-    text(rx0 + 2.0, ry1 - 2.4, "PRISM surveillance report", size=7.6, weight="bold", va="top").set_family(serif)
-    text(rx1 - 2.0, ry1 - 2.6, "SYNTHETIC EXAMPLE", size=6.5, colour=grey, ha="right", va="top")
-    for i, (key, _, name, value) in enumerate(scores):
-        y = ry1 - 9.6 - 3.4 * i
-        text(rx0 + 2.0, y, name, size=6.5).set_family(serif)
-        ax.add_patch(Rectangle((rx0 + 18.0, y - 0.8), 17.0, 1.6, fc="#e6e6e6", ec="none", zorder=3))
-        ax.add_patch(Rectangle((rx0 + 18.0, y - 0.8), 17.0 * value, 1.6, fc=C[key], ec="none", zorder=3))
-        text(rx0 + 36.5, y, f"{value:.2f}", size=6.5).set_family(serif)
-    body = ("Enhancing tumour is 2.0 cc larger than at the previous scan. The two models disagree, and the 80% "
-            "conformal set holds both outcomes. This situation has few cases (1 of 9 scans was progression).")
-    text(rx0 + 2.0, ry1 - 21.0, "\n".join(textwrap.wrap(body, 60)), size=6.5, va="top").set_family(serif)
+    # ---- 5 Record and report
+    x0, x1 = cols[4]
+    rx = x1 - x0
+    r1 = (top - 17.0, top)
+    card(x0, r1[0], x1, r1[1], "Structured record", BLACK, "every value under a fixed\nkey, with its source", size=5.7)
+    text(x0 + 1.8, r1[0] + 6.4, "meas.enhancing_cc\nmodel.imaging.score\nconformal.combined.80",
+         size=5.3, colour=st.MUTED, family=MONO)
+    r2 = (r1[0] - 3.0 - 17.0, r1[0] - 3.0)
+    box(x0, r2[0], x1, r2[1], edge=BLACK, ls=(0, (3, 1.5)))
+    text(x0 + 1.8, r2[1] - 1.6, "Local language model", size=6.4, colour=BLACK, weight="bold")
+    text(x0 + 1.8, r2[1] - 5.6, "Qwen3.8-27B, greedy decoding\nconstrained to a JSON schema:\n"
+                                "{section, sentence, cited keys};\nno images, no arithmetic", size=5.7)
+    r3 = (eb, r2[0] - 3.0)
+    card(x0, r3[0], x1, r3[1], "Deterministic checker", BLACK,
+         "every number in a cited field;\nflags, set, agreement, tier\nstated; no diagnosis or advice;\n"
+         "verifier binds each number and\ndirection to its region", size=5.7)
+    text(x0 + 1.8, r3[0] + 3.0, "accept, or reject without repair", size=5.6, colour=BLACK, weight="bold")
+    cx = (x0 + x1) / 2
+    bus = cols[3][1] + 2.0                       # every statement (and the scores) enter the record
+    for y in ((e1[0] + e1[1]) / 2, (e2[0] + e2[1]) / 2, (e3[0] + e3[1]) / 2):
+        ax.plot([cols[3][1], bus], [y, y], color=BLACK, lw=0.7)
+    ry = (r1[0] + r1[1]) / 2
+    ax.plot([bus, bus], [(e3[0] + e3[1]) / 2, ry], color=BLACK, lw=0.7)
+    arrow((bus, ry), (x0, ry))
+    arrow((cx, r1[0]), (cx, r2[1]))
+    arrow((cx, r2[0]), (cx, r3[1]))
 
-    # ---------------------------------------------------------------- Panel B (strip)
-    text(0.6, 28.5, "B", size=10, weight="bold", va="baseline")
-    text(4.5, 28.5, "How it was evaluated", size=8.5, weight="bold", va="baseline")
-    blocks = [(1.0, 29.0, "MU-Glioma-Post", "public development\ncohort, 5 × 5 cross\nvalidation by patient"),
-              (35.0, 58.0, "Models locked", "fitted once\non MU"),
-              (64.0, 91.0, "LUMIERE, UCSF", "applied\nunchanged"),
-              (97.0, 108.0, "406", "reports\nchecked")]
-    for i, (x0, x1, name, detail) in enumerate(blocks):
-        rect(x0, 6.0, x1, 23.0, edge=ink if i == 3 else rule)
-        heading(x0 + 1.5, 21.0, name, detail)
-        if i:
-            arrow((blocks[i - 1][1], 14.5), (x0, 14.5))
-    del panel_a
-    save(fig, output, "fig1_system")
+    # ================================================================ (b) evaluation protocol
+    by1 = eb - 7.0
+    st.panel_header(fig, (by1 + 2.4) / H, "c", "Evaluation")
+    bt, bb = by1 - 4.0, 7.5
+    mid = (bt + bb) / 2
+    card(2.0, bb, 50.0, bt, "Development: MU-Glioma-Post", BLACK,
+         "126 grade 4 patients; 5 repeats of 5-fold\ncross validation grouped by patient; pooled\n"
+         "held-out AUC on 146 scans of 80 patients", size=5.7)
+    card(56.0, bb, 92.0, bt, "Lock", BLACK,
+         "each model fitted once on all\n181 MU detection scans, then\nfrozen; reduced clinical history\n"
+         "where a cohort lacks dates", size=5.7)
+    eh = (bt - bb - 2.0) / 2
+    for y0, title, body in [(bt - eh, "External: LUMIERE", "178 scans of 79 patients; 3-label masks"),
+                            (bb, "External: UCSF-ALPTDG", "69 second scans of 69 patients")]:
+        box(98.0, y0, 140.0, y0 + eh, edge=BLACK)
+        text(99.8, y0 + eh - 1.4, title, size=6.4, colour=BLACK, weight="bold")
+        text(99.8, y0 + eh - 4.9, body, size=5.7)
+    card(146.0, bb, 179.0, bt, "Measured", BLACK,
+         "AUC, 95% CI from bootstrap\nsamples of patients; coverage\nof the 80% sets; reports\npassing the checker",
+         size=5.7)
+    arrow((50.0, mid), (56.0, mid))
+    arrow((92.0, mid), (95.0, mid), style="-")
+    ax.plot([95.0, 95.0], [bt - eh / 2, bb + eh / 2], color=BLACK, lw=0.7)
+    arrow((95.0, bt - eh / 2), (98.0, bt - eh / 2)); arrow((95.0, bb + eh / 2), (98.0, bb + eh / 2))
+    arrow((140.0, mid), (146.0, mid))
+    text(2.0, bb - 2.2,
+         "Label: the first scan at documented progression versus a scan followed by \u2265 120 days without "
+         "progression (LUMIERE: rated stable or responding).", size=5.7, colour=st.MUTED)
+
+    st.save(fig, output, "fig1_system")
+
+
+if __name__ == "__main__":
+    fig1(Path(__file__).resolve().parents[1] / "docs/manuscript/figures")

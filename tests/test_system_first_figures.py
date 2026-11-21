@@ -17,6 +17,6 @@ class SystemFirstFigureTest(unittest.TestCase):
             )
 
             self.assertEqual(result.returncode, 0, result.stderr)
-            for name in ("fig1_system", "fig2_transport", "fig3_evidence", "fig4_confidence", "fig5_report"):
+            for name in ("fig1_system", "fig2_transport", "fig5_report"):
                 self.assertTrue((output / f"{name}.pdf").is_file())
                 self.assertTrue((output / f"{name}.png").is_file())

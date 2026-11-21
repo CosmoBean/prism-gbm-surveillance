@@ -20,3 +20,8 @@ legacy/reproduction/fusion_inputs/
 legacy/reproduction/shipped_inputs/
 legacy/reproduction/agent_reports/
 legacy/reproduction/validation/runs/
+
+# Example papers kept for private study (copyrighted); only our notes are tracked
+docs/literature/examples/*
+!docs/literature/examples/README.md
+!docs/literature/examples/*_NOTES.md

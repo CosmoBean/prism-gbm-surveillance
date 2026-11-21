@@ -1,5 +1,81 @@
 # Outline: the argument of the PRISM paper (layer 1)
 
+## Spine 2026-11-18 (author approved the abstract in LOCKED.md)
+
+Title "PRISM: an auditable local system for glioma follow-up MRI". Story order: (1) premise: a score is useful only
+if the reader can see what it rests on, and a report only if it can be checked; (2) PRISM, a local system built for
+both; (3) the separation exposed that timing and enhancement carry most of the ranking (no clear gain over the
+baseline); (4) locked transfer to LUMIERE and UCSF-ALPTDG; (5) reports checked against the record, verifier.
+The comparison with the published radiomics pipeline leaves the abstract and the contributions and stays in
+Results as context. Next: align the contribution bullets, then the Results order.
+
+## System-first submission version 2026-11-15 (PENDING AUTHOR reaction; supersedes the methods rewrite below)
+
+Author's direction (2026-11-15, after the review in REVIEW_2026-11-15.md):
+- The paper is the system, not three separate analyses.
+- Cross-site validation is featured.
+- The within/across-window split goes inside the audit trail, never in the abstract.
+- "What would the clinician miss without the model" is answered with measured proxies. The reader study is the
+  next step.
+
+Argument. After glioma treatment a follow up MRI is read against the treatment course, and a progression score alone
+does not show what it rests on. PRISM scores each scan with separate imaging, clinical-history and combined models,
+locked on MU and applied unchanged at two external centres. Each score comes with an audit trail: how much of its
+ranking timing alone supplies, how its conformal set was calibrated, and a local report whose numbers are checked
+against the record. The trail shows what a score adds beyond what the reader already has (timing and visible
+enhancement). No clinician has read the reports.
+
+Sections:
+1. Introduction.
+2. PRISM.
+3. Methods: evaluation and the audit trail.
+4. Results:
+   - 4.1 Cross-site transfer (headline).
+   - 4.2 What each score adds beyond timing and enhancement (new planned analysis E4; the split folds in here).
+   - 4.3 Conformal sets by group (null).
+   - 4.4 Report and verifier.
+5. Discussion.
+
+## Methods rewrite 2026-11-15 (branch `methods-rewrite-2026-11-15`; supersedes every framing below)
+
+Author's direction (2026-11-15): bottom line up front; a methods / medical AI paper whose contributions are technical
+objects with measured properties; everything else supports them. No "phase of care" (say time after radiotherapy);
+no LIME or SHAP (the models are linear and attribution cannot separate signal from schedule).
+
+Bottom line. A progression score can transfer between centres while drawing its discrimination from different
+evidence. PRISM gives each follow up scan a record that shows where its scores' discrimination comes from and how far
+to trust them, and a report verified against that record. Fitted once on the public development cohort and applied
+unchanged at two centres.
+
+Contributions (each with its measurement; prior art in docs/literature/PRIOR_ART_2026-11-15_METHODS.md):
+- C1 A context audit of discrimination. The exact split of the AUC into pairs within one time window and across
+  windows (identity of Kallus and Zhou 2019), with the change in each part when an input block is added, for every
+  model at each centre. Measured: A_W, A_B and increments with patient bootstrap CIs (MU, LUMIERE).
+- C2 Group-conditional conformal sets over time after radiotherapy and enhancement state, with a fixed fallback to
+  coarser groups; the calibration level is part of the record. Measured: within-group coverage, worst-group gap,
+  two-outcome and empty sets, against the planned marginal sets.
+- C3 A verifier that binds every number and direction word of a generated report to the record entity it refers to.
+  Measured: planted-error rejection per error class (synthetic and real reports), false rejections, language model
+  and template as two writers.
+Supporting: locked external tests (AUCs), the UCSF enhancement result, the system and its cost, disagreement (one
+exploratory paragraph), the card as a descriptive lookup.
+
+Sections: 1 Introduction (problem, prior art, contributions, bottom line). 2 PRISM (inputs, models, record and
+report; Fig 1, Table models). 3 Methods (3.1 context split, 3.2 group-conditional sets, 3.3 bound verifier). 4
+Evaluation design (cohorts, roles, planned vs exploratory, statistics; Tables 1, eval, tests). 5 Results (5.1 locked
+transfer, Fig 2; 5.2 context split, Fig 3; 5.3 confidence, Fig 4; 5.4 reports, Fig 5 and verifier table). 6
+Discussion.
+
+## Revision proposal 2026-11-13 (branch `revision-overnight-2026-11-13`, PENDING AUTHOR)
+
+Made overnight in answer to the advisor's review; log in [REVISION_2026-11-13.md](REVISION_2026-11-13.md). Not merged.
+Title "PRISM: making glioma progression scores inspectable on MRI after treatment". Contributions in the advisor's order
+(2,4,1,3): the system, the local checked report, what a score rests on differs between cohorts, external tests.
+Sections: 2 PRISM (inputs, three models, confidence statements, record and report, implementation and cost), 3
+Evaluation design (cohorts, how each cohort was evaluated, one table of tests and outcomes, audits), 4 Validation
+(inputs, models, confidence, reports, what carries a score), 5 Discussion. New evidence: checker mutation test
+(synthetic), measured extraction cost, the input validation subsection from existing re-segmentation results.
+
 ## Contributions and framing (2026-11-01, after the supervisor's review)
 
 Finding first, system as the response. The Introduction ends with four numbered contributions: (1) the finding: what
