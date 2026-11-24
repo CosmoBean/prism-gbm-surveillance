@@ -19,7 +19,7 @@
 \author{
 \name{Sri Datta Ganesh Bandreddi\textsuperscript{a}\thanks{CONTACT Sri Datta Ganesh Bandreddi. Email: sbandred@andrew.cmu.edu; ORCID: 0009-0004-3617-6734}
   and Yongjie Jessica Zhang\textsuperscript{b}}
-\affil{\textsuperscript{a}Department of Biomedical Engineering, Carnegie Mellon University, Pittsburgh, PA, USA;
+\affil{\textsuperscript{a}Department of Biomedical Engineering, Carnegie Mellon University, Pittsburgh, PA, USA;\\
 \textsuperscript{b}Department of Mechanical Engineering, Carnegie Mellon University, Pittsburgh, PA, USA}
 }
 
@@ -31,7 +31,7 @@
 \begin{abstract}
 Machine learning models for glioma follow-up MRI report high accuracy, but a single AUC cannot show what drives a
 model's predictions. We built a new framework, PRISM (Progression Reading with Independent Scores and Measurements),
-running on one local computer. A Swin UNETR network trained on BraTS data segments each scan; three logistic regressions score it from its image measurements, its clinical history and the two
+running on one local computer. The first-place ensemble of the BraTS 2024 post-treatment challenge segments each scan; three logistic regressions score it from its image measurements, its clinical history and the two
 combined, each with a conformal prediction set; and a local large language model writes a
 report whose every number is checked against its source. On MU-Glioma-Post, the combined model reached an AUC of
 0.82. Without retraining, it reached 0.77 at LUMIERE and 0.86 at UCSF-ALPTDG. For each scan,
