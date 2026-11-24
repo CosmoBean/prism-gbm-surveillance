@@ -18,7 +18,7 @@
 
 \author{
 \name{Sri Datta Ganesh Bandreddi\textsuperscript{a}\thanks{CONTACT Sri Datta Ganesh Bandreddi. Email: sbandred@andrew.cmu.edu; ORCID: 0009-0004-3617-6734}
-  and Jessica Zhang\textsuperscript{b}}
+  and Yongjie Jessica Zhang\textsuperscript{b}}
 \affil{\textsuperscript{a}Department of Biomedical Engineering, Carnegie Mellon University, Pittsburgh, PA, USA;
 \textsuperscript{b}Department of Mechanical Engineering, Carnegie Mellon University, Pittsburgh, PA, USA}
 }
@@ -30,9 +30,9 @@
 % Section 4.5 and Table 5 (verifier: every value under the wrong region rejected).
 \begin{abstract}
 Machine learning models for glioma follow-up MRI report high accuracy, but a single AUC cannot show what drives a
-model's predictions. We built PRISM (Progression Reading with Independent Scores and Measurements),
-running on one local computer: a Swin UNETR network trained on BraTS data segments each scan, three logistic regressions score it from its image measurements, its clinical history and the two
-combined, each with a conformal prediction set, and a local large language model writes a
+model's predictions. We built a new framework, PRISM (Progression Reading with Independent Scores and Measurements),
+running on one local computer. A Swin UNETR network trained on BraTS data segments each scan; three logistic regressions score it from its image measurements, its clinical history and the two
+combined, each with a conformal prediction set; and a local large language model writes a
 report whose every number is checked against its source. On MU-Glioma-Post, the combined model reached an AUC of
 0.82. Without retraining, it reached 0.77 at LUMIERE and 0.86 at UCSF-ALPTDG. For each scan,
 PRISM reports what its score rests on: the image and clinical-history scores, whether they agree, and how the models
@@ -59,8 +59,7 @@ repeat scan or histology before progression is called within 12 weeks of radioth
 Advanced MRI helps in some studies but has not solved the problem. In a meta-analysis of 30 small studies, 13 at high
 risk of bias, diffusion and perfusion MRI reached pooled AUCs of 0.90--0.93 \citep{taylor2022}, and adding them
 improved a radiomics model in 61 patients \citep{kim2019}. In 105 patients with suspected pseudoprogression, however,
-they did not significantly improve on clinical data and MGMT status \citep{leone2023}. PRISM works from conventional
-MRI and the clinical record, both part of every routine follow-up.
+they did not significantly improve on clinical data and MGMT status \citep{leone2023}.
 
 Machine learning models for this decision are mostly built on the image alone and tested on a single split of one
 cohort. Studies of treatment response have small samples and a high risk of bias \citep{booth2022}, 29\% of 51 glioma
@@ -103,34 +102,35 @@ test such checkers \citep{rao2025rexerr}. Because patient records often cannot l
 also run locally, and open-weight models run on site can label radiology reports \citep{mukherjee2023} and extract
 their findings as well as closed models \citep{nowak2025}.
 
-We present PRISM (Progression Reading with Independent Scores and Measurements), a system for glioma follow-up MRI
-that runs on one local computer (Figure~\ref{fig:1}). In other recent systems, language-model agents read the clinical
+We present PRISM (Progression Reading with Independent Scores and Measurements), a new system for glioma follow-up MRI
+that runs on one local computer. PRISM works from conventional MRI and the clinical record, both part of every
+routine follow-up. In other recent systems, language-model agents read the clinical
 notes and assign a BT-RADS category \citep{jabal2026}. PRISM's language model makes no decision: it writes up values
 computed elsewhere, so every sentence it writes can be checked. Our contributions are:
 \begin{enumerate}
-\item A local pipeline that segments the tumour on each scan with a pretrained model, used without fine-tuning:
+\item A new local pipeline is developed, which segments the tumour on each scan with a pretrained model, used without fine-tuning:
 either Swin UNETR trained on BraTS 2021 \citep{hatamizadeh2022} or the top-ranked model of the BraTS 2024
 post-treatment challenge \citep{ferreira2024}. From each segmentation, PRISM derives 27 measurements of tumour volume,
 shape, intensity and change from earlier scans, without patient data leaving the computer.
-\item Separate imaging and clinical-history scores, each reported with its uncertainty. Three ridge logistic
+\item PRISM separates imaging and clinical-history scores, each reported with its uncertainty. Three ridge logistic
 regressions \citep{pedregosa2011} score each scan from the image measurements alone, which contain no dates, from the
 clinical history, and from the two combined. Each score is accompanied by the set of outcomes it cannot exclude,
 calibrated to contain the true outcome in 80\% of scans \citep{angelopoulos2023}, a statement of whether the imaging
 and clinical-history scores agree, and the models' performance on comparable earlier scans.
-\item An evaluation of what each score adds to what the clinician already knows. Each score is compared with a
+\item PRISM provides an evaluation of what each score adds to what the clinician already knows. Each score is compared with a
 reference model based on the time since radiotherapy and the enhancing tumour volume, and its AUC is split into a part
 from pairs of scans in the same time window after radiotherapy and a part from pairs in different windows
 \citep{kallus2019}.
-\item External validation without retraining. The models were fitted once, on 181 scans from 92 patients in
+\item External validation is performed without retraining. The models were fitted once, on 181 scans from 92 patients in
 MU-Glioma-Post, and applied unchanged to 178 scans from 79 patients in LUMIERE and 69 scans from 69 patients in
 UCSF-ALPTDG, using both the masks supplied with each dataset and PRISM's own segmentation.
-\item Report generation with deterministic verification. The language model, Qwen3.8-27B served with vLLM
+\item Report is generated with deterministic verification. The language model, Qwen3.8-27B served with vLLM
 \citep{kwon2023}, writes the report only from a structured record that holds each value with its source, and a
 rule-based checker and verifier test every number and direction against that record. All reports for held-out scans
 passed these checks, which were themselves tested with 24 types of planted error.
 \end{enumerate}
 
-Section~\ref{sec:2} describes the cohorts, PRISM's stages and the evaluation. Section~\ref{sec:3} reports the results
+The remainder of this paper is organized as follows. Section~\ref{sec:2} describes the cohorts, PRISM's stages and the evaluation. Section~\ref{sec:3} reports the results
 at the three centres, what the scores rest on, the effect of segmentation, and the conformal sets and report checks.
 Section~\ref{sec:4} discusses what the results mean and their limits.
 
@@ -139,7 +139,7 @@ Section~\ref{sec:4} discusses what the results mean and their limits.
 \subsection{Cohorts and label}\label{sec:2.1}
 
 % Sources: TABLE1_COHORT.md; UCSF_DATA.md; UCSF_PLAN.md; DETECTION_TASK.md; INTENDED_USE.md; NUMBERS.md 2.2.
-We used three public cohorts of patients followed with MRI after treatment for glioma. PRISM was developed on
+We used three public cohorts of patients followed with MRI after treatment for glioma. PRISM is developed on
 MU-Glioma-Post \citep{mahmoud2025} and tested without retraining on LUMIERE \citep{suter2022} and UCSF-ALPTDG
 \citep{fields2024} (Table~\ref{tab:1}). In all three, the primary population was grade 4 glioma.
 
@@ -162,6 +162,7 @@ progression.
 \caption[The three cohorts]{\textbf{The three cohorts.} Recorded data and scans in the detection task.}
 \label{tab:1}
 \begin{threeparttable}
+\footnotesize
 \zebrarows
 \begin{tabularx}{\linewidth}{@{}R{3.3cm}LLL@{}}
 \toprule
@@ -226,7 +227,7 @@ PRISM processes each scan in six stages (Figure~\ref{fig:1}c), described below i
 \begin{figure}[!htbp]
 \centering
 \figslot{fig1_system.pdf}{0.85\textheight}{One MU patient's follow-up on real scans; PRISM's segmenter; the method in six stages; the evaluation protocol.}
-\caption{\textbf{The task and the method.} (a) One MU-Glioma-Post patient's scans after radiotherapy, by weeks after
+\caption{\textbf{The workflow of PRISM.} (a) One MU-Glioma-Post patient's scans after radiotherapy, by weeks after
 its end, with the enhancing tumour outlined by PRISM's segmenter (solid) and by the released mask (dashed); volumes are
 the segmenter's, with the released mask's in brackets. Scans followed by at least 120 days without progression are
 labelled no progression, and the first scan after documented progression, at 40.9 weeks, is the progression scan.

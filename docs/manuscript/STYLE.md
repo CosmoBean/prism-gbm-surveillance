@@ -218,3 +218,7 @@ Add each new reaction as a dated one-line rule.
   `docs/manuscript/archive/`.
 - 2026-11-19: table row shading is neutral grey (`rowgrey` = gray 0.92 in `paper/macros.tex`), never a blue tint; blue
   distracts.
+- 2026-11-24: Prof. Zhang's marked copy (email 2026-11-23): her mechanical edits applied as marked (author name
+  "Yongjie Jessica Zhang"; title ends "for Glioma Follow-up MRI"; abstract sentence split with semicolons; contributions
+  open with PRISM or a verb; "The remainder of this paper is organized as follows."; Table 1 in footnotesize like
+  Table 2; Figure 1 caption "The workflow of PRISM."). Her subjective items are with the author.
