@@ -651,8 +651,8 @@ def panel_c(scans) -> Canvas:
     c.text(lx + 7.0, e_comb + 5.0, "Deterministic checker", size=T_TITLE, weight="bold")
     c.text(lx + 7.0, e_comb + 1.3, "every number in a cited field;\nflags stated; the verifier ties\n"
                                    "each number to its region", size=T_BODY)
-    c.arrow((lx, e_comb - 4.0), (lx, e_hist + 6.6), BLACK, 0.8, ms=6)
-    c.text(lx + 1.5, e_comb - 8.6, "accept or reject", size=T_NOTE, colour=st.MUTED)
+    c.arrow((lx, e_comb - 4.0), (lx, e_hist + 10.2), BLACK, 0.8, ms=6)
+    c.text(lx, e_hist + 7.0, "accept or reject", size=T_NOTE, colour=st.MUTED, ha="center", va="bottom")
     c.document(lx - 4.6, e_hist - 6.0, 9.2, 12.4, BLACK, lines=5)
     c.text(lx + 7.0, e_hist + 5.0, "Report", size=T_TITLE, weight="bold")
     c.text(lx + 7.0, e_hist + 1.3, "each sentence with the\nrecord keys it cites", size=T_BODY)
@@ -660,7 +660,7 @@ def panel_c(scans) -> Canvas:
 
 
 # ==================================================================== (d) evaluation
-HD = 46.0
+HD = 44.0
 
 
 def panel_d() -> Canvas:
@@ -684,10 +684,8 @@ def panel_d() -> Canvas:
         c.database(cx, y, 8.0, 11.0, DB, filled=False)
         c.text(cx + 5.8, y + 5.0, name, size=T_TITLE, weight="bold")
         c.text(cx + 5.8, y + 1.2, body, size=T_BODY)
-    c.text(1.0, 11.0, "Measured: AUC with a 95% patient-bootstrap interval; coverage of the conformal sets; reports "
-                     "passing the checker.", size=T_BODY)
-    c.text(1.0, 6.6, "Label: the first scan at documented progression versus a scan followed by at least 120 days "
-                     "without progression\n(LUMIERE: rated stable or responding).", size=T_NOTE, colour=st.MUTED)
+    c.text(1.0, 9.0, "Reported in every cohort: the AUC with its 95% interval (patient bootstrap), the coverage of\n"
+                     "the conformal sets, and the share of reports the checker accepts.", size=T_BODY)
     return c
 
 

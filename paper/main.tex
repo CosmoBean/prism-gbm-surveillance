@@ -136,6 +136,8 @@ Section~\ref{sec:4} discusses what the results mean and their limits.
 
 \section{Methods}\label{sec:2}
 
+Figure~\ref{fig:1} gives an overview of this section. PRISM reads each follow-up MRI scan of a patient treated for glioma (Figure~\ref{fig:1}a) and returns three scores of progression with a written report. Section~\ref{sec:2.1} describes the three cohorts and the label. Section~\ref{sec:2.2} describes PRISM's six stages (Figure~\ref{fig:1}c): segmentation of the tumour regions by a fixed network (Figure~\ref{fig:1}b), measurements from the masks with the clinical-history inputs, three models (imaging, clinical history and combined), confidence statements, a record of every value, and a report written by a local language model and checked by rule-based programs. Section~\ref{sec:2.3} describes how PRISM was developed on MU-Glioma-Post and tested without retraining on LUMIERE and UCSF-ALPTDG (Figure~\ref{fig:1}d).
+
 % FIGURE REDESIGN (2026-11-18), modelled on Tak et al. 2025, NEJM AI, doi:10.1056/AIoa2400703; enlarged and split
 % over two pages 2026-11-26 (PI review: legible on paper). Each panel is drawn at its printed size (text width, fonts
 % 7 pt or larger) by scripts/fig1_prism.py, which reads the MU images from data/mu-glioma-post (patient
