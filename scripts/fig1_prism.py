@@ -523,9 +523,9 @@ def panel_c(scans) -> Canvas:
     # two rows of three stages; three lanes per row: imaging, combined, clinical history
     r1, r2 = top - 10.5, top - 78.0
     lane = lambda r: (r - 12.5, r - 30.0, r - 47.5)
-    for i, ((x0, x1), name) in enumerate(zip(COLS, ["Inputs", "Features", "Models"])):
+    for i, ((x0, x1), name) in enumerate(zip(COLS, ["Segmentation", "Measurements", "Models"])):
         c.stage(x0, x1, r1, i + 1, name)
-    for i, ((x0, x1), name) in enumerate(zip(COLS, ["Evidence", "Collation", "Writing and checking"])):
+    for i, ((x0, x1), name) in enumerate(zip(COLS, ["Evidence", "Record", "Report and checks"])):
         c.stage(x0, x1, r2, i + 4, name)
     y_img, y_comb, y_hist = lane(r1)
 
