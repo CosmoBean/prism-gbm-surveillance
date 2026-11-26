@@ -32,6 +32,27 @@ for doc in main supplement; do
   if grep -qE "error message|^I was expecting|^I'm skipping" "$OUT/$doc.blg" 2>/dev/null; then
     cat "$OUT/$doc.blg" >&2; echo "ERROR: BibTeX errors in $doc" >&2; status=1
   fi
+  # a cited entry must not still be a placeholder: no note = {CHECK}, no "% CHECK" comment right above it,
+  # no "to be completed" in its fields
+  unverified=$(python3 - "$OUT/$doc.aux" refs.bib <<'PY'
+import re, sys
+aux, bib = open(sys.argv[1]).read(), open(sys.argv[2]).read().splitlines()
+cited = {k.strip() for g in re.findall(r'\\citation\{([^}]*)\}', aux) for k in g.split(',')}
+starts = [i for i, l in enumerate(bib) if re.match(r'@\w+\{', l)] + [len(bib)]
+for a, b in zip(starts, starts[1:]):
+    key = re.match(r'@\w+\{([^,]+),', bib[a]).group(1).strip()
+    above, k = [], a - 1
+    while k >= 0 and bib[k].startswith('%'):
+        above.append(bib[k]); k -= 1
+    body = '\n'.join(l for l in bib[a:b] if not l.startswith('%'))
+    if key in cited and (any('CHECK' in l for l in above) or re.search(r'note\s*=\s*\{CHECK\}|to be completed', body, re.I)):
+        print(key)
+PY
+)
+  unverified=$(echo $unverified)
+  if [ -n "$unverified" ]; then
+    echo "ERROR: $doc cites unverified bibliography entries: $unverified" >&2; status=1
+  fi
   if grep -q "^Warning--" "$OUT/$doc.blg" 2>/dev/null; then
     echo "BibTeX warnings ($doc):"; grep "^Warning--" "$OUT/$doc.blg" | sed 's/^/  /'
   fi

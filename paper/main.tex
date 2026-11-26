@@ -60,12 +60,12 @@ repeat scan or histology before progression is called within 12 weeks of radioth
 Advanced MRI helps in some studies but has not solved the problem. In a review of 30 small studies, 13 at high
 risk of bias, diffusion and perfusion MRI reached pooled AUCs of 0.90--0.93 in the 25 that could be pooled
 \citep{taylor2022}, and adding them
-improved a radiomics model in 61 patients \citep{kim2019}. In 105 patients with suspected pseudoprogression, however,
+improved a radiomics model developed in 61 patients and tested in 34 others \citep{kim2019}. In 105 patients with suspected pseudoprogression, however,
 they did not significantly improve on clinical data and MGMT status \citep{leone2023}.
 
-Machine learning models for this decision are mostly built on the image alone and tested on a single split of one
-cohort. Studies of treatment response have small samples and a high risk of bias \citep{booth2022}, 29\% of 51 glioma
-radiomics studies were validated externally \citep{park2020}, and 3 of 20 studies of automated response assessment
+Machine learning models for this decision are mostly built on the image alone and tested only within the cohort they
+were developed on. Studies of treatment response have small samples and a high risk of bias \citep{booth2022}, 29\% of 51 radiomics
+studies in neuro-oncology, nine in ten of them on glioma, were validated externally \citep{park2020}, and 3 of 20 studies of automated response assessment
 considered clinical characteristics \citep{shi2025}. Single splits of small cohorts give unstable estimates
 \citep{an2021}, and most deep learning algorithms for radiological diagnosis lose performance on external data
 \citep{yu2022}. A radiomics model published on MU-Glioma-Post, the cohort used in this study, was
@@ -74,15 +74,16 @@ evaluated on a single held-out set of 30 patients (AUC 0.80) \citep{christodoulo
 A single AUC does not show what drives a model's predictions. Models learn shortcuts, signals that predict the label
 without being what the reader cares about \citep{geirhos2020,zech2018,badgeley2019}. In this setting, a model of
 clinical data alone matched one using MRI on an external test set \citep{gomaa2025}, and the interval between scans
-strongly affected a model built on the RANO rules \citep{tarek2026}. The useful measure is what a model adds beyond
-what a clinician already knows \citep{pencina2008,beaulieujones2021}. Saliency maps drawn after the fact do
-not reliably locate what a model has used \citep{arun2021,saporta2022}, so a model that is interpretable by design is preferable
+affected a model built on the RANO rules \citep{tarek2026}. The useful measure is what a model adds beyond
+what a clinician already knows \citep{pencina2008,beaulieujones2021}. Saliency maps drawn after the fact
+localise abnormalities poorly and can be insensitive to the model's own weights \citep{arun2021,saporta2022}, so a model that is interpretable by design is preferable
 \citep{rudin2019}.
 
 The image measurements themselves depend on how the tumour is outlined. After surgery and radiotherapy the scan
 contains a resection cavity and treatment changes, which make segmentation harder, and the BraTS 2024 challenge was
-set up for this setting \citep{deverdier2024}. Experts disagree about the quality of the same glioma segmentation
-\citep{hoebel2024}, so measured volumes depend on whose outlines are used.
+set up for this setting \citep{deverdier2024}. Experts disagree about the quality of the same glioma segmentation,
+and their own outlines of the same tumour overlap only in part \citep{hoebel2024}, so measured volumes depend on whose
+outlines are used.
 
 A score is also more useful when it states its uncertainty. Conformal prediction turns a score into a set of possible
 outcomes that contains the true one at a chosen rate \citep{angelopoulos2023}, although the guarantee does not hold
@@ -97,17 +98,18 @@ structured BT-RADS system was adopted \citep{weinberg2018}, reports mentioned be
 
 Reports written by language models can contain errors that a reader may not catch. AI-written chest radiograph reports
 contained clinically significant errors \citep{tanno2025}, 6\% of oncology CT reports simplified by an open-weight
-model contained factual errors \citep{prucker2025}, and systems that write text from tables misstate numbers
-\citep{wiseman2017}. Automatic measures of factual accuracy track human judgement poorly \citep{gabriel2021}, so
-checkers test each statement against the patient record \citep{zeba2026}, and errors can be planted in reports to
-test such checkers \citep{rao2025rexerr}. Because patient records often cannot leave the hospital, the model should
+model contained factual errors \citep{prucker2025}, and neural systems that write text from tables misstate
+many of the numbers they report \citep{wiseman2017}. Automatic measures of factual accuracy track human judgement poorly \citep{gabriel2021}, so
+checkers test each statement against the patient record \citep{zeba2026}, and errors can be planted in radiology
+reports to build test sets for methods that correct them \citep{rao2025rexerr}. Because patient records often cannot leave the hospital, the model should
 also run locally, and open-weight models run on site can label radiology reports \citep{mukherjee2023} and extract
 their findings comparably to closed models \citep{nowak2025}.
 
 We present PRISM (Progression Reading with Independent Scores and Measurements), a new system for glioma follow-up MRI
 that runs on one local computer. PRISM works from conventional MRI and the clinical record, both part of every
-routine follow-up. In other recent systems, language-model agents combine the clinical
-notes with automated tumour volumes and assign a BT-RADS category \citep{jabal2026}. PRISM's language model makes no decision: it writes up values
+routine follow-up. In another recent system, a language-model agent extracts clinical
+variables from the notes, and rules combine them with automated tumour volumes to assign a BT-RADS category
+\citep{jabal2026}. PRISM's language model makes no decision: it writes up values
 computed elsewhere, so every sentence it writes can be checked. Our contributions are:
 \begin{enumerate}
 \item A new local pipeline is developed, which segments the tumour on each scan with a pretrained model, used without fine-tuning:
@@ -115,9 +117,9 @@ either Swin UNETR trained on BraTS 2021 \citep{hatamizadeh2022} or the top-ranke
 post-treatment challenge \citep{ferreira2024}. From each segmentation, PRISM derives 27 measurements of tumour volume,
 shape, intensity and change from earlier scans, without patient data leaving the computer.
 \item PRISM separates imaging and clinical-history scores, each reported with its uncertainty. Three ridge logistic
-regressions \citep{pedregosa2011} score each scan from the image measurements alone, which contain no dates, from the
-clinical history, and from the two combined. Each score is accompanied by the set of outcomes it cannot exclude,
-calibrated to contain the true outcome in 80\% of scans \citep{angelopoulos2023}, a statement of whether the imaging
+regressions \citep{lecessie1992} score each scan from the image measurements alone, which contain no dates, from the
+clinical history, and from the two combined. Each score is accompanied by the set of outcomes it cannot exclude \citep{angelopoulos2023},
+calibrated to contain the true outcome in 80\% of scans, a statement of whether the imaging
 and clinical-history scores agree, and the models' performance on comparable earlier scans.
 \item PRISM provides an evaluation of what each score adds to what the clinician already knows. Each score is compared with a
 reference model based on the time since radiotherapy and the enhancing tumour volume, and its AUC is split into a part
@@ -304,18 +306,19 @@ Enhancing volume alone & Log enhancing tumour volume, used directly & No \\
 \paragraph*{Segmentation.} The tumour masks of each scan come from one of two fixed public segmentation networks,
 which PRISM runs itself, or are supplied with the dataset (Table~\ref{tab:1}). The primary results use the supplied masks, so that every volume can be traced to a
 public file. At MU-Glioma-Post and UCSF-ALPTDG, the supplied masks mark the enhancing tumour, necrosis, FLAIR
-hyperintensity and the resection cavity. At LUMIERE, they are DeepBraTumIA masks with three labels, which count the
-cavity as necrosis.
+hyperintensity and the resection cavity. At LUMIERE, they are DeepBraTumIA masks with three labels \citep{suter2022}, which count
+the cavity as necrosis.
 
 Both networks run with their public weights and settings and were not tuned on our cohorts. The first is the Swin
 UNETR \citep{hatamizadeh2022} released for BraTS 2021 (fold 1; Figure~\ref{fig:1}b), a network of 62 million
 parameters that marks the enhancing tumour, the tumour core and the whole tumour. It takes FLAIR, T1c, T1 and T2, each
 scaled to zero mean and unit variance over the brain, in blocks of $128^3$ voxels that overlap by half. A voxel
 belongs to a region when its probability exceeds 0.5. Necrosis is the core outside the enhancing tumour, and FLAIR
-hyperintensity is the rest of the whole tumour. BraTS 2021 contains scans taken before surgery, so this network has no
-resection-cavity label and supplies 22 of the 27 measurements. The second network is the winning BraTS 2024 model for
-adult glioma after treatment \citep{deverdier2024,ferreira2024}, an ensemble of nnU-Net, MedNeXt and Swin UNETR
-networks, run from the challenge organisers' container. It also marks the resection cavity and supplies all 27
+hyperintensity is the rest of the whole tumour. BraTS 2021 contains scans taken before surgery \citep{baid2021}, so this network has no
+resection-cavity label and supplies 22 of the 27 measurements. The second network is the winning model \citep{ferreira2024} of the
+BraTS 2024 challenge for adult glioma after treatment \citep{deverdier2024}, an ensemble of nnU-Net
+\citep{isensee2021}, MedNeXt \citep{roy2023} and Swin UNETR networks, run with the BraTS orchestrator
+\citep{kofler2025}. It also marks the resection cavity and supplies all 27
 measurements (Supplementary Section~S13.1).
 
 \paragraph*{Measurements and clinical-history inputs.} From the masks and the T1c and FLAIR images, PRISM computes 27
@@ -332,7 +335,7 @@ the diagnosis date (Supplementary Section~S2).
 
 % Sources: prism/models/formulations.py; prism/experiments/c3_radiomics.py (BASE_PRE); NUMBERS.md 2.1;
 % DETECTION_TASK.md (External test); SYSTEM_RESULTS.md (Deviations item 1).
-\paragraph*{Three models.} The imaging, clinical-history and combined models are ridge logistic regressions on the
+\paragraph*{Three models.} The imaging, clinical-history and combined models are ridge logistic regressions \citep{lecessie1992} on the
 inputs listed in Table~\ref{tab:models}. Logistic regression turns a weighted sum of the inputs into a probability of
 progression, and the ridge (L2) penalty pulls the weights towards zero, which keeps them stable with many correlated
 inputs and few patients.
@@ -381,8 +384,9 @@ Because patients contribute different numbers of scans, weighting by patient mak
 We also computed group-conditional (Mondrian) sets, which compute $\hat q$ separately within each group of scans, so
 that the 80\% target applies to each group as well as to the whole cohort \citep{vovk2022book}. A group combines the
 time window after radiotherapy with the state of the enhancing tumour: absent (below 0.1\,cc), present with no
-previous scan to compare, increased since the previous scan by at least 1\,cc and 40\%, or not increased. Groups with
-fewer than 10 calibration patients fall back to a coarser level (\citealp{johansson2015,ding2023}; Supplementary Section~S10.2). Part of any gain in
+previous scan to compare, increased since the previous scan by at least 1\,cc and 40\%, or not increased. Small calibration
+groups make the thresholds conservative \citep{johansson2015}, so groups with fewer than 10 calibration patients fall
+back to a coarser level (\citealp{ding2023}; Supplementary Section~S10.2). Part of any gain in
 coverage within a group can come from larger sets alone. To separate the two, we compared the group sets at MU with
 planned sets at the $\alpha$ (0.175) that gives the same share of sets holding both outcomes (exploratory).
 
@@ -426,7 +430,7 @@ Fixed code fills in the rest of the report page: the tables of volumes and score
 flags, the segmentation slices and a fixed paragraph of limitations. The language model only turns record entries into
 prose, a division of work also used to write brain tumour reports from extracted image features
 \citep{herasrivera2026}. The page carries the history, comparison and change elements of the BT-RADS follow-up
-template \citep{weinberg2018}, whose structured reports were rated more consistent than the free prose they replaced \citep{gore2019}.
+template \citep{weinberg2018}, whose adoption was followed by higher ratings of report consistency \citep{gore2019}.
 It leaves out the template's category and advice, because PRISM makes no decision (Supplementary Section~S8). Because
 the enhancing volume varies between scans taken close together (Section~\ref{sec:3.3}), the report calls all volumes
 indicative.
@@ -454,7 +458,7 @@ LUMIERE evaluation reports (Supplementary Section~S10.3).
 
 To measure what the two programs catch, we planted one error at a time in correct reports, using 24 kinds of error
 (Supplementary Section~S10). Planted errors are also used to evaluate other factuality checks
-\citep{gabriel2021,rao2025rexerr}. The correct reports came from test code (52 synthetic records), the language model (the 276 MU and
+\citep{gabriel2021}. The correct reports came from test code (52 synthetic records), the language model (the 276 MU and
 LUMIERE evaluation records) and a fixed template applied to the same records (Supplementary Section~S10.3). Three kinds of
 error were held out while the rules were written: two that place a value under the wrong region or score, and one that
 reverses the direction of a change. Because we wrote both the rules and these errors, a separate language model that
@@ -503,7 +507,7 @@ window, shows how much of $A_B$ the window alone supplies (Supplementary Section
 \citep{christodoulou2026} with its authors' public code and settings, on the same patients, masks, label and folds as
 PRISM, and compared it with PRISM's imaging model. The pipeline computes 4,892 radiomic features of the current scan
 with PyRadiomics \citep{vangriethuysen2017}, keeps the 256 best ranked within each training set, and fits a gradient
-boosted tree model (LightGBM; Supplementary Section~S14.3).
+boosted tree model (LightGBM, \citealp{ke2017}; Supplementary Section~S14.3).
 
 The authors' code labels every scan of a patient who ever progressed as progression. We kept PRISM's label, so the
 comparison is between two methods on one task and does not replicate the published estimate. The plan, fixed before
@@ -514,7 +518,7 @@ refitted the models in the same folds: Swin UNETR at MU, with the supplied cavit
 centres (22 measurements), fitted on MU and applied without retraining; and the BraTS 2024 model in the same way. The
 published pipeline was also run on the Swin UNETR masks at MU. Each score is compared with its value on the supplied
 masks by the paired difference in AUC, under the rules in Table~\ref{tab:2} (Supplementary Section~S14.4).
-Agreement with the supplied masks is measured by the Dice overlap, and the noise of the enhancing volume by its median
+Agreement with the supplied masks is measured by the Dice overlap \citep{dice1945}, and the noise of the enhancing volume by its median
 fold change between consecutive scans at most 30 days apart, at MU and LUMIERE.
 
 \paragraph*{Tests fixed in advance.} Table~\ref{tab:2} lists each planned test, its rule and its outcome. The primary
@@ -525,7 +529,7 @@ testing. Analyses not fixed in advance are marked exploratory.
 
 
 \paragraph*{Statistics.} Every AUC has a 95\% confidence interval (CI) from 1,000 bootstrap samples of patients
-(2,000 in later analyses; Supplementary Section~S3). Each sample draws patients with replacement, keeps all their scans, and resamples the
+\citep{field2007} (2,000 in later analyses; Supplementary Section~S3). Each sample draws patients with replacement, keeps all their scans, and resamples the
 held-out predictions without refitting the models. At MU each sample averages the AUC over the five repeats of cross
 validation. Differences between scores are computed within the same samples. A difference whose CI lies above zero
 counts as a gain, and one whose CI includes zero as no clear difference. No P values are reported. Calibration is
@@ -889,11 +893,12 @@ Reports that passed the checker, rejected by the verifier & 0 of 52 & 1 of 276 &
 % =====================================================================================================
 \section{Discussion}\label{sec:4}
 
-PRISM ranked follow-up scans better than the radiomics model previously published on the same cohort
-\citep{christodoulou2026}. On the same patients, masks, label and folds, PRISM's imaging model reached an AUC of 0.71
+PRISM ranked follow-up scans better than the radiomics model of \citet{christodoulou2026}, previously published
+on the same cohort. On the same patients, masks, label and folds, PRISM's imaging model reached an AUC of 0.71
 against 0.58 for that model, and its clinical-history model reached 0.82 (Section~\ref{sec:3.1}). PRISM's models also
 kept their ranking at two hospitals whose scans they had never seen, without retraining. Most models in this field are
-built on the image alone and tested only within the cohort they were developed on \citep{booth2022,park2020,shi2025},
+built on the image alone \citep{booth2022,shi2025} and tested only within the cohort they were developed on
+\citep{booth2022,park2020,shi2025},
 and a single split of a small cohort gives unstable estimates \citep{an2021,varoquaux2018}. An earlier re-implementation of that model
 ranged from 0.32 to 0.88 over random held-out sets (Section~\ref{sec:3.1}). PRISM was evaluated by
 repeated cross validation and at two external centres instead.
@@ -918,11 +923,12 @@ intensity of the outline, and outlines of the same tumour differ between experts
 draw after treatment \citep{deverdier2024}. The BraTS 2024 model, trained on scans after treatment, kept the imaging
 score closer to its value on the supplied masks than the older Swin UNETR did.
 
-PRISM's reports can be checked line by line. Other systems ask language models to combine clinical notes with tumour
-volumes and assign a BT-RADS category \citep{jabal2026}, or to describe the images alone \citep{herasrivera2026}. In PRISM, the clinical
+PRISM's reports can be checked line by line. Other systems use language models to extract clinical variables from
+notes, which rules then combine with tumour volumes to assign a BT-RADS category \citep{jabal2026}, or to write
+reports from features of the images alone \citep{herasrivera2026}. In PRISM, the clinical
 history is stored as data in the record, the language model only writes from that record, and every number it writes
 is traced back to its source. Other checks for clinical text either forbid numbers \citep{pham2026} or trace them
-without testing the check itself \citep{mansour2026}. PRISM's checks were tested by planting errors in correct reports
+without reporting a test of the check itself \citep{mansour2026}. PRISM's checks were tested by planting errors in correct reports
 (Section~\ref{sec:3.5}).
 
 The 80\% sets held their target across each cohort, but not in every small group of scans, such as scans in the first
@@ -934,7 +940,7 @@ intervals are wide. Progression is taken as each centre recorded it, without bio
 supplied with the datasets and the segmenters' outlines are references, not ground truth. At UCSF-ALPTDG the time after
 radiotherapy had to be estimated from its start date. No cohort included perfusion or diffusion imaging, which help
 separate progression from treatment effects in other studies \citep{taylor2022}. Future work includes a reader study in
-which neuroradiologists judge the reports against the scans, further cohorts such as Burdenko and UCSD-PTGBM to fill
+which neuroradiologists judge the reports against the scans, further cohorts such as Burdenko \citep{zolotova2023burdenko} and UCSD-PTGBM \citep{gagnon2026} to fill
 the small groups of scans, and a wider test of the report checks.
 
 \subsection*{Conclusion}

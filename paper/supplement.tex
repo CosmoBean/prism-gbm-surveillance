@@ -271,7 +271,7 @@ $\leq$ 0. Other arms are secondary, without multiplicity correction.
 \small
 \renewcommand{\thetable}{S4}\renewcommand{\theHtable}{S4}
 \caption{\textbf{Tuned encoder: discrimination and calibration} (\code{finetune/<population>/results.csv}). IPCW
-AUC at 120 days with 95\% bootstrap CI over patients; $\Delta$AUC paired against the core model; MDE: minimal
+AUC \citep{uno2007} at 120 days with 95\% bootstrap CI over patients; $\Delta$AUC paired against the core model; MDE: minimal
 detectable $\Delta$AUC at 80\% power.}
 \label{tab:S42}
 \begin{tabularx}{\linewidth}{@{}L R{2.6cm} R{2.9cm} R{1.0cm} R{1.0cm} R{0.8cm}@{}}
@@ -336,17 +336,17 @@ from the previous scan did not alter the verdict.
 \FloatBarrier
 \section{Report content against the BT-RADS follow-up template}\label{sec:S24}
 
-Source: the BT-RADS follow-up reporting template (sample v1.03, btrads.com) and category guide (version 1.01)
-\citep{weinberg2018}, and the report fields in \code{prism/report/facts\_v3.py} and \code{prism/report/sections\_v3.py}.
+Source: the BT-RADS follow-up reporting template (sample v1.03) and category guide (version 1.01)
+\citep{btradsweb,weinberg2018}, and the report fields in \code{prism/report/facts\_v3.py} and \code{prism/report/sections\_v3.py}.
 No patient record was used for this comparison.
 
 \textbf{Why this template.} No public cohort releases clinician reports for glioma follow-up MRI after treatment,
 including the three used here, so the report could not be compared with the reports written for the same scans. We
 compared its content instead with the structured follow-up template of the Brain Tumor Reporting and Data System
 (BT-RADS) \citep{weinberg2018}. In surveys of clinicians and radiologists at the centre that introduced it, taken before and
-after its adoption, reports written with the template were judged more consistent and less ambiguous than the free
-prose they replaced \citep{gore2019}, and they recorded more clinical history and used fewer hedging words
-\citep{zhang2020}. In a 2018 survey of 220 European
+nine months after its adoption, reports were rated more consistent and less ambiguous after the change
+\citep{gore2019}, and an analysis of the reports themselves found that they recorded more clinical history and used
+fewer hedging words \citep{zhang2020}. In a survey of 220 European
 centres, 60\% issued qualitative follow-up reports and 23\% used a template \citep{thust2018}.
 
 \begin{table}[H]
@@ -481,7 +481,7 @@ generated. The fixed template writes one set sentence per line of the prompt fro
 \renewcommand{\thetable}{S9}\renewcommand{\theHtable}{S9}
 \centering
 \caption{\textbf{Reports on the evaluation records of MU (114) and LUMIERE (162).} Qwen3.8-27B, greedy decoding, one H100.
-Reading ease is the Flesch score, where higher is easier.}
+Reading ease is the Flesch score \citep{flesch1948}, where higher is easier.}
 \label{tab:S25b}
 \footnotesize
 \begin{tabularx}{\linewidth}{@{}LR{1.6cm}R{1.6cm}R{1.6cm}R{1.4cm}R{1.4cm}@{}}
@@ -619,7 +619,7 @@ state, which are the situations of the reliability card, and compared them with 
 level 2 its enhancement state over all time windows and level 3 all calibration scans, which is the marginal set. Most
 groups hold few calibration patients, and small calibration sets give overly wide prediction regions \citep{johansson2015}, which is
 why a group with fewer than 10 calibration patients falls back to a coarser level. Clustered conformal prediction
-gives classes with too few calibration examples the all-scan threshold in the same way \citep{ding2023}. The
+likewise gives classes with too few calibration examples the threshold pooled over all classes \citep{ding2023}. The
 time after radiotherapy is unknown for every LUMIERE scan, so LUMIERE scans start at level 2. The nominal level was
 80\% throughout. Under exchangeability within the group, level 1 and level 2 sets are conditional on the group, and
 nothing holds at LUMIERE unless its scans are exchangeable with the MU calibration scans.
@@ -946,7 +946,7 @@ since surgery at LUMIERE and the days since the start of radiotherapy at UCSF-AL
 
 \subsection{Published radiomics pipeline}\label{sec:S30.3}
 
-We ran the authors' extraction on all 594 MU scans with four sequences and a mask: N4 bias correction within the mask,
+We ran the authors' extraction on all 594 MU scans with four sequences and a mask: N4 bias correction \citep{tustison2010} within the mask,
 resampling to 1\,mm with B-spline interpolation, scaling to zero mean and unit variance within the mask, and one
 region, the whole mask. The 4,892 features per scan are taken from each of the four sequences, from the original image
 and from Laplacian of Gaussian ($\sigma$ 0.5 to 3\,mm) and wavelet filtered versions of it \citep{vangriethuysen2017}.

@@ -222,3 +222,8 @@ Add each new reaction as a dated one-line rule.
   "Yongjie Jessica Zhang"; title ends "for Glioma Follow-up MRI"; abstract sentence split with semicolons; contributions
   open with PRISM or a verb; "The remainder of this paper is organized as follows."; Table 1 in footnotesize like
   Table 2; Figure 1 caption "The workflow of PRISM."). Her subjective items are with the author.
+- 2026-11-26: every citation supports exactly the clause it sits on (numbers, population, method and verb strength as
+  the source gives them). Cite a source for its own finding, never for PRISM's design or result; split a clause between
+  sources when each carries only part. Name every tool, dataset, model and method with its reference. A reworded
+  citing sentence is checked against the source again before it is committed, and `paper/build.sh` refuses a cited
+  bibliography entry still marked CHECK.
