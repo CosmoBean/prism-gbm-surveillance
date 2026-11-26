@@ -29,7 +29,7 @@ primary population.}
 \section{Data cleaning}\label{sec:S2}
 
 Source: \code{docs/manuscript/FLOW.md} (\code{outputs/data/mu\_flow.csv}); \code{docs/results/FIX\_LABELS.md}.
-These steps clean the MU-Glioma-Post release before any task is defined. The detection sets drawn from the
+These steps clean the MU-Glioma-Post release \citep{mahmoud2025,yaseen2025tcia} before any task is defined. The detection sets drawn from the
 cleaned scans, and those of LUMIERE and UCSF-ALPTDG, are in the main text tables \emph{The three cohorts} and \emph{How each cohort was evaluated}.
 
 \begin{table}[H]
@@ -164,7 +164,7 @@ agree with labels (ET/brain on T1c median 1.45, > 1 in 98\% of scans; SNFH/brain
 masks (0018\_T5 / 0032\_T5, 0060\_T2 / 0062\_T2, 0113\_T1 / 0132\_T1) and four further pairs are
 near-identical; a few implausible within-days volume jumps; 15 of 96 recorded deaths precede a dated MRI (Supplementary Table~S2).
 
-\textbf{Re-segmentation.} BraTS 2021 SwinUNETR and BrainSegFounder were run on all 594 complete scans (sliding
+\textbf{Re-segmentation.} BraTS 2021 SwinUNETR \citep{hatamizadeh2022} and BrainSegFounder \citep{cox2024} were run on all 594 complete scans (sliding
 window, ROI 128$^{3}$, overlap 0.5; labels written in the MU convention; RC taken from the MU mask where the
 new map is background, because BraTS models have no cavity class and label most of the cavity as NETC, so
 tumour core is not comparable).
@@ -229,6 +229,8 @@ published approach on the second masks (2026-11-16); and the calibration, spectr
 \section[Reporting checklists (TRIPOD+AI, CLEAR) cross-referenced to the manuscript]{Reporting checklists
 cross-referenced to the manuscript}\label{sec:S17}
 
+The checklists are TRIPOD+AI \citep{collins2024} and CLEAR \citep{kocak2023}.
+
 \flag{[PENDING: TRIPOD+AI and CLEAR checklists to be regenerated against the current manuscript.]}
 
 \FloatBarrier
@@ -245,7 +247,7 @@ outer test fold. The test score is the mean logit of the 4 networks; the out-of-
 onto the core model's predictors and the core ridge was refitted. Patients never overlap between fitting, stopping,
 inner and outer test sets (unit test). Censored scans were excluded from the training loss and scored as usual.
 
-\textbf{Network.} MONAI SwinUNETR encoder (feature size 48; FLAIR, T1c, T1, T2) from BraTS 2021 or BrainSegFounder
+\textbf{Network.} MONAI \citep{cardoso2022monai} SwinUNETR encoder (feature size 48; FLAIR, T1c, T1, T2) from BraTS 2021 or BrainSegFounder
 weights. Input: a brain z-scored cube centred on the lesion and cavity, side $\max(128, \text{extent} + 16)$ mm,
 resampled to 128$^3$ when larger (37 of 308 scans). Mask-weighted means of stages 2 to 4 within the lesion plus the
 global mean of stage 4 (2,112 features), LayerNorm, dropout 0.3 and one linear output. Patch embedding and stages 1--2
@@ -341,9 +343,10 @@ No patient record was used for this comparison.
 \textbf{Why this template.} No public cohort releases clinician reports for glioma follow-up MRI after treatment,
 including the three used here, so the report could not be compared with the reports written for the same scans. We
 compared its content instead with the structured follow-up template of the Brain Tumor Reporting and Data System
-(BT-RADS) \citep{weinberg2018}. In surveys of referring clinicians at the centre that introduced it, reports
-written with the template were judged more consistent and less ambiguous than free prose \citep{gore2019}, and they
-recorded more treatment history and used fewer hedging words \citep{zhang2020}. In a 2018 survey of 220 European
+(BT-RADS) \citep{weinberg2018}. In surveys of clinicians and radiologists at the centre that introduced it, taken before and
+after its adoption, reports written with the template were judged more consistent and less ambiguous than the free
+prose they replaced \citep{gore2019}, and they recorded more clinical history and used fewer hedging words
+\citep{zhang2020}. In a 2018 survey of 220 European
 centres, 60\% issued qualitative follow-up reports and 23\% used a template \citep{thust2018}.
 
 \begin{table}[H]
@@ -614,7 +617,7 @@ During radiotherapy & 2 & 1 & -- & -- & -- \\
 We calibrated the conformal sets within groups defined by the time window after radiotherapy and the enhancement
 state, which are the situations of the reliability card, and compared them with the marginal sets of the plan. Each scan was calibrated at the finest level with at least 10 calibration patients, level 1 being its group,
 level 2 its enhancement state over all time windows and level 3 all calibration scans, which is the marginal set. Most
-groups hold few calibration patients, and small calibration sets give overly wide sets \citep{johansson2015}, which is
+groups hold few calibration patients, and small calibration sets give overly wide prediction regions \citep{johansson2015}, which is
 why a group with fewer than 10 calibration patients falls back to a coarser level. Clustered conformal prediction
 gives classes with too few calibration examples the all-scan threshold in the same way \citep{ding2023}. The
 time after radiotherapy is unknown for every LUMIERE scan, so LUMIERE scans start at level 2. The nominal level was
@@ -948,9 +951,9 @@ resampling to 1\,mm with B-spline interpolation, scaling to zero mean and unit v
 region, the whole mask. The 4,892 features per scan are taken from each of the four sequences, from the original image
 and from Laplacian of Gaussian ($\sigma$ 0.5 to 3\,mm) and wavelet filtered versions of it \citep{vangriethuysen2017}.
 
-The tree model weights the two classes equally. Its settings are tuned over 400 trials of a Bayesian search (Optuna),
+The tree model weights the two classes equally. Its settings are tuned over 400 trials of a Bayesian search (Optuna; \citealp{akiba2019}),
 each trial scored by fivefold cross validation grouped by patient within the training set. The model's output is
-mapped to a probability by Platt calibration, a logistic fit to the held-out predictions of that cross validation.
+mapped to a probability by Platt calibration \citep{platt1999}, a logistic fit to the held-out predictions of that cross validation.
 The authors' ranking combines the size of L1 penalised logistic regression coefficients with permutation importance,
 but their code computes permutation importance only in inner folds of at least 30 scans. Our inner folds held 13 to 16
 scans, so the features were ranked by coefficient size alone. We left the code unchanged

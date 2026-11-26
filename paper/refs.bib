@@ -100,12 +100,13 @@
 
 % CHECK: cited from DEEP_FEATURES.md only; title and authors incomplete.
 @article{cox2024,
-  author  = {Cox, J. and others},
+  author  = {Cox, J. and Liu, P. and Stolte, S. E. and Yang, Y. and Liu, K. and See, K. B. and Ju, H. and Fang, R.},
   year    = {2024},
-  title   = {{BrainSegFounder [full title to be completed]}},
+  title   = {{BrainSegFounder: Towards 3D foundation models for neuroimage segmentation}},
   journal = {Medical Image Analysis},
-  doi     = {10.1016/j.media.2024.103301},
-  note    = {CHECK}
+  volume  = {97},
+  pages   = {103301},
+  doi     = {10.1016/j.media.2024.103301}
 }
 
 @article{demircioglu2021,
@@ -125,6 +126,7 @@
   title   = {{A self-supervised multimodal deep learning approach to differentiate post-radiotherapy progression from pseudoprogression in glioblastoma}},
   journal = {Scientific Reports},
   volume  = {15},
+  number  = {1},
   pages   = {17133},
   doi     = {10.1038/s41598-025-02026-7}
 }
@@ -179,9 +181,9 @@
   title   = {{CheckList for EvaluAtion of Radiomics research (CLEAR): A step-by-step reporting guideline for authors and reviewers endorsed by ESR and EuSoMII}},
   journal = {Insights into Imaging},
   volume  = {14},
+  number  = {1},
   pages   = {75},
-  doi     = {10.1186/s13244-023-01415-8},
-  note    = {CHECK}
+  doi     = {10.1186/s13244-023-01415-8}
 }
 
 @article{leone2023,
@@ -288,6 +290,7 @@
   title   = {{Discriminators of pseudoprogression and true progression in high-grade gliomas: A systematic review and meta-analysis}},
   journal = {Scientific Reports},
   volume  = {12},
+  number  = {1},
   pages   = {13258},
   doi     = {10.1038/s41598-022-16726-x}
 }
@@ -309,6 +312,7 @@
   title   = {{Calibration: The Achilles heel of predictive analytics}},
   journal = {BMC Medicine},
   volume  = {17},
+  number  = {1},
   pages   = {230},
   doi     = {10.1186/s12916-019-1466-7}
 }
@@ -414,7 +418,7 @@
   author       = {Moreau, Noémie N. and Leclercq, Alexandre G. and Desmonts, Alexis and Poirier, Yoann and Dubru, Aurélie and Guillemette, Laura and Lecoeur, Pascal and Lemasson, Kévin and others},
   title        = {{Pre and post treatment MRI and radiotherapy plans of patients with glioblastoma: the CFB-GBM cohort (CFB-GBM)}},
   year         = {2025},
-  howpublished = {The Cancer Imaging Archive, version 4},
+  howpublished = {{The Cancer Imaging Archive}, version 4},
   doi          = {10.7937/v9pn-2f72},
   url          = {https://doi.org/10.7937/v9pn-2f72},
   note         = {Data set; metadata from DataCite}
@@ -701,7 +705,8 @@
 @article{pedregosa2011,
   author={Pedregosa, Fabian and Varoquaux, Ga{\"e}l and Gramfort, Alexandre and Michel, Vincent and Thirion, Bertrand and Grisel, Olivier and Blondel, Mathieu and Prettenhofer, Peter and Weiss, Ron and Dubourg, Vincent and Vanderplas, Jake and Passos, Alexandre and Cournapeau, David and Brucher, Matthieu and Perrot, Matthieu and Duchesnay, {\'E}douard},
   title={Scikit-learn: Machine Learning in {P}ython},
-  journal={Journal of Machine Learning Research}, volume={12}, pages={2825--2830}, year={2011}}
+  journal={Journal of Machine Learning Research}, volume={12}, number={85}, pages={2825--2830}, year={2011},
+  url={https://jmlr.org/papers/v12/pedregosa11a.html}}
 
 @article{vovk2015,
   author  = {Vovk, Vladimir},
@@ -732,6 +737,7 @@
   booktitle = {Advances in Neural Information Processing Systems},
   volume    = {32},
   year      = {2019},
+  url       = {https://proceedings.neurips.cc/paper/2019/hash/73e0f7487b8e5297182c5a711d20bf26-Abstract.html},
   eprint    = {1902.05826},
   archivePrefix = {arXiv}
 }
@@ -928,7 +934,7 @@
   volume    = {9047},
   pages     = {271--280},
   publisher = {Springer},
-  doi       = {10.1007/978-3-319-17091-6_20}
+  doi       = {10.1007/978-3-319-17091-6_22}
 }
 
 @article{beaulieujones2021,
@@ -937,6 +943,7 @@
   title   = {{Machine learning for patient risk stratification: standing on, or looking over, the shoulders of clinicians?}},
   journal = {npj Digital Medicine},
   volume  = {4},
+  number  = {1},
   pages   = {62},
   doi     = {10.1038/s41746-021-00426-3}
 }
@@ -1073,4 +1080,39 @@
   number  = {10},
   pages   = {987--996},
   doi     = {10.1056/NEJMoa043330}
+}
+
+@misc{yaseen2025tcia,
+  author       = {Yaseen, D. and Garrett, F. and Gass, J. and Greaser, J. and Isufi, E. and Layfield, L. and Nada, A. and Porgorzelski, K. and Sinclair, B. and Tahon, N. and Thacker, J.},
+  year         = {2025},
+  title        = {{University of Missouri Post-operative Glioma Dataset (MU-Glioma-Post)}},
+  howpublished = {{The Cancer Imaging Archive}, \url{https://doi.org/10.7937/7K9K-3C83}},
+  doi          = {10.7937/7K9K-3C83}
+}
+@misc{cardoso2022monai,
+  author        = {Cardoso, M. J. and Li, W. and Brown, R. and Ma, N. and others},
+  year          = {2022},
+  title         = {{MONAI: An open-source framework for deep learning in healthcare}},
+  howpublished  = {{arXiv} preprint, \url{https://doi.org/10.48550/arXiv.2211.02701}},
+  eprint        = {2211.02701},
+  archivePrefix = {arXiv},
+  doi           = {10.48550/arXiv.2211.02701}
+}
+@inproceedings{akiba2019,
+  author    = {Akiba, T. and Sano, S. and Yanase, T. and Ohta, T. and Koyama, M.},
+  year      = {2019},
+  title     = {{Optuna: A next-generation hyperparameter optimization framework}},
+  booktitle = {Proceedings of the 25th ACM SIGKDD International Conference on Knowledge Discovery \& Data Mining},
+  pages     = {2623--2631},
+  publisher = {ACM},
+  doi       = {10.1145/3292500.3330701}
+}
+@incollection{platt1999,
+  author    = {Platt, J. C.},
+  year      = {1999},
+  title     = {{Probabilistic outputs for support vector machines and comparisons to regularized likelihood methods}},
+  booktitle = {Advances in Large Margin Classifiers},
+  editor    = {Smola, A. J. and Bartlett, P. and Sch{\"o}lkopf, B. and Schuurmans, D.},
+  pages     = {61--74},
+  publisher = {MIT Press}
 }
