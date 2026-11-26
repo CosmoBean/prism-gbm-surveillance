@@ -1,8 +1,8 @@
 """Deterministic parts of the v3 report (no LLM), rendered from facts_v3, plus the LLM's four prose sections.
 
 Layout: header; segmentation figure (attached here, never shown to the LLM); for each section the LLM prose followed
-by its deterministic table (1 what the scan shows, 2 the two pathways, 3 the combined score, 4 how much to trust
-this here); flags; standing limitations. Markdown and a self-contained HTML page (figure embedded as base64).
+by its deterministic table (1 what the scan shows; 2 model predictions: the two models, then the combined score, under one
+heading; 3 match with previously seen scans); flags; standing limitations. Markdown and a self-contained HTML page (figure embedded as base64).
 """
 
 from __future__ import annotations
@@ -13,8 +13,9 @@ from pathlib import Path
 
 from prism.report.facts_v3 import FLAGS, PATHWAYS
 
-TITLES = {"scan": "1. What the scan shows", "pathways": "2. The two pathways",
-          "combined": "3. The combined score", "trust": "4. How much to trust this here"}
+# The combined score continues under "2. Model predictions" (empty title: no heading of its own; author 2026-11-20).
+TITLES = {"scan": "1. What the scan shows", "pathways": "2. Model predictions",
+          "combined": "", "trust": "3. Match with previously seen scans"}
 LIMITATIONS = (
     "PRISM's scores rank scans for whether this is the scan at which progression is called. They are not a "
     "diagnosis and this report gives no recommendation or decision. The models were developed at one institution "
@@ -91,7 +92,7 @@ def render_md(scan_label: str, F: dict, prose: dict | None, figure: str | None =
     if figure:
         L += [f"![Segmentation]({figure})", ""]
     for s, (head, rows) in tables(F).items():
-        L += [f"## {TITLES[s]}", "", " ".join((prose or {}).get(s) or ["(not generated)"]), "",
+        L += ([f"## {TITLES[s]}", ""] if TITLES[s] else []) + [" ".join((prose or {}).get(s) or ["(not generated)"]), "",
               "| " + " | ".join(head) + " |", "|" + "---|" * len(head)]
         L += ["| " + " | ".join(str(x) for x in r) + " |" for r in rows]
         L.append("")
@@ -123,7 +124,7 @@ def render_html(scan_label: str, F: dict, prose: dict | None, figure_path: str |
     else:
         B.append("<p class='muted'>Segmentation figure: not available.</p>")
     for s, (head, rows) in tables(F).items():
-        B.append(f"<h2>{e(TITLES[s])}</h2><p class='prose'>{e(' '.join((prose or {}).get(s) or ['(not generated)']))}</p>")
+        B.append((f"<h2>{e(TITLES[s])}</h2>" if TITLES[s] else "") + f"<p class='prose'>{e(' '.join((prose or {}).get(s) or ['(not generated)']))}</p>")
         B.append("<div class='wrap'><table><tr>" + "".join(f"<th>{e(h)}</th>" for h in head) + "</tr>")
         for r in rows:
             B.append("<tr>" + "".join(f"<td class='{'raised' if str(x).startswith('RAISED') else ''}'>{e(str(x))}</td>"

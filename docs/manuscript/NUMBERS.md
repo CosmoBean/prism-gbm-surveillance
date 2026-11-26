@@ -15,6 +15,8 @@ or scans), the exact source (file, section or table) and the status.
 - Plans: UCSF `0e7c9fe`; system `e7cba80`; report v3.1 `4f7e7b9`; reduced confidence (exploratory) `3d20c41`;
   Christodoulou source check (exploratory) `9810dc4`. All five exist in `git log`.
 
+Design analysis, not adopted (2026-11-20): the stratified imaging model (A) and the offset combined model (B) are reported in `docs/results/STRATIFIED_OFFSET.md` and `docs/results/ADOPT_AB.md`. Every value here is for PRISM's current models.
+
 ---
 
 ## Mismatches (skeleton / STORY / OUTLINE vs sources)

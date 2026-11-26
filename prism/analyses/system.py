@@ -19,6 +19,17 @@ alpha 0.2 (council). Records carry no outcome label (labels: records_<cohort>_EV
 
     PYTHONPATH=. .venv/bin/python -m prism system [--steps scores records evaluate] [--workers 10] [--n-boot 1000]
     -> outputs/results/analyses/system/   (patient-level, git-ignored)
+
+PRISM_MASKS=brats24_22 (docs/results/SEGMENTER_SWITCH.md): every imaging input from PRISM's own segmenter (BraTS24_1
+maps, the 22 cavity-free inputs of prism.features.seg_measurements), with PRISM_MEASUREMENTS = the padded BraTS24 MU
+table of S4. Only the measurement source changes; the designs are S4's segmenter22 arm (prism.analyses.segmenter_stage):
+  MU       timeline B1; images the 22 inputs; combined B1 + the 22 inputs (as released: B1 + I_pure)
+  LUMIERE  timeline Tbase; images the 22 inputs (all scans; no 3-volume substitute); combined the reduced form
+           T_BASE + has_prev + log days from prev + the 22 inputs
+  UCSF     timeline A-Tbase; images and combined as LUMIERE
+Grade 4 only (the BraTS24 scope); the card lookup is rebuilt from these scores (MU, LUMIERE, UCSF locked; the
+UCSF-trained card cohort is not part of this pipeline and is left out). Scores are checked against S4's
+preds_segmenter22.npz before any evaluation. Outputs: outputs/results/analyses/system_brats24_22/.
 """
 
 from __future__ import annotations
@@ -41,9 +52,14 @@ from prism.analyses import ucsf_external as UX
 from prism.audit import conformal as cf
 from prism.audit import reliability as R
 from prism.audit.model import ood_flags, ood_ranges
-from prism.config import MEASUREMENTS, OUTPUTS, RESULTS, SKIP_UCSF
+from prism.config import MASK_SUFFIX, MASKS, MEASUREMENTS, OUTPUTS, RESULTS, SKIP_UCSF
 
-OUT = RESULTS / "analyses" / "system"
+OUT = RESULTS / "analyses" / f"system{MASK_SUFFIX}"
+SEG = MASKS == "brats24_22"   # PRISM's own segmenter, 22 inputs (SEGMENTER_SWITCH.md)
+SEG_MU_TABLE = RESULTS / "analyses" / "segmenter_brats24" / "mu_table_brats24_padded.csv"
+SEG_PREDS = RESULTS / "analyses" / "segmenter_brats24" / "preds_segmenter22.npz"
+POPS = ("grade4",) if SEG else D.POPS
+assert not SEG or MEASUREMENTS == SEG_MU_TABLE, f"PRISM_MASKS=brats24_22 needs PRISM_MEASUREMENTS={SEG_MU_TABLE}"
 SEED = 20261026
 N_BOOT, N_REF, N_DRAW = 1000, 100, 1000
 ALPHAS = (0.2, 0.1)
@@ -87,7 +103,30 @@ def _q(p, y, pid):
 def mu_designs(pop):
     d, A = UX.mu_detection(pop)
     b1 = D.context(pop, "primary")[1]["B1"]
-    return d, {"timeline": b1, "images": A["A-Ipure"], "combined": pd.concat([b1, A["A-Ipure"]], axis=1)}
+    img = A["A-Ipure"].drop(columns=list(_cavity())) if SEG else A["A-Ipure"]
+    return d, {"timeline": b1, "images": img, "combined": pd.concat([b1, img], axis=1)}
+
+
+def _cavity():
+    from prism.features.seg_measurements import CAVITY_INPUTS
+    return CAVITY_INPUTS
+
+
+def _seg_designs():
+    """S4's segmenter22 MU frame and designs (prism.analyses.segmenter_stage, same process table)."""
+    from prism.analyses import segmenter_stage as SS
+    SS.configure("brats24")
+    return SS, SS.mu_designs("segmenter22")
+
+
+def _seg_table(cohort: str) -> pd.DataFrame:
+    from prism.features.seg_measurements import table_path
+    return pd.read_csv(table_path(cohort, "brats24"))
+
+
+SEG_SOURCE = "PRISM segmenter (BraTS24_1 maps: ET, SNFH, NETC, RC); volumes in cc"
+# Names start with the released-mask model keys so facts_v3.model_key maps them to the same "based on" text.
+SEG_IMAGES = "I_pure (PRISM's segmenter: the 22 cavity-free measurements of the BraTS24_1 maps; SEGMENTER_SWITCH.md)"
 
 
 def mu_job(job):
@@ -136,7 +175,8 @@ def mu_measurements(d):
         c = cur.loc[sid]
         rows.append(_meas({"et": c.et_cc, "snfh": c.snfh_cc, "necrosis": c.netc_cc, "cavity": c.rc_cc},
                           [({"et": x.et_cc, "snfh": x.snfh_cc, "necrosis": x.netc_cc, "cavity": x.rc_cc}, day - x.mri_day)
-                           for x in e.itertuples()], "MU segmentation (prism measurements: ET, SNFH, NETC, RC)"))
+                           for x in e.itertuples()],
+                          SEG_SOURCE if SEG else "MU segmentation (prism measurements: ET, SNFH, NETC, RC)"))
     return rows
 
 
@@ -226,7 +266,50 @@ def _apply(models: dict, Xext: dict, use: dict | None = None):
     return S, sets
 
 
+def lumiere_cohort_seg():
+    from prism.data.lumiere import demographics
+    SS, (d, A4, T, cv) = _seg_designs()
+    L, LX, _ = D.lumiere_detection()
+    Xmu = {"timeline": T[D.T_BASE], "images": cv["images"], "combined": cv["combined"]}
+    models = locked_models(Xmu, d)
+    ls = SS.lumiere_seg(L, LX, list(cv["images"].columns), "brats24")
+    Xl = {"timeline": LX[D.T_BASE], "images": ls["images"], "combined": ls["combined"]}
+    S, sets = _apply(models, Xl)
+    dmo = demographics()
+    idh = dmo.idh_raw.astype(str).str.strip().str.lower()
+    mg = dmo.mgmt_raw.astype(str).str.strip().str.lower()
+    dmo["idh"] = np.select([idh.eq("wt"), idh.str.contains("mut")], ["wildtype", "mutant"], "unknown")
+    dmo["mgmt"] = np.select([mg.eq("methylated"), mg.eq("not methylated")], ["methylated", "unmethylated"], "unknown")
+    mol = L[["patient_id"]].merge(dmo[["patient_id", "idh", "mgmt"]], on="patient_id", how="left").fillna("unknown")
+    tr = np.where(d.label_120.notna())[0]
+    ood = [ood_flags(Xl["combined"], mol, ood_ranges(Xmu["combined"], tr))]
+    # measurements: BraTS24 volumes; earlier studies from the same pool as the previous scan (rated, not Pre-Op)
+    m = _seg_table("lumiere")
+    m = m[m.scan_id.isin(SS.lumiere_pool())]
+    vol = m.set_index("scan_id")
+    by = {p: g.sort_values("mri_day") for p, g in m.groupby("patient_id")}
+    v = lambda x: {"et": x.et_cc, "snfh": x.snfh_cc, "necrosis": x.netc_cc, "cavity": x.rc_cc}
+    nanv = {"et": np.nan, "snfh": np.nan, "necrosis": np.nan, "cavity": np.nan}
+    meas = []
+    for t in L.itertuples():
+        g = by.get(t.patient_id, m.iloc[:0])
+        cur = v(vol.loc[t.scan_id]) if t.scan_id in vol.index else nanv
+        e = g[g.mri_day < t.day]
+        meas.append(_meas(cur, [(v(x), t.day - x.mri_day) for x in e.itertuples()], SEG_SOURCE))
+    et = vol.et_cc.reindex(L.scan_id).to_numpy(float)
+    pet = vol.et_cc.reindex(L.prev_scan_id.replace("", np.nan)).to_numpy(float)
+    enh = np.array([R.enhancement_state(a, b if p else np.nan) for a, b, p in zip(et, pet, L.prev_scan_id.ne(""))])
+    return {"cohort": "lumiere", "pop": "grade4", "d": L, "scan_id": L.scan_id.to_numpy(),
+            "patient_id": L.patient_id.to_numpy(), "y": L.label_det.to_numpy(float), "S": S, "sets": sets, "ood": ood,
+            "card_phase": np.array(["unknown"] * len(L)), "enh": enh, "comp_phase": np.array(["unknown"] * len(L)),
+            "own": "lumiere", "eval": {"all": np.ones(len(L), bool)}, "median_set": np.ones(len(L), bool),
+            "meas": meas, "image_model": np.array([SEG_IMAGES] * len(L)),
+            "check_t_img_all": S["p_images"][0], "early_flag": L.early_post_rt.to_numpy()}
+
+
 def lumiere_cohort():
+    if SEG:
+        return lumiere_cohort_seg()
     from prism.config import LUMIERE_ROOT
     from prism.data.lumiere import _week, demographics
     L, LX, _ = D.lumiere_detection()
@@ -275,7 +358,40 @@ def lumiere_cohort():
             "check_t_img_all": t_img_all, "early_flag": L.early_post_rt.to_numpy()}
 
 
+def ucsf_cohort_seg():
+    SS, (d4, A4, T, cv) = _seg_designs()
+    u = UX.ucsf_frame()
+    A = UX.ucsf_designs(u, A4)
+    keep = (u.timepoint.eq(2) & u.grade4).to_numpy()
+    Xmu = {"timeline": A4["A-Tbase"], "images": cv["images"], "combined": cv["combined"]}
+    models = locked_models(Xmu, d4)
+    us = SS.ucsf_seg(u, A, keep, list(cv["images"].columns), "brats24")
+    Xu = {"timeline": A["A-Tbase"][keep].reset_index(drop=True), "images": us["images"], "combined": us["combined"]}
+    S, sets = _apply(models, Xu)
+    uk = u[keep].reset_index(drop=True)
+    tr = np.where(d4.label_120.notna())[0]
+    ood = [ood_flags(Xu["combined"], uk, ood_ranges(Xmu["combined"], tr))]
+    im = _seg_table("ucsf").set_index("scan_id")
+    v = lambda x: {"et": im.et_cc.get(x, np.nan), "snfh": im.snfh_cc.get(x, np.nan),
+                   "necrosis": im.netc_cc.get(x, np.nan), "cavity": im.rc_cc.get(x, np.nan)}
+    meas = []
+    for sid, dp in zip(uk.scan_id, uk.days_from_prev):
+        s1 = sid.replace("_time2", "_time1")
+        meas.append(_meas(v(sid), [(v(s1), dp)] if s1 in im.index else [], SEG_SOURCE + "; history = scan 1 only"))
+    pm30, neg = uk.pos_s2_pm30.eq(1).to_numpy(), uk.primary_neg.to_numpy()
+    e2 = im.et_cc.reindex(uk.scan_id).to_numpy(float)
+    e1 = im.et_cc.reindex(uk.scan_id.str.replace("_time2", "_time1", regex=False)).to_numpy(float)
+    return {"cohort": "ucsf", "pop": "grade4", "d": uk, "scan_id": uk.scan_id.to_numpy(),
+            "patient_id": uk.subject_id.to_numpy(), "y": np.where(pm30, 1.0, np.where(neg, 0.0, np.nan)), "S": S,
+            "sets": sets, "ood": ood, "card_phase": np.array([R.phase_cell(p) for p in uk.rt_phase]),
+            "enh": np.array([R.enhancement_state(a, b) for a, b in zip(e2, e1)]), "comp_phase": uk.rt_phase.to_numpy(),
+            "own": "ucsf_locked", "eval": {"scan2_pm30": pm30 | neg}, "median_set": pm30 | neg, "meas": meas,
+            "check_scores": {p: S[f"p_{p}"][0] for p in PW}}
+
+
 def ucsf_cohort():
+    if SEG:
+        return ucsf_cohort_seg()
     d4, A4 = UX.mu_detection("grade4")
     u = UX.ucsf_frame()
     A = UX.ucsf_designs(u, A4)
@@ -335,14 +451,17 @@ def provenance(c, i, r=0):
         return {"scores": f"out-of-fold, MU 5 x 5 CV (detection_cohort folds), repeat {r}, outer fold "
                           f"{int(c['fold'][r, i])}; patient not in training",
                 "models": {"timeline": "B1 (C2 clinical + timing + treatment), c3 verified ridge, seed = repeat",
-                           "images": "I_pure (volumes, morphology / relative intensity, log ratios to the previous "
-                                     "scan, ET / lesion ratio to the whole-history minimum)",
-                           "combined": "B1 + I_pure"},
+                           "images": SEG_IMAGES if SEG else
+                           "I_pure (volumes, morphology / relative intensity, log ratios to the previous "
+                           "scan, ET / lesion ratio to the whole-history minimum)",
+                           "combined": "B1 + I_pure (PRISM's segmenter, 22 inputs)" if SEG else "B1 + I_pure"},
                 "conformal": f"patient split 70 / 30 inside the outer training fold, seed {10 * r + int(c['fold'][r, i])};"
                              " pathway refitted on the 70%", "population_model": c["pop"]}
     mid = {"lumiere": {"timeline": "Tbase@grade4", "images": str(c["image_model"][i]) if "image_model" in c else "",
                        "combined": "T@grade4"},
            "ucsf": {"timeline": "A-Tbase@grade4", "images": "A-Ipure@grade4", "combined": "A-T@grade4"}}[c["cohort"]]
+    if SEG:
+        mid = {**mid, "images": SEG_IMAGES, "combined": mid["combined"] + " (PRISM's segmenter, 22 inputs)"}
     return {"scores": "locked MU grade-4 model (fitted once on the MU grade-4 detection training rows: positives + "
                       "primary negatives; c3.BASE_PRE + verified ridge, seed 0), applied once; no refit",
             "models": mid, "conformal": "one MU-calibrated model per pathway (MU patient split 70 / 30, seed 0), "
@@ -356,6 +475,8 @@ def build_record(c: dict, i: int, table, atable, r: int = 0) -> dict:
     reasons = list(c["ood"][r][i])
     card = R.build_card(ph, en, table, c["own"], {"timeline": S["p_timeline"][r, i], "images": S["p_images"][r, i]},
                         {k: float(v[r]) for k, v in c["medians"].items()}, reasons, atable)
+    if SEG:  # the UCSF-trained card cohort is not part of the segmenter pipeline (not run, so not shown)
+        card["evidence"].pop("ucsf_internal", None)
     pf = c["flags"]
     flags = {"pathways_disagree": bool(pf["disagree"][r, i]), "out_of_range": bool(pf["out_of_range"][r, i]),
              "out_of_range_reasons": reasons, "tier_flag": bool(pf["tier"][r, i]), "tier": c["tier"][i],
@@ -584,7 +705,79 @@ def evaluate_set(c: dict, setname: str, workers: int, n_boot: int, n_ref: int, n
 
 
 # ---------------------------------------------------------------- checks
+EXPECTED_SEG = {  # S4 segmenter22 (s4_exploratory.csv) and the unchanged clinical-history AUCs
+    ("mu", "grade4", "intended_use", "timeline"): 0.822, ("mu", "grade4", "intended_use", "images"): 0.708,
+    ("mu", "grade4", "intended_use", "combined"): 0.823, ("lumiere", "grade4", "all", "timeline"): 0.689,
+    ("lumiere", "grade4", "all", "images"): 0.693, ("lumiere", "grade4", "all", "combined"): 0.790,
+    ("ucsf", "grade4", "scan2", "timeline"): 0.561, ("ucsf", "grade4", "scan2", "images"): 0.796,
+    ("ucsf", "grade4", "scan2", "combined"): 0.808}
+
+
+def check_scores_seg(cohorts: dict) -> pd.DataFrame:
+    """Every segmenter score equals S4's segmenter22 prediction (same designs, folds, seeds); clinical history equals
+    the published scores; AUCs reproduce EXPECTED_SEG."""
+    z = np.load(SEG_PREDS)
+    rows = []
+    same = lambda name, a, b: rows.append({"check": f"{name} == reference (max dev)", "value": float(np.nanmax(np.abs(a - b))),
+                                           "published": 0.0, "ok": bool(np.nanmax(np.abs(a - b)) < 1e-9)
+                                           and np.array_equal(np.isnan(a), np.isnan(b))})
+    add = lambda k, v: rows.append({"check": "|".join(k), "value": v, "published": EXPECTED_SEG[k],
+                                    "ok": abs(v - EXPECTED_SEG[k]) < 0.0006})
+    c = cohorts[("mu", "grade4")]
+    assert np.array_equal(z["mu_scan_id"], c["scan_id"].astype(str))
+    pub = pd.read_csv(D.OUT / "oof_grade4_primary.csv.gz").set_index("scan_id").reindex(c["scan_id"])
+    same("mu|B1 OOF vs detection", c["S"]["p_timeline"], pub[[f"B1#r{r}" for r in range(5)]].to_numpy().T)
+    same("mu|images vs S4 segmenter22", c["S"]["p_images"], z["mu_images"])
+    same("mu|combined vs S4 segmenter22 combined_full", c["S"]["p_combined"], z["mu_combined_full"])
+    m = c["eval"]["intended_use"]
+    for p in PW:
+        add(("mu", "grade4", "intended_use", p), auc_m(c["y"][m].astype(int), c["S"][f"p_{p}"][:, m],
+                                                      np.ones((5, m.sum()), bool)))
+    L = cohorts[("lumiere", "grade4")]
+    assert np.array_equal(z["lum_scan_id"], L["scan_id"].astype(str))
+    lp = pd.read_csv(D.OUT / "lumiere_predictions.csv").set_index("scan_id").reindex(L["scan_id"])
+    same("lumiere|Tbase vs published", L["S"]["p_timeline"][0], lp["Tbase@grade4"].to_numpy())
+    same("lumiere|images vs S4 segmenter22", L["S"]["p_images"][0], z["lum_images"])
+    same("lumiere|combined vs S4 segmenter22", L["S"]["p_combined"][0], z["lum_combined"])
+    for p in PW:
+        add(("lumiere", "grade4", "all", p), R.auc(L["y"].astype(int), L["S"][f"p_{p}"][0]))
+    if not SKIP_UCSF:
+        U = cohorts[("ucsf", "grade4")]
+        assert np.array_equal(z["ucsf_scan_id"], U["scan_id"].astype(str))
+        m = U["eval"]["scan2_pm30"]
+        sc = pd.read_csv(RESULTS / "analyses" / "ucsf" / "locked" / "scores.csv").set_index("scan_id").reindex(U["scan_id"])
+        same("ucsf|A-Tbase vs published", U["S"]["p_timeline"][0], sc["A-Tbase@grade4"].to_numpy())
+        same("ucsf|images vs S4 segmenter22 (evaluated)", U["S"]["p_images"][0][m], z["ucsf_images"][m])
+        same("ucsf|combined vs S4 segmenter22 (evaluated)", U["S"]["p_combined"][0][m], z["ucsf_combined"][m])
+        for p in PW:
+            add(("ucsf", "grade4", "scan2", p), R.auc(U["y"][m].astype(int), U["S"][f"p_{p}"][0][m]))
+    return pd.DataFrame(rows)
+
+
+def card_table_seg(cohorts: dict) -> None:
+    """The card lookup and agreement tables rebuilt from this pipeline's scores (reliability_card.cohort_table, the
+    same tier and agreement rules), written to the switched card folder that RC.load_table reads."""
+    rows, arows = [], []
+    for k, name in ((("mu", "grade4"), "mu"), (("lumiere", "grade4"), "lumiere"), (("ucsf", "grade4"), "ucsf_locked")):
+        if k not in cohorts:
+            continue
+        c = cohorts[k]
+        f = pd.DataFrame({"cohort": name, "scan_id": c["scan_id"], "patient_id": c["patient_id"], "label": c["y"],
+                          "phase": c["card_phase"], "enhancement": c["enh"]})
+        for p, a in zip(R.PATHWAYS, PW):
+            for r in range(c["S"][f"p_{a}"].shape[0]):
+                f[f"{p}#r{r}"] = c["S"][f"p_{a}"][r]
+        r_, a_ = RC.cohort_table(f)
+        rows += r_
+        arows += a_
+    RC.OUT.mkdir(parents=True, exist_ok=True)
+    pd.DataFrame(rows).to_csv(RC.OUT / "lookup.csv", index=False)
+    pd.DataFrame(arows).to_csv(RC.OUT / "agreement.csv", index=False)
+
+
 def check_scores(cohorts: dict) -> pd.DataFrame:
+    if SEG:
+        return check_scores_seg(cohorts)
     rows = []
     add = lambda k, v: rows.append({"check": "|".join(k), "value": v, "published": EXPECTED[k],
                                     "ok": abs(v - EXPECTED[k]) < 0.0006})
@@ -630,7 +823,7 @@ def check_scores(cohorts: dict) -> pd.DataFrame:
 # ---------------------------------------------------------------- main
 def build(workers):
     t0 = time.time()
-    cohorts = {("mu", p): mu_cohort(p, workers) for p in D.POPS}
+    cohorts = {("mu", p): mu_cohort(p, workers) for p in POPS}
     print(f"MU scores {time.time() - t0:.0f}s", flush=True)
     cohorts[("lumiere", "grade4")] = lumiere_cohort()
     if not SKIP_UCSF:
@@ -660,6 +853,8 @@ def main(argv=None) -> None:
     t0 = time.time()
     (OUT / "RECORDS_READY").unlink(missing_ok=True)
     cohorts = build(a.workers)
+    if SEG:
+        card_table_seg(cohorts)
     table, atable = RC.load_table()
     for k, c in cohorts.items():
         derive(c, table)
@@ -691,7 +886,8 @@ def main(argv=None) -> None:
     print(pd.DataFrame(T["selective"]).drop(columns=["set"]).round(3).to_string(index=False))
     print(pd.DataFrame(T["tiers"]).round(3).to_string(index=False))
     info = {"n_boot": a.n_boot, "n_ref": a.n_ref, "n_draw": a.n_draw, "seed": SEED, "seconds": round(time.time() - t0),
-            "calibration_sizes_mu": {p: cohorts[("mu", p)]["cal"] for p in D.POPS}}
+            "calibration_sizes_mu": {p: cohorts[("mu", p)]["cal"] for p in POPS}, "masks": MASKS,
+            "measurements": str(MEASUREMENTS)}
     (OUT / "run_info.json").write_text(json.dumps(_clean(info), indent=1))
 
 

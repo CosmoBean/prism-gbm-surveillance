@@ -1,331 +1,224 @@
 # How we write the PRISM paper
 
-The rules for writing and editing `paper/main.tex`. They come from the author's direction (2026-10-22/23) and from
-four models of the craft. Read this before drafting, and again before committing any prose. When the author reacts
-to a passage, add the lesson to section 10 so it outlives the session.
-
-For a short, repeatable drafting prompt, use [VOICE.md](VOICE.md). It is the practical companion to this longer
-record of rules and reactions.
+The current rules for `paper/main.tex`, consolidated on 2026-11-19. Only rules that hold now are here. Superseded
+directions are listed once in section 9 so they are not reintroduced, and their full history is in git (this file
+before consolidation: commit e647e79). When the author reacts to a passage, add the lesson to section 10, and fold it
+into sections 1–8 when it settles.
 
 **The one sentence to remember:** *elegance comes from the arrangement of ideas, not the sophistication of the
 vocabulary.*
 
 ---
 
-## 1. A paper is an argument, not an analysis report
+## 1. What the paper is
 
-The analysis documents in `docs/results/` are the lab notebook: complete, chronological, every number with its
-interval, every deviation labelled. That is their job. The paper's job is different: to make **one argument** that
-a reader can follow, remember and repeat, with the evidence a sceptical reader needs to believe it.
+- **One system, one argument.** The paper presents PRISM, a local system for glioma follow-up MRI, as one argument. It
+  is not an analysis report, a set of separate techniques or a version history. The analysis documents in
+  `docs/results/` are the notebook; never transcribe the notebook into the paper.
+- **Title:** "PRISM: an auditable local system for glioma follow-up MRI".
+- **The spine** (the locked abstract, LOCKED.md) runs in this order:
+  1. the premise: a score is useful only if the reader can see what it rests on, and a report only if it can be
+     checked;
+  2. PRISM, built for both;
+  3. what the separation exposed: timing and the enhancing tumour carry most of the ranking, with no clear gain over
+     the timing-and-enhancement baseline;
+  4. locked transfer to LUMIERE and UCSF-ALPTDG;
+  5. reports checked against the record, and the verifier.
+- **What PRISM is, not only what it does** (the PI). PRISM is a local software system rather than a new model: a
+  chain of deterministic stages around one language model, centred on the scan's record. Every value sits in the
+  record under a fixed key with its source.
+  - The language model is one writing step: schema-constrained, with no tools and no images.
+  - Never call it an "agent" or "agentic", and never propose a multi-agent "council" (evidence:
+    `docs/review/SIMILAR_SYSTEMS.md`).
+  - Say "system", not "framework" or "pipeline".
+- **Auditable** is defined once, in the Introduction: each score's inputs are reported separately, and every number
+  in the report is traced to its entry in the record and checked automatically. It is used as defined after that.
+- **Best foot forward.** Lead with what PRISM does, with moderate claims. Present the difficulties of follow-up data
+  as known challenges, each paired with the part of PRISM that handles it. Do not accuse the field.
+- **Against precedent, not novelty.** State each contribution against its nearest precedent, cited by name. Claim
+  combinations and measurements, not components. Use the field's own terms. Never "first", "novel" or "state of the
+  art".
+- **Cross-site validation is featured.** The models were fitted once on MU-Glioma-Post and applied unchanged. Claim
+  transfer, not better performance.
+- **Clinical benefit** is answered with measured proxies only: what a score adds over timing and visible
+  enhancement. "Clinical decision support" appears only as the intended use ("a system intended for clinical decision
+  support"). A clinical reading of the reports is left to future work.
 
-So the paper is written from the argument down, never from the results up.
-- We do not ask "what did we find?" and then try to fit it all in.
-- We ask "what is the claim?", "what does a reader need to see, in what order, to believe it?", and we show
-  exactly that.
+## 2. Names and terms
 
-The notebook order (what we ran first) and the argument order (what the reader needs first) are different. Our first
-draft followed the notebook. That is the main reason it read as a report.
+| Use | Never |
+|---|---|
+| clinical-history model; reduced clinical-history model | timeline model, timeline pathway, timeline score |
+| imaging model; combined model; "model" for each | pathway |
+| timing-and-enhancement baseline; clinical data alone; enhancing volume alone | model codes (B1, R2, I2) in the main text |
+| time after radiotherapy; time window | phase, phase of care |
+| MU-Glioma-Post, the public development cohort | the development centre |
+| auditable; every value has a source and is checked | interpretable, explainable; LIME or SHAP |
+| what the checker and the verifier catch, and what they miss | faithful (of the reports) |
+| progression was recorded at a scan (narrative); the exact label definition (Methods) | diagnostic claims |
+| PRISM (the author's own, unpublished system) | "published" PRISM; "the published approach" means Christodoulou et al. only |
+| indicative volumes | any RANO category assigned, applied or implied by PRISM |
+| system; record; report; writing step | agent, agentic, council, framework, pipeline |
 
-## 2. The models
+- **RANO** appears only in the Introduction's literature review, as other people's criteria. PRISM never applies,
+  assigns or names a RANO category in the methods, figures, tables or reports.
+- A 27-billion-parameter model runs on a laptop. Do not present local model size as a barrier to deployment.
+- **Words to avoid** unless the paper demonstrates them: novel, unique, powerful, robust, comprehensive, seamless,
+  transformative, sophisticated, state-of-the-art, clinically actionable, real-world, scalable, end-to-end,
+  leverage, unlock, harness, empower. Use the concrete fact instead: "passed the record check", not
+  "hallucination-free".
+- **Hyphens** only in formal names, abbreviations, identifiers and terms that lose their meaning without one. Keep
+  one construction throughout.
 
-| Model | What it teaches | How it shows up in our paper |
-|---|---|---|
-| **Watson & Crick (1953)**, "We wish to suggest a structure for…" | **Directness.** The first sentence says what the paper does. No warm-up, no novelty claims, no literature tour before the idea. | The abstract and the introduction's last paragraph state the finding in the first clause. |
-| **Rockman (2012)**, "But what is the question to which QTNs are the answer?" | **Curiosity.** Turn a research programme into a puzzle; question an assumption the reader holds. | Our puzzle: *when a surveillance model scores 0.80, what has it learned to see?* The assumption we question: that a high AUC on surveillance MRI means the images are doing the work. |
-| **Feynman** | **Conversation.** Build the problem and its constraints with the reader, then the resolution, so the explanation feels like an investigation. | Results are a sequence of steps, each answering the question the previous one raised. |
-| **Whitesides (2004)**, "Whitesides' Group: Writing a Paper" | **Outline before prose.** The paper is organised around its conclusions and the figures and tables that carry them; prose is written last. Write the outline while the research is still running; it shows what is missing. | We work in layers (section 7) and settle the outline before any paragraph is rewritten. |
+## 3. What to show: the 80 / 20 rule
 
-The July 2026 Inorganic Chemistry editorial "The Art of Storytelling in Scientific Writing" is on the author's
-list; its points are not yet included here (add them when the text is available).
+The main text shows about 80% of the story, everything a reader needs to follow and believe the argument. About 20%,
+the detail behind each step, is left for reviewers in [RESERVE.md](RESERVE.md), with its answer ready. This is
+selection, not concealment.
 
-## 3. The claim and the question
+**Always in the main text:**
+- the timing-and-enhancement baseline, next to any model that uses timing;
+- the AUC split by time window, inside the audit trail, never in the abstract;
+- the planned tests and their outcomes (Table of planned tests), stated neutrally and framed by the argument;
+- which analyses were planned and which exploratory, in one word where it applies. A pass rate measured after a
+  revision prompted by evaluation failures is called exploratory;
+- the scope limits, stated once and plainly: one public development cohort, a documentation-based label, and no
+  clinician has read the reports (future work).
 
-Every element of the paper must serve these. If a paragraph does not, it moves to the supplement or goes.
+**Never in the paper:**
+- commentary that argues against our own claims ("cannot show", "a defect", "part of the AUC comes from …");
+- exploratory negatives on superseded pipelines. They go to the supplement or out;
+- project history: versions, earlier prompts, rule revisions. Development history is stated once, in Methods, and
+  never in the abstract or a heading;
+- method statements that do not match the current code. Check against the code, not an older audit.
 
-- **The question (Rockman):** when a model of glioma surveillance MRI scores well, what has it learned to see?
-- **The claim (Watson & Crick):** mostly, where the patient is in treatment. PRISM separates the evidence of the
-  images from the evidence of the treatment timeline and audits each, which shows what each contributes and where
-  neither can be trusted.
-- **The investigation (Feynman):** a model scores 0.80 → the test set's mix of treatment phases explains it →
-  give a model more structure step by step and watch where its gains come from → what remains is what images
-  contribute on their own → what a system can honestly offer with that.
+**The abstract** carries no radiomics comparison and no AUC split. It holds one or two numbers per claim.
 
-The full spine with figures is in [OUTLINE.md](OUTLINE.md).
+The test for every sentence: *does the reader need this here to follow or believe the argument?* If not, move it to
+the reserve, or cut it. Every result in the main text must answer "so what?".
 
-## 4. What to reveal: the 80 / 20 rule
+## 4. Numbers
 
-The paper is persuasion, and persuasion is selection. We show the reader about 80% of the story: everything needed
-to follow and believe the argument. We leave about 20%, the detail behind each step, for the reviewer to ask about.
-A good reviewer question we can answer in one paragraph is a strength, not a weakness. Spoon-feeding every check
-buries the argument and signals defensiveness.
+- One number per claim in the prose. Give intervals for the headline numbers only.
+- Never give the same number twice across the text, tables and captions. Decide where each number lives.
+- Give a number once the reader knows what it would mean. Contrasts beat levels.
+- Two decimals in prose; three in tables only when the differences are small. No p-values where an interval says the
+  same.
+- Give each count its scope (cohort, evaluation, comparison).
+- AUC measures ranking; the separate scores show what the ranking rests on. Present the two as complementary. Never
+  say that the AUC "hid" something.
+- Ranking language belongs to the evaluation. When the Introduction explains what a score is for, it describes a
+  single scan.
 
-Selection is not concealment. The line is drawn here:
+## 5. Prose
 
-**Always in the main text (never withheld). These would change what a reader concludes:**
-- for any task the paper presents the system as doing, its performance where the system is meant to be used,
-  next to the more flattering number. This belongs in the Results; the abstract carries it only if the abstract
-  makes a claim about that task. (120-day risk: the intended-use AUC of 0.60 stays in the Results and Discussion.);
-- the strongest baseline: what timing and treatment alone achieve, whenever we report a model that uses them;
-- the within-phase result, whenever an across-phase number could be read as image signal;
-- which analyses were planned in advance and which were exploratory (one word in place is enough);
-- the scope limits that bound the claim: one development centre, a documentation-based label, no clinician has
-  read the reports;
-- any result that contradicts the claim.
-
-**The reserve (supplement, or ready for the response to reviewers). Each is a reviewer question we welcome:**
-- sensitivity analyses that leave the conclusion unchanged (censoring weights, deaths as non-events, alternative
-  negative sets, gradient boosting vs ridge);
-- the full list of imaging variants tried (70 radiomics configurations, 32 frozen encoders, nine fine-tuned arms,
-  resegmentation, label variants, diffusion); the main text names the strongest test and says the rest agreed;
-- calibration detail beyond one sentence; SHAP; the report generator's comparison arms;
-- mechanistic explanations we suspect but have not proven (why ET volumes are noisy; why the networks failed).
-
-Every reserve item is logged in [RESERVE.md](RESERVE.md) with where its answer lives, so a reviewer question is
-answered in minutes.
-
-**Cut entirely:** project history (versions, the leaky boosting model, earlier prompts), work by others we do not
-use, and anything that exists only because we ran it.
-
-Test for any sentence or number: *does the reader need this to follow or believe the argument at this point?* If
-not now, perhaps later in the paper; if never, the reserve.
-
-## 5. Numbers: the right metric at the right time
-
-- **One number per claim in the prose.** The interval goes with the headline numbers (the claim's own evidence),
-  not with every number. Other numbers live in tables and figures and are pointed to, not repeated.
-- **Never the same number twice** across text, table and caption. Decide where each number lives.
-- **Show a number when the reader is ready to interpret it.** A number arrives after the sentence that tells the
-  reader what it would mean. "Timing alone, with no image at all, scored 0.82" lands only once the reader knows
-  the full model scored 0.84.
-- **Contrasts beat levels.** Readers remember "the same model fell from 0.87 to 0.72", not two separate AUCs in
-  two paragraphs.
-- **The abstract carries one or two numbers**, the ones the claim cannot do without. A sequence of numbers (a
-  ladder, a list of AUCs) is told in words in the abstract and shown in a figure in the paper.
-- **Do not argue against the metric you lean on.** AUC measures how well a model ranks scans; the audit shows what
-  it uses. Frame the two as complementary ("an AUC cannot say what a model has learned to see"), never as "the
-  audit found what the AUC hid" next to a column of AUCs.
-- **Precision:** two decimals in prose (0.82); three in tables only when differences are small. No p-values when an
-  interval says the same thing.
-- **Name things by what they are, not by codes.** "The timing model", "images alone", "the full model": not B1,
-  R2, I2, P. Codes stay in the supplement.
-- **Counts that matter are concrete.** "56 of the 62 progression scans came more than 12 weeks after RT" persuades
-  more than any statistic about phase imbalance.
-
-## 6. Prose
+**Register.** Write elegant British prose for a methods and medical AI journal: the voice of a scientist explaining
+to a colleague what they did and found. It should read as a polished article, not a results log. Use British
+spelling with -ise.
 
 **Paragraphs**
-- The first sentence of every paragraph is its claim. A reader who reads only first sentences should get the
-  whole argument. (We test this; see section 8.)
-- One idea per paragraph. A second idea means a second paragraph.
-- A caveat comes after the claim it qualifies, once, in the place where it applies. It does not come before the
-  claim, and it is not repeated in every section.
+- Every paragraph starts with its claim, so a reader of first sentences alone gets the whole argument.
+- One idea per paragraph.
+- A caveat comes after the claim it qualifies, once, where it applies.
+- State the general problem before PRISM's response to it.
+- Introduce a clinical term through the problem it names, then give its label.
 
 **Sentences**
-- Plain words, active voice, "we" for what we did. Short sentences for claims; longer ones only for reasoning.
-- No intensifiers or signposts that do the reader's thinking: *notably, importantly, interestingly, crucially,
-  remarkably, it is worth noting that.* If something is important, the arrangement shows it.
-- No stacked hedges ("may potentially suggest"). Say what the evidence supports, at its strength.
-- No lists of tests in place of a finding. "Radiomics, frozen and fine-tuned encoders, resegmentation, a cleaner
-  label and diffusion showed no measurable gain" is a list. "Every way we gave the images more to work with raised
-  the AUC only by teaching the model the treatment timeline" is a finding.
-- British spelling with -ise; SI units upright (journal rules: [JOURNAL_RULES.md](JOURNAL_RULES.md)).
+- Plain words and the active voice. Use "we" and the past tense for what we did, the present for what is true.
+- Use concrete subjects (patients, scans, models, records, reports), not "the evidence" or "the story".
+- Carry the reasoning with ordinary connectives (because, so, which suggested).
+- Let sentence length follow the thought.
+- Do not write as if defending every sentence. No staged definitions and no stacked hedges.
+- Avoid Claude's default voice:
+  - "X, not Y" slogans;
+  - staccato announcements;
+  - abstractions as subjects;
+  - colon reveals;
+  - triplets;
+  - quotable closing lines.
+- Use no intensifiers or signposts (notably, importantly, crucially, it is worth noting).
+- Do not arrange prose with colons or semicolons. Use a full sentence, a comma or a parenthesis instead.
+- Ask few rhetorical questions, or none.
+- State a fact the reader needs inline, in one clause. Do not leave "see Supplementary section" placeholders.
 
-**Voice: what Claude's default sounds like, and what to write instead**
+**Revising**
+- Revise conservatively. Change the sentences that are wrong and keep the ones that work.
+- Preserve the actor, action and object the author liked. Never substitute a shorter but vaguer claim.
 
-Rules about arrangement do not stop a writer's default voice from coming back. Claude's default is recognisable,
-and the author noticed it in abstract draft 2. Check every draft for these and rewrite them:
-- slogans built on contrast: "X, not Y", "not X but Y", "says how well…, not what…";
-- dramatic short sentences that announce instead of explain: "Taking the evidence apart showed why.";
-- abstractions doing things: "the record grounds a report", "the images held their own", "the evidence speaks";
-- colon reveals, triplets, and a closing line written to be quoted;
-- the same rhythm in every sentence.
+## 6. Sections
 
-Write instead as a scientist explaining to a colleague what they did and what they found:
-- "we" and the past tense for what we did; the present for what is true;
-- reasoning carried by ordinary connectives (because, so, which suggested, we therefore);
-- sentences whose length follows the thought, some long, some short, none written for effect;
-- concrete subjects: patients, scans, models, dates, not "the evidence" or "the story".
+- **Title:** short. No unneeded adjectives.
+- **Abstract** (≤ 150 words, unstructured): locked, and follows the spine in section 1.
+- **Introduction** (about seven paragraphs):
+  - a real literature review that sets up the abstract's premises;
+  - then "We present PRISM", with "auditable" defined and the contributions;
+  - the contributions follow the spine: four bullets, each a bold lead-in and one plain sentence, with no numbers or
+    section references;
+  - then a short paragraph on what PRISM is technically: the stages, the record at the centre, the tools underneath,
+    and the nearest systems.
+- **PRISM** (Section 2): inputs and measurements, the three models, the record and the report.
+- **Evaluation** (Section 3): enough to make the argument checkable, in the order the Results need it.
+- **Results:** declarative headings that state the finding, never "What/How …" headings. Development history does
+  not belong in a heading.
+- **Discussion:**
+  - answer the premise first;
+  - give the limits as the scope of the claim;
+  - state future work once, at the end, as "left to future work".
 
-Watson & Crick's first sentence is modest and plain. Feynman reasons out loud. Neither uses a slogan.
+## 7. Figures and tables
 
-**Before and after, from our first draft**
+- **House style:** every figure uses `scripts/figure_style.py`.
+  - Colour follows the score: clinical history purple, imaging teal, combined orange, navy for structure.
+  - Use one sans-serif typeface and no titles inside plots.
+- **Figure 1** is a methods schematic. It carries no results.
+- **Figures that show the system's output** show a real held-out output laid out as a clinical page: BT-RADS order,
+  numbers in tables and graphics, and each sentence once, with its cited fields. Never an invented example.
+- **Tak et al. 2025 (NEJM AI)** is the model for the cohort and case figures. Figures are illustrative, not box
+  flowcharts.
+- Figures and tables sit next to their first mention.
+- Tables use visibly shaded alternate rows (`\zebrarows`).
+- The supplement keeps only what the current paper rests on.
 
-| First draft | Why it fails | Rewritten |
-|---|---|---|
-| "PRISM predicts documented progression within 120 days of a glioma surveillance MRI and returns an audit record and a clinician report per scan." (abstract, sentence 1) | Opens with a product description; the reader has no reason to care yet. | "A model that predicts glioma progression from surveillance MRI can score well without looking at the tumour." |
-| "Radiomics, frozen and fine-tuned deep encoders, resegmentation, a cleaner label and diffusion showed no measurable gain, and a locked model scored 0.61 externally." | A list of tests; six results the reader cannot weigh. | "Giving the images more structure raised the AUC only by teaching the model the treatment timeline; within a phase of care, images alone held at about 0.68." |
-| Section heading "Imaging adds nothing measurable" | A verdict that overstates and invites a fight. | "What the images contribute on their own" |
-| Four sentences of censoring detail in the middle of the phase-of-care result | A reserve item in the main line; the reader loses the thread. | One clause: "the result held under every censoring correction we tried (Supplementary S20)". |
+## 8. How we work, and the tests
 
-## 7. How we work: layers, cheapest first
+**Layers.** Work outline → skeleton (first sentences only) → prose → polish, and settle each with the author before
+the next. Agree on the story ([OUTLINE.md](OUTLINE.md)) before writing prose.
 
-Following Whitesides, each layer is settled with the author before the next is written.
-1. **Outline** ([OUTLINE.md](OUTLINE.md)): title, question, claim, the argument as a sequence of figure claims,
-   the abstract.
-2. **Skeleton:** each section as its paragraphs' first sentences only. Reading the skeleton must give the whole
-   argument.
-3. **Prose:** paragraphs written under their first sentences.
-4. **Polish:** numbers checked against sources (`paper/SOURCE_MAP.md`), rules in this file checked, PDF rebuilt.
+**Before showing a draft:**
+1. First-sentence test: do the paragraphs' first sentences read as the argument?
+2. Cold reader: an agent with no project context states the claim and the numbers it remembers.
+3. Hostile reviewer: every objection is answered in the main text, logged in RESERVE.md, or fixed.
+4. Number audit: every number appears once, matches its source (`docs/manuscript/NUMBERS.md`,
+   `docs/results/`), and is needed where it stands.
+5. Integrity check: everything on the "always" list in section 3 is present.
 
-Do not polish a section whose outline is still moving.
+**Housekeeping:**
+- Rebuild and commit `paper/main.pdf` after every change to the paper.
+- Locked passages (LOCKED.md) change only with the author's approval.
+- Material awaiting the author's review goes in `docs/review/`.
 
-## 8. Tests before showing the author a draft
+## 9. Retired directions (do not reintroduce)
 
-1. **First-sentence test:** extract the first sentence of every paragraph. Does it read as the argument?
-2. **Cold reader:** an agent with no project context reads the draft and states the claim in two sentences and the
-   three numbers it remembers. If it cannot, or remembers the wrong numbers, the arrangement is wrong.
-3. **Hostile reviewer:** an agent reviews as a sceptical referee. Every objection it raises is either (a) answered
-   in the main text because it is on the "always" list, (b) logged in RESERVE.md with its answer, or (c) a real
-   weakness to fix.
-4. **Number audit:** every number in the prose appears once, matches its source, and is needed where it stands.
-5. **Integrity check:** everything on the "always" list in section 4 is present.
+| Retired | Replaced by |
+|---|---|
+| The puzzle "what has the model learned to see", the claim "mostly the treatment timeline", the 120-day risk story, "within phase" | The system argument and the timing-and-enhancement baseline (section 1) |
+| "Three or four introductory paragraphs, no list of contributions"; "two background paragraphs and five bullets" | About seven paragraphs, then four contributions (section 6) |
+| Titles with no system name, the clinician's question first; "a modular system for … surveillance" | The current title (section 1) |
+| Tagline "PRISM makes progression scores inspectable"; the light-through-a-prism metaphor | "Auditable", defined once |
+| Ban on "clinical decision support" | Allowed as intended use only |
+| The pitch "beat radiomics by 0.24" in the abstract; the methods-first framing (three technical contributions C1–C3) | Radiomics comparison in Results only; the system spine |
+| "Private local agentic report" | One schema-bound writing step, never an agent |
+| The example report drawn as a segmentation strip, never a patient image | A real held-out report page with the cohort's images |
+| VOICE.md, STORY.md and the council rounds as guides | This file, [OUTLINE.md](OUTLINE.md), [RESERVE.md](RESERVE.md) |
 
-## 9. Sections: what each one does
+## 10. Reactions since consolidation
 
-- **Title:** the question or the finding, not the system's name and three adjectives. The system name can follow a
-  colon.
-- **Abstract (≤ 150 words, unstructured):** (1) the finding or the puzzle, in one sentence; (2) what we built and on
-  what data; (3) the investigation in two or three sentences, with the two or three numbers that carry it; (4) what
-  is left and what the system offers; (5) the scope limit.
-- **Introduction (three or four paragraphs):** why surveillance MRI is hard and why this matters to a reader of
-  this journal; why high reported AUCs should make us curious; the question; what we did and found, stated
-  directly. No list of contributions.
-- **Methods:** enough to make the argument checkable, in the order the Results need it. Definitions the reader needs
-  to interpret a number come before that number. Everything else is in the supplement, pointed to once.
-- **Results:** one subsection per step of the investigation. The heading states what the step found. The last
-  sentence of each subsection raises the question the next one answers.
-- **Discussion:** answer the question from the introduction in the first paragraph. Then what it means for people
-  who build or evaluate such models, what the system offers, and the limits as the scope of the claim rather than an
-  apology. End on the idea, not on future work.
-
-## 10. Lessons from the author's reactions
-
-Add each reaction as a dated, one-line rule.
-- 2026-10-21: one story about the final system; no version history; drop the leaky boosting model and Rai 2026.
-- 2026-10-22: do not frame imaging as worthless. Make the two kinds of evidence (images, treatment timeline)
-  "speak for what they are"; most datasets have images but no timing, so the imaging pathway must stand on its own.
-- 2026-10-22: the doctor weighs both kinds of evidence; coupling them can be a display in the record, not
-  necessarily another model.
-- 2026-10-23: tight, about 80%; leave the other 20% to the reviewers' curiosity. Not disinformation: selection of
-  what to reveal, and when, for a better story.
-- 2026-10-23: the abstract had too many numbers (0.66 → 0.81 and four others). Keep one or two; tell sequences in
-  words.
-- 2026-10-23: 120-day risk is not the headline. It is where the problem was found (the first 0.80) and stays in the
-  body with its intended-use result; the abstract need not quote it.
-- 2026-10-23: "exposes leaks that the AUC hid" reads as self-contradictory in a paper full of AUCs. Say what an
-  AUC cannot tell (what the model uses), not that the AUC was wrong.
-- 2026-10-23: draft 2 fell back into Claude's default voice (contrast slogans, staccato, abstractions as subjects).
-  The rules above were about arrangement; voice needs its own check (section 6, "Voice"). Best remedy: imitate a
-  sample of the author's own writing or a paragraph they choose, not rules alone.
-- 2026-10-23: the author preferred abstract draft 1's voice (direct, concrete numbers, semicolon-joined contrasts) to
-  drafts 2 and 3; only its ending was wrong. Revise conservatively: change the sentences that are wrong, keep the
-  ones that work, do not rewrite a whole passage to fix one part.
-- 2026-10-23: agree on the results and the story (STORY.md) before writing prose.
-- 2026-10-25: every result in the main text must answer "so what?" in the author's internal dialogue: what does
-  the reader now believe that they did not before? If there is no answer, it goes to the supplement. The report
-  generator gets little space; deep learning only as much as it adds to the argument.
-- 2026-10-25: the author did not like the five-step outline brief given in chat (step 1 "a good score that
-  measured the test set" → step 5 "where the system says it isn't reliable"). Reasons not yet given; revisit the
-  outer story with the UCSF results in hand before writing a skeleton. The RANO argument is out of the paper.
-- 2026-10-26: do not accuse the field ("nobody knows what they have learned"). Lead with what our models and system
-  can do, shown with moderate claims; present the difficulties of surveillance data as known challenges, each paired
-  with the part of the system that mitigates it. Split variance and the Christodoulou-style replication are supporting
-  evidence for why the system tests the way it does, not the story.
-- 2026-10-26: the author sees PRISM as modular: clinical/timeline features, simple engineered image features, deep
-  segmentation feeding measurements and the report, and a confidence (card tier + conformal set). Deep networks are
-  described as the segmenters, not as failed classifiers.
-- 2026-10-26: no RANO anywhere, including figure labels and report wording ("indicative volumes", not "not RANO").
-- 2026-10-27: the proposed system-first abstract reads as fragments (a component inventory, five AUCs from different
-  pathways, a report check, a disclaimer). The abstract must tell one narrative with a punchline up front; describe
-  what the system is for, not every part it has; no factual-report tone.
-- 2026-10-28: the author liked the overnight pass and asked for more: concise and right, not just right-looking. "Not
-  a million words, but the 100 words that actually drive the impact." Cut every sentence that does not move the
-  argument; figures and tables sit in the text next to their first mention, not at the end.
-- 2026-10-28: "why do we have red text that goes towards supplementary material and not directly in the main text?"
-  State the fact a reader needs inline, in one clause; no "see Supplementary section" placeholders in the main text.
-  The supplement holds full tables only and is cited by real section number once it is rebuilt.
-- 2026-10-28: the example report should look like a standard clinical report: a readable serif, black and grey
-  only, and images (a drawn segmentation strip, never a patient image).
-- 2026-11-01 (supervisor's review, before reading the paper in full): "We need to be clear on what the contributions
-  and the system does, and everything else falls in place." The Introduction now ends with four numbered
-  contributions, finding first (overrides section 9's "no list of contributions"). It names the challenges a single
-  score hides, says how PRISM differs from a general-purpose chat model (the language model only words a checked
-  record, locally), and explains the name: as a prism splits light, PRISM splits a score into its evidence. Figures
-  should be illustrative, not box flowcharts.
-- 2026-11-01 (author): "Before saying this system is my design, I want to look for other systems with similar design
-  ... this has to read like coming from someone who has the expertise." Every contribution is stated against its
-  nearest precedent, which is cited by name (docs/literature/PRIOR_ART_2026-11-01.md). Claim combinations and
-  measurements, never components; use the field's terms for what we did (covariate-specific AUC, incorporation bias,
-  late fusion, deterministic check) instead of inventing names. No "first", no "novel".
-- 2026-11-01 (author): the title was a mouthful. Short title (about 12 words), the clinician's question first, no
-  system name, no "language model" (docs/manuscript/council/titles_2026-11-01.md).
-- 2026-11-01 (author): "at the development centre" reads as if PRISM was built with the centre's dataset. MU-Glioma-Post
-  is a public cohort we developed on: call it "the public development cohort", never "the development centre".
-- 2026-11-03 (author): every technical label, adjective, and emphasis word must earn its place by changing a
-  factual claim or advancing the argument. Prefer the concrete action and its supported consequence; do not use
-  inflated jargon, generic AI language, or hype that adds neither.
-- 2026-11-03 (author): lead with the clinical reading situation, then explain what a score does before naming its
-  limitation. Use natural endpoint language in narrative prose ("progression was recorded"), and give a result count
-  its scope rather than letting it appear as an unexplained number.
-- 2026-11-03 (author): introduce a clinical term through the concrete problem it names before using its label; remove
-  clinical detail that does not recur in the argument. Name a prediction score and its task before discussing its
-  limitations; do not add qualifiers such as "automated" when they do not alter the point.
-- 2026-11-03 (author): do not write as if defending every sentence. Avoid staged definitions, colon reveals, and
-  formal qualifications when a plain active statement carries the point; name what the model does directly.
-- 2026-11-03 (author): use the parts of a sentence the author likes to identify the informational shape that works.
-  Rewrite the faulty passage when needed, but preserve its useful actor, action and object; do not substitute a
-  shorter but vaguer or different claim, or refactor unrelated prose.
-- 2026-11-03 (author): keep the scan-level purpose of a model separate from study-level evaluation. Ranking language
-  belongs with AUC/discrimination results, not with the Introduction's account of what a progression score is for.
-- 2026-11-03 (author): state the general problem before introducing PRISM's specific response. The problem is that a
-  score hides the information informing an assessment; image measurements and treatment context are PRISM's answer,
-  not the whole definition of the problem.
-- 2026-11-03 (author): PRISM is the system; the scan-level record is the system's artefact; the report is its
-  readable output. The tagline is “PRISM is a system that makes progression scores inspectable.” Do not burden it
-  with “surveillance support” or “clinical decision support” until clinical feasibility is evaluated.
-- 2026-11-03 (author): use hyphens only when they are part of a formal name, an abbreviation, a code or dataset
-  identifier, or a technical term that loses its meaning without one. Otherwise use ordinary words or rewrite the
-  phrase. Keep one construction consistent: for example, use “treatment context,” never alternate it with
-  “treatment-context information.”
-- 2026-11-03 (author): do not rely on colons or semicolons to arrange prose. Prefer a full sentence, a comma, or a
-  parenthesis. Retain them only when they materially improve a compact table, mathematical expression, or an otherwise
-  ambiguous construction.
-- 2026-11-13 (author): never call the clinical and treatment history model the "timeline pathway" or "timeline
-  score"; the author finds it confusing and misleading. Call it the "clinical-history model". Call the image pathway
-  the "imaging model", and say "model", not "pathway", for each. Keep "clinical data alone" for the baseline with the
-  same patient variables and no treatment dates.
-- 2026-11-15 (author): do not mention "phase of care"; it takes away. Say "time after radiotherapy" or "time window"
-  where the idea is needed.
-- 2026-11-15 (author): no LIME or SHAP. Interpretability methods are a black box of their own; the paper says
-  "inspectable" (every value has a source and is checked), never "interpretable" or "explainable".
-- 2026-11-15 (author): bottom line up front. Decide what the paper is about first, then the contributions, each a
-  technical object with how it is measured; everything else supports them. Venue: methods / medical AI, technically
-  oriented, not simplistic.
-- 2026-11-15 (author): a 27B parameter model runs on a laptop; do not present local model size as a deployment barrier.
-- 2026-11-15 (author, later): the paper is the system, told as one argument, not an analysis report or three
-  separate techniques. Feature the cross-site validation (models locked, then applied unchanged). Keep the within- and
-  across-window split inside the audit trail and out of the abstract. Answer "what would the clinician miss without
-  the model" with measured proxies, never as a claim of clinical benefit. Pareto: cover enough, and do it right and
-  reproducibly.
-- 2026-11-17: "clinical decision support" is allowed only as intended use ("a system intended for clinical decision
-  support"); it supersedes the 2026-11-03 ban. Never "faithful" for the reports; say what the checks catch and miss.
-  A pass rate measured after a revision prompted by evaluation failures is called exploratory. Evidence the reader
-  baseline models is "available to any reader", never "a reader already weighs" (the baseline is not a clinician).
-- 2026-11-17 (author): "I do not want any candidly negative analysis against our own claims to be present in the
-  paper." No commentary that argues against the paper's claims ("cannot show", "a defect", "too many to serve as
-  warnings", "part of the AUC comes from ..."). Planned-test outcomes stay (Table 2, the reader baseline), stated
-  neutrally and framed by the argument: the separate scores show what the ranking rests on. Exploratory negatives on
-  superseded pipelines and sub-analyses go to the supplement or out. Title: "auditable system", not "auditable
-  separation". Method statements must match the current code, not an earlier audit.
-- 2026-11-17: Figures share one house style (`scripts/figure_style.py`; colour follows the score; Figure 1 is a
-  methods schematic with no results). "Remove any stale entries that do not add to the paper": the supplement keeps
-  only content the current paper rests on; earlier-study analyses stay in `docs/results/` and git history.
-- 2026-11-18 (author): title "PRISM: an auditable local system for glioma follow-up MRI" (keep "local system"). Keep titles short; no adjectives
-  that are not needed. "Auditable" is defined once in the Introduction (inputs reported separately; every report number
-  traced to its record entry and checked).
-- 2026-11-18 (author): put the best foot forward. The abstract runs premise, system, what the separation exposed,
-  transfer, checked reports. Development history (prompt revisions, rule revisions) is stated once in Methods, never
-  in the abstract or headings. Claim only what holds without a caveat. The radiomics comparison is not in the abstract.
-- 2026-11-18 (author, guiding professor): the Introduction is longer (about seven paragraphs) with a real
-  literature review that sets up the abstract's premises; this replaces the "three or four paragraphs, no list of
-  contributions" recipe. Contributions follow the abstract's spine.
+Add each new reaction as a dated one-line rule.
+- 2026-11-19: guidance consolidated. Only the current rules are kept; the history guides are moved to
+  `docs/manuscript/archive/`.
+- 2026-11-19: table row shading is neutral grey (`rowgrey` = gray 0.92 in `paper/macros.tex`), never a blue tint; blue
+  distracts.
+- 2026-11-24: Prof. Zhang's marked copy (email 2026-11-23): her mechanical edits applied as marked (author name
+  "Yongjie Jessica Zhang"; title ends "for Glioma Follow-up MRI"; abstract sentence split with semicolons; contributions
+  open with PRISM or a verb; "The remainder of this paper is organized as follows."; Table 1 in footnotesize like
+  Table 2; Figure 1 caption "The workflow of PRISM."). Her subjective items are with the author.

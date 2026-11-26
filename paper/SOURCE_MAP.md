@@ -1,4 +1,4 @@
-<!-- Moved verbatim from docs/manuscript/DRAFT.md (2026-10-15 snapshot); not part of main.pdf. Section and table numbers refer to paper/main.tex. Updated 2026-10-15 for the PRISM-paper framing: methods sections are renumbered (new §2.1 architecture; old §2.1–2.11 are now §2.2–2.12; new §2.13 report generator; old §2.12 is now §2.14), results gain §3.10. "PRISM report model/split" is now "PRISM's initial radiomics model" / "our initial evaluation split"; "baseline" = PRISM's core model. -->
+<!-- Moved verbatim from docs/manuscript/archive/DRAFT.md (2026-10-15 snapshot); not part of main.pdf. Section and table numbers refer to paper/main.tex. Updated 2026-10-15 for the PRISM-paper framing: methods sections are renumbered (new §2.1 architecture; old §2.1–2.11 are now §2.2–2.12; new §2.13 report generator; old §2.12 is now §2.14), results gain §3.10. "PRISM report model/split" is now "PRISM's initial radiomics model" / "our initial evaluation split"; "baseline" = PRISM's core model. -->
 
 ## Appendix: Source map (not for submission)
 

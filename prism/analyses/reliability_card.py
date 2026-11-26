@@ -28,9 +28,9 @@ import numpy as np
 import pandas as pd
 
 from prism.audit import reliability as R
-from prism.config import MEASUREMENTS, OUTPUTS, RESULTS
+from prism.config import MASK_SUFFIX, MEASUREMENTS, OUTPUTS, RESULTS
 
-OUT = RESULTS / "analyses" / "reliability_card"
+OUT = RESULTS / "analyses" / f"reliability_card{MASK_SUFFIX}"   # PRISM_MASKS=brats24_22: tables from prism.analyses.system
 ARMS = {"mu": ("B1", "I_pure", "B1+I_pure"), "lumiere": ("Tbase", "T_img", "T"),
         "ucsf_locked": ("A-Tbase@grade4", "A-Ipure@grade4", "A-T@grade4"),
         "ucsf_internal": ("B-Tl", "Ipure", "B-Tl+Ipure")}

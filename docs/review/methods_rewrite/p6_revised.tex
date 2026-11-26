@@ -1,0 +1,110 @@
+% Sources: CHRISTODOULOU_FAITHFUL_PLAN.md (with deviations); CHRISTODOULOU_REPLICATION.md (faithful run);
+% prism/analyses/_christodoulou_vendor.py; refs christodoulou2026, vangriethuysen2017.
+\paragraph*{The published radiomics pipeline.} We compared PRISM's imaging model with the radiomics pipeline published
+on MU-Glioma-Post \citep{christodoulou2026}, run with its authors' public code and settings on the same patients,
+masks, label and folds as PRISM. The pipeline describes the tumour region of the current scan by 4,892 radiomic
+features computed with PyRadiomics \citep{vangriethuysen2017}: measures of shape, intensity and texture in each of the
+four sequences, taken from the original image and from Laplacian of Gaussian and wavelet filtered versions of it.
+Within each training set it ranks the features, keeps the top 256 and fits a gradient boosted tree model (LightGBM)
+that weights the two classes equally. It tunes the model's settings over 400 trials of a Bayesian search (Optuna),
+each trial scored by fivefold cross validation grouped by patient within the training set, and maps the model's
+output to a probability by Platt calibration, a logistic fit to the held-out predictions of that cross validation.
+The authors' ranking combines the size of L1 penalised logistic regression coefficients with permutation importance,
+but their code computes permutation importance only in inner folds of at least 30 scans. Our inner folds held 13 to 16
+scans, so the features were ranked by coefficient size alone. We left the code unchanged.
+\todo{SUPPLEMENT: extraction settings, the first re-implementation (sensitivity analysis) and the run with the
+authors' patient-level label (exploratory).}
+The authors' code labels every scan of a patient who ever progressed as progression. We kept PRISM's label, the scan
+at which progression was documented, so the comparison is of two methods on one task, not a replication of the
+published estimate. The plan, committed before the run, stated that if the pipeline did not rank below PRISM's
+imaging model, we would withdraw the claim that the imaging model ranks scans better. We also ran the pipeline on the
+masks of a segmentation network, as part of the segmentation comparison.
+
+% Sources: MASK_SENSITIVITY_PLAN.md; METHODS_RESULTS.md E5; CHRISTODOULOU_BRATS_MASKS_PLAN.md (with deviations);
+% SEGMENTER_STAGE_PLAN.md; SEGMENTER_STAGE.md; SEGMENTER_BRATS24_PLAN.md.
+\paragraph*{Segmentation comparison.} Because the measurements depend on whose outlines are used, we tested how much
+PRISM's results change when the masks supplied with each dataset are replaced by a segmentation network's, in three
+planned analyses. First, at MU we replaced every supplied mask with the Swin UNETR label map and refitted the imaging,
+combined and time-and-enhancement models in the same folds. Swin UNETR does not mark the resection cavity, so the
+cavity measurements kept the supplied mask. The published radiomics pipeline was run on the same label maps, with the
+authors' tumour region (every labelled voxel) and nothing else changed. Second, we ran PRISM from Swin UNETR alone at
+all three centres, taking nothing from the supplied masks. Without the cavity, 22 of the 27 measurements remain. We
+refitted the imaging, reduced combined and time-and-enhancement models on MU and applied them without retraining at
+LUMIERE and UCSF-ALPTDG, where the time-and-enhancement model used the approximated window. This plan was committed
+before any segmenter-derived number was compared with a label at LUMIERE or UCSF-ALPTDG. Third, the BraTS 2024 model
+takes the place of Swin UNETR in the second analysis. It marks the cavity, so all 27 measurements come from it.
+
+Each analysis compares every score with its value on the supplied masks by the paired AUC difference. The first
+analysis required every paired CI to include zero. The second and third required every paired CI to include zero or
+lie above it, so that a segmenter may raise a score but not lower it. All three required the combined model's gain
+over the time-and-enhancement model to be read the same way under both mask sets (a gain, or no clear gain), at MU in
+the first analysis and at MU and LUMIERE in the others. For the published pipeline, the plan required it to rank below
+PRISM's imaging model on the Swin UNETR masks as well; otherwise the comparison would be limited to the supplied
+masks. We also report how well each segmenter agrees with the supplied masks, by the Dice overlap (0 for disjoint
+outlines, 1 for identical ones), and how noisy the enhancing volume is, as the median fold change between consecutive
+scans at most 30 days apart at MU and LUMIERE. Before the run we expected one network applied to every scan to be at
+least as repeatable as the supplied masks.
+
+% Sources: NUMBERS.md sections 6, 9, 13, 14; METHODS_PLAN.md; CLINICIAN_BASELINE_PLAN.md; REVIEW_ANALYSES_PLAN.md.
+\paragraph*{Tests fixed in advance.} Table~\ref{tab:2} lists each planned test, the rule fixed before it was run and
+the outcome, including the two tests that passed only after a revision. The primary results are the external AUCs,
+the gain over the time-and-enhancement model and the comparison with the published radiomics pipeline. The other
+tests each answer a separate question with its own rule, and we made no correction for multiple testing. Analyses that
+were not fixed in advance are marked exploratory where they appear.
+
+% Sources: NUMBERS.md section 9; METHODS_RESULTS.md; CHRISTODOULOU_REPLICATION.md; SEGMENTER_STAGE.md.
+\begin{table}[!htbp]
+\centering
+\caption[Planned tests]{\textbf{Planned tests and their outcome.} Each test, the rule committed to the repository
+before it was run, and the outcome. Differences are in AUC, with 95\% CIs.}
+\label{tab:2}
+\begin{threeparttable}
+\footnotesize
+\zebrarows
+\begin{tabularx}{\linewidth}{@{}R{4.0cm}R{3.9cm}LR{0.9cm}@{}}
+\toprule
+Test & Rule fixed in advance & Outcome & Section \\
+\midrule
+Published radiomics pipeline against the clinical-history model on MU folds & Estimate only & $-$0.24 ($-$0.34 to $-$0.15) & \ref{sec:3.1} \\
+Published radiomics pipeline below the imaging model on MU folds & Otherwise the comparison is withdrawn & \textbf{Yes}. $-$0.13 ($-$0.23 to $-$0.02) & \ref{sec:3.1} \\
+MU results unchanged with Swin UNETR masks (supplied cavity kept) & Every paired CI includes 0, time-and-enhancement reading unchanged & \textbf{No} for the imaging model's AUC. \textbf{Yes} for the combined model, the time-and-enhancement model and the reading & \ref{sec:3.3} \\
+Published radiomics pipeline below the imaging model on the Swin UNETR masks & Otherwise the claim is limited to the supplied masks & \textbf{Yes} & \ref{sec:3.1} \\
+Results at three centres unchanged with PRISM's Swin UNETR stage & Every paired CI includes 0 or lies above it, gain reading unchanged at MU and LUMIERE & \textbf{No} for the MU imaging model. \textbf{Yes} for the other eight scores and the reading & \ref{sec:3.3} \\
+Results at three centres unchanged with the BraTS 2024 stage & As for Swin UNETR & \todo{S4 PENDING} & \ref{sec:3.3} \\
+Image measurements and schedule inputs add to the clinical-history model on MU & Gain $\geq$ 0.03, CI above 0 & \textbf{No}. $+$0.02 ($-$0.03 to $+$0.06) & \ref{sec:3.2} \\
+MU AUCs unchanged with all scans before progression as negatives & Each changes by $<$ 0.05, time-and-enhancement reading unchanged & \textbf{No} for the imaging model, $-$0.054. \textbf{Yes} for the others and the reading & \ref{sec:3.1} \\
+Unknown IDH and MGMT status as its own category & Every paired CI includes 0 & \textbf{Yes} & \ref{sec:2.2} \\
+Deep networks tuned on MU add to the clinical-history model with image measurements & Gain $\geq$ 0.03, CI above 0 & \textbf{No}. No network gained & \ref{sec:3.2} \\
+Combined model at LUMIERE & AUC $\geq$ 0.65 & \textbf{Yes} & \ref{sec:3.1} \\
+Imaging model at UCSF & AUC $\geq$ 0.65, lower bound $>$ 0.5 & \textbf{Yes} & \ref{sec:3.1} \\
+Disagreement of the two models marks scans the combined score ranks less well & AUC difference, CI above 0 & \textbf{Yes} at MU; not at LUMIERE or UCSF & \ref{sec:3.4} \\
+Combined model over the time-and-enhancement model & CI above 0 & \textbf{No clear gain} at MU or LUMIERE & \ref{sec:3.2} \\
+Marginal conformal sets, combined model & Coverage $\geq$ 0.78 in each cohort & \textbf{Yes} on point estimates & \ref{sec:3.4} \\
+Reports pass the checker & $\geq$ 95\% in each cohort & \textbf{No} as planned (every LUMIERE report failed). \textbf{Yes} after one revision of the record fields and the prompt & \ref{sec:3.4} \\
+Verifier closes a blind spot & $\geq$ 95\% of synthetic errors of that kind rejected & After one revision of the rules, \textbf{Yes} for direction and swapped volumes, \textbf{No} for a swapped tier word & \ref{sec:3.4} \\
+Usefulness to clinicians & Not tested & Future work & \ref{sec:4} \\
+\bottomrule
+\end{tabularx}
+\begin{tablenotes}\footnotesize
+\item Each plan and the date it was committed are listed in Supplementary Section~S5. The conformal sets of the imaging model at LUMIERE (0.71) and the clinical-history
+model at UCSF (0.70) did not meet the coverage rule.
+\end{tablenotes}
+\end{threeparttable}
+\end{table}
+
+% Sources: NUMBERS.md 2.3; SYSTEM_RESULTS.md; METHODS_RESULTS.md (bootstrap seeds, E6a); prism/analyses/detection.py
+% (bootstrap, ci); ref vancalster2019.
+\paragraph*{Statistics.} Every AUC carries a 95\% confidence interval (CI) from a bootstrap of patients. Each bootstrap
+sample draws patients with replacement and keeps all scans of each patient drawn, and the CI is the 2.5th to 97.5th
+percentile of the AUC over 1,000 samples. Drawing patients rather than scans keeps a patient's scans together, so the
+CI reflects the number of patients, not the larger number of scans. The bootstrap resamples the held-out predictions
+without refitting the models, so the CI shows the uncertainty from the patients evaluated, not from model fitting. At
+MU each sample averages the AUC over the five repeats of cross validation, as the point estimate does. Analyses added
+later used 2,000 samples: the time-and-enhancement model, the AUC split, the group-conditional sets, the segmentation
+comparison, and the analyses of calibration, of all scans before progression and of unknown marker status. A
+difference between two scores is computed within the same samples, so variation common to both scores cancels. We
+read differences from their CIs and report no P values: a difference whose CI lies above zero counts as a gain, and
+one whose CI includes zero as no clear difference, not as evidence that the scores are equal. Calibration, the match
+between predicted probabilities and observed rates, is summarised by the calibration intercept (above 0 when the
+score predicts too low on average) and the calibration slope (below 1 when the predictions are too extreme, above 1
+when they are too compressed) \citep{vancalster2019}.

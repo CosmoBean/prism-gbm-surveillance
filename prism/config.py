@@ -9,6 +9,10 @@ Every path can be overridden with an environment variable, so the pipeline runs 
     PRISM_WORKERS   processes for image stages       (default: all CPUs)
     PRISM_MEASUREMENTS  MU measurement table the models read (default: $PRISM_OUTPUTS/features/measurements.csv;
                         set only for sensitivity runs, e.g. the re-segmented masks of prism.analyses.mask_sensitivity)
+    PRISM_MASKS     source of every imaging input of the system and report stages (default: released, the released
+                    masks). brats24_22: PRISM's own segmenter (BraTS24_1 maps, the 22 cavity-free inputs), the primary
+                    pipeline from 2026-11-20 (docs/results/SEGMENTER_SWITCH.md); outputs go to <stage>_brats24_22/
+                    and PRISM_MEASUREMENTS must point at the padded BraTS24 MU table of S4
 """
 
 from __future__ import annotations
@@ -37,6 +41,9 @@ MU_FLOW = OUTPUTS / "data" / "mu_flow.csv"
 FOLDS = OUTPUTS / "data" / "folds.csv"
 LUMIERE_COHORT = OUTPUTS / "data" / "lumiere_cohort.csv"
 MEASUREMENTS = Path(os.environ.get("PRISM_MEASUREMENTS", OUTPUTS / "features" / "measurements.csv"))
+MASKS = os.environ.get("PRISM_MASKS", "released")
+assert MASKS in ("released", "brats24_22"), f"PRISM_MASKS={MASKS}"
+MASK_SUFFIX = "" if MASKS == "released" else f"_{MASKS}"   # appended to the system / card / report output folders
 RADIOMICS = OUTPUTS / "features" / "radiomics.csv"
 RADIOMICS_ERODED = OUTPUTS / "features" / "radiomics_eroded.csv"
 RESULTS = OUTPUTS / "results"

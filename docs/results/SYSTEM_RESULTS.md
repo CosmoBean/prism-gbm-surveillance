@@ -292,7 +292,7 @@ tier and out of range are not used as flags. This design would have to be tested
 ## EXPLORATORY: analyses requested in internal review (2026-10-26)
 
 **EXPLORATORY.** These analyses were added after internal review round 3
-([round3_reviewer2.md](../manuscript/council/round3_reviewer2.md), M2, M3, M4 and M6, plus NUMBERS.md mismatch 8).
+([round3_reviewer2.md](../manuscript/archive/council/round3_reviewer2.md), M2, M3, M4 and M6, plus NUMBERS.md mismatch 8).
 None is pre-specified, except the UCSF calibration row under F (UCSF_PLAN.md, secondary).
 
 The populations are those of S1–S4:

@@ -1,0 +1,63 @@
+\paragraph*{Confidence statements.} Beside each score, PRISM states how sure it is in three ways. It gives a set of
+possible outcomes, says whether the imaging and clinical-history models agree, and reports how well the models
+performed on comparable scans.
+
+The set lists the outcomes PRISM cannot rule out at the scan (progression, no progression, or both). It is chosen so
+that it includes the true outcome for 80\% of scans. It comes from split-conformal prediction
+\citep{angelopoulos2023}. This method holds out calibration patients that the model was not fitted on, and uses their
+scores to measure how far a score can lie from the true outcome. Write $\hat p(1) = \hat p$ for a scan's score and
+$\hat p(0) = 1 - \hat p$. For each calibration scan $i$ with outcome $y_i$, the nonconformity score
+$s_i = 1 - \hat p_i(y_i)$ is the probability that the model did not give to the true outcome. A patient contributes
+several scans, so each calibration scan is weighted by one over the number of that patient's calibration scans, and
+every patient counts once. With $\alpha = 0.2$ and $n$ calibration patients, the threshold $\hat q$ is the smallest
+$s_i$ whose cumulative weight, taking the $s_i$ in increasing order, reaches $(1 - \alpha)(n + 1)$. If no $s_i$ reaches
+it, $\hat q$ is infinite and every set holds both outcomes. A new scan receives every outcome to which the model gave
+enough probability,
+\begin{equation}
+C(\hat p) = \{\, y \in \{0, 1\} : 1 - \hat p(y) \le \hat q \,\}.
+\end{equation}
+A score near 0 or 1 gives a single outcome, and a score near 0.5 gives both. When $\hat q < 0.5$, a score between
+$\hat q$ and $1 - \hat q$ gives an empty set.
+
+The calibration patients must be kept apart from the patients the model is fitted on. As planned, each of the three
+models was therefore refitted on 70\% of its training patients and calibrated on the other 30\%. At MU this was done
+inside each training fold of the cross-validation. For the external cohorts it was done once, on all MU training
+patients, and the resulting models and thresholds were applied without retraining. The set of the combined score is
+the primary one.
+
+The 80\% is a rate over scans. Suppose a new patient is exchangeable with the calibration patients, which means that
+swapping them would not change the joint distribution of their data. Then about 80\% of their sets contain the true
+outcome on average over scans, but not necessarily within a subgroup \citep{romano2020,barber2021limits}. Weighting by
+patient makes even this average approximate. The rate carries over to an external cohort only if its scans are
+exchangeable with MU's \citep{mehrtens2023}, so we also calibrated within groups of comparable scans.
+
+% Sources: METHODS_PLAN.md M2; Supplementary Section S10.
+Group-conditional (Mondrian) sets compute $\hat q$ separately within each group of scans, so that the 80\% target
+applies to each group and not only to the cohort as a whole \citep{vovk2022book}. A group combines the time window
+after radiotherapy, defined above, with the state of the enhancing tumour. The tumour can be absent (below 0.1\,cc),
+present with no previous scan to compare, increased since the previous scan by at least 1\,cc and 40\%, or not
+increased. Most groups hold few calibration patients, and small calibration sets give overly wide sets
+\citep{johansson2015}. Each scan is therefore calibrated at the finest of three levels that holds at least 10
+calibration patients. These levels are its group, its enhancement state over all time windows, and all calibration
+scans (the planned set). Clustered conformal prediction gives classes with too few calibration examples the
+all-scan threshold in the same way \citep{ding2023}. LUMIERE records no radiotherapy dates, so its scans start at the
+second level. Calibrating within groups can raise coverage in a group just by making sets larger. To separate the two
+effects, we compared it at MU with planned-type sets at the $\alpha$ (0.175) that gives the same share of sets holding
+both outcomes (exploratory).
+
+The agreement statement says whether the clinical-history and imaging models point the same way at the scan. Each
+model's score is compared with the median of that model's scores over the cohort's evaluated scans. The median uses no
+outcomes, and at MU it is taken in each cross-validation repeat. The two models agree when both scores lie above
+their medians or both lie below. One model sees no images and the other sees no dates, so disagreement means the
+treatment course and the tumour point in different directions.
+
+The reliability card, after model cards \citep{mitchell2019}, looks up how well the models have performed on scans in
+the same group as this one. For each cohort separately, it gives how many scans with and without progression in that
+group the models were tested on. At MU these are out-of-fold scans, and elsewhere they are scans scored without
+retraining. With at least 10 of each, the group is in the tested tier, and the card also gives the three models' AUCs
+with 95\% CIs from 1,000 bootstrap samples of patients. With fewer, the tier is few cases and the card gives only the
+counts. With no scans, the tier is not tested. The record carries the tier of the scan's own cohort. The card fits
+nothing. It reads results that have already been measured, including the scan it describes.
+\todo{SUPPLEMENT: Recomputed without the patient's own scans, the card changed the tier of one MU scan (supplement,
+``Reliability card without the described patient'', sec:S25).} The agreement and tier rules were set after the first
+results at the three cohorts had been seen (exploratory).

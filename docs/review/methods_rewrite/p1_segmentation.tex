@@ -1,0 +1,127 @@
+\subsection{PRISM}\label{sec:2.2}
+
+% Sources: SYSTEM_PLAN.md section 1.
+PRISM turns one follow-up scan and the patient's clinical record into a structured record and a checked report in
+six stages (Figure~\ref{fig:1}). It outlines the tumour, measures it, scores the scan with three models, attaches
+statements of how certain each score is, collates every value into one record with its source, and has a local
+language model write the report, which rule-based programs then check against the record. Table~\ref{tab:models}
+lists every score in the paper.
+
+% Sources: OUTLINE.md (Fig 1); SYSTEM_PLAN.md section 1.
+% FIGURE REDESIGN (2026-11-18), modelled on Tak et al. 2025, NEJM AI, doi:10.1056/AIoa2400703.
+% Example paper (local only): docs/literature/examples/tak2025_nejmai.md and tak2025_figures/.
+% What we take from it, figure by figure: docs/literature/examples/tak2025_NOTES.md.
+% Figure 1a follows their Figure 1A (one real patient on a timeline). Drawn by scripts/fig1_prism.py, which reads the
+% MU images from data/mu-glioma-post (patient PatientID_0204; labels by the paper's rule, computed in the script).
+\begin{figure}[!htbp]
+\centering
+\figslot{fig1_system.pdf}{0.6\textheight}{One MU patient's follow-up on real scans; PRISM's segmenter; the method in six stages; the evaluation protocol.}
+\caption{\textbf{The task and the method.} (a) One MU-Glioma-Post patient's scans after radiotherapy. Each panel is
+the T1c axial slice with the most enhancement. The enhancing tumour is outlined as PRISM's segmenter, a Swin UNETR
+trained on BraTS 2021 \citep{hatamizadeh2022}, draws it (solid) and as the mask supplied with the dataset draws it
+(dashed); volumes are the segmenter's, with the supplied mask's in brackets. Enhancement at 3.7
+weeks, inside the first 12 weeks, receded without progression; progression was documented at 33.4 weeks. Scans are
+labelled by the paper's rule: progression documented at the scan, or no progression for at least 120 days after it;
+the scan at 24.7 weeks meets neither and is not labelled. (b) PRISM's segmenter, shown on the patient's last scan. A
+Swin UNETR \citep{hatamizadeh2022} takes the four sequences as channels. Its Swin Transformer encoder applies
+self-attention within shifted local windows and halves the resolution at each stage, and its convolutional decoder
+restores it through skip connections from every stage. Each Swin stage holds two successive blocks (below):
+layer normalisation, multi-head self-attention within 7\textsuperscript{3} windows, and a multilayer perceptron, each
+with a residual connection; the second block shifts the windows by half a window, so that information passes between
+neighbouring windows. Three sigmoid outputs (tumour core, whole tumour, enhancing tumour) give the
+enhancing, necrosis and FLAIR masks. (c) What PRISM computes at one follow-up scan, in six stages. The masks come from
+PRISM's segmenter or are those supplied with the dataset; the results in this paper use the supplied masks unless
+stated. The masks
+give 27 measurements of the tumour and its change ($\mathbf{x}_{\mathrm{img}}$); the treatment course as of the scan
+day and the patient's characteristics give the clinical-history inputs ($\mathbf{x}_{\mathrm{hist}}$). Three ridge
+logistic regressions score the scan on each input set and on both. The evidence statements are the split-conformal set of the combined score, the agreement of the imaging and
+clinical-history scores, and the reliability card. Collation is deterministic code that gathers every score,
+measurement and statement into one record, each under a fixed key with its source. A local language model writes the
+report from the record alone, and a deterministic checker accepts it or rejects it without repair. Colours mark the models as in every figure; the two
+input slices are this patient's last two scans. (d) Models were developed on MU by repeated cross validation grouped
+by patient, then fitted once and applied unchanged at LUMIERE and UCSF, under rules fixed before any score was
+compared with an external label, except the LUMIERE imaging and reduced clinical-history scores, added afterwards
+(Table~\ref{tab:models}).}
+\label{fig:1}
+\end{figure}
+
+% Drawn by scripts/fig_cohorts.py from the system records and the supplied dates (after Tak et al. 2025, Figure 2).
+\begin{figure}[!htbp]
+\centering
+\figslot{fig_cohorts.pdf}{0.50\textheight}{For MU, LUMIERE and UCSF, the time of each evaluation scan and the interval
+since the previous scan, by label.}
+\caption{\textbf{When the evaluation scans were taken.} One panel per cohort, headed by its evaluation scans,
+patients and share of progression scans. Left, the time of each scan, split by label: at MU-Glioma-Post in weeks
+after the end of radiotherapy, with the first 12 weeks shaded; at LUMIERE, which records no radiotherapy dates, in
+weeks after surgery; and at UCSF-ALPTDG, which records no end of radiotherapy, in weeks after the first surgery.
+Right, weeks since the patient's previous scan. Each column shares one axis across cohorts; scans beyond it are drawn
+at the edge and counted. Each point is one scan (filled, progression; open, no progression), and the vertical bar
+marks the median. MU shows the 146 scans of the intended use and UCSF the second scan of each grade 4 patient.}
+\label{fig:cohorts}
+\end{figure}
+
+% Sources: NUMBERS.md 2.1, 3, 4; DETECTION_TASK.md; UCSF_PLAN.md; CLINICIAN_BASELINE_PLAN.md; CHRISTODOULOU_REPLICATION.md;
+% SKELETON_2026-11-20.md (timestamp-only check, scratchpad timing_only.py).
+\begin{table}[!htbp]
+\centering
+\caption[The scores in this paper]{\textbf{The scores in this paper.} Every fitted score except the published
+radiomics pipeline is a ridge logistic regression fitted within the training data, with unknown IDH or MGMT status coded
+with wildtype and unmethylated (coding it as its own category changed no AUC clearly), and missing measurements imputed with the training median and an indicator. Status says whether
+a score's own AUC was planned before the analysis or exploratory; the comparisons in Table~\ref{tab:2} were planned
+even where a score's AUC on MU was exploratory.}
+\label{tab:models}
+\footnotesize
+\zebrarows
+\begin{tabularx}{\linewidth}{@{}R{2.9cm}LR{1.3cm}R{3.4cm}@{}}
+\toprule
+Score & Inputs & Dates & Status \\
+\midrule
+Clinical-history model & Age, sex, IDH and MGMT status, days since diagnosis, day of surgery, radiotherapy start, end and dose, fractions, whether chemotherapy had started, the 12-week flag, visit index, biopsy before resection and a previous brain tumour & Yes & Planned \\
+Reduced clinical-history model & Age, sex, IDH and MGMT status, days since surgery, a flag for the first weeks after radiotherapy & Partly & Planned at UCSF-ALPTDG, exploratory at LUMIERE \\
+Imaging model & 27 measurements of the segmented tumour (volumes, shape and intensity, change since the previous scan, volumes relative to the patient's smallest) & No & Exploratory on MU, planned at UCSF-ALPTDG \\
+Images from one scan & The 19 measurements of the current scan & No & Exploratory on MU, planned at UCSF-ALPTDG \\
+Combined model & Inputs of both models (externally the reduced clinical-history inputs, volumes and their change, and the interval since a previous scan) & Yes & Exploratory on MU, planned and applied unchanged in its reduced form \\
+\addlinespace
+Published radiomics pipeline & 256 of 4,892 radiomic features of the current scan ranked within training, class weighted gradient boosting tuned over 400 trials, Platt calibration; the authors' code \citep{christodoulou2026} & No & Planned \\
+Time-and-enhancement model & Time window after radiotherapy, log enhancing volume and its change since the previous scan & Yes & Planned \\
+Timing alone & Days since the end of radiotherapy or visit number, without a fitted model; or a ridge on these, days since diagnosis and the 12-week flag & Yes & Exploratory \\
+Clinical data alone & Age, sex, IDH and MGMT status & No & Planned reference \\
+Enhancing volume alone & Log enhancing tumour volume, no fitted model & No & Exploratory reference \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+% Sources: DETECTION_TASK.md (Plan, B1); UCSF_IMAGING.md; NUMBERS.md 2.1; SEGMENTER_STAGE.md section 2;
+% SEGMENTER_BRATS24_PLAN.md; refs mahmoud2025, suter2022, fields2024, hatamizadeh2022, deverdier2024, ferreira2024.
+\paragraph*{Segmentation and measurements.} PRISM outlines the tumour with a fixed public network, or uses the masks
+supplied with each dataset, and computes 27 measurements of the tumour and its change. The masks supplied with each
+dataset (the supplied masks) are automatic masks at MU-Glioma-Post, DeepBraTumIA masks with three labels at LUMIERE
+and the masks provided with UCSF-ALPTDG (Table~\ref{tab:1}). The primary results use them, so every volume can be
+traced to a public file. PRISM's own segmentation stage holds two networks, each run unchanged with its public weights
+and never tuned on our cohorts. The first is a Swin UNETR trained on BraTS 2021 \citep{hatamizadeh2022}
+(Figure~\ref{fig:1}b). It takes FLAIR, T1c, T1 and T2 as four channels, each normalised over its non-zero voxels,
+slides a window of $128^3$ voxels across the brain with half overlap, and thresholds its three sigmoid outputs (tumour
+core, whole tumour and enhancing tumour) at 0.5. The enhancing tumour is taken directly, necrosis is the core less the
+enhancing tumour, and FLAIR hyperintensity is the whole tumour less the core. This network was trained on scans before
+surgery and does not outline the resection cavity, so it supplies 22 of the 27 measurements. The second is the
+first-placed model of the BraTS 2024 challenge on post-treatment adult glioma \citep{deverdier2024,ferreira2024}, an
+ensemble of nnU-Net and MedNeXt networks that labels the resection cavity as well and so supplies all 27. LUMIERE's
+images are stored on an atlas grid with a different axis orientation, so before either network they are reoriented to
+the orientation of the training data, and the label map is mapped back. This step is the same for every LUMIERE scan.
+
+From the masks and images, PRISM computes 27 measurements. Nineteen describe the current scan: the log volumes of the
+enhancing tumour, necrosis, FLAIR hyperintensity, resection cavity, tumour core and whole lesion, and 13 measures of
+shape and of T1 contrast and FLAIR intensity relative to normal appearing brain (Supplementary Table~S7). Eight
+describe change since the previous scan and since the patient's smallest volume. Five measurements depend on the
+cavity (its volume, whether there is one, the share of enhancing tumour next to it, the distance of the enhancing
+tumour from it, and its change since the previous scan).
+
+PRISM also takes the treatment course as of the scan day: days since diagnosis and surgery, radiotherapy start, end
+and dose, and whether chemotherapy had started. It places the scan in a time window after radiotherapy (before its
+end, within 12 weeks after its end, later, or unknown when dates are missing), and it takes age, sex, and IDH mutation
+and MGMT promoter methylation status. Every input is taken as of the scan day. IDH and MGMT status count as unknown at
+scans before the diagnosis date (8 grade 4 scans, used only in training). The duration of radiotherapy and the time
+since its end enter only after radiotherapy has ended, and the prescribed dose enters from its start.
+
+% Sources: prism/models/formulations.py; prism/experiments/c3_radiomics.py (BASE_PRE); NUMBERS.md 2.1;
+% DETECTION_TASK.md (External test); SYSTEM_RESULTS.md (Deviations item 1).

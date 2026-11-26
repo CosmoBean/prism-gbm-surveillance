@@ -92,7 +92,7 @@
 % ---------------------------------------------------------------- colour, placeholders
 \usepackage[table]{xcolor}
 % Long text tables: light grey on every other body row (header and first body row white).
-\definecolor{rowgrey}{gray}{0.94}
+\definecolor{rowgrey}{gray}{0.92}  % neutral grey (equal R, G, B); no blue tint
 % Colour is hidden through the header and restarted after \midrule, so it does not depend on how a class draws its
 % rules (interact's rules add empty spacer rows).
 \newcommand{\zebrarows}{%
@@ -143,5 +143,5 @@
 
 % Running title (used in the page header of both documents)
 \newcommand{\runningtitle}{PRISM: an auditable local system for glioma follow-up MRI}
-\newcommand{\papertitle}{PRISM: an auditable local system for glioma follow-up MRI}
+\newcommand{\papertitle}{PRISM: Progression Reading with Independent Scores and Measurements for Glioma Follow-up MRI}
 \fancyhead[R]{\footnotesize\color{gray}\runningtitle}

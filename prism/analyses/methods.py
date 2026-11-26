@@ -13,6 +13,10 @@ training fold, refitted on the 70%; external MU split seed 0).
 
     PRISM_SKIP_UCSF=1 PYTHONPATH=. .venv/bin/python -m prism.analyses.methods [--workers 20] [--n-boot 2000]
     -> outputs/results/analyses/methods/   (aggregate CSVs only)
+
+PRISM_MASKS=brats24_22 (with PRISM_MEASUREMENTS = the S4 padded MU table; docs/results/SEGMENTER_SWITCH.md): the same
+analyses on PRISM's own segmenter (22 inputs), the system's segmenter designs and the BraTS24 enhancing volume ->
+outputs/results/analyses/methods_brats24_22/. The registered marginal sets are asserted equal to the system's.
 """
 
 from __future__ import annotations
@@ -30,9 +34,9 @@ from threadpoolctl import threadpool_limits
 from prism.analyses import detection as D
 from prism.analyses import system as S
 from prism.audit import conformal as cf
-from prism.config import RESULTS
+from prism.config import MASK_SUFFIX, RESULTS, SKIP_UCSF
 
-OUT = RESULTS / "analyses" / "methods"
+OUT = RESULTS / "analyses" / f"methods{MASK_SUFFIX}"
 SEED = 20261115
 ALPHA = 0.2
 MIN_PAT = 10
@@ -224,7 +228,9 @@ def run_mu(workers, n_boot):
     # reproduction: displayed AUCs equal the system's
     from sklearn.metrics import roc_auc_score
     chk = {p: float(np.mean([roc_auc_score(y[ev], P[p][r, ev]) for r in range(5)])) for p in PW}
-    for p, ref in (("timeline", 0.822), ("images", 0.709), ("combined", 0.821)):
+    refs = (("timeline", 0.822), ("images", 0.708), ("combined", 0.823)) if S.SEG else \
+        (("timeline", 0.822), ("images", 0.709), ("combined", 0.821))
+    for p, ref in refs:
         assert abs(chk[p] - ref) < 1e-3, (p, chk[p])
     et = X["images"]["log_et_cc"].to_numpy(float) if "log_et_cc" in X["images"] else None
     scores = {p: P[p][:, ev] for p in PW}
@@ -232,7 +238,7 @@ def run_mu(workers, n_boot):
     if et is not None:
         scores["enhancing_volume"] = np.broadcast_to(et[ev], (5, ev.sum())).copy()
     t1, n1 = m1_table("mu", y[ev], scores, phase[ev], pid[ev], n_boot)
-    for p, ref in WITHIN_REF.items():
+    for p, ref in ({} if S.SEG else WITHIN_REF).items():   # registered values are the released masks'
         v = float(t1[(t1.score == p) & (t1.stat == "a_within")].est.iloc[0])
         assert abs(v - ref) < 0.01, (p, v, ref)
     rows, extras = [], []
@@ -259,7 +265,11 @@ def run_lumiere(n_boot):
     r_other = float(ym[lab & (ph != "early_post_rt")].mean())
     scores = {p: c["S"][f"p_{p}"] for p in PW}
     scores["context_only"] = np.where(flag == 1, r_early, r_other)[None, :]
-    scores["enhancing_volume"] = np.log(np.asarray(L.et, float) + 1e-3)[None, :] if "et" in L else None
+    if S.SEG:
+        et_seg = S._seg_table("lumiere").set_index("scan_id").et_cc.reindex(L.scan_id).to_numpy(float)
+        scores["enhancing_volume"] = np.log(et_seg + 1e-3)[None, :]
+    else:
+        scores["enhancing_volume"] = np.log(np.asarray(L.et, float) + 1e-3)[None, :] if "et" in L else None
     if scores["enhancing_volume"] is None:
         del scores["enhancing_volume"]
     t1, n1 = m1_table("lumiere", y, scores, ctxlab, pid, n_boot)
@@ -276,11 +286,18 @@ def run_lumiere(n_boot):
     LX = D.lumiere_detection()[1]
     Xl = {"timeline": LX[D.T_BASE], "images": LX[timg], "combined": LX, "images_scan": LX[S.VOL3]}
     nop = L.prev_scan_id.eq("").to_numpy()
+    if S.SEG:   # the system's segmenter designs (lumiere_cohort_seg): no current-scan-only fallback
+        SS, (dseg, _, T, cv) = S._seg_designs()
+        assert (dseg.scan_id.to_numpy() == dm.scan_id.to_numpy()).all()
+        Xmu = {"timeline": T[D.T_BASE], "images": cv["images"], "combined": cv["combined"]}
+        ls = SS.lumiere_seg(c["d"], LX, list(cv["images"].columns), "brats24")
+        Xl = {"timeline": LX[D.T_BASE], "images": ls["images"], "combined": ls["combined"]}
+        nop = np.zeros(len(L), bool)
     enh = c["enh"]
     n = len(L)
     rows, extras = [], []
     for p in PW:
-        parts = [(p, ~nop), ("images_scan", nop)] if p == "images" else [(p, np.ones(n, bool))]
+        parts = [(p, ~nop), ("images_scan", nop)] if p == "images" and not S.SEG else [(p, np.ones(n, bool))]
         lev = np.zeros((1, n), int)
         sm, sr = [np.zeros((1, n), bool) for _ in range(2)], [np.zeros((1, n), bool) for _ in range(2)]
         for name, m in parts:
@@ -299,6 +316,70 @@ def run_lumiere(n_boot):
     return t1, n1, rows, extras
 
 
+def run_ucsf(n_boot):
+    """UCSF-ALPTDG, grade 4 scan 2 (locked MU models). Context rt_phase, as the plan fixes; the context-only score takes
+    MU's rate for the matching stratum and MU's pooled rate otherwise (no_rt, rt_date_unknown). M2 groups as the card's
+    situation; scans whose time after radiotherapy is unknown fall to level 2, as at LUMIERE."""
+    from prism.analyses import ucsf_external as UX
+    c = S.ucsf_cohort()
+    ev = ~np.isnan(c["y"])
+    y, pid = c["y"][ev].astype(int), c["patient_id"][ev]
+    ph = c["comp_phase"].astype(str)[ev]
+    d4, A4 = UX.mu_detection("grade4")
+    y4, p4 = d4.label_120.to_numpy(), d4.patient_id.to_numpy()
+    lab = ~np.isnan(y4)
+    ph4 = d4.phase.astype(str).to_numpy()
+    rate = pd.Series(y4[lab]).groupby(ph4[lab]).mean()
+    ctx = pd.Series(ph).map(rate).fillna(float(y4[lab].mean())).to_numpy(float)
+    im = (S._seg_table("ucsf") if S.SEG else pd.read_csv(S.OUTPUTS / "data" / "ucsf" / "imaging_features.csv")
+          ).set_index("scan_id")
+    et = im.et_cc.reindex(c["scan_id"][ev]).to_numpy(float)
+    scores = {p: c["S"][f"p_{p}"][:, ev] for p in PW}
+    scores["context_only"] = ctx[None, :]
+    scores["enhancing_volume"] = np.log(et + 1e-3)[None, :]
+    from sklearn.metrics import roc_auc_score
+    chk = {p: float(roc_auc_score(y, scores[p][0])) for p in PW}
+    refs = (("timeline", 0.561), ("images", 0.796), ("combined", 0.808)) if S.SEG else \
+        (("timeline", 0.561), ("images", 0.726), ("combined", 0.856))
+    for p, ref in refs:
+        assert abs(chk[p] - ref) < 1e-3, (p, chk[p])
+    t1, n1 = m1_table("ucsf", y, scores, ph, pid, n_boot)
+    # M2: MU calibration rows (registered split seed 0) and their groups
+    names = {"timeline": "A-Tbase", "images": "A-Ipure", "combined": "A-T"}
+    u = UX.ucsf_frame()
+    keep = (u.timepoint.eq(2) & u.grade4).to_numpy()
+    A = UX.ucsf_designs(u, A4)
+    Xmu4 = {p: A4[names[p]] for p in PW}
+    Xte = {p: A[names[p]][keep].reset_index(drop=True) for p in PW}
+    if S.SEG:   # the system's segmenter designs (ucsf_cohort_seg)
+        SS, (dseg, A4s, T, cv) = S._seg_designs()
+        assert (dseg.scan_id.to_numpy() == d4.scan_id.to_numpy()).all()
+        As = UX.ucsf_designs(u, A4s)
+        us = SS.ucsf_seg(u, As, keep, list(cv["images"].columns), "brats24")
+        Xmu4 = {"timeline": A4s["A-Tbase"], "images": cv["images"], "combined": cv["combined"]}
+        Xte = {"timeline": As["A-Tbase"][keep].reset_index(drop=True), "images": us["images"],
+               "combined": us["combined"]}
+    rows_ = np.arange(len(d4))
+    proper, cal = cf.patient_split(p4, 0.3, seed=0)
+    cr = rows_[cal][~np.isnan(y4[cal])]
+    cph, enh_mu = S.mu_situation(d4)
+    g1_mu = np.array([f"{a}|{b}" for a, b in zip(cph, enh_mu)])
+    g1 = np.array([f"{a}|{b}" for a, b in zip(c["card_phase"], c["enh"])])
+    rows, extras = [], []
+    for p in PW:
+        conf = S._fit(Xmu4[p], d4, rows_[proper])
+        pcal = conf(Xmu4[p].iloc[cr])
+        pte = conf(Xte[p])
+        Lv, a0, a1, b0, b1 = mondrian_sets(pcal, y4[cr], p4[cr], g1_mu[cr], enh_mu[cr], pte, g1, c["enh"],
+                                           start2=False)
+        assert (b0 == c["sets"][("std", p, 0.2, 0)][0]).all() and (b1 == c["sets"][("std", p, 0.2, 1)][0]).all(), p
+        rr, ex_ = m2_summary("ucsf", p, y, pid, g1[ev], Lv[None, ev], [a0[None, ev], a1[None, ev]],
+                             [b0[None, ev], b1[None, ev]], n_boot)
+        rows += rr
+        extras.append(ex_)
+    return t1, n1, rows, extras, chk
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser()
     ap.add_argument("--workers", type=int, default=20)
@@ -308,11 +389,13 @@ def main(argv=None):
     t0 = time.time()
     t_mu, n_mu, r_mu, e_mu, chk = run_mu(a.workers, a.n_boot)
     t_l, n_l, r_l, e_l = run_lumiere(a.n_boot)
-    pd.concat([t_mu, t_l]).to_csv(OUT / "m1_auc_split.csv", index=False)
-    pd.DataFrame(r_mu + r_l).to_csv(OUT / "m2_coverage.csv", index=False)
-    pd.DataFrame(e_mu + e_l).to_csv(OUT / "m2_levels.csv", index=False)
+    t_u, n_u, r_u, e_u, chk_u = ([], None, [], [], None) if SKIP_UCSF else run_ucsf(a.n_boot)
+    pd.concat([t_mu, t_l, *([] if SKIP_UCSF else [t_u])]).to_csv(OUT / "m1_auc_split.csv", index=False)
+    pd.DataFrame(r_mu + r_l + r_u).to_csv(OUT / "m2_coverage.csv", index=False)
+    pd.DataFrame(e_mu + e_l + e_u).to_csv(OUT / "m2_levels.csv", index=False)
     (OUT / "run_info.json").write_text(json.dumps({"n_boot": a.n_boot, "seed": SEED, "min_patients": MIN_PAT,
-                                                   "alpha": ALPHA, "mu_check_auc": chk, "counts": [n_mu, n_l],
+                                                   "alpha": ALPHA, "mu_check_auc": chk, "ucsf_check_auc": chk_u,
+                                                   "counts": [n_mu, n_l, n_u],
                                                    "seconds": round(time.time() - t0)}, indent=1))
     print(f"done in {time.time() - t0:.0f}s")
 

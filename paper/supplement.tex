@@ -1,5 +1,5 @@
 % supplement.tex -- Supplementary Material. SOURCE OF TRUTH from 2026-10-15
-% (docs/manuscript/SUPPLEMENT.md is a frozen snapshot). Build: ./build.sh (tectonic).
+% (docs/manuscript/archive/SUPPLEMENT.md is a frozen snapshot). Build: ./build.sh (tectonic).
 % References to the main text are by section number as printed in main.pdf ("main Section 3.5").
 \documentclass[11pt,a4paper]{article}
 \input{macros}
@@ -122,7 +122,8 @@ eligibility. Change features use earlier scans only.
 \textbf{Molecular status before diagnosis.} An as-of audit found IDH and MGMT status used at
 8 grade 4 scans (11 in all gliomas) taken 1--58 days before the diagnosis date (\code{AUDIT\_SYSTEM.md} \S{}2). In
 every model reported in the paper these markers count as unknown at such scans (\code{phase\_censoring.masked\_molecular}),
-and the time since the end of radiotherapy and its duration enter only once it has ended.
+and the time since the end of radiotherapy and its duration enter only once it has ended. None of the 8 grade 4 scans
+is in the evaluation set.
 
 The 27 measurements of the imaging model are defined in Supplementary Table~S7.
 
@@ -137,6 +138,9 @@ predictions of each repeat.
 \item \textbf{Bootstrap.} Patient-cluster bootstrap, 1,000 draws; each draw resamples patients once and
 recomputes the mean-over-repeats statistic of every model on that draw, so differences are paired. $\Delta$AUC
 is the point estimate (not the bootstrap mean) with the bootstrap CI.
+\item \textbf{Analyses with 2,000 draws.} The time-and-enhancement model, the AUC split, the group-conditional sets,
+the segmentation comparison, and the analyses of calibration, of all scans before progression and of unknown marker
+status use 2,000 draws.
 \item \textbf{Selection inside folds.} Standardisation, imputation and the choice of penalty are all inside the
 training fold, the penalty by inner patient-grouped cross validation
 \citep{varma2006,cawley2010,demircioglu2021}.
@@ -180,7 +184,23 @@ BrainSegFounder & 0.81 [0.56, 0.91] & 0.86 & 0.94 / 0.92 \\
 
 Short-gap consistency ($\leq$ 30 d, 54 pairs): median ET fold change 2.57 with the released masks and 2.17
 with the SwinUNETR masks ($\Delta$ median |log ratio| $-$0.17 [$-$0.46, $-$0.02]); WT unchanged. The mask
-sensitivity analysis of the main text replaces every MU mask with the SwinUNETR label map (main Section 3.3).
+sensitivity analysis of the main text replaces every MU mask with the SwinUNETR label map (main Section 2.3).
+
+\textbf{Gain over the time-and-enhancement model at LUMIERE.} With Swin UNETR masks, the gain of the combined model
+over the time-and-enhancement model at LUMIERE moved from $+$0.04 to $-$0.03. The main reason is that the
+time-and-enhancement model itself rose with Swin UNETR, by 0.04 (0.02 to 0.08). The reading, no clear gain, was the
+same under both mask sets (main Section 3.3).
+
+\textbf{BraTS 2024 post-treatment model.} Between scans at most 30 days apart, the BraTS 2024 enhancing volume
+changed by a median factor of 2.10 (1.29--6.17) at MU-Glioma-Post (14 pairs) and 14.4 (5.2--39.5) at LUMIERE (15
+pairs). With the supplied masks, the factors were 2.21 and 2.60.
+
+At MU-Glioma-Post, the imaging model on the BraTS 2024 outlines differed from the imaging model on the Swin UNETR
+outlines by $+$0.05 ($-$0.01 to $+$0.11).
+
+Without the five cavity measurements (exploratory), the BraTS 2024 outlines gave an MU imaging AUC of 0.71 and a
+LUMIERE reduced combined AUC of 0.79. The supplied masks gave 0.71 and 0.77. Dropping the cavity measurements raised
+the imaging model's AUC by 0.03 at MU and at LUMIERE.
 
 \FloatBarrier
 \section{Reproducibility}\label{sec:S16}
@@ -450,7 +470,7 @@ to not tested. No scan at MU or LUMIERE moved between tested and few cases, so t
 
 \paragraph{Reports with this paper's model names, and a template.} The record keys and the prompt were renamed
 (clinical-history model, imaging model) with no other change. A small adapter maps the new names back before the
-unchanged checker runs. Through the adapter, the checker mutation test of the main text (main Section 4.5) gave the same result, mutant for mutant.
+unchanged checker runs. Through the adapter, the checker mutation test of the main text (main Section 3.4) gave the same result, mutant for mutant.
 The renamed prompt passed all 48 development reports at the first run and was frozen before the evaluation reports were
 generated. The fixed template writes one set sentence per line of the prompt from the record's values.
 
@@ -492,6 +512,23 @@ dates. The strata held 2 progression and 1 other scan during radiotherapy, 4 and
 after its end) and 56 and 32 later. At LUMIERE the context is the rater's flag for a scan within 3 months after
 radiotherapy, with 1 progression and 27 other scans flagged and 72 and 78 not flagged. The MU values of $A_W$
 reproduced the registered audit within each time window (0.64 and 0.68 for the clinical-history and imaging models).
+
+Formally, with $P$ and $N$ the scans with and without progression, $s$ a score and $c$ the context,
+\begin{equation*}
+\mathrm{AUC} = \frac{1}{|P||N|}\sum_{i\in P}\sum_{j\in N} K(s_i,s_j), \qquad K(a,b) = \mathbb{1}[a>b] +
+\tfrac12\mathbb{1}[a=b],
+\end{equation*}
+and the pairs within one context are $W = \{(i,j): c_i = c_j\}$, with $B$ its complement. $A_W$ and $A_B$ are the same
+sum restricted to $W$ and to $B$. Externally the context only score takes MU's share of progression scans for the
+matching context, and MU's overall share for scans without a dated course of radiotherapy. Scans without a value of a
+score are left out of that score's pairs.
+
+At LUMIERE the context is the rater's flag, and only one of the 28 flagged scans had progression. The reduced models
+take the flag as an input, so the across-context AUC of the clinical-history model (0.96, against 0.59 within one
+context; Table S10) shows mainly how much the flag carries. When the UCSF-ALPTDG data were restored, the split was
+also run there, with the window approximated from the start of radiotherapy. Nearly nine in ten UCSF-ALPTDG pairs
+($w$ = 0.88, 0.76 to 0.98) fell within one window, almost all later than 12 weeks after radiotherapy, so the pairs
+across windows are too few to read and the within-window AUCs are close to the overall ones.
 
 \begin{table}[!htbp]
 \renewcommand{\thetable}{S10}\renewcommand{\theHtable}{S10}
@@ -576,7 +613,10 @@ During radiotherapy & 2 & 1 & -- & -- & -- \\
 
 We calibrated the conformal sets within groups defined by the time window after radiotherapy and the enhancement
 state, which are the situations of the reliability card, and compared them with the marginal sets of the plan. Each scan was calibrated at the finest level with at least 10 calibration patients, level 1 being its group,
-level 2 its enhancement state over all time windows and level 3 all calibration scans, which is the marginal set. The
+level 2 its enhancement state over all time windows and level 3 all calibration scans, which is the marginal set. Most
+groups hold few calibration patients, and small calibration sets give overly wide sets \citep{johansson2015}, which is
+why a group with fewer than 10 calibration patients falls back to a coarser level. Clustered conformal prediction
+gives classes with too few calibration examples the all-scan threshold in the same way \citep{ding2023}. The
 time after radiotherapy is unknown for every LUMIERE scan, so LUMIERE scans start at level 2. The nominal level was
 80\% throughout. Under exchangeability within the group, level 1 and level 2 sets are conditional on the group, and
 nothing holds at LUMIERE unless its scans are exchangeable with the MU calibration scans.
@@ -682,13 +722,18 @@ We added two rules to the frozen checker, which itself was not edited. The first
 that sits next to a named quantity (enhancing tumour, FLAIR hyperintensity, necrosis, cavity, or one of the three
 model scores) to a cited field for that quantity. The second binds each direction word (larger, increased, smaller,
 decreased and similar) to every cited field that carries a direction. The rules of version 1.0 were fixed before any
-report was checked. They bound a number only to cited fields whose key names the quantity, and they
+report was checked. The verifier splits each sentence into clauses at commas, semicolons, colons and the word ``and''. The rules of
+version 1.0 bound a number only to cited fields whose key names the quantity, and they
 rejected every real report (276 of 276 from the language model and 276 of 276 from the template) and 24 of the 52
-correct synthetic reports, because the statement fields name the quantity in their text and not in their key. This
+correct synthetic reports, because the statement fields name the quantity in their text and not in their key, as in
+``enhancing tumour 3.5\,cc larger than at the previous scan''. This
 pre-specified rule failed, and we report it as such. Version 1.1 also binds numbers and direction
 words inside a cited text field to the quantity named in their clause. It was developed on the synthetic records
 (52 of 52 correct reports passed) and on the development reports (47 of 48 from the language model and 48 of 48 from
 the template), frozen, and then applied once to the evaluation reports.
+
+The 52 synthetic records cover two tiers, both sides of each model's median, each of the three possible conformal
+sets and the out-of-range flag.
 
 Every evaluation report passed the frozen checker. Version 1.1 rejected 1 of the 114 MU reports of the language model
 (by the direction rule), none of its 162 LUMIERE reports and none of the 276 template reports. These rejections were
@@ -778,6 +823,197 @@ D & Direction stated wrongly in new words (regressed, receded, less, a reduction
 L & A correct value under the wrong quantity, citing both fields & 156 & 0.12 & 1.00 & 1.00 \\
 S & A score on the wrong side of its median, in new words (exceeds, under) & 104 & 0.14 & 0.14 & 0 \\
 & Control, a correct paraphrase & 104 & 0 & 0 & 0 \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\FloatBarrier
+\section{Calibration of the three scores}\label{sec:S27}
+
+% Drawn by scripts/fig_calibration.py from the per-scan scores of the ROC curves in Figure 3 (fig2_performance.roc_data).
+The three scores rank scans; their probabilities were not recalibrated for any centre. Supplementary
+Figure~S1 shows how far the predicted probabilities sit from the observed share of progression scans in each
+cohort, with the calibration slope and intercept quoted in the Results. The calibration intercept is above 0 when a
+score predicts too low on average. The slope is below 1 when the predictions are too extreme and above 1 when they
+are too compressed.
+
+\begin{figure}[!htbp]
+\renewcommand{\thefigure}{S1}\renewcommand{\theHfigure}{S1}
+\centering
+\figslot{figS_calibration.pdf}{0.40\textheight}{Calibration curves of the three scores per cohort.}
+\caption{\textbf{Calibration of the clinical-history, imaging and combined scores.} (a) MU-Glioma-Post, out of fold
+in the intended use; (b) LUMIERE and (c) UCSF-ALPTDG, models fitted on MU and applied unchanged (at both, the reduced
+combined model). The evaluation scans of each score are split into five equal-size bins of predicted probability;
+each point is a bin's mean prediction against its observed share of progression scans (at MU, averaged over the five
+repeats of cross validation). The dashed diagonal is perfect calibration. Slope: the coefficient of the logit of
+the prediction in a logistic regression on the label (1 is ideal); intercept: calibration-in-the-large with the
+logit as offset (0 is ideal).}
+\label{fig:S_calibration}
+\end{figure}
+
+\FloatBarrier
+\section{The record fields cited by the example report}\label{sec:S28}
+
+% Drawn by scripts/fig5_report.py alongside Figure 7.
+\begin{figure}[!htbp]
+\renewcommand{\thefigure}{S2}\renewcommand{\theHfigure}{S2}
+\centering
+\figslot{fig5_report_fields.pdf}{0.55\textheight}{Each sentence of the example report with the record fields it cites.}
+\caption{\textbf{The record fields cited by each sentence of the report in Figure 7.} The language model's sentences
+verbatim, each with the fields of the scan's record it cites; the checker compares every value in a sentence with
+these fields.}
+\label{fig:S_fields}
+\end{figure}
+
+
+\FloatBarrier
+\section{Details of PRISM's stages}\label{sec:S29}
+
+% Sources: main.tex Methods (former SUPPLEMENT notes); prism/features/reseg.py; prism/audit/conformal.py;
+% prism/report/prompts_v3_1.py, checker.py; REPORT_V3_1.md.
+\subsection{Segmentation at LUMIERE}\label{sec:S29.1}
+
+LUMIERE's images are stored on an atlas grid whose axis order differs from that of the networks' training data. PRISM
+reorients each LUMIERE scan to the training order without resampling, runs the network, and reorients the label map
+back.
+
+\subsection{Measurements}\label{sec:S29.2}
+
+Supplementary Table~S7 defines the 27 measurements. Nineteen describe the current scan: the log volumes of the
+enhancing tumour, necrosis, FLAIR hyperintensity, resection cavity, tumour core and whole lesion; eight measures of
+composition, shape and position relative to the cavity; and five measures of T1c and FLAIR intensity relative to
+normal-appearing brain, taken as the brain more than 10\,mm from the lesion and the cavity. Eight describe change: the
+log ratio of each of the six volumes to the previous scan, and of the enhancing tumour and whole lesion to the
+patient's smallest volume so far.
+
+Five measurements need the resection cavity: its volume, whether there is one, the share of enhancing tumour within
+5\,mm of it, the distance of the enhancing tumour from it, and its change since the previous scan.
+
+\subsection{Conformal sets}\label{sec:S29.3}
+
+If no nonconformity score $s_i$ reaches the cumulative weight $(1-\alpha)(n+1)$, the threshold $\hat q$ is infinite
+and every set holds both outcomes. When $\hat q < 0.5$, a score between $\hat q$ and $1 - \hat q$ gives an empty set.
+
+\subsection{Report}\label{sec:S29.4}
+
+The prompt asks for sentences in this order: the scan's timing; the volumes, called indicative; their change; each
+model's score and what it is based on; whether the two models agree; the combined score and what a score means; its
+80\% conformal set; the card's tier; and one sentence for each raised flag. Flags are raised for nearly every scan, so
+the report presents the agreement and the card as descriptions of what the score rests on rather than as warnings.
+
+The first prompt asked for the rater's three-month mark at LUMIERE in words that contain the number 3, but the record
+entry held only ``yes'' or ``no''. The 3 was therefore in no cited entry, and the checker rejected every LUMIERE
+report. We changed this entry to hold the full sentence with its number, wrote every number word in the record as
+digits, made each line of the prompt appear only when its entry is in the record, and removed the mention of RANO.
+
+Of six other local open-weight models of 2 to 35 billion parameters given the same prompt unchanged (main
+Figure~8), only Gemma-4 31B also had every report pass. The reports regenerated with this paper's model
+names are in Supplementary Section~S9.
+
+\subsection{Checks}\label{sec:S29.5}
+
+Besides the rules in main Section 2.2, the checker rejects a report that writes a number as a word. It rejects a
+report that leaves out a raised flag, any of the three scores, the enhancing volume, or the tier where the card has
+few cases or none. It also rejects a report that calls an input out of range when no flag says so, misstates a
+conformal set or the agreement, or quotes a performance figure that is not on the card.
+
+Because the checker accepts a number that equals a number in any cited entry and does not read direction words
+(main Section 2.2), it accepts a sentence that gives the FLAIR volume as the enhancing volume while citing both
+entries, or that writes ``larger'' where the record says ``smaller''. The verifier (Supplementary Section~S10.3) adds rules for both
+cases.
+
+\FloatBarrier
+\section{Details of the evaluation}\label{sec:S30}
+
+% Sources: main.tex Methods (former SUPPLEMENT notes); UCSF_PLAN.md; CLINICIAN_BASELINE_PLAN.md;
+% CHRISTODOULOU_REPLICATION.md (faithful run); MASK_SENSITIVITY_PLAN.md.
+\subsection{What was fixed in advance at each external centre}\label{sec:S30.1}
+
+At UCSF-ALPTDG every model was fixed in a written plan before any score was compared with the label. At LUMIERE the
+combined model and its comparison with the time-and-enhancement model were fixed in advance, and the other scores are
+exploratory.
+
+\subsection{Time-and-enhancement model and timing alone}\label{sec:S30.2}
+
+At MU the time window enters the time-and-enhancement model as indicators, with scans later than 12 weeks after
+radiotherapy as the reference. Besides the days since the end of radiotherapy and the visit number used directly,
+timing alone includes a ridge model on the days since the end of radiotherapy, the visit number, the days since
+diagnosis and the 12-week flag. Externally, where these dates are missing, the unfitted timing score is the days
+since surgery at LUMIERE and the days since the start of radiotherapy at UCSF-ALPTDG.
+
+\subsection{Published radiomics pipeline}\label{sec:S30.3}
+
+We ran the authors' extraction on all 594 MU scans with four sequences and a mask: N4 bias correction within the mask,
+resampling to 1\,mm with B-spline interpolation, scaling to zero mean and unit variance within the mask, and one
+region, the whole mask. The 4,892 features per scan are taken from each of the four sequences, from the original image
+and from Laplacian of Gaussian ($\sigma$ 0.5 to 3\,mm) and wavelet filtered versions of it \citep{vangriethuysen2017}.
+
+The tree model weights the two classes equally. Its settings are tuned over 400 trials of a Bayesian search (Optuna),
+each trial scored by fivefold cross validation grouped by patient within the training set. The model's output is
+mapped to a probability by Platt calibration, a logistic fit to the held-out predictions of that cross validation.
+The authors' ranking combines the size of L1 penalised logistic regression coefficients with permutation importance,
+but their code computes permutation importance only in inner folds of at least 30 scans. Our inner folds held 13 to 16
+scans, so the features were ranked by coefficient size alone. We left the code unchanged
+\citep{christodoulou2026}.
+
+\subsection{Rules of the segmentation comparison}\label{sec:S30.4}
+
+The first analysis (Swin UNETR at MU, with the supplied cavity kept) required every paired CI to include zero. The
+second and third (Swin UNETR and the BraTS 2024 model at all three centres) required every paired CI to include zero
+or lie above it, so that a segmenter may raise a score but not lower it. All three required the combined model's gain
+over the time-and-enhancement model to be read the same way under both mask sets, at MU in the first analysis and at
+MU and LUMIERE in the others. The published pipeline also had to rank below PRISM's imaging model on the Swin UNETR
+masks, or the comparison would be limited to the supplied masks.
+
+\FloatBarrier
+\section{Further results}\label{sec:S31}
+
+% Sources: CHRISTODOULOU_REPLICATION.md; TIMING_ONLY.md; STRATIFIED_OFFSET.md; IMAGING_S3.md.
+\subsection{Published radiomics pipeline}\label{sec:S31.1}
+
+The pipeline's tuning AUC within the training folds averaged 0.70 and did not carry to the held-out folds. An earlier
+re-implementation from the published description used original-image features only, selected the 256 by univariate
+AUC and ran 40 search trials. It also reached 0.58 (0.50 to 0.66) in the intended use, and a logistic regression on
+its 256 features reached 0.64 (exploratory).
+
+We also ran the earlier re-implementation with the authors' patient-level label, which marks every scan of a patient
+who ever progressed as progression (exploratory). Under repeated cross validation it reached 0.44 (0.38 to
+0.50) in patients with glioblastoma, below age, sex, IDH and MGMT status alone (0.57). With patients of all diagnoses
+labelled as the authors' code labels them, it reached 0.73 (0.66 to 0.78), against 0.81 (0.74 to 0.87) for the same
+four clinical inputs. Over 100 held-out sets of 30 patients, it averaged 0.75.
+
+\subsection{Timing alone}\label{sec:S31.2}
+
+At MU the visit number alone ranked scans at 0.78 (exploratory).
+
+\subsection{Changes to the design of the imaging model}\label{sec:S31.3}
+
+Four changes to the imaging model were tested at MU (exploratory; Table~S17). An imaging model fitted with a separate
+intercept for each time window, so that only differences within a window inform the image terms, kept the AUC within
+a window at MU and lowered the AUC across windows by 0.06 ($-$0.12 to $-$0.01). A wider penalty grid changed the AUC within a window by $+$0.004.
+Letting the enhancing volume carry a different weight in the first 12 weeks after radiotherapy changed it by
+$-$0.01. A combined model that adds the image and clinical terms to the time-and-enhancement model as a fixed offset
+ranked scans as the combined model did at all three centres; at LUMIERE its overall AUC differed by $-$0.02 ($-$0.07
+to $+$0.02). The AUC within a window of about 0.68 is what these
+measurements carry once timing is held fixed, in a cohort of 62 scans with progression.
+
+\begin{table}[!htbp]
+\renewcommand{\thetable}{S17}\renewcommand{\theHtable}{S17}
+\centering
+\caption{\textbf{Exploratory. Changes to the design of the imaging model.} Paired differences from the current model
+(the combined model for the offset model) with 95\% intervals from 2,000 bootstrap samples of patients. Within, the
+AUC over pairs within one time window (the rater's flag at LUMIERE). Dashes mark values not computed.}
+\label{tab:S31a}
+\footnotesize
+\begin{tabularx}{\linewidth}{@{}LR{2.6cm}R{2.6cm}R{2.6cm}R{2.6cm}@{}}
+\toprule
+Change & MU, within & MU, AUC & LUMIERE, within & UCSF-ALPTDG, AUC \\
+\midrule
+Separate intercept per window & $-$0.00 ($-$0.09 to $+$0.08) & $-$0.04 ($-$0.10 to $+$0.02) & $-$0.01 ($-$0.07 to $+$0.04) & $+$0.04 ($-$0.00 to $+$0.09) \\
+Wider penalty grid & $+$0.004 ($-$0.005 to $+$0.014) & -- & $+$0.000 ($-$0.001 to $+$0.001) & -- \\
+Separate intercepts, wider grid & $-$0.011 ($-$0.095 to $+$0.069) & -- & $-$0.011 ($-$0.064 to $+$0.037) & -- \\
+Separate intercepts, enhancement weighted by window & $-$0.013 ($-$0.098 to $+$0.067) & -- & $-$0.011 ($-$0.065 to $+$0.036) & $+$0.066 ($+$0.014 to $+$0.123) \\
+Offset combined model & $-$0.04 ($-$0.09 to $+$0.01) & $-$0.01 ($-$0.05 to $+$0.03) & $-$0.02 ($-$0.09 to $+$0.03) & $+$0.01 ($-$0.05 to $+$0.08) \\
 \bottomrule
 \end{tabularx}
 \end{table}

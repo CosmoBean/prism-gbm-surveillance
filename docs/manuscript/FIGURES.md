@@ -1,4 +1,74 @@
-# Manuscript figures and tables (results sections 1–3 + phase of care)
+# Manuscript figures and tables
+
+## Current figures (2026-11-20), in manuscript order
+
+Images are the PNGs drawn alongside each PDF in `figures/`; the paper includes the PDFs. Everything below this section
+is earlier planning, kept for history.
+
+### Figure 1. The workflow of PRISM (two pages, start of Methods)
+`scripts/fig1_prism.py`: each panel drawn at its printed size (text width, fonts 7 pt or larger). Page 1: (a) one MU
+patient on real scans; (b) PRISM's segmenter. Page 2: (c) the method in six stages; (d) the evaluation protocol.
+
+![Figure 1a](figures/fig1a.png?v=2026-11-26)
+![Figure 1b](figures/fig1b.png?v=2026-11-26)
+![Figure 1c](figures/fig1c.png?v=2026-11-26)
+![Figure 1d](figures/fig1d.png?v=2026-11-26)
+
+### Figure 2. When the evaluation scans were taken
+`scripts/fig_cohorts.py`: one panel per cohort. Time of each scan from the cohort's time zero, and weeks since the
+previous scan, by label; shared axes, scans beyond the axis counted at the edge.
+
+![Figure 2](figures/fig_cohorts.png?v=2026-11-20-0810)
+
+### Figure 3. Performance at the development centre and at two external centres
+`scripts/fig2_performance.py`: ROC curves with patient-bootstrap bands, AUC with 95% CI, and the gain over the
+time-and-enhancement model (MU, LUMIERE).
+
+![Figure 3](figures/fig2_performance.png?v=2026-11-20-0810)
+
+### Figure 4. Where the ranking comes from
+`scripts/generate_methods_figures.py`: AUC within one time window and across windows, per score and cohort.
+Candidate for the supplement.
+
+![Figure 4](figures/fig3_context_split.png?v=2026-11-20-0810)
+
+### Figure 5. Coverage within groups of comparable scans
+`scripts/generate_methods_figures.py`: coverage of the combined score's 80% sets by group, marginal and
+group-conditional. Candidate for the supplement.
+
+![Figure 5](figures/fig4_group_conformal.png?v=2026-11-20-0810)
+
+### Figure 6. Four patients' follow-up as PRISM records it
+`scripts/fig_case_strips.py`: the same axial T1c slice at every visit, lesion arrow, segmenter (solid) and released
+(dashed) outlines, the three scores, the combined 80% set and model agreement.
+
+![Figure 6](figures/fig_case_strips.png?v=2026-11-20-0810)
+
+### Figure 7. The report PRISM writes
+`scripts/fig5_report.py`: the report for Patient 1's progression scan (strip a of Figure 6).
+
+![Figure 7](figures/fig5_report.png?v=2026-11-20-0810)
+
+### Figure 8. Reports passing the checker, by local language model
+`scripts/fig5_report.py` (`ladder_figure`): reports passing the checker, of 406, for seven local language models.
+
+![Figure 8](figures/fig_llm_checker.png?v=2026-11-20-0810)
+
+### Supplementary Figure S1. Calibration of the three scores
+`scripts/fig_calibration.py`: five equal-size bins per score; slope and intercept in the legend.
+
+![Supplementary Figure S1](figures/figS_calibration.png?v=2026-11-20-0810)
+
+### Supplementary Figure S2. The record fields cited by the example report
+`scripts/fig5_report.py`: each sentence of Figure 7 with the record fields it cites.
+
+![Supplementary Figure S2](figures/fig5_report_fields.png?v=2026-11-20-0810)
+
+---
+
+# Earlier planning (history)
+
+## Results sections 1–3 + phase of care
 
 ## Redesign after Tak et al. 2025 (2026-11-18)
 
@@ -10,8 +80,8 @@ Model paper: Tak D et al., *NEJM AI* 2025, doi:10.1056/AIoa2400703. The full tex
 |---|---|---|---|
 | Figure 1: (a) one real MU patient on a weeks-after-RT axis, (b) method, (c) evaluation | Tak Fig 1A | done | `scripts/fig1_prism.py` (reads `data/mu-glioma-post`) |
 | Figure 2: one row per cohort; AUC with CIs; gain over the timing-and-enhancement baseline | Tak Fig 3 | done | `scripts/fig2_performance.py` (aggregates) |
-| Case strips: three score cells per scan, conformal set, disagreement mark | Tak Fig 4 | planned; on orchard | `scripts/fig_case_strips.py` (spec and skeleton) |
-| Cohort characteristics: weeks after RT by label, scan interval, progression rate | Tak Fig 2 | planned; on orchard | not started |
+| Case strips (`fig_case_strips`): four MU patients chosen by a written rule (first in ID order: A progression, models agree; B no progression, agree; C progression, disagree at that scan; D no progression, disagree), three score cells per scan, 80% set, agreement | Tak Fig 4 | drawn 2026-11-19; not yet in the paper | `scripts/fig_case_strips.py` (records_mu.jsonl, out-of-fold repeat 0; data/mu-glioma-post) |
+| Cohort characteristics (`fig_cohorts`): time of each evaluation scan by label (MU weeks after RT; LUMIERE weeks after surgery), weeks since the previous scan, scans and progression share | Tak Fig 2 | drawn 2026-11-19 for MU, LUMIERE and UCSF (UCSF data restored 2026-11-19); in the paper | `scripts/fig_cohorts.py` (records_*.jsonl and labels) |
 
 `fig2_transport.pdf` is superseded by `fig2_performance.pdf`.
 

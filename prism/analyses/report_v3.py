@@ -28,10 +28,10 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from prism.config import MEASUREMENTS, OUTPUTS, REPO, RESULTS
+from prism.config import MASK_SUFFIX, MEASUREMENTS, OUTPUTS, REPO, RESULTS
 
-OUT = RESULTS / "analyses" / "report_v3"
-SYSTEM = RESULTS / "analyses" / "system"
+OUT = RESULTS / "analyses" / f"report_v3{MASK_SUFFIX}"
+SYSTEM = RESULTS / "analyses" / f"system{MASK_SUFFIX}"
 DEV_SEED = 20261026
 N_DEV = 20
 LLM_ENV = os.environ.get("PRISM_LLM_ENV", "/project/community/sbandred/envs/prism-llm")

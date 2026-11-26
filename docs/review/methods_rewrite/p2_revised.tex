@@ -1,0 +1,39 @@
+\paragraph*{Three models.} Three models score each scan for progression: an imaging model, a clinical-history model
+and a combined model. The imaging model uses the 27 measurements and is given no dates. Its score therefore depends on
+the tumour alone and can be set against the clinical-history score. The clinical-history model uses the treatment
+course and the patient's characteristics and sees no images. The combined model uses both sets of inputs. PRISM
+reports all three scores, so a reader can see whether a scan's combined score follows the images or the clinical
+history.
+
+Each model is a logistic regression with a ridge penalty, fitted with scikit-learn \citep{pedregosa2011}. Logistic
+regression gives each input a weight and turns the weighted sum into a probability of progression. The ridge (L2)
+penalty pulls the weights towards zero, which keeps them stable when there are many correlated inputs and few
+patients. Deep networks fine-tuned on MU did not add to a ridge model of the clinical history and image measurements
+(Table~\ref{tab:2}). Before fitting, each missing input is set to its median in the training data, an extra input
+marks the scans where it was missing, and every input is standardised to mean zero and unit variance. The penalty
+strength is set by its inverse, $C$, where smaller values pull harder. $C$ is chosen from six values (0.01, 0.03, 0.1,
+0.3, 1 and 3) by threefold cross validation within the training data, with each patient's scans kept in one fold.
+The chosen value is the one with the lowest mean log loss, which measures how much probability the model gives to the
+true outcome. The model is then refitted with that value on all training scans.
+
+The full clinical-history model cannot be computed at the two external centres, because neither records the full
+treatment course. LUMIERE dates each scan only by the weeks since surgery. UCSF-ALPTDG records the days since
+diagnosis, which it defines as the first surgery, and the start of radiotherapy, but not its end. The models are
+applied there without retraining, so PRISM uses reduced models: they are fitted on MU, but only with the inputs that
+all three cohorts record. The reduced clinical-history model takes age, sex, IDH and MGMT status, the days since
+surgery, and a flag for scans in the first 12 weeks after radiotherapy. On MU the flag is computed from the end of
+radiotherapy. At LUMIERE it is the rater's mark for scans taken less than three months after radiotherapy. At
+UCSF-ALPTDG it marks scans 42 to 125 days after the start of radiotherapy, which assumes a six-week course. The
+reduced combined model adds the log volumes of the enhancing tumour, of necrosis and cavity together, and of the FLAIR
+hyperintensity. It also adds the change in each volume since the previous scan, whether there was a previous scan, and
+the interval since it.
+
+At UCSF-ALPTDG the supplied masks also mark the resection cavity, so PRISM applies the full imaging model. The one
+earlier scan in the dataset serves as the patient's history. LUMIERE's supplied masks have three compartments, with
+necrosis and cavity combined. Its imaging model is therefore fitted on MU with those three volumes and their change
+since the previous scan. At the 10 LUMIERE scans with no previous scan, a model of the three current volumes is used
+instead. The imaging model needs only the scans and their masks, so PRISM gives an imaging score at every centre,
+including one that records no treatment dates.
+
+% Sources: prism/audit/conformal.py; METHODS_PLAN.md M2; RELIABILITY_CARD.md; REVISION_DATA.md R2; refs
+% angelopoulos2023, vovk2022book, romano2020, barber2021limits, johansson2015, ding2023, mehrtens2023, mitchell2019.

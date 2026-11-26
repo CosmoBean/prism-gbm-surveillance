@@ -1,0 +1,21 @@
+\paragraph*{Three models.} Three logistic regression models score each scan: one on the images, one on the clinical
+history and one on both. The imaging model uses the 27 measurements and is never given dates. The clinical-history
+model uses the treatment course and the patient's characteristics, and the combined model uses both input sets.
+PRISM shows all three, so the record shows which kind of evidence a score follows. Each model is a logistic regression
+with an L2 (ridge) penalty \citep{pedregosa2011}, chosen because it is simple and uses few inputs. Deep networks tuned
+on MU did not improve on it (Table~\ref{tab:2}). Inputs are standardised, and the penalty is chosen from six values of
+the inverse strength $C$ (0.01 to 3) by threefold cross validation grouped by patient, minimising log loss.
+
+LUMIERE records only the days since surgery, and UCSF-ALPTDG the days since surgery and the start of radiotherapy,
+so the full
+clinical-history model cannot be computed there. For these centres PRISM uses reduced models, fitted on MU with the
+inputs that every cohort records. The reduced clinical-history model takes age, sex, IDH and MGMT status, days since
+surgery and a flag for the first weeks after radiotherapy. At LUMIERE the flag is the rater's mark for scans within
+three months of radiotherapy, and at UCSF-ALPTDG it is approximated from the start of radiotherapy, assuming a six
+week course. The reduced combined model adds the enhancing, necrosis (with cavity) and FLAIR volumes, their change
+since the previous scan, and the interval since that scan. LUMIERE's masks have three compartments, so its imaging
+model is fitted on MU with those three volumes and their change. Because the imaging model needs only scans and masks,
+PRISM gives an imaging score at a centre that records no treatment dates.
+
+% Sources: prism/audit/conformal.py; METHODS_PLAN.md M2; RELIABILITY_CARD.md; REVISION_DATA.md R2; refs
+% angelopoulos2023, vovk2022book, romano2020, barber2021limits, johansson2015, ding2023, mehrtens2023, mitchell2019.

@@ -87,7 +87,7 @@ correct reports pass) and the development reports (language model 47 / 48, templ
 applied once to the evaluation reports.
 
 False rejections (v1.1, evaluation reports, all passing the frozen checker): language model MU 1 / 114 (rule V2),
-LUMIERE 0 / 162; template 0 / 276. Not adjudicated (the reports are not read in a hosted context).
+LUMIERE 0 / 162; template 0 / 276. Adjudicated 2026-11-20: the one rejected report (MU PatientID_0105 Timepoint 3, claim 11) is correct. It copies card.situation verbatim ("enhancing tumour present, not increased since the previous scan"); rule V2 matched "increased" and ignores negation, so the rejection is false.
 
 Planted errors, share rejected (frozen checker -> verifier):
 | operator | synthetic (52 records) | real, language model | real, template |
@@ -351,3 +351,35 @@ folds, intended use:
 
 Reading (descriptive): the reduced model that was applied at LUMIERE and UCSF reaches 0.80 on MU, 0.02 below the
 full combined model, with an interval that includes zero.
+
+
+## UCSF-ALPTDG added (2026-11-19)
+
+The UCSF data were restored on 2026-11-19 and M1 and M2 were run on UCSF as the plan fixes (context `rt_phase`;
+context-only score MU's rate for the matching stratum, MU's pooled rate for `no_rt` and `rt_date_unknown`; M2 groups
+the card's situation, MU calibration split seed 0). Checks: the locked UCSF AUCs reproduce (0.561 / 0.726 / 0.856);
+the registered marginal sets equal the system's; the MU and LUMIERE rows of every output are unchanged. Grade 4 scan 2,
+69 scans of 69 patients, 29 progression. Share of pairs within one context w = 0.88 (0.76-0.98): almost all scans are
+later than 12 weeks after radiotherapy, so A_B rests on few pairs.
+
+| cohort | score | AUC | within context A_W | across contexts A_B |
+|---|---|---|---|---|
+| UCSF | clinical-history | 0.56 (0.42-0.70) | 0.56 (0.41-0.70) | 0.56 (0.05-1.00) |
+| UCSF | imaging | 0.73 (0.59-0.84) | 0.73 (0.60-0.85) | 0.66 (0.46-0.84) |
+| UCSF | combined | 0.86 (0.76-0.94) | 0.87 (0.78-0.95) | 0.73 (0.21-1.00) |
+| UCSF | context only | 0.49 (0.43-0.55) | 0.50 (0.50-0.50) | 0.43 (0.00-1.00) |
+| UCSF | enhancing volume | 0.88 (0.79-0.95) | 0.89 (0.81-0.96) | 0.75 (0.44-1.00) |
+
+M2, combined model, 80% sets (groups with at least 9 scans):
+
+| group | n | marginal (registered) | group-conditional |
+|---|---|---|---|
+| all | 69 | 0.78 (0.68-0.87) | 0.77 (0.67-0.87) |
+| progression | 29 | 0.97 (0.89-1.00) | 0.97 (0.89-1.00) |
+| no progression | 40 | 0.65 (0.49-0.79) | 0.62 (0.47-0.77) |
+| later_post_rt × et_not_increased | 28 | 0.61 (0.42-0.79) | 0.54 (0.33-0.72) |
+| later_post_rt × et_increased | 25 | 0.92 (0.80-1.00) | 0.96 (0.86-1.00) |
+| later_post_rt × et_absent | 12 | 0.92 (0.73-1.00) | 0.92 (0.73-1.00) |
+
+Reading (descriptive): at UCSF the AUC split adds little, because nearly every pair lies in one window. Group
+calibration did not lift the least covered group (later, enhancement not increased).
