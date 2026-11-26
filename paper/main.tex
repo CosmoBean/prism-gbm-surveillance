@@ -34,7 +34,8 @@ model's predictions. We built a new framework, PRISM (Progression Reading with I
 running on one local computer. The first-place ensemble of the BraTS 2024 post-treatment challenge segments each scan; three logistic regressions score it from its image measurements, its clinical history and the two
 combined, each with a conformal prediction set; and a local large language model writes a
 report whose every number is checked against its source. On MU-Glioma-Post, the combined model reached an AUC of
-0.82. Without retraining, it reached 0.77 at LUMIERE and 0.86 at UCSF-ALPTDG. For each scan,
+0.82 in five repeats of fivefold cross validation; on a single held-out split, the design of earlier studies, it reached
+up to 1.00, and 0.84 on average over 100 such splits. Without retraining, it reached 0.77 at LUMIERE and 0.86 at UCSF-ALPTDG. For each scan,
 PRISM reports what its score rests on: the image and clinical-history scores, whether they agree, and how the models
 performed on comparable scans.
 \end{abstract}
@@ -473,7 +474,9 @@ validation grouped by patient: in each repeat, a model was fitted on four folds 
 fifth. The AUC was computed over the held-out scores of the 146 evaluation scans (Section~\ref{sec:2.1}) and averaged
 over the five repeats, because a single split of a small cohort gives an estimate with a wide error
 \citep{an2021,varoquaux2018}. Each model was then fitted once on all 181 MU training scans and applied to LUMIERE and
-UCSF-ALPTDG without retraining or recalibration (Supplementary Section~S14.1).
+UCSF-ALPTDG without retraining or recalibration (Supplementary Section~S14.1). For comparison with studies evaluated on
+one held-out split \citep{christodoulou2026}, the combined model was also fitted and scored on 100 random held-out sets
+of 18 of the 92 grade 4 patients, drawn as in an earlier re-implementation of that study (exploratory).
 
 \paragraph*{Time-and-enhancement model.} As a reference for what a clinician reading the scan already knows, in line with benchmarking
 models against information clinicians already hold \citep{beaulieujones2021}, a ridge logistic regression was fitted on the time window after radiotherapy, the log
@@ -616,7 +619,9 @@ With Swin UNETR masks, the pipeline reached 0.53 and ranked below the imaging mo
 (0.01--0.19; Supplementary Section~S15.1).
 
 On single held-out sets, an earlier re-implementation of the pipeline ranged from 0.32 to 0.88 (mean 0.63) on the
-intended-use scans, over 100 random sets of 18 of the 92 grade 4 patients.
+intended-use scans, over 100 random sets of 18 of the 92 grade 4 patients. On 100 sets drawn the same way, PRISM's
+combined model reached up to 1.00, and 0.84 on average, with 95\% of sets between 0.68 and 0.96 (BraTS 2024 outlines
+without the cavity measurements; exploratory).
 
 \subsection{What the ranking rests on}\label{sec:3.2}
 
