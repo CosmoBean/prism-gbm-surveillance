@@ -24,10 +24,6 @@ from matplotlib.patches import Circle, Ellipse, FancyArrowPatch, FancyBboxPatch,
 
 import figure_style as st
 
-W = 180.0                          # drawing units (about 1 mm each)
-HA, HB, HC, HD = 54.0, 60.0, 66.0, 34.0   # panel heights, top to bottom
-H = HA + HB + HC + HD
-TB, TC, TD = H - HA, H - HA - HB, HD       # top edges of panels (b), (c), (d)
 REPO = Path(__file__).resolve().parents[1]
 MU = REPO / "data" / "mu-glioma-post"
 PATIENT = "PatientID_0204"        # early enhancement that resolved, then progression
@@ -130,49 +126,63 @@ def patient_scans():
 SEQ_LABELS = [("t2f", "FLAIR"), ("t1c", "T1c"), ("t1n", "T1"), ("t2w", "T2")]
 LABEL_RGB = {3: "#F2C14E", 1: "#D65F5F", 2: "#7BC67B", 4: "#F29CB7"}   # enhancing, necrosis, FLAIR, cavity
 
+# Every panel is drawn at its printed size: one drawing unit is one millimetre on the page, so the font sizes below
+# are the printed sizes. W is the text width of the journal page (A4, 1 inch margins).
+W = 159.0
+MM = 1 / 25.4
+T_HEAD, T_STAGE, T_TITLE, T_BODY, T_NOTE = 9.5, 8.5, 8.0, 7.5, 7.0   # points; nothing smaller than 7
+
 
 class Canvas:
-    """One full-figure axes in drawing units, with the primitives and Tak-style icons used by every panel."""
+    """One panel, one axes in millimetres, with the primitives and Tak-style icons used by every panel."""
 
-    def __init__(self):
-        self.fig = plt.figure(figsize=(st.WIDTH, st.WIDTH * H / W))
+    def __init__(self, h: float):
+        self.W, self.H = W, h
+        self.fig = plt.figure(figsize=(W * MM, h * MM))
         self.ax = self.fig.add_axes([0, 0, 1, 1])
-        self.ax.set(xlim=(0, W), ylim=(0, H))
+        self.ax.set(xlim=(0, W), ylim=(0, h))
         self.ax.axis("off")
 
     # ---------------------------------------------------------------- primitives
-    def text(self, x, y, s, size=6.0, colour=st.INK, **kw):
+    def text(self, x, y, s, size=T_BODY, colour=st.INK, **kw):
         kw.setdefault("ha", "left"); kw.setdefault("va", "top")
-        return self.ax.text(x, y, s, fontsize=size, color=colour, linespacing=1.3, zorder=6, **kw)
+        assert size >= 7.0 or kw.get("family") == "__allow_small__", s
+        return self.ax.text(x, y, s, fontsize=size, color=colour, linespacing=1.25, zorder=6, **kw)
 
-    def arrow(self, a, b, colour=BLACK, lw=0.7, style="-|>", ms=5.5, **kw):
+    def arrow(self, a, b, colour=BLACK, lw=0.8, style="-|>", ms=7.0, **kw):
         self.ax.add_patch(FancyArrowPatch(a, b, arrowstyle=style, mutation_scale=ms, color=colour, lw=lw,
                                           shrinkA=0, shrinkB=0, zorder=4, **kw))
 
-    def line(self, xs, ys, colour=BLACK, lw=0.7, **kw):
+    def line(self, xs, ys, colour=BLACK, lw=0.8, **kw):
         kw.setdefault("zorder", 3)
         self.ax.plot(xs, ys, color=colour, lw=lw, solid_capstyle="butt", **kw)
 
-    def box(self, x0, y0, x1, y1, edge=BLACK, face="white", lw=0.7, ls="-", r=1.3, z=2):
+    def box(self, x0, y0, x1, y1, edge=BLACK, face="white", lw=0.8, ls="-", r=1.3, z=2):
         self.ax.add_patch(FancyBboxPatch((x0, y0), x1 - x0, y1 - y0, boxstyle=f"round,pad=0,rounding_size={r}",
                                          fc=face, ec=edge, lw=lw, ls=ls, zorder=z))
 
     def image(self, x, y, w, h, img, **kw):
-        iax = self.fig.add_axes([x / W, y / H, w / W, h / H])
+        iax = self.fig.add_axes([x / self.W, y / self.H, w / self.W, h / self.H])
         iax.imshow(img, cmap="gray", vmin=0, vmax=1, interpolation="bilinear", **kw)
         iax.set_xticks([]); iax.set_yticks([])
         for sp in iax.spines.values():
             sp.set_visible(False)
         return iax
 
-    def chevron(self, x, y, s=3.0, colour=BLACK, lw=1.1):
+    def chevron(self, x, y, s=3.0, colour=BLACK, lw=1.2):
         self.line([x, x + s * 0.7, x], [y + s, y, y - s], colour, lw)
 
-    def header(self, top, letter, heading):
-        st.panel_header(self.fig, (top - 0.8) / H, letter, heading)
+    def header(self, letter, heading):
+        self.ax.text(0.5, self.H - 0.5, letter, fontsize=11, weight="bold", ha="left", va="top", color=st.INK)
+        self.ax.text(6.0, self.H - 0.9, heading, fontsize=T_HEAD, weight="bold", ha="left", va="top", color=st.INK)
 
-    def rule(self, y):
-        self.line([1.0, W - 1.0], [y, y], st.RULE, 0.5)
+    def stage(self, x0, x1, y, number, name):
+        """A numbered stage heading over a hairline (panel c)."""
+        self.ax.add_patch(Circle((x0 + 2.2, y), 2.1, fc=BLACK, ec="none", zorder=5))
+        self.text(x0 + 2.2, y + 0.05, str(number), size=T_STAGE, colour="white", weight="bold", ha="center",
+                  va="center")
+        self.text(x0 + 5.6, y + 0.05, name, size=T_STAGE + 0.5, weight="bold", va="center")
+        self.line([x0, x1], [y - 3.2, y - 3.2], st.RULE, 0.6)
 
     # ---------------------------------------------------------------- icons (after Tak et al., Figure 1)
     def database(self, cx, cy, w, h, colour=DB, filled=True):
@@ -288,74 +298,7 @@ class Canvas:
         return iax
 
 
-# ==================================================================== (a) one patient's follow-up
-def panel_a(c: Canvas, scans) -> None:
-    top = H
-    c.header(top, "a", "MU-Glioma-Post: one patient's follow-up after radiotherapy")
-    mid = top - 24.0
-    c.database(10.0, mid, 10.0, 14.0)
-    c.text(10.0, mid - 9.6, "MU-Glioma-Post", size=5.6, ha="center", weight="bold")
-    c.chevron(18.0, mid, 3.2)
-    c.crowd(23.6, mid - 9.5, 4, 4, 1.7, 4.4, 6.0)
-    c.text(30.2, mid - 13.4, "126 grade 4\npatients", size=5.4, ha="center", colour=st.MUTED)
-    # dashed bracket from the crowd to one patient's timeline
-    c.line([39.5, 42.0, 42.0], [mid + 2.0, mid + 2.0, top - 9.0], DB, 0.6, ls=(0, (2, 1.5)))
-    c.line([39.5, 42.0, 42.0], [mid - 2.0, mid - 2.0, top - 41.0], DB, 0.6, ls=(0, (2, 1.5)))
-    c.line([42.0, 45.0], [top - 9.0, top - 9.0], DB, 0.6, ls=(0, (2, 1.5)))
-    c.line([42.0, 45.0], [top - 41.0, top - 41.0], DB, 0.6, ls=(0, (2, 1.5)))
-
-    n = len(scans)
-    iw, gap = 19.0, 7.5
-    ix0 = 52.0
-    iy0 = top - 15.0 - iw
-    xs = [ix0 + k * (iw + gap) for k in range(n)]
-    # intervals between scans, bracketed above the images (Tak's "161 Days")
-    by = top - 12.0
-    for k in range(1, n):
-        a, b = xs[k - 1] + iw / 2, xs[k] + iw / 2
-        c.line([a, b], [by, by], BLACK, 0.6)
-        for x in (a, b):
-            c.line([x, x], [by - 0.7, by + 0.7], BLACK, 0.6)
-        c.text((a + b) / 2, by + 0.6, f"{scans[k]['weeks'] - scans[k - 1]['weeks']:.0f} weeks", size=5.4,
-               ha="center", va="bottom")
-    for k, sc in enumerate(scans):
-        x = xs[k]
-        weight = "bold" if sc["label"] == "Progression" else "normal"
-        style = "italic" if sc["label"] == "Not labelled" else "normal"
-        colour = st.MUTED if sc["label"] == "Not labelled" else BLACK
-        c.text(x + iw / 2, top - 6.0, sc["label"], size=6.2, ha="center", weight=weight, style=style,
-               colour=colour)
-        c.scan(x, iy0, iw, sc, pointer=True)
-        c.text(x + iw / 2, iy0 - 1.0, f"enhancing {sc['net_cc']:.1f} cc ({sc['et_cc']:.1f})", size=5.2,
-               ha="center", colour=st.MUTED)
-    # the time axis, to scale, with the first 12 weeks shaded and "Follow-up" style labels
-    ty = iy0 - 7.5
-    tx0, tx1 = 47.0, W - 3.0
-    wmax = 44.0
-    wx = lambda w: ix0 + (W - 8.0 - ix0) * w / wmax
-    c.ax.add_patch(Rectangle((wx(0), ty - 1.3), wx(12) - wx(0), 2.6, fc=st.tint(st.HIST, 0.75), ec="none",
-                             zorder=2))
-    c.text(wx(6), ty + 1.6, "first 12 weeks", size=5.0, colour=st.HIST, ha="center", va="bottom")
-    c.arrow((tx0, ty), (tx1, ty), BLACK, 0.8, ms=6)
-    for k, sc in enumerate(scans):
-        c.line([xs[k] + iw / 2, wx(sc["weeks"])], [iy0 - 4.2, ty + 0.9], st.RULE, 0.5, zorder=1)
-        c.ax.add_patch(Circle((wx(sc["weeks"]), ty), 0.85, fc=BLACK, ec="white", lw=0.3, zorder=5))
-        c.text(wx(sc["weeks"]), ty - 1.6, f"{sc['weeks']:.1f} wk", size=5.2, ha="center")
-    c.text(wx(0), ty - 1.6, "end of RT", size=5.0, ha="center", colour=st.MUTED)
-    c.text(tx1, ty - 4.6, "weeks after the end of radiotherapy", size=5.2, colour=st.MUTED, ha="right")
-    # legend
-    c.line([2.4, 5.4], [top - 46.0, top - 46.0], CONTOUR, 1.2)
-    c.text(6.2, top - 45.0, "PRISM's segmenter", size=5.0, colour=st.MUTED)
-    c.line([2.4, 5.4], [top - 49.0, top - 49.0], RELEASED, 0.9, ls="--")
-    c.text(6.2, top - 48.0, "released mask (cc)", size=5.0, colour=st.MUTED)
-    c.rule(TB + 0.6)
-
-
-# ==================================================================== (b) the segmenter
-ARCHS = [("nnU-Net", "convolutional U-Net"), ("Swin UNETR", "transformer encoder"),
-         ("MedNeXt-L", "ConvNeXt-style, kernel 5")]
-
-
+# ==================================================================== network glyphs (panel b)
 def unet_glyph(c: Canvas, x, y, colour, w=15.0, h=8.0):
     """A small U-Net: plates shrinking to the bottleneck and growing back, with one skip arc."""
     hs = [1.0, 0.72, 0.48, 0.72, 1.0]
@@ -410,148 +353,214 @@ def swin_glyph(c: Canvas, x, y, colour, w=15.0, h=8.0):
         c.slab(dx + 1.0 + i * rest / 3, y - hh / 2, rest / 3 * 0.62, hh, 1.6, st.tint(colour, 0.78), alpha=1.0)
 
 
-def panel_b(c: Canvas, seq) -> None:
+# ==================================================================== (a) one patient's follow-up
+HA = 70.0
+
+
+def panel_a(scans) -> Canvas:
+    c = Canvas(HA)
+    top = HA
+    c.header("a", "MU-Glioma-Post: one patient's follow-up after radiotherapy")
+    n = len(scans)
+    iw, gap, ix0 = 22.0, 5.0, 28.0
+    xs = [ix0 + k * (iw + gap) for k in range(n)]
+    iy0 = top - 20.0 - iw
+    mid = iy0 + iw / 2
+    c.database(10.0, mid + 3.0, 9.0, 12.0)
+    c.text(0.8, mid - 4.6, "MU-Glioma-Post", size=T_NOTE, weight="bold")
+    c.text(0.8, mid - 7.8, "126 grade 4\npatients", size=T_NOTE, colour=st.MUTED)
+    c.chevron(19.5, mid + 3.0, 2.6)
+    by = top - 15.5                                        # intervals between scans (Tak's "161 Days")
+    for k in range(1, n):
+        a, b = xs[k - 1] + iw / 2, xs[k] + iw / 2
+        c.line([a, b], [by, by], BLACK, 0.6)
+        for x in (a, b):
+            c.line([x, x], [by - 0.8, by + 0.8], BLACK, 0.6)
+        c.text((a + b) / 2, by + 0.7, f"{scans[k]['weeks'] - scans[k - 1]['weeks']:.0f} weeks", size=T_NOTE,
+               ha="center", va="bottom")
+    for k, sc in enumerate(scans):
+        x = xs[k]
+        weight = "bold" if sc["label"] == "Progression" else "normal"
+        style = "italic" if sc["label"] == "Not labelled" else "normal"
+        colour = st.MUTED if sc["label"] == "Not labelled" else BLACK
+        c.text(x + iw / 2, top - 6.6, sc["label"], size=T_TITLE, ha="center", weight=weight, style=style,
+               colour=colour)
+        c.scan(x, iy0, iw, sc, pointer=True)
+        c.text(x + iw / 2, iy0 - 0.9, f"{sc['net_cc']:.1f} cc ({sc['et_cc']:.1f})", size=T_BODY, ha="center")
+    # the time axis, to scale, with the first 12 weeks shaded
+    ty = iy0 - 12.5
+    wmax = 44.0
+    wx = lambda w: ix0 + (W - 6.0 - ix0) * w / wmax
+    c.ax.add_patch(Rectangle((wx(0), ty - 1.4), wx(12) - wx(0), 2.8, fc=st.tint(st.HIST, 0.75), ec="none",
+                             zorder=2))
+    c.text(wx(6), ty + 1.8, "first 12 weeks", size=T_NOTE, colour=st.HIST, ha="center", va="bottom")
+    c.arrow((ix0 - 6.0, ty), (W - 1.5, ty), BLACK, 0.9, ms=7)
+    for k, sc in enumerate(scans):
+        c.line([xs[k] + iw / 2, wx(sc["weeks"])], [iy0 - 4.6, ty + 1.0], st.RULE, 0.6, zorder=1)
+        c.ax.add_patch(Circle((wx(sc["weeks"]), ty), 1.0, fc=BLACK, ec="white", lw=0.3, zorder=5))
+        c.text(wx(sc["weeks"]), ty - 1.9, f"{sc['weeks']:.1f}", size=T_BODY, ha="center")
+    c.text(ix0 - 6.0, ty - 1.9, "end of\nradiotherapy", size=T_NOTE, ha="left", colour=st.MUTED)
+    c.text(W - 1.0, ty - 5.4, "weeks after the end of radiotherapy", size=T_NOTE, colour=st.MUTED, ha="right")
+    # legend
+    ly = 3.2
+    c.line([1.0, 5.0], [ly, ly], CONTOUR, 1.4)
+    c.text(6.0, ly + 1.6, "PRISM's segmenter", size=T_NOTE, colour=st.MUTED)
+    c.line([31.0, 35.0], [ly, ly], RELEASED, 1.1, ls="--")
+    c.text(36.0, ly + 1.6, "released mask", size=T_NOTE, colour=st.MUTED)
+    c.text(W - 1.0, ly + 1.6, "under each scan: enhancing volume, segmenter (released mask)", size=T_NOTE,
+           colour=st.MUTED, ha="right")
+    return c
+
+
+# ==================================================================== (b) the segmenter
+HB = 104.0
+CHAINS = [("nnU-Net", ["conv 3³", "norm", "LReLU"], False, "twice per stage"),
+          ("MedNeXt", ["depthwise conv 5³", "GroupNorm", "1×1×1, 4× channels", "GELU", "1×1×1"], True, ""),
+          ("Swin UNETR", ["LN", "W-MSA", "LN", "MLP"], False, "each with a residual; then shifted windows")]
+
+
+def panel_b(seq) -> Canvas:
     from matplotlib.colors import to_rgb
-    top = TB
-    c.header(top, "b", "PRISM's segmenter: the BraTS 2024 post-treatment ensemble applied to every scan")
-    base = top - 28.0                                   # vertical centre line of the ensemble
-    # ---- inputs: the four sequences stacked along a diagonal (Tak's scans along a time arrow)
-    s = 12.5
+    c = Canvas(HB)
+    top = HB
+    c.header("b", "PRISM's segmenter: the BraTS 2024 post-treatment ensemble, applied to every scan")
+    rows = [top - 25.0, top - 39.0, top - 53.0]           # three architectures
+    base = rows[1]
+    # ---- inputs: the four sequences stacked along a diagonal
+    s = 14.0
     for k, (key, name) in enumerate(SEQ_LABELS):
-        x, y = 2.0 + k * 3.6, base + 7.5 - k * 5.4
+        x, y = 1.0 + k * 3.0, base + 8.0 - k * 5.6
         c.image(x, y - s / 2, s, s, seq[key])
-        c.text(x + 0.6, y + s / 2 - 0.5, name, size=4.6, colour="white", weight="bold")
-    c.arrow((26.0, base - 2.0), (30.5, base - 2.0), BLACK, 0.8)
-
+        c.text(x + 0.5, y + s / 2 - 0.4, name, size=T_NOTE, colour="white", weight="bold")
+    c.arrow((24.0, base - 3.0), (28.0, base - 3.0), BLACK, 0.9)
     # ---- six networks: three architectures (rows) x two training sets (columns), five folds each
-    rows = [base + 11.0, base, base - 11.0]
-    cx = [56.0, 77.0]
-    c.line([31.0, 31.0], [rows[0], rows[-1]], BLACK, 0.6)
-    for ry in rows:
-        c.arrow((31.0, ry), (33.5, ry), BLACK, 0.6, ms=4)
-    c.text(cx[0] + 7.5, top - 4.6, "BraTS 2024 data\n(1,350 cases)", size=4.8, ha="center", weight="bold")
-    c.text(cx[1] + 7.5, top - 4.6, "plus synthetic images\n(15,651 cases)", size=4.8, ha="center", weight="bold")
+    cx = [31.5, 62.5]
+    bw, bh = 26.0, 11.0
+    c.text(cx[0] + bw / 2, top - 7.6, "BraTS 2024 data\n(1,350 cases)", size=T_NOTE, ha="center", weight="bold")
+    c.text(cx[1] + bw / 2, top - 7.6, "plus synthetic images\n(15,651 cases)", size=T_NOTE, ha="center",
+           weight="bold")
     draw = {"nnU-Net": unet_glyph, "Swin UNETR": swin_glyph, "MedNeXt-L": mednext_glyph}
-    for r, (ry, (name, kind)) in enumerate(zip(rows, ARCHS)):
-        c.text(34.0, ry + 2.4, name, size=5.2, weight="bold", colour=st.IMG)
-        c.text(34.0, ry - 0.2, kind, size=4.4, colour=st.MUTED)
-        for col, x in enumerate(cx):
-            for k in (2, 1):                              # two ghost plates behind: the other folds
-                c.box(x - 1.2 + k * 0.9, ry - 4.4 + k * 0.9, x + 15.4 + k * 0.9, ry + 4.8 + k * 0.9,
-                      edge=st.tint(st.IMG, 0.55), face="white", lw=0.4, r=0.6, z=1)
-            c.box(x - 1.2, ry - 4.4, x + 15.4, ry + 4.8, edge=st.IMG, face="white", lw=0.5, r=0.6, z=2)
-            c.text(x - 0.4, ry + 4.4, name, size=4.2, weight="bold", colour=st.IMG, va="top")
-            draw[name](c, x + 0.4, ry - 1.4, st.IMG, w=13.2, h=4.6)
-            c.text(x + 15.0, ry - 3.0, "×5", size=4.4, colour=st.MUTED, ha="right")
-    gx0, gx1 = cx[0] - 3.0, cx[1] + 19.6                 # the 30 networks, enclosed; one arrow to the mean
-    c.box(gx0, rows[-1] - 6.4, gx1, rows[0] + 7.6, edge=st.MUTED, face="none", lw=0.5, ls=(0, (2, 1.5)), r=1.0, z=0)
-    c.text(gx0, rows[-1] - 7.4, "each network in five folds: 6 × 5 = 30 networks, fixed weights",
-           size=4.6, colour=st.MUTED)
-    c.arrow((gx1, base), (104.0 - 3.4, base), BLACK, 0.6, ms=4)
-
+    for ry, name in zip(rows, ["nnU-Net", "Swin UNETR", "MedNeXt-L"]):
+        for x in cx:
+            for k in (2, 1):                                # two ghost plates behind: the other folds
+                c.box(x + k * 0.9, ry - bh / 2 + k * 0.9, x + bw + k * 0.9, ry + bh / 2 + k * 0.9,
+                      edge=st.tint(st.IMG, 0.55), face="white", lw=0.5, r=0.7, z=1)
+            c.box(x, ry - bh / 2, x + bw, ry + bh / 2, edge=st.IMG, face="white", lw=0.6, r=0.7, z=2)
+            c.text(x + 0.8, ry + bh / 2 - 0.6, name, size=T_NOTE, weight="bold", colour=st.IMG)
+            draw[name](c, x + 1.2, ry - 2.0, st.IMG, w=16.0, h=4.6)
+            c.text(x + bw - 0.6, ry - bh / 2 + 0.6, "×5", size=T_NOTE, colour=st.MUTED, ha="right", va="bottom")
+    gx0, gx1 = cx[0] - 2.0, cx[1] + bw + 3.6
+    c.box(gx0, rows[-1] - bh / 2 - 2.0, gx1, rows[0] + bh / 2 + 3.4, edge=st.MUTED, face="none", lw=0.6,
+          ls=(0, (2, 1.5)), r=1.0, z=0)
     # ---- ensemble: equal-weight mean of the 30 probability maps, then regions and the volume rule
-    ex = 104.0
-    c.ax.add_patch(Circle((ex, base), 3.4, fc="white", ec=BLACK, lw=0.7, zorder=5))
-    c.text(ex, base + 0.1, "mean", size=4.8, ha="center", va="center", weight="bold")
-    c.text(ex, base - 4.4, "of the 30\nprobability\nmaps", size=4.4, ha="center", colour=st.MUTED)
-    bx0, bx1 = 111.0, 128.0
-    c.arrow((ex + 3.4, base), (bx0, base), BLACK, 0.6, ms=4)
-    c.box(bx0, base - 7.0, bx1, base + 7.0, edge=BLACK, r=0.8)
-    c.text((bx0 + bx1) / 2, base + 5.6, "> 0.5 per region\n(WT, TC, ET, RC);\nWT and RC parts\n"
-           "< 50 voxels\nremoved", size=4.5, ha="center")
-    c.arrow((bx1, base), (bx1 + 3.0, base), BLACK, 0.8)
-    ow = 19.0
-    ox = bx1 + 3.4
+    ex = 100.0
+    c.arrow((gx1, base), (ex - 4.4, base), BLACK, 0.8)
+    c.ax.add_patch(Circle((ex, base), 4.4, fc="white", ec=BLACK, lw=0.8, zorder=5))
+    c.text(ex, base + 0.1, "mean", size=T_BODY, ha="center", va="center", weight="bold")
+    c.text(ex, base - 5.6, "of the 30\nprobability\nmaps", size=T_NOTE, ha="center", colour=st.MUTED)
+    bx0, bx1 = 107.5, 128.0
+    c.arrow((ex + 4.4, base), (bx0, base), BLACK, 0.8)
+    c.box(bx0, base - 9.0, bx1, base + 9.0, edge=BLACK, r=0.9)
+    c.text((bx0 + bx1) / 2, base + 7.6, "> 0.5 per\nregion;\nparts under\n50 voxels\nremoved", size=T_NOTE,
+           ha="center")
+    c.arrow((bx1, base), (bx1 + 2.6, base), BLACK, 0.9)
+    ow = 27.0
+    ox = W - ow - 0.5
     iax = c.image(ox, base - ow / 2, ow, ow, seq["t1c"])
     rgba = np.zeros(seq["label"].shape + (4,))
     for lab, colour in LABEL_RGB.items():
         rgba[seq["label"] == lab] = (*to_rgb(colour), 0.6)
     iax.imshow(rgba, interpolation="nearest")
-    for k, (lab, name) in enumerate([(3, "enhancing"), (1, "necrosis"), (2, "FLAIR\nhyperintensity"),
-                                     (4, "resection\ncavity")]):
-        ly = base + ow / 2 - 1.6 - k * 4.0
-        c.ax.add_patch(Rectangle((ox + ow + 1.0, ly - 0.7), 1.4, 1.4, fc=LABEL_RGB[lab], ec="none"))
-        c.text(ox + ow + 3.0, ly + 0.8, name, size=4.6, colour=st.MUTED)
-    c.text(ox, base - ow / 2 - 1.2, "first place, BraTS 2024 adult\nglioma post-treatment; trained\n"
-                                    "and fixed, with no tuning\non any cohort", size=4.6, colour=st.MUTED)
-
-    # ---- the building block of each architecture, in a row
-    iy = TC + 5.6
-    c.text(2.0, iy + 6.4, "The building block of each architecture:", size=5.0, colour=st.INK)
-    chains = [("nnU-Net", ["conv 3³", "norm", "LReLU"], False, "× 2"),
-              ("MedNeXt", ["depthwise\nconv 5³", "GroupNorm", "1×1×1\n×4 ch.", "GELU", "1×1×1"], True, ""),
-              ("Swin UNETR", ["LN", "W-MSA", "LN", "MLP"], False, "each with a residual;\nthen shifted windows")]
-    x = 2.0
-    for name, cells, resid, note in chains:
-        c.text(x, iy + 0.1, name, size=4.8, weight="bold", colour=st.IMG, va="center")
-        x += {"nnU-Net": 10.0, "MedNeXt": 10.6, "Swin UNETR": 13.0}[name]
-        start = x
-        prev = None
+    # notes and the label legend, under the ensemble
+    ny = rows[-1] - bh / 2 - 3.4
+    c.text(gx0, ny, "3 architectures × 2 training sets × 5 folds = 30 networks, weights fixed, with no tuning on "
+                    "any cohort;\nfirst place in the BraTS 2024 adult glioma post-treatment challenge", size=T_NOTE,
+           colour=st.MUTED)
+    lx = gx0
+    ly = ny - 9.4
+    for lab, name in [(3, "enhancing tumour"), (1, "necrosis"), (2, "FLAIR hyperintensity"), (4, "resection cavity")]:
+        c.ax.add_patch(Rectangle((lx, ly - 1.0), 2.4, 2.4, fc=LABEL_RGB[lab], ec="none"))
+        c.text(lx + 3.2, ly + 1.4, name, size=T_NOTE, colour=st.INK)
+        lx += 8.0 + 1.3 * len(name)
+    # ---- the building block of each architecture, one line each
+    iy = 21.0
+    c.line([1.0, W - 1.0], [iy + 5.2, iy + 5.2], st.RULE, 0.6)
+    c.text(1.0, iy + 3.8, "The building block of each architecture", size=T_BODY, weight="bold")
+    for r, (name, cells, resid, note) in enumerate(CHAINS):
+        y = iy - 3.6 - r * 6.4
+        c.text(1.0, y + 0.1, name, size=T_BODY, weight="bold", colour=st.IMG, va="center")
+        x = 22.0
+        start, prev = x, None
         for cell in cells:
-            w = 2.4 + 0.95 * max(len(t) for t in cell.split("\n"))
+            w = 3.0 + 1.42 * len(cell)
             face = st.IMG if "MSA" in cell else (st.tint(st.IMG, 0.6) if cell in ("MLP", "GELU", "LReLU")
                                                   else st.tint(st.IMG, 0.9))
-            c.box(x, iy - 2.0, x + w, iy + 2.0, edge=st.IMG, face=face, lw=0.5, r=0.6, z=5)
-            c.text(x + w / 2, iy + 0.05, cell, size=4.2, ha="center", va="center",
+            c.box(x, y - 2.3, x + w, y + 2.3, edge=st.IMG, face=face, lw=0.6, r=0.7, z=5)
+            c.text(x + w / 2, y + 0.05, cell, size=T_NOTE, ha="center", va="center",
                    colour="white" if "MSA" in cell else st.INK)
             if prev is not None:
-                c.arrow((prev, iy), (x, iy), st.IMG, 0.5, ms=3.5)
+                c.arrow((prev, y), (x, y), st.IMG, 0.6, ms=5)
             prev = x + w
-            x += w + 1.2
-        if resid:                                           # residual connection, below the row
-            c.line([start - 0.6, start - 0.6, prev + 0.6], [iy, iy - 3.4, iy - 3.4], st.IMG, 0.5)
-            c.arrow((prev + 0.6, iy - 3.4), (prev + 0.6, iy - 0.2), st.IMG, 0.5, ms=3.5)
+            x += w + 2.4
+        if resid:                                           # residual connection, drawn around the row
+            c.line([start - 0.8, start - 0.8, prev + 0.8], [y, y + 2.9, y + 2.9], st.IMG, 0.6)
+            c.arrow((prev + 0.8, y + 2.9), (prev + 0.8, y + 0.3), st.IMG, 0.6, ms=5)
+            c.text(prev + 2.2, y + 0.1, "with a residual", size=T_NOTE, colour=st.MUTED, va="center")
         if note:
-            c.text(prev + 1.4, iy + 0.1, note, size=4.4, colour=st.MUTED, va="center")
-            x += 7.0
-        x += 6.0
-    c.rule(TC + 0.6)
+            c.text(prev + 2.2, y + 0.1, note, size=T_NOTE, colour=st.MUTED, va="center")
+    return c
 
 
 # ==================================================================== (c) PRISM at one scan
-def panel_c(c: Canvas, scans) -> None:
-    top = TC
-    c.header(top, "c", "PRISM at one follow-up scan")
-    cols = [(2.0, 25.0), (28.0, 49.0), (52.0, 88.0), (91.0, 114.0), (117.0, 142.0), (145.0, 179.0)]
-    names = ["Inputs", "Features", "Models", "Evidence", "Collation", "Writing and checking"]
-    sy = top - 8.0
-    for i, ((x0, x1), name) in enumerate(zip(cols, names)):
-        c.ax.add_patch(Circle((x0 + 1.9, sy), 1.8, fc=BLACK, ec="none", zorder=5))
-        c.text(x0 + 1.9, sy + 0.05, str(i + 1), size=5.6, colour="white", weight="bold", ha="center", va="center")
-        c.text(x0 + 4.8, sy + 0.05, name, size=6.4, weight="bold", va="center")
-        c.line([x0, x1], [sy - 2.8, sy - 2.8], st.RULE, 0.5)
-    y_img, y_comb, y_hist = top - 19.0, top - 36.0, top - 53.0
+HC = 136.0
+COLS = [(1.0, 51.0), (55.0, 104.0), (108.0, 158.0)]
+
+
+def panel_c(scans) -> Canvas:
+    c = Canvas(HC)
+    top = HC
+    c.header("c", "PRISM at one follow-up scan, in six stages")
+    # two rows of three stages; three lanes per row: imaging, combined, clinical history
+    r1, r2 = top - 10.5, top - 78.0
+    lane = lambda r: (r - 12.5, r - 30.0, r - 47.5)
+    for i, ((x0, x1), name) in enumerate(zip(COLS, ["Inputs", "Features", "Models"])):
+        c.stage(x0, x1, r1, i + 1, name)
+    for i, ((x0, x1), name) in enumerate(zip(COLS, ["Evidence", "Collation", "Writing and checking"])):
+        c.stage(x0, x1, r2, i + 4, name)
+    y_img, y_comb, y_hist = lane(r1)
 
     # ---- 1 inputs: two scans, and the clinical history as a document
-    x0, x1 = cols[0]
+    x0, x1 = COLS[0]
     for k, label in enumerate(["previous", "current"]):
-        sx = x0 + k * 11.8
-        c.scan(sx, y_img - 6.0, 10.6, scans[k - 2])
-        c.text(sx + 5.3, y_img - 6.6, label, size=4.8, colour=st.MUTED, ha="center")
-    c.text(x0, y_img - 10.4, "four MRI sequences;\nsegmenter masks (b)", size=5.0)
-    c.document(x0 + 1.0, y_hist - 5.0, 8.0, 10.5, st.HIST, lines=5)
-    c.text(x0 + 10.6, y_hist + 5.2, "treatment\ncourse as of\nthe scan day;\nage, sex,\nIDH, MGMT", size=5.0)
+        sx = x0 + k * 17.0
+        c.scan(sx, y_img - 7.5, 15.5, scans[k - 2])
+        c.text(sx + 7.75, y_img - 8.2, label, size=T_NOTE, colour=st.MUTED, ha="center")
+    c.text(x0 + 35.0, y_img + 7.5, "four MRI\nsequences;\nsegmenter\nmasks (b)", size=T_NOTE)
+    c.document(x0 + 1.0, y_hist - 6.0, 10.0, 13.0, st.HIST, lines=5)
+    c.text(x0 + 13.5, y_hist + 6.5, "treatment course as of\nthe scan day; age, sex,\nIDH and MGMT status",
+           size=T_BODY)
 
     # ---- 2 features as vectors of cells
-    x0, x1 = cols[1]
-    cwid, ch = 3.0, 1.15
+    x0, x1 = COLS[1]
+    cw = 3.6
     tints = [0.0] * 5 + [0.35] * 10 + [0.62] * 7
     for k, a in enumerate(tints):
-        c.ax.add_patch(Rectangle((x0 + 1.0, y_img + 8.0 - (k + 1) * ch * 0.62), cwid, ch * 0.62,
+        c.ax.add_patch(Rectangle((x0 + 1.0, y_img + 8.0 - (k + 1) * 0.78), cw, 0.78,
                                  fc=st.tint(st.IMG, a), ec="white", lw=0.25, zorder=5))
-    c.text(x0 + 5.4, y_img + 8.2, r"$\mathbf{x}_{\mathrm{img}}$ (22)", size=5.8, colour=st.IMG, weight="bold")
-    c.text(x0 + 5.4, y_img + 4.4, "5 volumes\n10 shape and\n    intensity\n7 change since\n    earlier scans",
-           size=4.9)
+    c.text(x0 + 7.0, y_img + 8.4, r"$\mathbf{x}_{\mathrm{img}}$ (22 inputs)", size=T_TITLE, colour=st.IMG,
+           weight="bold")
+    c.text(x0 + 7.0, y_img + 4.2, "5 volumes\n10 shape and intensity\n7 change since earlier\nscans", size=T_BODY)
     for k in range(12):
-        c.ax.add_patch(Rectangle((x0 + 1.0, y_hist + 4.5 - (k + 1) * 0.78), cwid, 0.78,
+        c.ax.add_patch(Rectangle((x0 + 1.0, y_hist + 6.5 - (k + 1) * 1.05), cw, 1.05,
                                  fc=st.tint(st.HIST, 0.15 + 0.05 * (k % 3)), ec="white", lw=0.25, zorder=5))
-    c.text(x0 + 5.4, y_hist + 4.7, r"$\mathbf{x}_{\mathrm{hist}}$", size=5.8, colour=st.HIST, weight="bold")
-    c.text(x0 + 5.4, y_hist + 1.2, "dates of surgery,\nRT, chemo; time\nwindow; patient", size=4.9)
-    c.arrow((cols[0][1] - 0.6, y_img + 2.0), (x0 + 0.6, y_img + 2.0))
-    c.arrow((cols[0][1] - 0.6, y_hist), (x0 + 0.6, y_hist))
+    c.text(x0 + 7.0, y_hist + 6.9, r"$\mathbf{x}_{\mathrm{hist}}$", size=T_TITLE, colour=st.HIST, weight="bold")
+    c.text(x0 + 7.0, y_hist + 2.7, "dates of surgery,\nradiotherapy and chemo-\ntherapy; time window",
+           size=T_BODY)
+    c.arrow((COLS[0][1] + 0.5, y_img), (x0 + 0.5, y_img))
+    c.arrow((COLS[0][1] + 0.5, y_hist), (x0 + 0.5, y_hist))
 
     # ---- 3 models: network glyphs with the fitted form
-    x0, x1 = cols[2]
+    x0, x1 = COLS[2]
     models = [
         (y_img, "Imaging model", st.IMG,
          r"$\hat p = \sigma(\beta_0 + \boldsymbol{\beta}^{\top}\mathbf{x}_{\mathrm{img}})$", "no dates"),
@@ -561,137 +570,133 @@ def panel_c(c: Canvas, scans) -> None:
         (y_hist, "Clinical-history model", st.HIST,
          r"$\hat p = \sigma(\beta_0 + \boldsymbol{\beta}^{\top}\mathbf{x}_{\mathrm{hist}})$", "")]
     for y, name, colour, eq, note in models:
-        c.network(x0 + 4.2, y, 2.6, colour)
-        c.text(x0 + 9.0, y + 4.6, name, size=5.8, colour=colour, weight="bold")
-        c.text(x0 + 9.0, y + 1.3, eq, size=5.4)
+        c.network(x0 + 5.0, y, 3.2, colour)
+        c.text(x0 + 11.0, y + 5.4, name, size=T_TITLE, colour=colour, weight="bold")
+        c.text(x0 + 11.0, y + 1.6, eq, size=T_BODY)
         if note:
-            c.text(x0 + 9.0, y - 2.0, note, size=4.9, colour=st.MUTED)
-    fx = cols[1][1]
-    c.arrow((fx + 0.4, y_img), (x0 + 0.8, y_img), st.IMG)
-    c.arrow((fx + 0.4, y_hist), (x0 + 0.8, y_hist), st.HIST)
-    c.arrow((fx + 0.4, y_img - 2.0), (x0 + 0.8, y_comb + 0.8), st.IMG)
-    c.arrow((fx + 0.4, y_hist + 2.0), (x0 + 0.8, y_comb - 0.8), st.HIST)
-    c.text(x0, y_hist - 5.6, "ridge logistic regression, penalty by\npatient-grouped cross validation", size=4.8,
-           colour=st.MUTED)
+            c.text(x0 + 11.0, y - 2.6, note, size=T_NOTE, colour=st.MUTED)
+    fx = COLS[1][1]
+    c.arrow((fx, y_img), (x0 + 0.8, y_img), st.IMG)
+    c.arrow((fx, y_hist), (x0 + 0.8, y_hist), st.HIST)
+    c.arrow((fx, y_img - 3.0), (x0 + 0.8, y_comb + 1.0), st.IMG)
+    c.arrow((fx, y_hist + 3.0), (x0 + 0.8, y_comb - 1.0), st.HIST)
+    c.text(x0, y_hist - 5.0, "ridge logistic regression, penalty\nby patient-grouped cross validation",
+           size=T_NOTE, colour=st.MUTED)
+
+    # ---- the turn from row 1 to row 2: the three scores go on to stage 4
+    ty = r2 + 5.6
+    c.line([W - 0.6, W - 0.6], [y_img, ty], BLACK, 0.8)
+    for y, *_ in models:
+        c.line([W - 3.0, W - 0.6], [y, y], BLACK, 0.8)
+    c.line([W - 0.6, 0.6], [ty, ty], BLACK, 0.8)
+    c.text(2.0, ty + 0.9, "the three scores, with the measurements and the history, go on to stage 4", size=T_NOTE,
+           colour=st.MUTED, va="bottom")
+    e_img, e_comb, e_hist = lane(r2)
+    c.line([0.6, 0.6], [ty, e_hist], BLACK, 0.8)
+    for y in (e_img, e_comb, e_hist):
+        c.arrow((0.6, y), (2.6, y), BLACK, 0.8, ms=5)
 
     # ---- 4 evidence statements, each a small icon
-    x0, x1 = cols[3]
-    ev = [(y_img + 2.0, "Conformal set", "80% set: {0}, {1}\nor {0, 1}"),
-          (y_comb - 2.0, "Model agreement", "imaging and clinical\nhistory, each against\nits cohort median"),
-          (y_hist - 4.0, "Reliability card", "results measured in\nthis time window and\nenhancement state")]
+    x0, x1 = COLS[0]
+    ev = [(e_img, "Conformal set", "80% set: {0}, {1} or {0, 1}"),
+          (e_comb, "Model agreement", "imaging and clinical-history\nscores, each against its\ncohort median"),
+          (e_hist, "Reliability card", "results measured in this\ntime window and\nenhancement state")]
     for k, (y, title, body) in enumerate(ev):
-        c.box(x0, y - 2.6, x0 + 5.2, y + 2.6, edge=BLACK, r=0.6, z=4)
+        c.box(x0 + 2.6, y - 3.0, x0 + 8.6, y + 3.0, edge=BLACK, r=0.7, z=4)
         if k == 0:
-            c.text(x0 + 2.6, y + 0.1, "{0,1}", size=4.0, ha="center", va="center")
+            c.text(x0 + 5.6, y + 0.1, "{0,1}", size=T_NOTE, ha="center", va="center")
         elif k == 1:
-            c.arrow((x0 + 1.6, y - 1.6), (x0 + 1.6, y + 1.6), st.IMG, 0.8, ms=3.5)
-            c.arrow((x0 + 3.6, y - 1.6), (x0 + 3.6, y + 1.6), st.HIST, 0.8, ms=3.5)
+            c.arrow((x0 + 4.4, y - 2.0), (x0 + 4.4, y + 2.0), st.IMG, 0.9, ms=4.5)
+            c.arrow((x0 + 6.8, y - 2.0), (x0 + 6.8, y + 2.0), st.HIST, 0.9, ms=4.5)
         else:
             for r in range(3):
                 for q in range(3):
-                    c.ax.add_patch(Rectangle((x0 + 0.9 + q * 1.2, y - 1.8 + r * 1.2), 1.0, 1.0,
+                    c.ax.add_patch(Rectangle((x0 + 3.4 + q * 1.5, y - 2.2 + r * 1.5), 1.2, 1.2,
                                              fc=st.tint(BLACK, 0.45 if (r + q) % 3 else 0.85), ec="none",
                                              zorder=5))
-        c.text(x0 + 6.4, y + 2.6, title, size=5.6, weight="bold")
-        c.text(x0 + 6.4, y - 0.4, body, size=4.8)
-    jx = cols[2][1] + 1.0
-    c.line([jx, jx], [y_hist, y_img], BLACK, 0.6)
-    for y, *_ in models:
-        c.line([jx - 1.5, jx], [y, y], BLACK, 0.6)
-    for y, *_ in ev:
-        c.arrow((jx, y), (x0 - 0.2, y), BLACK, 0.6, ms=4)
+        c.text(x0 + 10.0, y + 4.0, title, size=T_TITLE, weight="bold")
+        c.text(x0 + 10.0, y + 0.4, body, size=T_BODY)
 
     # ---- 5 collation: every value gathered under a fixed key, with its source, into the record
-    x0, x1 = cols[4]
-    cx = (x0 + x1) / 2
-    ft = y_img + 6.0
-    c.funnel(cx, ft, 14.0, 8.0)
-    sources = [y_img + 2.0, y_comb - 2.0, y_hist - 4.0]
-    for y in sources:
-        c.line([cols[3][1] + 0.5, cols[3][1] + 1.6], [y, y], BLACK, 0.6)
-    bus = cols[3][1] + 1.6
-    c.line([bus, bus], [min(sources), ft + 2.0], BLACK, 0.6)
-    c.line([bus, cx], [ft + 2.0, ft + 2.0], BLACK, 0.6)
-    c.arrow((cx, ft + 2.0), (cx, ft + 0.2), BLACK, 0.6, ms=4)
-    # the scores and the measurements also enter the record directly (a bypass above the evidence column)
-    yb = top - 12.4
-    c.line([cols[2][1] - 1.0, cols[2][1] - 1.0], [y_img + 6.6, yb], BLACK, 0.6, ls=(0, (2, 1.2)))
-    c.line([cols[2][1] - 1.0, cx - 3.0], [yb, yb], BLACK, 0.6, ls=(0, (2, 1.2)))
-    c.arrow((cx - 3.0, yb), (cx - 3.0, ft + 0.3), BLACK, 0.6, ms=4, ls=(0, (2, 1.2)))
-    c.text((cols[3][0] + cols[3][1]) / 2 + 1.0, yb + 0.05, "scores, measurements, history", size=4.4,
-           colour=st.MUTED, ha="center", va="center", bbox=dict(fc="white", ec="none", pad=0.4))
-    rd = (cx - 10.5, y_comb - 16.0, 21.0, 22.0)
-    c.arrow((cx, ft - 8.0), (cx, rd[1] + rd[3] + 0.2), BLACK, 0.7, ms=4.5)
+    x0, x1 = COLS[1]
+    cx = (x0 + x1) / 2 + 2.0
+    ft = e_img + 7.0
+    c.funnel(cx, ft, 15.0, 8.0)
+    bus = COLS[0][1] + 1.6
+    for y in (e_img, e_comb, e_hist):
+        c.line([bus - 2.0, bus], [y, y], BLACK, 0.8)
+    c.line([bus, bus], [e_hist, ft + 2.2], BLACK, 0.8)
+    c.line([bus, cx], [ft + 2.2, ft + 2.2], BLACK, 0.8)
+    c.arrow((cx, ft + 2.2), (cx, ft + 0.2), BLACK, 0.8, ms=5)
+    rd = (cx - 20.0, e_hist - 6.0, 40.0, 32.0)
+    c.arrow((cx, ft - 8.0), (cx, rd[1] + rd[3] + 0.2), BLACK, 0.8, ms=6)
     x, y, w, h = rd
     c.document(x, y, w, h, BLACK, lines=0)
-    c.text(x + 1.2, y + h - 4.2, "record", size=5.6, weight="bold")
-    c.text(x + 1.2, y + h - 7.6, "meas.enhancing_cc\nmodel.imaging.score\nmodel.combined.\n  score\n"
-           "conformal.80\nagreement\ncard.tier\n… + source", size=3.9, family=MONO, colour=st.MUTED)
-    c.text(cx, y - 1.4, "deterministic code;\nevery value under a\nfixed key, with its\nsource", size=4.8,
-           ha="center")
+    c.text(x + 1.5, y + h - 1.4, "record", size=T_TITLE, weight="bold")
+    c.text(x + 1.5, y + h - 12.2, "meas.enhancing_cc\nmodel.imaging.score\nmodel.combined.score\nconformal.80\n"
+                                 "agreement\ncard.tier …", size=T_NOTE, family=MONO, colour=st.MUTED)
+    c.text(x + 1.5, y + h - 5.0, "every value under a\nfixed key, with its source", size=T_NOTE, colour=st.INK)
 
     # ---- 6 writing and checking
-    x0, x1 = cols[5]
+    x0, x1 = COLS[2]
     lx = x0 + 6.0
-    ex = rd[0] + rd[2] + 1.6
-    c.line([rd[0] + rd[2], ex, ex], [y_comb, y_comb, y_img + 1.0], BLACK, 0.7)
-    c.arrow((ex, y_img + 1.0), (lx - 4.6, y_img + 1.0), BLACK, 0.7, ms=4.5)
-    c.chat(lx, y_img + 1.0, 9.0, 6.6)
-    c.text(lx + 6.2, y_img + 5.6, "Local language model", size=5.6, weight="bold")
-    c.text(lx + 6.2, y_img + 2.6, "Qwen3.8-27B; writes\nsentences that cite record\nkeys (JSON schema); no\n"
-                                  "images, no arithmetic", size=4.8)
-    c.arrow((lx, y_img - 4.2), (lx, y_comb + 4.6), BLACK, 0.7, ms=4.5)
-    c.shield(lx, y_comb + 1.0, 3.2)
-    c.text(lx + 6.2, y_comb + 4.4, "Deterministic checker", size=5.6, weight="bold")
-    c.text(lx + 6.2, y_comb + 1.4, "every number in a cited field;\nflags stated; the verifier ties\n"
-                                   "each number to its region", size=4.8)
-    c.arrow((lx, y_comb - 4.0), (lx, y_hist + 4.6), BLACK, 0.7, ms=4.5)
-    c.text(lx + 1.0, y_comb - 7.0, "accept or reject", size=4.6, colour=st.MUTED)
-    c.document(lx - 4.0, y_hist - 6.0, 8.0, 10.5, BLACK, lines=5)
-    c.text(lx + 6.2, y_hist + 2.4, "Report", size=5.6, weight="bold")
-    c.text(lx + 6.2, y_hist - 0.6, "each sentence with the\nrecord keys it cites", size=4.8)
-    c.rule(TD + 0.6)
+    c.line([rd[0] + rd[2], rd[0] + rd[2] + 2.0, rd[0] + rd[2] + 2.0], [e_comb, e_comb, e_img], BLACK, 0.8)
+    c.arrow((rd[0] + rd[2] + 2.0, e_img), (lx - 5.2, e_img), BLACK, 0.8, ms=6)
+    c.chat(lx, e_img, 10.0, 7.4)
+    c.text(lx + 7.0, e_img + 5.0, "Local language model", size=T_TITLE, weight="bold")
+    c.text(lx + 7.0, e_img + 1.3, "Qwen3.8-27B; writes\nsentences that cite record\nkeys; no images, no arithmetic",
+           size=T_BODY)
+    c.arrow((lx, e_img - 4.8), (lx, e_comb + 5.4), BLACK, 0.8, ms=6)
+    c.shield(lx, e_comb + 1.4, 3.6)
+    c.text(lx + 7.0, e_comb + 5.0, "Deterministic checker", size=T_TITLE, weight="bold")
+    c.text(lx + 7.0, e_comb + 1.3, "every number in a cited field;\nflags stated; the verifier ties\n"
+                                   "each number to its region", size=T_BODY)
+    c.arrow((lx, e_comb - 4.0), (lx, e_hist + 6.6), BLACK, 0.8, ms=6)
+    c.text(lx + 1.5, e_comb - 8.6, "accept or reject", size=T_NOTE, colour=st.MUTED)
+    c.document(lx - 4.6, e_hist - 6.0, 9.2, 12.4, BLACK, lines=5)
+    c.text(lx + 7.0, e_hist + 5.0, "Report", size=T_TITLE, weight="bold")
+    c.text(lx + 7.0, e_hist + 1.3, "each sentence with the\nrecord keys it cites", size=T_BODY)
+    return c
 
 
 # ==================================================================== (d) evaluation
-def panel_d(c: Canvas) -> None:
-    top = TD
-    c.header(top, "d", "Evaluation")
-    y = top - 15.0
-    c.database(8.0, y, 8.0, 11.0)
-    c.text(8.0, y - 7.8, "MU-Glioma-Post", size=5.2, ha="center", weight="bold")
-    c.chevron(14.5, y, 2.6)
-    c.crowd(19.5, y - 6.5, 3, 3, 1.6, 4.0, 5.6)
-    c.text(32.0, y + 6.0, "development", size=5.6, weight="bold")
-    c.text(32.0, y + 2.6, "5 repeats of 5-fold cross\nvalidation grouped by\npatient; held-out AUC on\n"
-                          "146 scans of 80 patients", size=4.9)
-    c.chevron(61.0, y, 2.6)
-    c.lock(70.0, y + 1.0, 3.0)
-    c.network(80.0, y + 0.6, 2.6, BLACK)
-    c.text(75.0, y - 4.4, "each model fitted once\non all 181 MU scans,\nthen frozen", size=4.9, ha="center")
-    c.chevron(90.0, y, 2.6)
-    for k, (name, body) in enumerate([("LUMIERE", "178 scans of 79 patients"),
-                                      ("UCSF-ALPTDG", "69 second scans of 69 patients")]):
-        cx = 101.0 + k * 34.0
+HD = 46.0
+
+
+def panel_d() -> Canvas:
+    c = Canvas(HD)
+    top = HD
+    c.header("d", "Evaluation")
+    y = top - 17.0
+    c.database(6.0, y + 1.0, 8.0, 11.0)
+    c.text(0.8, y - 6.6, "MU-Glioma-\nPost", size=T_NOTE, weight="bold")
+    c.text(16.5, y + 7.5, "Development", size=T_TITLE, weight="bold")
+    c.text(16.5, y + 3.7, "5 repeats of 5-fold cross\nvalidation grouped by\npatient; held-out AUC on\n"
+                          "146 scans of 80 patients", size=T_BODY)
+    c.chevron(48.0, y, 2.8)
+    c.lock(56.0, y + 2.0, 3.0)
+    c.network(66.0, y + 1.6, 2.8, BLACK)
+    c.text(61.0, y - 3.6, "each model fitted\nonce on all 181 MU\nscans, then frozen", size=T_BODY, ha="center")
+    c.chevron(75.0, y, 2.8)
+    for k, (name, body) in enumerate([("LUMIERE", "178 scans of\n79 patients"),
+                                      ("UCSF-ALPTDG", "69 second scans\nof 69 patients")]):
+        cx = 84.0 + k * 38.0
         c.database(cx, y, 8.0, 11.0, DB, filled=False)
-        c.text(cx + 6.0, y + 4.0, name, size=5.6, weight="bold")
-        c.text(cx + 6.0, y + 0.6, body.replace(" of ", "\nof "), size=4.9)
-    c.chevron(160.0, y, 2.6)
-    c.text(165.0, y + 6.0, "measured", size=5.6, weight="bold")
-    c.text(165.0, y + 2.6, "AUC with patient\nbootstrap CI;\nset coverage;\nreports passing\nthe checker", size=4.9)
-    c.text(2.0, 3.0, "Label: the first scan at documented progression versus a scan followed by ≥ 120 days "
-                     "without progression (LUMIERE: rated stable or responding).", size=5.0, colour=st.MUTED,
-           va="bottom")
+        c.text(cx + 5.8, y + 5.0, name, size=T_TITLE, weight="bold")
+        c.text(cx + 5.8, y + 1.2, body, size=T_BODY)
+    c.text(1.0, 11.0, "Measured: AUC with a 95% patient-bootstrap interval; coverage of the conformal sets; reports "
+                     "passing the checker.", size=T_BODY)
+    c.text(1.0, 6.6, "Label: the first scan at documented progression versus a scan followed by at least 120 days "
+                     "without progression\n(LUMIERE: rated stable or responding).", size=T_NOTE, colour=st.MUTED)
+    return c
 
 
 def fig1(output: Path) -> None:
     scans = patient_scans()
-    c = Canvas()
-    panel_a(c, scans)
-    panel_b(c, sequence_slices(PATIENT, scans[-1]["tp"]))
-    panel_c(c, scans)
-    panel_d(c)
-    st.save(c.fig, output, "fig1_system")
+    seq = sequence_slices(PATIENT, scans[-1]["tp"])
+    for name, c in [("fig1a", panel_a(scans)), ("fig1b", panel_b(seq)), ("fig1c", panel_c(scans)),
+                    ("fig1d", panel_d())]:
+        st.save(c.fig, output, name)
 
 
 if __name__ == "__main__":

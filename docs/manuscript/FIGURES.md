@@ -5,11 +5,14 @@
 Images are the PNGs drawn alongside each PDF in `figures/`; the paper includes the PDFs. Everything below this section
 is earlier planning, kept for history.
 
-### Figure 1. The task and the method
-`scripts/fig1_prism.py`: (a) one MU patient on real scans; (b) PRISM's segmenter; (c) the method in six stages;
-(d) the evaluation protocol.
+### Figure 1. The workflow of PRISM (two pages, start of Methods)
+`scripts/fig1_prism.py`: each panel drawn at its printed size (text width, fonts 7 pt or larger). Page 1: (a) one MU
+patient on real scans; (b) PRISM's segmenter. Page 2: (c) the method in six stages; (d) the evaluation protocol.
 
-![Figure 1](figures/fig1_system.png?v=2026-11-20-0810)
+![Figure 1a](figures/fig1a.png?v=2026-11-26)
+![Figure 1b](figures/fig1b.png?v=2026-11-26)
+![Figure 1c](figures/fig1c.png?v=2026-11-26)
+![Figure 1d](figures/fig1d.png?v=2026-11-26)
 
 ### Figure 2. When the evaluation scans were taken
 `scripts/fig_cohorts.py`: one panel per cohort. Time of each scan from the cohort's time zero, and weeks since the
