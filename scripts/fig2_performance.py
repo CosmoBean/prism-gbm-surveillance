@@ -29,10 +29,10 @@ SCORES = [
     ("Clinical-history model", st.HIST, "o", True),
     ("Imaging model", st.IMG, "o", True),
     ("Combined model", st.COMB, "o", True),
-    ("Combined model, released masks", st.CLIN, "o", False),
+    ("Combined model, supplied masks", st.CLIN, "o", False),
     ("Time-and-enhancement model", BASE, "s", True),
     ("Enhancing volume alone", st.ET, "D", False),
-    ("Published radiomics, released masks", st.CLIN, "^", False),
+    ("Published radiomics, supplied masks", st.CLIN, "^", False),
 ]
 COHORTS = ["MU-Glioma-Post", "LUMIERE", "UCSF-ALPTDG"]
 APPROX = {"UCSF-ALPTDG"}   # cohorts where the time-and-enhancement model uses the approximate RT window
@@ -49,7 +49,7 @@ SEED, N_BOOT = 20261120, 2000
 ROC_SCORES = [("Clinical-history model", "hist"), ("Imaging model", "images"), ("Combined model", "combined"),
               ("Time-and-enhancement model", "baseline")]
 KEYS = {"Clinical-history model": "hist", "Imaging model": "images", "Combined model": "combined",
-        "Combined model, released masks": "combined_released", "Time-and-enhancement model": "baseline",
+        "Combined model, supplied masks": "combined_released", "Time-and-enhancement model": "baseline",
         "Enhancing volume alone": "et"}
 
 
@@ -97,7 +97,7 @@ def aucs_and_gains(data) -> tuple[dict, dict]:
         GAIN[c] = {n: (est[k][0] - est["baseline"][0], *ci([b[k][0] - b["baseline"][0] for b in B]))
                    for n, k in KEYS.items() if k in ("hist", "images", "combined")}
     if "MU-Glioma-Post" in AUC:
-        AUC["MU-Glioma-Post"]["Published radiomics, released masks"] = RADIOMICS_MU
+        AUC["MU-Glioma-Post"]["Published radiomics, supplied masks"] = RADIOMICS_MU
     # the same numbers as S4 where they overlap (segmenter22 rows of s4_exploratory.csv)
     s4 = pd.read_csv(RES / "segmenter_brats24/s4_exploratory.csv")
     s4 = s4[s4.masks == "segmenter22"].drop_duplicates(["cohort", "kind", "score"]).set_index(["cohort", "kind", "score"])

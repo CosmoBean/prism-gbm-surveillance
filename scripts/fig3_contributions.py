@@ -1,6 +1,6 @@
 """Figure 3: what each group of inputs contributes to PRISM's three scores at MU (exploratory).
 
-Reads outputs/results/analyses/feature_contributions/{shares.csv, logo.csv} written by
+Reads outputs/results/analyses/feature_contributions_brats24_22/{shares.csv, logo.csv} (primary pipeline) written by
 scripts/prism_feature_contributions.py. Row (a): each group's share of a scan's score, median and IQR over the 146
 evaluation scans. Row (b): the fall in AUC when the group is left out, with its paired 95% CI.
 """
@@ -10,7 +10,7 @@ import pandas as pd
 import figure_style as st
 
 REPO = Path(__file__).resolve().parents[1]
-SRC = REPO / "outputs/results/analyses/feature_contributions"
+SRC = REPO / "outputs/results/analyses/feature_contributions_brats24_22"   # primary: PRISM's segmenter, 22 inputs
 GROUPS = ["Patient characteristics", "Treatment course and dates", "Volumes", "Composition, shape and position",
           "Intensity", "Change since earlier scans"]
 MODELS = [("history", "Clinical-history model", st.HIST), ("imaging", "Imaging model", st.IMG),

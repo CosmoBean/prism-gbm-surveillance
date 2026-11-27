@@ -8,7 +8,8 @@ Two measures, both in the paper's 5 x 5 patient-grouped cross validation and on 
      Shares are averaged over the five repeats, then summarised by the median over scans.
 
 Run from the repo root: PYTHONPATH=. python scripts/prism_feature_contributions.py [workers]
-Outputs: outputs/results/analyses/feature_contributions/{logo.csv, shares.csv, scan_shares.csv}
+  (primary, PRISM's segmenter: PRISM_MASKS=brats24_22 PRISM_MEASUREMENTS=.../mu_table_brats24_padded.csv; 22 inputs)
+Outputs: outputs/results/analyses/feature_contributions{,_brats24_22}/{logo.csv, shares.csv, scan_shares.csv}
 """
 import sys, warnings, numpy as np, pandas as pd
 from pathlib import Path
@@ -19,6 +20,7 @@ warnings.filterwarnings("ignore")
 from prism.analyses import christodoulou_replication as CR
 from prism.analyses import detection as D
 from prism.experiments import c3_radiomics as c3
+from prism.config import MASK_SUFFIX
 
 GROUPS = {
     "Patient characteristics": ["age", "male", "idh_mutant", "mgmt_methylated", "biopsy_before_resection",
@@ -35,11 +37,16 @@ GROUPS = {
     "Change since earlier scans": ["logratio_prev_et", "logratio_prev_netc", "logratio_prev_snfh", "logratio_prev_rc",
                                    "logratio_prev_tumor", "logratio_prev_lesion", "nadir_all_et", "nadir_all_lesion"],
 }
-OUT = Path("outputs/results/analyses/feature_contributions")
+# = prism.features.seg_measurements.CAVITY_INPUTS (not imported: that module needs torch)
+CAVITY_INPUTS = ("log_rc_cc", "has_cavity", "et_near_cavity_fraction", "et_cavity_distance", "logratio_prev_rc")
+OUT = Path(f"outputs/results/analyses/feature_contributions{MASK_SUFFIX}")
 
 
 def designs():
     d, y, _, ridge = CR.data("grade4")
+    if MASK_SUFFIX:
+        ridge = {**ridge, "I_pure": ridge["I_pure"].drop(columns=list(CAVITY_INPUTS))}
+        assert ridge["I_pure"].shape[1] == 22, ridge["I_pure"].shape
     X = {"history": ridge["B1"], "imaging": ridge["I_pure"],
          "combined": pd.concat([ridge["B1"], ridge["I_pure"]], axis=1)}
     grouped = sum(GROUPS.values(), [])
@@ -105,7 +112,7 @@ if __name__ == "__main__":
             parts[key[0]].setdefault(r, {}).update({i: dict(zip(gn, row)) for i, row in zip(te, pa)})
     S = {key: oof[key][:, ev] for key in jobs}
     auc = {key: np.mean([fast_auc(yl, S[key][r]) for r in range(5)]) for key in jobs}
-    print("full models (should be 0.82 / 0.71 / 0.82):",
+    print("mask suffix:", repr(MASK_SUFFIX), "| full models:",
           {m: round(auc[(m, "all")], 3) for m in ("combined", "imaging", "history")})
 
     rng = np.random.default_rng(0)

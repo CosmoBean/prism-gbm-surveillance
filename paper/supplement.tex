@@ -125,7 +125,7 @@ every model reported in the paper these markers count as unknown at such scans (
 and the time since the end of radiotherapy and its duration enter only once it has ended. None of the 8 grade 4 scans
 is in the evaluation set.
 
-The 27 measurements of the imaging model are defined in Supplementary Table~S7.
+The 27 measurements of the imaging model are defined in Supplementary Table~S7; with PRISM's segmenter, the five that need the cavity are left out.
 
 \FloatBarrier
 \section{Estimator}\label{sec:S9}
@@ -182,7 +182,7 @@ BrainSegFounder & 0.81 [0.56, 0.91] & 0.86 & 0.94 / 0.92 \\
 \end{tabularx}
 \end{table}
 
-Short-gap consistency ($\leq$ 30 d, 54 pairs): median ET fold change 2.57 with the released masks and 2.17
+Short-gap consistency ($\leq$ 30 d, 54 pairs): median ET fold change 2.57 with the supplied masks and 2.17
 with the SwinUNETR masks ($\Delta$ median |log ratio| $-$0.17 [$-$0.46, $-$0.02]); WT unchanged. The mask
 sensitivity analysis of the main text replaces every MU mask with the SwinUNETR label map (main Section 2.3).
 
@@ -397,7 +397,7 @@ and none was compared with a report written for the same scan.
 \centering
 \small
 \renewcommand{\thetable}{S7}\renewcommand{\theHtable}{S7}
-\caption{\textbf{The 27 measurements of the imaging model.} Computed by \code{prism/features/measurements.py} and
+\caption{\textbf{The 27 measurements of the imaging model} (22 with PRISM's segmenter, which leaves out the five that need the cavity). Computed by \code{prism/features/measurements.py} and
 \code{prism/features/tabular.py} from the masks and images as released (no registration or resampling by PRISM). Intensities are expressed relative to normal appearing brain, the brain more
 than 10\,mm from the lesion and the resection cavity. Distances and areas are in voxels, which are 1\,mm at the 1\,mm
 resolution of MU and UCSF.
@@ -507,16 +507,18 @@ the public development cohort (MU grade 4 intended use, 146 scans) and LUMIERE (
 
 \subsection{Contribution of each group of inputs}\label{sec:S26.1}
 
-% Sources: scripts/prism_feature_contributions.py; outputs/results/analyses/feature_contributions (2026-11-26).
+% Sources: scripts/prism_feature_contributions.py; outputs/results/analyses/feature_contributions_brats24_22 (2026-11-27).
 This analysis was added at review and is exploratory. It uses the label, folds and 146 evaluation scans of the main
-analysis at MU, where the full models reached 0.82 (combined), 0.71 (imaging) and 0.82 (clinical history). The inputs
+analysis at MU and the 22 measurements from PRISM's segmenter, with which the full models reached 0.82 (combined),
+0.71 (imaging) and 0.82 (clinical history). The inputs
 fall into six groups. The patient's characteristics are age, sex, IDH and MGMT status, a biopsy before resection and a
 previous brain tumour. The treatment course and dates are the days since diagnosis, surgery and the end of
 radiotherapy; the start, duration, dose and fractions of radiotherapy and whether it was hypofractionated; whether
 radiotherapy and chemotherapy had started and radiotherapy had ended; the 12-week flag and its product with MGMT
-status; unknown radiotherapy dates; and the visit index. The volumes are the six log volumes; composition, shape and
-position the eight measures of Table~S7 that describe them; intensity the five relative intensities; and change since
-earlier scans the six log ratios to the previous scan and the two volumes relative to the patient's smallest. A
+status; unknown radiotherapy dates; and the visit index. The volumes are the log volumes; composition, shape and
+position the measures of Table~S7 that describe them; intensity the five relative intensities; and change since
+earlier scans the log ratios to the previous scan and the two volumes relative to the patient's smallest. Without the
+cavity, the volumes keep five inputs, composition, shape and position five, and change since earlier scans seven. A
 missing-value indicator belongs to the group of its input.
 
 Table~S10 gives the AUC of each model refitted without each group, and Table~S11 each group's share of the score. A
@@ -535,17 +537,17 @@ bootstrap samples of patients.}
 \toprule
 Model & Group left out & AUC without & Fall in AUC \\
 \midrule
-Combined & Patient characteristics & 0.81 & $+$0.01 ($-$0.01 to $+$0.03) \\
-Combined & Treatment course and dates & 0.72 & $+$0.10 ($+$0.02 to $+$0.18) \\
-Combined & Volumes & 0.83 & $-$0.01 ($-$0.02 to $+$0.00) \\
-Combined & Composition, shape and position & 0.83 & $-$0.01 ($-$0.03 to $-$0.00) \\
-Combined & Intensity & 0.81 & $+$0.01 ($-$0.01 to $+$0.04) \\
-Combined & Change since earlier scans & 0.84 & $-$0.01 ($-$0.03 to $-$0.00) \\
+Combined & Patient characteristics & 0.81 & $+$0.01 ($-$0.01 to $+$0.04) \\
+Combined & Treatment course and dates & 0.73 & $+$0.09 ($+$0.01 to $+$0.17) \\
+Combined & Volumes & 0.82 & $-$0.00 ($-$0.02 to $+$0.01) \\
+Combined & Composition, shape and position & 0.82 & $-$0.00 ($-$0.01 to $+$0.01) \\
+Combined & Intensity & 0.82 & $+$0.01 ($-$0.01 to $+$0.02) \\
+Combined & Change since earlier scans & 0.83 & $-$0.01 ($-$0.03 to $+$0.00) \\
 \addlinespace
-Imaging & Volumes & 0.72 & $-$0.01 ($-$0.02 to $+$0.00) \\
-Imaging & Composition, shape and position & 0.73 & $-$0.02 ($-$0.03 to $-$0.00) \\
-Imaging & Intensity & 0.67 & $+$0.04 ($-$0.00 to $+$0.08) \\
-Imaging & Change since earlier scans & 0.66 & $+$0.05 ($-$0.00 to $+$0.11) \\
+Imaging & Volumes & 0.72 & $-$0.02 ($-$0.03 to $+$0.00) \\
+Imaging & Composition, shape and position & 0.71 & $-$0.00 ($-$0.01 to $+$0.01) \\
+Imaging & Intensity & 0.69 & $+$0.02 ($-$0.02 to $+$0.07) \\
+Imaging & Change since earlier scans & 0.64 & $+$0.07 ($+$0.02 to $+$0.13) \\
 \addlinespace
 Clinical history & Patient characteristics & 0.80 & $+$0.02 ($-$0.01 to $+$0.06) \\
 Clinical history & Treatment course and dates & 0.58 & $+$0.24 ($+$0.13 to $+$0.35) \\
@@ -564,17 +566,17 @@ the median over scans with and without progression.}
 \toprule
 Model & Group & Share & Progression & No progression \\
 \midrule
-Combined & Patient characteristics & 9\% (5--14\%) & 8\% & 9\% \\
-Combined & Treatment course and dates & 44\% (36--54\%) & 46\% & 43\% \\
-Combined & Volumes & 8\% (4--14\%) & 7\% & 8\% \\
-Combined & Composition, shape and position & 6\% (4--9\%) & 6\% & 6\% \\
-Combined & Intensity & 15\% (10--24\%) & 17\% & 15\% \\
-Combined & Change since earlier scans & 8\% (5--12\%) & 9\% & 7\% \\
+Combined & Patient characteristics & 9\% (6--17\%) & 8\% & 9\% \\
+Combined & Treatment course and dates & 44\% (36--56\%) & 47\% & 42\% \\
+Combined & Volumes & 13\% (6--19\%) & 12\% & 13\% \\
+Combined & Composition, shape and position & 4\% (3--7\%) & 4\% & 4\% \\
+Combined & Intensity & 13\% (8--19\%) & 15\% & 12\% \\
+Combined & Change since earlier scans & 7\% (5--11\%) & 7\% & 8\% \\
 \addlinespace
-Imaging & Volumes & 12\% (8--18\%) & 12\% & 12\% \\
-Imaging & Composition, shape and position & 13\% (9--19\%) & 14\% & 13\% \\
-Imaging & Intensity & 39\% (26--49\%) & 39\% & 38\% \\
-Imaging & Change since earlier scans & 33\% (19--42\%) & 28\% & 33\% \\
+Imaging & Volumes & 18\% (11--25\%) & 18\% & 16\% \\
+Imaging & Composition, shape and position & 8\% (5--14\%) & 8\% & 9\% \\
+Imaging & Intensity & 36\% (25--48\%) & 41\% & 32\% \\
+Imaging & Change since earlier scans & 33\% (19--45\%) & 23\% & 37\% \\
 \addlinespace
 Clinical history & Patient characteristics & 21\% (13--34\%) & 16\% & 23\% \\
 Clinical history & Treatment course and dates & 79\% (66--87\%) & 84\% & 77\% \\
@@ -597,10 +599,11 @@ nothing holds at LUMIERE unless its scans are exchangeable with the MU calibrati
 \begin{table}[!htbp]
 \renewcommand{\thetable}{S12}\renewcommand{\theHtable}{S12}
 \centering
-\caption{\textbf{Marginal (planned) and group-conditional conformal sets at the 80\% level.} Coverage is shown overall
+\caption{\textbf{Marginal (planned) and group-conditional conformal sets at the 80\% level,} with the 22 measurements
+from PRISM's segmenter. Coverage is shown overall
 with its interval, and within progression and other scans. The worst group gap is 0.80 minus the lowest coverage among
 groups with at least 10 evaluation scans (0 when no group falls below 0.80). With group-conditional sets, the share of
-scans calibrated at levels 1, 2 and 3 was 29\%, 45\% and 26\% at MU and 0\%, 60\% and 40\% at LUMIERE. Every marginal set
+scans calibrated at levels 1, 2 and 3 was 14\%, 57\% and 28\% at MU and 0\%, 53\% and 47\% at LUMIERE. Every marginal set
 is calibrated at level 3.}
 \label{tab:S26b}
 \footnotesize
@@ -609,19 +612,19 @@ is calibrated at level 3.}
  & Coverage & Progression covered & No progression covered & Both outcomes & Empty & Worst group gap \\
 \midrule
 \multicolumn{7}{@{}l}{\textit{MU grade 4 intended use (146 scans, 62 progression, averaged over five repeats)}} \\
-Clinical-history, marginal & 0.79 [0.73, 0.85] & 0.82 & 0.77 & 16\% & 3\% & 0.07 \\
-Clinical-history, group-conditional & 0.80 [0.75, 0.85] & 0.88 & 0.74 & 27\% & 7\% & 0.02 \\
-Imaging, marginal & 0.84 [0.80, 0.89] & 0.69 & 0.96 & 45\% & 0\% & 0.12 \\
-Imaging, group-conditional & 0.84 [0.79, 0.88] & 0.74 & 0.91 & 45\% & 3\% & 0.07 \\
-Combined, marginal & 0.82 [0.76, 0.88] & 0.82 & 0.83 & 25\% & 0.1\% & 0.12 \\
-Combined, group-conditional & 0.83 [0.78, 0.87] & 0.85 & 0.81 & 31\% & 4\% & 0.08 \\
+Clinical-history, marginal & 0.79 [0.73, 0.85] & 0.82 & 0.77 & 16\% & 3\% & 0.10 \\
+Clinical-history, group-conditional & 0.81 [0.76, 0.87] & 0.90 & 0.75 & 30\% & 6\% & 0 \\
+Imaging, marginal & 0.84 [0.80, 0.89] & 0.70 & 0.95 & 42\% & 0\% & 0.13 \\
+Imaging, group-conditional & 0.86 [0.81, 0.90] & 0.78 & 0.91 & 46\% & 3\% & 0 \\
+Combined, marginal & 0.82 [0.77, 0.87] & 0.81 & 0.83 & 26\% & 1\% & 0.10 \\
+Combined, group-conditional & 0.84 [0.79, 0.89] & 0.89 & 0.80 & 36\% & 5\% & 0 \\
 \multicolumn{7}{@{}l}{\textit{LUMIERE (178 scans, 73 progression)}} \\
-Clinical-history, marginal & 0.80 [0.73, 0.87] & 0.71 & 0.86 & 34\% & 0\% & 0.05 \\
-Clinical-history, group-conditional & 0.81 [0.74, 0.88] & 0.74 & 0.86 & 38\% & 2\% & 0.05 \\
-Imaging, marginal & 0.71 [0.65, 0.76] & 0.29 & 1.00 & 19\% & 0\% & 0.16 \\
-Imaging, group-conditional & 0.76 [0.71, 0.82] & 0.42 & 1.00 & 30\% & 0\% & 0.18 \\
-Combined, marginal & 0.87 [0.80, 0.93] & 0.77 & 0.94 & 38\% & 0\% & 0 \\
-Combined, group-conditional & 0.89 [0.84, 0.94] & 0.79 & 0.96 & 42\% & 0\% & 0 \\
+Clinical-history, marginal & 0.80 [0.73, 0.87] & 0.71 & 0.86 & 34\% & 0\% & 0.02 \\
+Clinical-history, group-conditional & 0.83 [0.76, 0.90] & 0.79 & 0.86 & 43\% & 1\% & 0.02 \\
+Imaging, marginal & 0.75 [0.69, 0.80] & 0.48 & 0.94 & 20\% & 0\% & 0.22 \\
+Imaging, group-conditional & 0.78 [0.72, 0.83] & 0.56 & 0.93 & 30\% & 1\% & 0.30 \\
+Combined, marginal & 0.82 [0.76, 0.88] & 0.63 & 0.95 & 22\% & 0\% & 0.08 \\
+Combined, group-conditional & 0.84 [0.78, 0.89] & 0.67 & 0.95 & 26\% & 1\% & 0.08 \\
 \bottomrule
 \end{tabularx}
 \end{table}
@@ -629,7 +632,8 @@ Combined, group-conditional & 0.89 [0.84, 0.94] & 0.79 & 0.96 & 42\% & 0\% & 0 \
 \begin{table}[!htbp]
 \renewcommand{\thetable}{S13}\renewcommand{\theHtable}{S13}
 \centering
-\caption{\textbf{Coverage of the combined model within each group with at least 9 evaluation scans.} Nominal level
+\caption{\textbf{Coverage of the combined model within each group with at least 9 evaluation scans,} with the 22
+measurements from PRISM's segmenter. Nominal level
 80\%. Early means up to 12 weeks after the end of radiotherapy. The time after radiotherapy is unknown for every
 LUMIERE scan, so its groups are the enhancement state alone.}
 \label{tab:S26c}
@@ -639,40 +643,35 @@ LUMIERE scan, so its groups are the enhancement state alone.}
 Group & Scans & Progression & Marginal & Group-conditional \\
 \midrule
 \multicolumn{5}{@{}l}{\textit{MU grade 4 intended use}} \\
-Early after radiotherapy, enhancement increased & 9 & 1 & 0.96 [0.85, 1.00] & 0.96 [0.85, 1.00] \\
-Early after radiotherapy, enhancement not increased & 11 & 3 & 0.93 [0.86, 0.98] & 0.95 [0.89, 1.00] \\
-Early after radiotherapy, no previous scan & 32 & 0 & 0.99 [0.96, 1.00] & 0.84 [0.74, 0.92] \\
-Later after radiotherapy, enhancement absent & 9 & 2 & 0.67 [0.40, 0.88] & 0.67 [0.40, 0.88] \\
-Later after radiotherapy, enhancement increased & 24 & 16 & 0.68 [0.55, 0.81] & 0.72 [0.59, 0.85] \\
-Later after radiotherapy, enhancement not increased & 54 & 38 & 0.78 [0.65, 0.89] & 0.87 [0.80, 0.93] \\
+Early after radiotherapy, enhancement increased & 10 & 1 & 0.88 [0.74, 0.98] & 0.90 [0.77, 1.00] \\
+Early after radiotherapy, enhancement not increased & 10 & 3 & 0.92 [0.82, 1.00] & 0.96 [0.90, 1.00] \\
+Early after radiotherapy, no previous scan & 31 & 0 & 0.99 [0.98, 1.00] & 0.80 [0.68, 0.91] \\
+Later after radiotherapy, enhancement increased & 27 & 19 & 0.70 [0.57, 0.82] & 0.84 [0.75, 0.92] \\
+Later after radiotherapy, enhancement not increased & 51 & 33 & 0.77 [0.66, 0.87] & 0.85 [0.76, 0.94] \\
 \multicolumn{5}{@{}l}{\textit{LUMIERE}} \\
-Enhancement absent & 57 & 13 & 0.93 [0.83, 0.99] & 0.93 [0.83, 0.99] \\
-Enhancement increased & 49 & 28 & 0.88 [0.78, 0.96] & 0.94 [0.86, 1.00] \\
-Enhancement not increased & 53 & 25 & 0.85 [0.73, 0.96] & 0.87 [0.75, 0.97] \\
-Enhancement state unknown & 15 & 5 & 0.80 [0.57, 1.00] & 0.80 [0.57, 1.00] \\
+Enhancement absent & 76 & 17 & 0.84 [0.74, 0.92] & 0.84 [0.74, 0.92] \\
+Enhancement increased & 55 & 32 & 0.85 [0.75, 0.94] & 0.93 [0.85, 0.98] \\
+Enhancement not increased & 36 & 18 & 0.72 [0.59, 0.85] & 0.72 [0.59, 0.85] \\
 \bottomrule
 \end{tabularx}
 \end{table}
 
 An exploratory check, not in the plan, compared the sets with two further baselines for the combined model at MU
-(Table S14). The first is a marginal set at a level of 82.5\% ($\alpha$ = 0.175), chosen so that its share of sets
+(Table S14). The first is a marginal set at a level of 84.5\% ($\alpha$ = 0.155), chosen so that its share of sets
 holding both outcomes matches that of the group-conditional set. The second is calibrated within each outcome. In the
-four groups below, coverage with the marginal, group-conditional and size matched sets was 0.99, 0.84 and
-1.00 early after radiotherapy without a previous scan (32 scans), 0.78, 0.87 and 0.83 later with enhancement not
-increased (54), 0.68, 0.72 and 0.74 later with enhancement increased (24), and 0.67, 0.67 and 0.69 later without
-enhancement (9). A marginal set enlarged to the same share of two outcome sets covers the worst groups at least as
-well as the group-conditional set. The gain of the group-conditional set in the worst group therefore comes from
-larger sets, not from calibration within groups. What calibration within groups does differently is move coverage
-from a group that is covered beyond the nominal level (early, no previous scan, 0.99 to 0.84) to the largest later
-group (0.78 to 0.87). The worst group gap of Table S12 used groups with at least 10 evaluation scans. With 9, the
-threshold of Table S13, the worst group is later after radiotherapy without enhancement, and its coverage is 0.67 with
-both sets.
+three largest groups, coverage with the marginal, group-conditional and size matched sets was 0.99, 0.80 and 1.00
+early after radiotherapy without a previous scan (31 scans), 0.77, 0.85 and 0.82 later with enhancement not increased
+(51), and 0.70, 0.84 and 0.79 later with enhancement increased (27). In the worst group, a marginal set enlarged to the
+same share of two outcome sets raised coverage from 0.70 to 0.79, and the group-conditional set to 0.84, so part of the
+gain comes from larger sets and part from calibration within groups. Calibration within groups also moves coverage
+from a group that is covered beyond the nominal level (early, no previous scan, 0.99 to 0.80) to the later groups.
 
 \begin{table}[!htbp]
 \renewcommand{\thetable}{S14}\renewcommand{\theHtable}{S14}
 \centering
-\caption{\textbf{Exploratory. Conformal sets of the combined model at MU against two further baselines.} Nominal
-level 80\% ($\alpha$ = 0.2) except for the size matched marginal set ($\alpha$ = 0.175). The last two columns give the
+\caption{\textbf{Exploratory. Conformal sets of the combined model at MU against two further baselines,} with the 22
+measurements from PRISM's segmenter. Nominal
+level 80\% ($\alpha$ = 0.2) except for the size matched marginal set ($\alpha$ = 0.155). The last two columns give the
 lowest coverage among groups with at least 9 and at least 10 evaluation scans, with the group and its number of scans.
 Later means more than 12 weeks after the end of radiotherapy.}
 \label{tab:S26f}
@@ -681,10 +680,10 @@ Later means more than 12 weeks after the end of radiotherapy.}
 \toprule
 Set & Coverage & Progression covered & No progression covered & Both outcomes & Empty & Worst group, at least 9 scans & Worst group, at least 10 scans \\
 \midrule
-Marginal (planned) & 0.82 & 0.82 & 0.83 & 25\% & 0.1\% & 0.67 (later, no enhancement, 9) & 0.68 (later, increased, 24) \\
-Group-conditional & 0.83 & 0.85 & 0.81 & 31\% & 4.1\% & 0.67 (same group) & 0.72 (same group) \\
-Marginal, size matched & 0.86 & 0.86 & 0.86 & 32\% & 0.1\% & 0.69 (same group) & 0.74 (same group) \\
-Outcome-conditional & 0.79 & 0.87 & 0.73 & 16\% & 0.7\% & 0.64 (later, increased) & 0.64 (same group) \\
+Marginal (planned) & 0.82 & 0.81 & 0.83 & 26\% & 1.0\% & 0.70 (later, increased, 27) & 0.70 (same group) \\
+Group-conditional & 0.84 & 0.89 & 0.80 & 36\% & 5.1\% & 0.80 (early, no previous scan, 31) & 0.80 (same group) \\
+Marginal, size matched & 0.87 & 0.87 & 0.87 & 36\% & 0.1\% & 0.79 (later, increased, 27) & 0.79 (same group) \\
+Outcome-conditional & 0.79 & 0.85 & 0.74 & 16\% & 0.7\% & 0.66 (later, increased, 27) & 0.66 (same group) \\
 \bottomrule
 \end{tabularx}
 \end{table}
@@ -709,8 +708,8 @@ The 52 synthetic records cover two tiers, both sides of each model's median, eac
 sets and the out-of-range flag.
 
 Every evaluation report passed the frozen checker. Version 1.1 rejected 1 of the 114 MU reports of the language model
-(by the direction rule), none of its 162 LUMIERE reports and none of the 276 template reports. These rejections were
-not adjudicated, because the reports are not read in a hosted context. Table S15 gives the share of planted errors
+(by the direction rule), none of its 162 LUMIERE reports and none of the 276 template reports. This rejection was
+read by hand: the report was correct, and the direction rule had read ``increased'' without its negation. Table S15 gives the share of planted errors
 rejected. The plan counts the verifier as closing a blind spot when it rejects at least 95\% of the synthetic mutants
 of an operator that the frozen checker misses.
 
@@ -852,7 +851,7 @@ back.
 
 \subsection{Measurements}\label{sec:S29.2}
 
-Supplementary Table~S7 defines the 27 measurements. Nineteen describe the current scan: the log volumes of the
+Supplementary Table~S7 defines the 27 measurements, of which PRISM's segmenter uses the 22 that do not need the cavity. Nineteen describe the current scan: the log volumes of the
 enhancing tumour, necrosis, FLAIR hyperintensity, resection cavity, tumour core and whole lesion; eight measures of
 composition, shape and position relative to the cavity; and five measures of T1c and FLAIR intensity relative to
 normal-appearing brain, taken as the brain more than 10\,mm from the lesion and the cavity. Eight describe change: the

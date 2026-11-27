@@ -55,3 +55,17 @@ Recorded before any rerun.
     texts (`system.py`).
   - Records were rebuilt and the reports regenerated. The superseded run is kept in
     `report_v3_2_brats24_22/_superseded_based_on_bug/`.
+
+## Applied in the paper (2026-11-27)
+
+- Author's instruction 2026-11-27: the paper now reports PRISM's segmenter (22 inputs) as primary everywhere, with
+  the supplied masks as the reference (abstract, contributions, Methods, Results, Discussion, Figures 2-3, Tables
+  S10-S14). The post hoc input choice and the BraTS 2024 training overlap (UCSF; MU possible) are stated in Methods
+  and the limitations.
+- Recomputed on the segmenter for the paper: input-group contributions (`feature_contributions_brats24_22/`), the
+  size-matched conformal sets (`methods_brats24_22/extra_m2.csv`, alpha 0.155), the all-scans MU set (0.81 / 0.65 /
+  0.79) and the calibration CIs.
+- Still from the supplied masks only, and labelled so: the UCSF reports (130), the verifier and planted-error tests,
+  the 30-record perturbation test, the seven-model comparison, the radiomics comparison.
+- Note: with the segmenter the imaging model's gain over the time-and-enhancement model has CIs below 0 at LUMIERE
+  and UCSF, and the combined model's at UCSF (approximated window).
