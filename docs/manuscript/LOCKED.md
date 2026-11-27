@@ -18,7 +18,6 @@ Source of each item: the PI's marked copy of 2026-11-23 (commit 28e245b), the ev
 the author's approvals of 2026-11-26 and 2026-11-27.
 
 ```locked
-\item A new local system is developed
 \item PRISM separates imaging and clinical-history scores, each reported with its uncertainty.
 \item PRISM provides an evaluation of what each score adds to what the clinician already knows.
 \item External validation is performed without retraining.
@@ -40,4 +39,19 @@ All evaluation reports passed the checker (Figure~\ref{fig:5} shows one).
 PRISM's combined model ranked scans with an AUC of 0.82 at MU and held that level without retraining at both external centres, with 0.79 at LUMIERE and 0.81 at UCSF-ALPTDG. Splitting each score into its inputs showed what this ranking rests on: the treatment course and the image measurements each made up about two fifths of the combined score. The results held with PRISM's own segmenter, the conformal sets kept their 80\% coverage in every cohort, and every report passed the checker.
 \subsection{Treatment history and images carry the combined score in near-equal parts}
 \subsection{The combined score's sets held their coverage}
+```
+
+## PI's Figure 1 requests (marked copy 2026-11-23, items 22, 25, 28, 29; restored 2026-11-27)
+
+```locked
+Figure~\ref{fig:1} gives an overview of PRISM and of this section. PRISM reads each follow-up MRI scan of a patient treated for glioma (Figure~\ref{fig:1}a) and returns three scores of progression with a written report. Section~\ref{sec:2.1} describes the cohorts and the label. Section~\ref{sec:2.2} describes PRISM's segmenter (Figure~\ref{fig:1}b) and its six stages (Figure~\ref{fig:1}c). Section~\ref{sec:2.3} describes how PRISM was developed on MU-Glioma-Post and tested without retraining on LUMIERE and UCSF-ALPTDG (Figure~\ref{fig:1}d).
+The task was to distinguish the scan at which progression was documented from scans without progression (Figure~\ref{fig:1}a).
+On MU, every model was evaluated by five repeats of fivefold cross validation grouped by patient (Figure~\ref{fig:1}d).
+\paragraph*{Segmentation (Stage 1).}
+\paragraph*{Measurements (Stage 2).}
+\paragraph*{Models (Stage 3).}
+\paragraph*{Evidence (Stage 4).}
+\paragraph*{Record (Stage 5).}
+\paragraph*{Report and checks (Stage 6).}
+\item A new local system is developed, which segments
 ```

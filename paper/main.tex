@@ -141,7 +141,7 @@ rules combine them with automated tumour volumes to assign a BT-RADS category \c
 model makes no decision. It writes up values computed elsewhere, so every sentence it writes can be checked. Our
 contributions are:
 \begin{enumerate}
-\item A new local system is developed. It segments the tumour on each scan with the top-ranked model of the BraTS 2024
+\item A new local system is developed, which segments the tumour on each scan with the top-ranked model of the BraTS 2024
 post-treatment challenge \citep{ferreira2024}, used without fine-tuning. We compare this segmenter with Swin UNETR
 trained on BraTS 2021 \citep{hatamizadeh2022} and with the masks supplied with each dataset. From each segmentation,
 PRISM derives 22 measurements of tumour volume, shape, intensity and change from earlier scans. No patient data leave
@@ -173,8 +173,11 @@ segmentation, and the conformal sets and report checks. Section~\ref{sec:4} disc
 limits.
 \section{Methods}\label{sec:2}
 
-PRISM reads each follow-up MRI scan of a patient treated for glioma and returns three scores of progression with a
-written report (Figure~\ref{fig:1}).
+Figure~\ref{fig:1} gives an overview of PRISM and of this section. PRISM reads each follow-up MRI scan of a patient
+treated for glioma (Figure~\ref{fig:1}a) and returns three scores of progression with a written report.
+Section~\ref{sec:2.1} describes the cohorts and the label. Section~\ref{sec:2.2} describes PRISM's segmenter
+(Figure~\ref{fig:1}b) and its six stages (Figure~\ref{fig:1}c). Section~\ref{sec:2.3} describes how PRISM was developed
+on MU-Glioma-Post and tested without retraining on LUMIERE and UCSF-ALPTDG (Figure~\ref{fig:1}d).
 
 \subsection{Cohorts and label}\label{sec:2.1}
 
@@ -183,7 +186,8 @@ We used three public cohorts of patients followed with MRI after treatment for g
 MU-Glioma-Post \citep{mahmoud2025,yaseen2025tcia} and tested without retraining on LUMIERE \citep{suter2022} and UCSF-ALPTDG
 \citep{fields2024} (Table~\ref{tab:1}). In all three, the primary population was grade 4 glioma.
 
-The task was to distinguish the scan at which progression was documented from scans without progression. Each cohort
+The task was to distinguish the scan at which progression was documented from scans without progression
+(Figure~\ref{fig:1}a). Each cohort
 records progression differently, so the label follows each cohort's own data (Table~\ref{tab:eval}). At
 MU-Glioma-Post and UCSF-ALPTDG, a scan without progression must be followed by at least 120 days without progression.
 LUMIERE rates every scan, and UCSF-ALPTDG supplies two consecutive scans per patient \citep{fields2024}, of which only the second is
@@ -306,7 +310,7 @@ Enhancing volume alone & Log enhancing tumour volume, used directly & No \\
 % Sources: DETECTION_TASK.md (Plan, B1); UCSF_IMAGING.md; NUMBERS.md 2.1; SEGMENTER_STAGE.md section 2;
 % SEGMENTER_BRATS24_PLAN.md; prism/features/reseg.py, reseg_brats24.py, measurements.py; ucsf_imaging.model_inputs;
 % refs mahmoud2025, suter2022, fields2024, hatamizadeh2022, deverdier2024, ferreira2024.
-\paragraph*{Segmentation.} PRISM segments each scan with the winning model \citep{ferreira2024} of the BraTS 2024
+\paragraph*{Segmentation (Stage 1).} PRISM segments each scan with the winning model \citep{ferreira2024} of the BraTS 2024
 challenge for adult glioma after treatment \citep{deverdier2024} (Figure~\ref{fig:1}b). This model is an ensemble of nnU-Net
 \citep{isensee2021}, MedNeXt \citep{roy2023} and Swin UNETR \citep{hatamizadeh2022} networks, run from the container distributed with the BraTS orchestrator
 \citep{kofler2025}. It marks the enhancing tumour, the non-enhancing tumour core (used here as necrosis), FLAIR
@@ -327,7 +331,7 @@ belongs to a region when its probability exceeds 0.5. Necrosis is the core outsi
 hyperintensity is the rest of the whole tumour. BraTS 2021 contains scans taken before surgery \citep{baid2021}. This network therefore has
 no resection-cavity label and supplies 22 of the 27 measurements.
 
-\paragraph*{Measurements.} From the masks and the T1c and FLAIR images, PRISM computes 27
+\paragraph*{Measurements (Stage 2).} From the masks and the T1c and FLAIR images, PRISM computes 27
 measurements. Nineteen describe the current scan: six log volumes and measures of composition,
 shape, position and intensity. Eight describe change since the previous scan and since the patient's smallest volume.
 Change uses earlier scans only and is zero at a patient's first scan. Five measurements need a resection cavity.
@@ -342,7 +346,7 @@ enter from the diagnosis date.
 
 % Sources: prism/models/formulations.py; prism/experiments/c3_radiomics.py (BASE_PRE); NUMBERS.md 2.1;
 % DETECTION_TASK.md (External test); SYSTEM_RESULTS.md (Deviations item 1).
-\paragraph*{Models.} The imaging, clinical-history and combined models are ridge logistic regressions \citep{lecessie1992} on the
+\paragraph*{Models (Stage 3).} The imaging, clinical-history and combined models are ridge logistic regressions \citep{lecessie1992} on the
 inputs listed in Table~\ref{tab:models}. Logistic regression turns a weighted sum of the inputs into a probability of
 progression. The ridge (L2) penalty pulls the weights towards zero. This keeps them stable when there are many
 correlated inputs and few patients.
@@ -367,7 +371,7 @@ these masks, the imaging model is fitted on MU with the three volumes and their 
 
 % Sources: prism/audit/conformal.py; METHODS_PLAN.md M2; RELIABILITY_CARD.md; REVISION_DATA.md R2; refs
 % angelopoulos2023, vovk2022book, romano2020, barber2021limits, johansson2015, ding2023, mehrtens2023, mitchell2019.
-\paragraph*{Evidence.} For each score, PRISM computes an 80\% split-conformal set
+\paragraph*{Evidence (Stage 4).} For each score, PRISM computes an 80\% split-conformal set
 \citep{angelopoulos2023}. Its threshold is taken from calibration patients that the model was not fitted on. Write $\hat p(1) = \hat p$ for a scan's score and $\hat p(0) = 1 - \hat p$. For each calibration scan $i$
 with outcome $y_i$, the nonconformity score $s_i = 1 - \hat p_i(y_i)$ is the probability that the model did not give
 to the true outcome. Each calibration scan is weighted by one over the number of its patient's calibration scans, so
@@ -413,7 +417,7 @@ It reads results already measured, including those for the scan it describes.
 % prism/report/verifier.py; REPORT_V3.md; REPORT_V3_1.md; METHODS_RESULTS.md M3; CHECKER_MUTATION.md;
 % REVISION_DATA.md R3/R4; refs kwon2023, herasrivera2026, weinberg2018, gore2019, zeba2026, wiseman2017, gabriel2021,
 % rao2025rexerr.
-\paragraph*{Record.} PRISM writes everything it computes for a scan into one structured record, a flat list of named
+\paragraph*{Record (Stage 5).} PRISM writes everything it computes for a scan into one structured record, a flat list of named
 entries. Each entry has a key and holds one value or one fixed sentence. The
 entries give the time after radiotherapy, the volumes and their change since the previous scan, each model's score
 with its cohort median and the inputs it is based on, the conformal sets, the agreement statement, the reliability
@@ -424,7 +428,7 @@ to two decimals, volumes to one). Fixed wording, such as the tier, each conforma
 agreement, each change in volume and the reason for each flag, is stored as a sentence for the language model to
 copy. The record holds no outcome label.
 
-\paragraph*{Report and checks.} A local open-weight language model, Qwen3.8-27B \citep{qwen2026}, writes the report's prose from the record alone.
+\paragraph*{Report and checks (Stage 6).} A local open-weight language model, Qwen3.8-27B \citep{qwen2026}, writes the report's prose from the record alone.
 It runs offline on one GPU of the computer that runs PRISM, served with the vLLM library \citep{kwon2023}, so the
 record never leaves that computer. Decoding is greedy (the model always takes its most likely next word), so the report does not depend on random
 sampling. The prompt asks for sentences in a fixed order, from the scan's timing to one sentence for each raised flag. It tells the model to copy every number as digits and every fixed phrase exactly, and to add no diagnosis, response
@@ -476,7 +480,7 @@ tier, the agreement, the change in enhancing volume, the out-of-range flag and t
 \subsection{Evaluation}\label{sec:2.3}
 
 \paragraph*{Development and external testing.} On MU, every model was evaluated by five repeats of fivefold cross
-validation grouped by patient. In each repeat, a model was fitted on four folds of patients and scored the scans of the
+validation grouped by patient (Figure~\ref{fig:1}d). In each repeat, a model was fitted on four folds of patients and scored the scans of the
 fifth. The AUC was computed over the held-out scores of the 146 evaluation scans (Section~\ref{sec:2.1}) and averaged
 over the five repeats, because a single split of a small cohort gives an estimate with a wide error
 \citep{an2021,varoquaux2018}. Each model was then fitted once on all 181 MU training scans and applied to LUMIERE and
