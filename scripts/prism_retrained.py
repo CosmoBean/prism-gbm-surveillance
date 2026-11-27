@@ -89,7 +89,7 @@ def run(name, d, Xmu, Xe, y, pid):
             bs = np.array([auc(k, i) for i in boots])
             dif = np.array([auc(k, i) - auc(("external", p), i) for i in boots]) if a != "external" else None
             res.append({"centre": name, "model": p, "fit": a, "n_scans": n, "n_pos": int(y.sum()),
-                        "n_patients": len(pats), "auc": round(full, 3),
+                        "n_patients": len(pats), "auc": round(full, 4),
                         "ci": [round(float(np.quantile(bs, q)), 3) for q in (.025, .975)],
                         "diff_vs_external": None if dif is None else round(full - auc(("external", p), np.arange(n)), 3),
                         "diff_ci": None if dif is None else [round(float(np.quantile(dif, q)), 3) for q in (.025, .975)]})

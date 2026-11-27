@@ -139,6 +139,8 @@
 \setlength{\bibsep}{2pt}
 
 \usepackage[hidelinks,unicode]{hyperref}
+% long repository URLs (e.g. christodoulou2026code) may also break at hyphens
+\def\UrlBreaks{\do\/\do-\do.\do_}
 \providecommand{\doi}{}\renewcommand{\doi}[1]{doi:\href{https://doi.org/#1}{#1}}
 
 % Running title (used in the page header of both documents)
