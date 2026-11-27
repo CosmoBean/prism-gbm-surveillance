@@ -107,6 +107,34 @@ planted in radiology reports to build test sets for methods that correct them \c
 often cannot leave the hospital, so the model should also run locally. Open-weight models run on site can label
 radiology reports \citep{mukherjee2023} and extract their findings comparably to closed models \citep{nowak2025}.
 
+% Figure 1 is placed here so that its float pages come before its first mention, in the Methods.
+% FIGURE REDESIGN (2026-11-18), modelled on Tak et al. 2025, NEJM AI, doi:10.1056/AIoa2400703; enlarged and split
+% over two pages 2026-11-26 (PI review: legible on paper). Each panel is drawn at its printed size (text width, fonts
+% 7 pt or larger) by scripts/fig1_prism.py, which reads the MU images from data/mu-glioma-post (patient
+% PatientID_0204; labels by the paper's rule, computed in the script).
+\begin{figure}[p]
+\centering
+\figslot{fig1a.pdf}{0.40\textheight}{One MU patient's follow-up on real scans.}\\[4pt]
+\figslot{fig1b.pdf}{0.50\textheight}{PRISM's segmenter.}
+\caption{\textbf{The workflow of PRISM.} (a) One MU-Glioma-Post patient's scans after radiotherapy, by weeks after
+its end, with the enhancing tumour outlined by PRISM's segmenter (solid) and by the supplied mask (dashed); volumes are
+the segmenter's, with the supplied mask's in brackets. Scans followed by at least 120 days without progression are
+labelled no progression, and the first scan after documented progression, at 40.9 weeks, is the progression scan.
+(b) PRISM's segmenter, the first-place BraTS 2024 post-treatment ensemble of 30 networks
+\citep{ferreira2024}, shown on that scan. Panels (c) and (d) follow on the next page.}
+\label{fig:1}
+\end{figure}
+
+\begin{figure}[p]
+\centering
+\figslot{fig1c.pdf}{0.62\textheight}{The method in six stages.}\\[4pt]
+\figslot{fig1d.pdf}{0.22\textheight}{The evaluation protocol.}
+\addtocounter{figure}{-1}
+\caption{\textbf{The workflow of PRISM (continued).} (c) The six stages of PRISM at one scan
+(Section~\ref{sec:2.2}). (d) Development on MU-Glioma-Post and testing without retraining at LUMIERE and UCSF-ALPTDG
+(Section~\ref{sec:2.3}).}
+\end{figure}
+
 We present PRISM (Progression Reading with Independent Scores and Measurements), a new system for glioma follow-up MRI
 that runs on one local computer. PRISM works from conventional MRI and the clinical record, both part of every
 routine follow-up. In another recent system, a language-model agent extracts clinical variables from the notes, and
@@ -148,33 +176,6 @@ limits.
 \section{Methods}\label{sec:2}
 
 Figure~\ref{fig:1} gives an overview of this section. PRISM reads each follow-up MRI scan of a patient treated for glioma (Figure~\ref{fig:1}a) and returns three scores of progression with a written report. Section~\ref{sec:2.1} describes the three cohorts and the label. Section~\ref{sec:2.2} describes PRISM's six stages (Figure~\ref{fig:1}c). They are segmentation of the tumour regions by a fixed network (Figure~\ref{fig:1}b), measurements from the masks with the clinical-history inputs, three models (imaging, clinical history and combined), evidence for each score, a record of every value, and a report written by a local language model and checked by rule-based programs. Section~\ref{sec:2.3} describes how PRISM was developed on MU-Glioma-Post and tested without retraining on LUMIERE and UCSF-ALPTDG (Figure~\ref{fig:1}d).
-
-% FIGURE REDESIGN (2026-11-18), modelled on Tak et al. 2025, NEJM AI, doi:10.1056/AIoa2400703; enlarged and split
-% over two pages 2026-11-26 (PI review: legible on paper). Each panel is drawn at its printed size (text width, fonts
-% 7 pt or larger) by scripts/fig1_prism.py, which reads the MU images from data/mu-glioma-post (patient
-% PatientID_0204; labels by the paper's rule, computed in the script).
-\begin{figure}[p]
-\centering
-\figslot{fig1a.pdf}{0.40\textheight}{One MU patient's follow-up on real scans.}\\[4pt]
-\figslot{fig1b.pdf}{0.50\textheight}{PRISM's segmenter.}
-\caption{\textbf{The workflow of PRISM.} (a) One MU-Glioma-Post patient's scans after radiotherapy, by weeks after
-its end, with the enhancing tumour outlined by PRISM's segmenter (solid) and by the supplied mask (dashed); volumes are
-the segmenter's, with the supplied mask's in brackets. Scans followed by at least 120 days without progression are
-labelled no progression, and the first scan after documented progression, at 40.9 weeks, is the progression scan.
-(b) PRISM's segmenter, the first-place BraTS 2024 post-treatment ensemble of 30 networks
-\citep{ferreira2024}, shown on that scan. Panels (c) and (d) follow on the next page.}
-\label{fig:1}
-\end{figure}
-
-\begin{figure}[p]
-\centering
-\figslot{fig1c.pdf}{0.62\textheight}{The method in six stages.}\\[4pt]
-\figslot{fig1d.pdf}{0.22\textheight}{The evaluation protocol.}
-\addtocounter{figure}{-1}
-\caption{\textbf{The workflow of PRISM (continued).} (c) The six stages of PRISM at one scan
-(Section~\ref{sec:2.2}). (d) Development on MU-Glioma-Post and testing without retraining at LUMIERE and UCSF-ALPTDG
-(Section~\ref{sec:2.3}).}
-\end{figure}
 
 \subsection{Cohorts and label}\label{sec:2.1}
 
