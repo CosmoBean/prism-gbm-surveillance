@@ -319,8 +319,8 @@ The masks supplied with each dataset are the reference (Table~\ref{tab:1}). At M
 mark the same four regions. At LUMIERE, they are DeepBraTumIA masks with three labels (necrosis, contrast enhancement and oedema) \citep{suter2022}; on inspection, the cavity falls within
 the necrosis label.
 
-PRISM runs both of its networks with their public weights, and neither was tuned on our cohorts. The
-second network is compared as an alternative segmentation stage. It is the Swin UNETR \citep{hatamizadeh2022} released in MONAI \citep{cardoso2022monai} for BraTS 2021. It marks the enhancing tumour, the tumour core
+Both segmenters are run with their public weights, and neither was tuned on our cohorts. The comparison segmenter
+is the Swin UNETR \citep{hatamizadeh2022} released in MONAI \citep{cardoso2022monai} for BraTS 2021. It marks the enhancing tumour, the tumour core
 and the whole tumour. It takes FLAIR, T1c, T1 and T2, each
 scaled to zero mean and unit variance over the brain, in blocks of $128^3$ voxels that overlap by half. A voxel
 belongs to a region when its probability exceeds 0.5. Necrosis is the core outside the enhancing tumour, and FLAIR
@@ -331,7 +331,7 @@ no resection-cavity label and supplies 22 of the 27 measurements.
 measurements. Nineteen describe the current scan: six log volumes and measures of composition,
 shape, position and intensity. Eight describe change since the previous scan and since the patient's smallest volume.
 Change uses earlier scans only and is zero at a patient's first scan. Five measurements need a resection cavity.
-PRISM uses the other 22, which both of its segmenters supply. With the supplied masks, all 27 are used.
+PRISM uses the other 22, the same 22 that Swin UNETR supplies. With the supplied masks, all 27 are used.
 
 PRISM computes the clinical-history inputs from the treatment course as of the scan day and from the patient's
 characteristics, including IDH mutation and MGMT promoter methylation status (Table~\ref{tab:models}). PRISM also places each scan in a
@@ -452,7 +452,7 @@ evaluation report was generated, and every report is counted as it was first wri
 
 The prompt was developed on 58 reports for 40 patients (20 MU, 10 LUMIERE and 10 UCSF-ALPTDG), and the evaluation
 used the remaining patients. The tests of the reports below use the reports written from the supplied masks for the
-276 MU and LUMIERE evaluation scans.
+276 evaluation scans at MU and LUMIERE of patients not used to develop the prompt.
 
 The checker accepts a number that equals a number in any cited entry. It does not read direction words. The second program, the verifier, runs the
 checker and adds two rules that tie each number and direction word to what it describes. It splits each sentence into clauses and assigns
@@ -465,9 +465,8 @@ To measure what the two programs catch, we planted one error at a time in correc
 \citep{gabriel2021}. The correct reports came from test code (52 synthetic records), the language model (the 276 MU and
 LUMIERE evaluation reports) and a fixed template applied to the same records. Three kinds of
 error were held out while the rules were written: two that place a value under the wrong region or score, and one that
-reverses the direction of a change. We wrote both the rules and these errors. A separate language model that
-had not seen the rules therefore also rewrote the synthetic reports with errors in its own words, with correct paraphrases as
-controls.
+reverses the direction of a change. To test errors written independently of the rules, a separate language model that had not seen them rewrote the
+synthetic reports with errors in its own words, with correct paraphrases as controls.
 
 To test whether a report follows its record, we changed one entry in 30 evaluation records, six each for the card's
 tier, the agreement, the change in enhancing volume, the out-of-range flag and the conformal set. 
@@ -518,9 +517,7 @@ refitted the models in the same folds. The first used Swin UNETR at MU, with the
 Swin UNETR alone at all three centres (22 measurements), fitted on MU and applied without retraining. The third used
 the BraTS 2024 model in the same way, which is PRISM's segmentation stage (Section~\ref{sec:2.2}).
 The published radiomics model was also run on the Swin UNETR masks at MU. Each score is compared with its value on the
-supplied masks by the paired difference in AUC. A segmenter was taken to preserve PRISM's results when no score fell,
-that is, when every paired CI included zero or lay above it, and the gain over the time-and-enhancement model was read
-the same way.
+supplied masks by the paired difference in AUC. 
 Agreement with the supplied masks
 is measured by the Dice overlap \citep{dice1945}. At MU and LUMIERE, the noise of the enhancing volume is measured by
 its median fold change between consecutive scans at most 30 days apart.
@@ -583,11 +580,11 @@ estimated window. At LUMIERE, enhancing volume alone uses the 171 scans with a s
 % the BraTS21 masks); METHODS_RESULTS.md E4.
 At MU, the published radiomics model ranked below PRISM's imaging model on both the supplied and the Swin UNETR
 masks. On the supplied masks it reached 0.58 (0.50--0.66), below the imaging model on the same masks by 0.13
-(0.02--0.23) and below the time-and-enhancement model (Figure~\ref{fig:2}). Enhancing volume alone reached 0.61. With Swin UNETR masks, the radiomics model reached 0.53, below the imaging model on the same masks by
+(0.02--0.23) and below both enhancing volume alone (0.61) and the time-and-enhancement model (Figure~\ref{fig:2}). With Swin UNETR masks, the radiomics model reached 0.53, below the imaging model on the same masks by
 0.10 (0.01--0.19).
 
 Over 100 random held-out sets of 18 of the 92 grade 4 patients, an earlier re-implementation of the radiomics model
-ranged from 0.32 to 0.88 (mean 0.63) on the intended-use scans. On 100 sets drawn the same way, PRISM's combined model
+ranged from 0.32 to 0.88 (mean 0.63) on the evaluation scans. On 100 sets drawn the same way, PRISM's combined model
 reached up to 1.00, and 0.84 on average, with 95\% of sets between 0.68 and 0.96 (exploratory).
 
 \subsection{The treatment dates are the largest part of the score}\label{sec:3.2}
@@ -608,7 +605,8 @@ different times after radiotherapy (Table~\ref{tab:1}). The patient's characteri
 At UCSF-ALPTDG, enhancing volume alone ranked scans at 0.88 (0.79--0.95) and the days since the start of
 radiotherapy at 0.54. At LUMIERE the two were closer, at 0.70 for enhancing volume and 0.61 for the days since surgery.
 
-At UCSF-ALPTDG the combined model ranked scans below the time-and-enhancement model, a difference of $-$0.07 ($-$0.14
+At UCSF-ALPTDG, the recorded progression closely followed visible growth of the enhancement. There, the combined
+model ranked scans below the time-and-enhancement model, a difference of $-$0.07 ($-$0.14
 to $-$0.005; Figure~\ref{fig:2}c). The time-and-enhancement model reached 0.88 there. UCSF-ALPTDG rated enhancement as
 increased at 27 of the 29 scans with progression. It dated progression a median of 7 days after the scan. Scans with
 progression also came sooner after the previous scan. This interval is an input of the reduced combined model, and
@@ -641,37 +639,36 @@ bootstrap samples of patients. Each model shows only the groups it uses.}
 
 \subsection{Effect of segmentation}\label{sec:3.3}
 
-% Sources: SEGMENTER_STAGE.md P2, P3; METHODS_RESULTS.md E5; NUMBERS.md 15.
+% Sources: SEGMENTER_BRATS24.md (P1-P4, 22-input arm; commit 24059e9).
+With PRISM's 22 measurements, the BraTS 2024 outlines gave an MU imaging AUC of 0.71, as on the supplied masks, and a
+LUMIERE combined AUC of 0.79. The BraTS 2024 model agreed with the supplied cavity at a median Dice of 0.92 at
+MU-Glioma-Post and 0.93 at UCSF-ALPTDG (other Dice in Table~\ref{tab:seg}). At LUMIERE it agreed less with the
+supplied masks (enhancing tumour Dice 0.64). Its enhancing volume there changed by a median factor of 14.4 between
+scans at most 30 days apart, against 2.6 with the supplied masks on the same 15 pairs.
+
+With all 27 measurements (Table~\ref{tab:seg}), the MU imaging model changed by $-$0.03 ($-$0.07 to $+$0.02), and the
+MU time-and-enhancement model lost 0.02 ($-$0.04 to $-$0.003). At LUMIERE the same model rose by 0.07 with the BraTS
+2024 enhancing volume, and the combined model ranked below it by 0.06 (0.002--0.12).
+
+% Sources: SEGMENTER_STAGE.md P1, P2, P3; METHODS_RESULTS.md E5; NUMBERS.md 15.
 Between MU scans at most 30 days apart (54 pairs), the enhancing volume changed by a median factor of 2.6 with the
 supplied masks and 2.2 with Swin UNETR. The interval of this difference excludes zero. At LUMIERE (52 pairs) the
 factors were 2.3 and 3.1, and the interval of the difference includes zero.
 
 Swin UNETR agreed with the supplied masks at a median enhancing tumour Dice of 0.73 to 0.80 across the centres
-(Table~\ref{tab:seg}). Many UCSF-ALPTDG scans hold little or no enhancement, which gives its Dice a long lower tail.
+(Table~\ref{tab:seg}). Its Dice at UCSF-ALPTDG has a long lower tail, because many scans there hold little or no
+enhancement.
 
-% Sources: SEGMENTER_STAGE.md P1; METHODS_RESULTS.md E5.
-With Swin UNETR outlines, the imaging model's AUC at MU fell to 0.63. This was the only one of the nine changes whose
-interval lay below zero. Keeping the supplied cavity gave the same fall, so the loss does not come
-from the missing cavity. The combined and time-and-enhancement models changed by at most 0.04 at every centre
-(Table~\ref{tab:seg}). The combined model showed no clear gain over the time-and-enhancement model under either mask
-set at MU and LUMIERE.
-
-% Sources: SEGMENTER_BRATS24.md (P1-P4, exploratory 22-input arm; commit 24059e9).
-The BraTS 2024 model agreed with the supplied cavity at a median Dice of 0.92 at MU-Glioma-Post and 0.93 at
-UCSF-ALPTDG (other Dice in Table~\ref{tab:seg}). With its outlines, the MU imaging model changed by $-$0.03 ($-$0.07
-to $+$0.02). This was a smaller loss than with Swin UNETR, and its interval includes zero. At LUMIERE the BraTS 2024
-model agreed less with the supplied masks (enhancing tumour Dice 0.64). Its enhancing volume there changed by a median
-factor of 14.4 between scans at most 30 days apart, against 2.6 with the supplied masks on the 15 pairs it was run on.
-
-With the BraTS 2024 outlines and all 27 measurements, two results fell outside this rule. The MU time-and-enhancement model lost 0.02 ($-$0.04 to
-$-$0.003). At LUMIERE the same model rose by 0.07 with the BraTS 2024 enhancing volume, and the combined model ranked
-below it by 0.06 (0.002--0.12). Without the five cavity measurements, the BraTS 2024 outlines
-gave an MU imaging AUC of 0.71, as on the supplied masks, and a LUMIERE combined AUC of 0.79.
+With Swin UNETR outlines, the imaging model's AUC at MU fell to 0.63. This was the only one of the nine Swin UNETR
+differences in Table~\ref{tab:seg} whose interval lay below zero. Keeping the supplied cavity gave the same fall, so
+the loss does not come from the missing cavity. The combined and time-and-enhancement models changed by at most 0.04
+at every centre (Table~\ref{tab:seg}). The combined model showed no clear gain over the time-and-enhancement model
+under either mask set at MU and LUMIERE.
 
 % Sources: SEGMENTER_STAGE.md P1 and P2 (s1_p1.csv, s1_p2_dice.csv); SEGMENTER_BRATS24_PLAN.md.
 \begin{table}[!htbp]
 \centering
-\caption[Effect of the segmenter]{\textbf{Effect of PRISM's segmentation stage.} Median Dice [IQR] of each
+\caption[Segmenters against the supplied masks]{\textbf{Segmenters against the supplied masks.} Median Dice [IQR] of each
 segmenter's enhancing tumour (ET) and whole tumour (WT) against the supplied masks, over every scan with a defined
 Dice, and the paired AUC difference of each score, segmenter minus supplied masks, with 95\% CIs from 2,000
 bootstrap samples of patients. The combined model is the reduced combined model at every centre. Swin UNETR supplies
@@ -727,8 +724,8 @@ course. 95\% CIs from 2,000 bootstrap samples of patients.}
 
 % Sources: outputs/results/analyses/system_brats24_22/selective.csv, tiers.csv; reliability_card_brats24_22.
 The combined score ranked MU scans less well when the clinical-history and imaging models disagreed, with an AUC of
-0.61 against 0.89 when they agreed. At LUMIERE the pattern was the same (0.75 against 0.84), and the interval included
-zero. At UCSF-ALPTDG there was no difference. Figure~\ref{fig:cases} shows four MU patients scan by
+0.61 against 0.89 when they agreed. At LUMIERE the pattern was the same (0.75 against 0.84), but the interval of the difference
+included zero. At UCSF-ALPTDG there was no difference. Figure~\ref{fig:cases} shows four MU patients scan by
 scan.
 
 The reliability card had enough comparable earlier scans to report the models' results (its tested tier) for 35\%
@@ -844,17 +841,14 @@ against 0.58 for that model (Section~\ref{sec:3.1}). PRISM's models also
 kept their ranking at two hospitals whose scans they had never seen, without retraining. Most models in this field are
 built on the image alone \citep{booth2022,shi2025} and tested only within the cohort they were developed on
 \citep{booth2022,park2020,shi2025}.
-A single split of a small cohort gives unstable estimates \citep{an2021,varoquaux2018}. An earlier re-implementation of
-that model ranged from 0.32 to 0.88 over random held-out sets. PRISM's combined model reached up to 1.00 (mean 0.84) on
+An earlier re-implementation of that model ranged from 0.32 to 0.88 over random held-out sets. PRISM's combined model reached up to 1.00 (mean 0.84) on
 sets drawn the same way (Section~\ref{sec:3.1}). PRISM was evaluated by repeated cross validation and at two external centres.
 
 But a good AUC does not say why a model ranks scans well, so PRISM breaks the score down. The imaging and
 clinical-history scores are computed separately, and each score splits into the parts that come from each group of
 inputs. The reader can therefore see what the score rests on. At MU-Glioma-Post the treatment course and dates made up
 a median of 44\% of the combined score, the largest single group, and the image inputs together 43\%
-(Section~\ref{sec:3.2}). Earlier studies also found that a model of clinical data alone matched one using MRI alone in an external test of 20
-patients \citep{gomaa2025}, and that the interval between
-scans influenced a model built on the RANO rules at LUMIERE \citep{tarek2026}. A clinician
+(Section~\ref{sec:3.2}). This is consistent with earlier reports \citep{gomaa2025,tarek2026}. A clinician
 already knows when a scan was taken. PRISM shows how much of its score that knowledge supplies and how much the images
 add.
 
@@ -863,11 +857,9 @@ clinician already knows \citep{beaulieujones2021}, here the time since radiother
 the date of each scan relative to treatment. The share of the score from each group of inputs needs only the model's
 weights. We suggest that studies of progression models report both beside the AUC.
 
-PRISM's combined score kept its ranking when PRISM's segmenter replaced the supplied masks. The imaging score depended
+PRISM's combined score ranked scans as well with its own segmenter as with the supplied masks. The imaging score depended
 more on the outlines (Section~\ref{sec:3.3}). The combined score rests largely on the treatment dates, which no
-segmenter changes, and on the enhancing volume, which changed little between segmenters at MU but more at LUMIERE. The
-imaging score also uses the shape and intensity of the outline. Outlines of the same tumour differ between experts
-\citep{hoebel2024} and are harder to draw after treatment \citep{deverdier2024}. 
+segmenter changes, and on the enhancing volume, which changed little between segmenters at MU but more at LUMIERE. The imaging score also uses the shape and intensity of the outline. 
 
 PRISM's reports can be checked line by line. Other systems use language models to extract clinical variables from
 notes, which rules then combine with tumour volumes to assign a BT-RADS category \citep{jabal2026}. Others use them to write reports before surgery from extracted image features and demographics
@@ -884,7 +876,8 @@ on its own scans.
 
 This study has limitations. PRISM was developed on one public cohort, and the two external cohorts are small, so their
 intervals are wide. Progression is taken as each centre recorded it, without biopsy or panel confirmation. The
-supplied masks and the segmenters' outlines are references, not ground truth. The BraTS 2024 data include scans contributed by UCSF \citep{deverdier2024}. At UCSF-ALPTDG the time after radiotherapy had to be estimated from its start date. No cohort
+supplied masks and the segmenters' outlines are references, not ground truth. The BraTS 2024 data include scans contributed by UCSF \citep{deverdier2024}, so the segmenter may have seen
+UCSF-ALPTDG patients. At UCSF-ALPTDG the time after radiotherapy had to be estimated from its start date. No cohort
 included perfusion or diffusion imaging, which help separate progression from treatment effects in other studies
 \citep{taylor2022}. Future work includes a reader study in which neuroradiologists judge the reports against the
 scans, further cohorts such as Burdenko \citep{zolotova2023burdenko} and UCSD-PTGBM \citep{gagnon2026} to fill the
@@ -894,7 +887,7 @@ small groups of scans, and a wider test of the report checks.
 
 We built PRISM so that a reader can see, at each follow-up scan, what its score rests on. Keeping the scores separate,
 and splitting each into the parts from its inputs, showed how much of the combined score came from the treatment dates
-and how much from the images. A single AUC does not reveal this. A PRISM report places the imaging score beside the
+and how much from the images. A PRISM report places the imaging score beside the
 clinical-history score, states how certain each is, and lets every number in it be traced to the scan's record.
 
 \section*{Acknowledgements}
