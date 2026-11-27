@@ -251,7 +251,7 @@ inner and outer test sets (unit test). Censored scans were excluded from the tra
 weights. Input: a brain z-scored cube centred on the lesion and cavity, side $\max(128, \text{extent} + 16)$ mm,
 resampled to 128$^3$ when larger (37 of 308 scans). Mask-weighted means of stages 2 to 4 within the lesion plus the
 global mean of stage 4 (2,112 features), LayerNorm, dropout 0.3 and one linear output. Patch embedding and stages 1--2
-frozen; stages 3--4 and the head trained with AdamW (encoder 2e-5, head 1e-3, weight decay 0.01), one warm-up epoch
+frozen; stages 3--4 and the head trained with AdamW \citep{loshchilov2019} (encoder 2e-5, head 1e-3, weight decay 0.01), one warm-up epoch
 and cosine decay over 25 epochs, batch 4, bf16, binary cross-entropy; early stopping with patience 5 and at least 3
 epochs. Augmentation: flips, translation of $\pm$8 voxels, intensity scale 0.9--1.1 and shift $\pm$0.1. Prediction:
 mean over 8 flips. Seeds fixed per job and deterministic kernels; repeated runs are bit identical. No hyperparameter
@@ -271,7 +271,7 @@ $\leq$ 0. Other arms are secondary, without multiplicity correction.
 \small
 \renewcommand{\thetable}{S4}\renewcommand{\theHtable}{S4}
 \caption{\textbf{Tuned encoder: discrimination and calibration} (\code{finetune/<population>/results.csv}). IPCW
-AUC \citep{uno2007} at 120 days with 95\% bootstrap CI over patients; $\Delta$AUC paired against the core model; MDE: minimal
+AUC \citep{uno2007,hung2010} at 120 days with 95\% bootstrap CI over patients; $\Delta$AUC paired against the core model; MDE: minimal
 detectable $\Delta$AUC at 80\% power.}
 \label{tab:S42}
 \begin{tabularx}{\linewidth}{@{}L R{2.6cm} R{2.9cm} R{1.0cm} R{1.0cm} R{0.8cm}@{}}
@@ -343,7 +343,7 @@ No patient record was used for this comparison.
 \textbf{Why this template.} No public cohort releases clinician reports for glioma follow-up MRI after treatment,
 including the three used here, so the report could not be compared with the reports written for the same scans. We
 compared its content instead with the structured follow-up template of the Brain Tumor Reporting and Data System
-(BT-RADS) \citep{weinberg2018}. In surveys of clinicians and radiologists at the centre that introduced it, taken before and
+(BT-RADS) \citep{weinberg2018,btradsweb}. In surveys of clinicians and radiologists at the centre that introduced it, taken before and
 nine months after its adoption, reports were rated more consistent and less ambiguous after the change
 \citep{gore2019}, and an analysis of the reports themselves found that they recorded more clinical history and used
 fewer hedging words \citep{zhang2020}. In a survey of 220 European
@@ -918,7 +918,7 @@ since surgery at LUMIERE and the days since the start of radiotherapy at UCSF-AL
 We ran the authors' extraction on all 594 MU scans with four sequences and a mask: N4 bias correction \citep{tustison2010} within the mask,
 resampling to 1\,mm with B-spline interpolation, scaling to zero mean and unit variance within the mask, and one
 region, the whole mask. The 4,892 features per scan are taken from each of the four sequences, from the original image
-and from Laplacian of Gaussian ($\sigma$ 0.5 to 3\,mm) and wavelet filtered versions of it \citep{vangriethuysen2017}.
+and from Laplacian of Gaussian ($\sigma$ 0.5 to 3\,mm) and wavelet filtered versions of it, as implemented in PyRadiomics \citep{vangriethuysen2017}.
 
 The tree model weights the two classes equally. Its settings are tuned over 400 trials of a Bayesian search (Optuna; \citealp{akiba2019}),
 each trial scored by fivefold cross validation grouped by patient within the training set. The model's output is

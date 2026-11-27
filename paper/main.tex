@@ -46,19 +46,18 @@ glioma surveillance, brain tumour segmentation, large language models, conformal
 
 \section{Introduction}\label{sec:1}
 
-Gliomas make up about a quarter of all primary brain tumours, and glioblastoma alone about half of the malignant
-ones \citep{ostrom2023}. Even with surgery, radiotherapy and temozolomide, median survival is about 15 months
+In the United States, gliomas make up about a quarter of all primary brain and other central nervous system tumours, and glioblastoma
+alone about half of the malignant ones \citep{ostrom2023}. Even with surgery, radiotherapy and temozolomide, median survival is about 15 months
 \citep{stupp2005}. After treatment, patients are followed with MRI every few months, and each scan feeds a decision:
-continue treatment, scan again sooner, or change treatment.
+continue treatment, scan again sooner, or change treatment \citep{weller2021}.
 
 Reading these scans is hard because treatment can look like progression. Pseudoprogression follows chemoradiotherapy
 in 20--30\% of patients \citep{wen2010}. It occurs more often when the MGMT promoter is methylated \citep{brandes2008}.
 In one cohort, half of the patients whose first scan after radiotherapy looked progressive had pseudoprogression
-\citep{taal2008}. Clinicians therefore read each scan against the time since treatment. RANO 2.0 asks for a repeat
+\citep{taal2008}. Clinicians therefore read each scan against the time since treatment \citep{weller2021}. RANO 2.0 asks for a repeat
 scan or histology before progression is called within 12 weeks of radiotherapy \citep{wen2023}.
 
-Advanced MRI helps in some studies but has not solved the problem. In a review of 30 small studies, 13 at high
-risk of bias, diffusion and perfusion MRI reached pooled AUCs of 0.90--0.93 in the 25 that could be pooled
+Advanced MRI helps in some studies but has not solved the problem. In a review of 30 studies of 1,372 patients, 13 at high risk of bias, diffusion and perfusion MRI reached pooled AUCs of 0.90--0.93 in the 25 that could be pooled
 \citep{taylor2022}. Adding them improved a radiomics model developed in 61 patients and tested in 34 others
 \citep{kim2019}. In 105 patients with suspected pseudoprogression, however, they did not significantly improve on
 clinical data and MGMT status \citep{leone2023}.
@@ -66,7 +65,8 @@ clinical data and MGMT status \citep{leone2023}.
 Machine learning models for this decision are mostly built on the image alone and tested only within the cohort they
 were developed on. Studies of treatment response have small samples and a high risk of bias \citep{booth2022}. Of 51
 radiomics studies in neuro-oncology, nine in ten of them on glioma, 29\% were validated externally \citep{park2020}.
-Of 20 studies of automated response assessment, 3 considered clinical characteristics \citep{shi2025}. Single splits
+Of 20 studies of automated response assessment in brain tumours, 3 stated that they had considered clinical
+characteristics \citep{shi2025}. Single splits
 of small cohorts give unstable estimates \citep{an2021}. Most deep learning algorithms for radiological diagnosis lose
 performance on external data \citep{yu2022}. In a meta-analysis of 31 studies, models tested at another institution
 reached a pooled AUC of 0.81, against 0.91 at the institution that developed them \citep{zhang2026meta}. A radiomics
@@ -75,37 +75,36 @@ patients (AUC 0.80) \citep{christodoulou2026}.
 
 A single AUC does not show what drives a model's predictions. Models learn shortcuts: signals that predict the label
 but are not what the reader cares about \citep{geirhos2020,zech2018,badgeley2019}. In this setting, a model of
-clinical data alone matched one using MRI on an external test set \citep{gomaa2025}. The interval between scans
+clinical data alone matched one using MRI alone on an external test set of 20 patients \citep{gomaa2025}. The interval between scans
 affected a model built on the RANO rules \citep{tarek2026}. The useful measure is what a model adds beyond what a
 clinician already knows \citep{pencina2008,beaulieujones2021}. Saliency maps drawn after the fact localise
 abnormalities poorly and can be insensitive to the model's own weights \citep{arun2021,saporta2022}. A model that is
 interpretable by design is therefore preferable \citep{rudin2019}.
 
-The image measurements themselves depend on how the tumour is outlined. After surgery and radiotherapy the scan
-contains a resection cavity and treatment changes, which make segmentation harder. The BraTS 2024 challenge was set
-up for this setting \citep{deverdier2024}. Experts disagree about the quality of the same glioma segmentation, and
+The image measurements themselves depend on how the tumour is outlined. After surgery and radiotherapy the scan contains a resection cavity and treatment changes, which make segmentation
+harder, and the BraTS 2024 challenge was set up for this setting \citep{deverdier2024}. Experts disagree about the quality of the same glioma segmentation, and
 their own outlines of the same tumour overlap only in part \citep{hoebel2024}. Measured volumes therefore depend on
 whose outlines are used.
 
 A score is also more useful when it states its uncertainty. Conformal prediction turns a score into a set of possible
-outcomes that contains the true one at a chosen rate \citep{angelopoulos2023}. The guarantee does not hold within
-subgroups or under distribution shift \citep{mehrtens2023}.
+outcomes that contains the true one at a chosen rate \citep{angelopoulos2023}. The guarantee holds on average, not within each subgroup \citep{barber2021limits,mehrtens2023}, and it does not hold
+under distribution shift \citep{mehrtens2023}.
 
 Finally, the result reaches the clinician as a report, and reports vary. Of 220 European centres, 60\% assessed
 follow-up scans qualitatively, 27\% applied RANO and 23\% used a reporting template \citep{thust2018}. After the
 structured BT-RADS system was adopted \citep{weinberg2018}, reports mentioned bevacizumab and MGMT status more often
 \citep{zhang2020}. They were also rated more consistent by the clinicians and radiologists caring for these patients
-\citep{gore2019}. Language models now draft such reports from automated measurements of brain tumours
-\citep{valerio2025,herasrivera2026} and other lesions \citep{mansour2026}.
+\citep{gore2019}. Language models now draft radiology reports from automated segmentations and measurements of brain tumours
+\citep{valerio2025,herasrivera2026} and liver lesions \citep{mansour2026}.
 
 Reports written by language models can contain errors that a reader may not catch. AI-written chest radiograph reports
 contained clinically significant errors \citep{tanno2025}. Of oncology CT reports simplified by an open-weight model,
 6\% contained factual errors \citep{prucker2025}. Neural systems that write text from tables misstate many of the
 numbers they report \citep{wiseman2017}. Automatic measures of factual accuracy track human judgement poorly
-\citep{gabriel2021}, so checkers test each statement against the patient record \citep{zeba2026}. Errors can be
-planted in radiology reports to build test sets for methods that correct them \citep{rao2025rexerr}. Patient records
-often cannot leave the hospital, so the model should also run locally. Open-weight models run on site can label
-radiology reports \citep{mukherjee2023} and extract their findings comparably to closed models \citep{nowak2025}.
+\citep{gabriel2021}. One alternative tests each statement of a generated summary against the patient record
+\citep{zeba2026}. Language models can plant errors in chest radiograph reports to build data sets for developing and testing methods that correct them \citep{rao2025rexerr}. Patient records
+often cannot leave the hospital, so the model should also run locally. Open-weight models run on site can label chest radiograph reports \citep{mukherjee2023} and extract their findings
+comparably to closed models \citep{nowak2025}.
 
 % Figure 1 is placed here so that its float pages come before its first mention, in the Methods.
 % FIGURE REDESIGN (2026-11-18), modelled on Tak et al. 2025, NEJM AI, doi:10.1056/AIoa2400703; enlarged and split
@@ -120,7 +119,7 @@ radiology reports \citep{mukherjee2023} and extract their findings comparably to
 its end, with the enhancing tumour outlined by PRISM's segmenter (solid) and by the supplied mask (dashed); volumes are
 the segmenter's, with the supplied mask's in brackets. Scans followed by at least 120 days without progression are
 labelled no progression, and the first scan after documented progression, at 40.9 weeks, is the progression scan.
-(b) PRISM's segmenter, the first-place BraTS 2024 post-treatment ensemble of 30 networks
+(b) PRISM's segmenter, the first-place BraTS 2024 post-treatment ensemble of six models, each trained with five-fold cross-validation
 \citep{ferreira2024}, shown on that scan. Panels (c) and (d) follow on the next page.}
 \label{fig:1}
 \end{figure}
@@ -186,7 +185,7 @@ MU-Glioma-Post \citep{mahmoud2025,yaseen2025tcia} and tested without retraining 
 The task was to distinguish the scan at which progression was documented from scans without progression. Each cohort
 records progression differently, so the label follows each cohort's own data (Table~\ref{tab:eval}). At
 MU-Glioma-Post and UCSF-ALPTDG, a scan without progression must be followed by at least 120 days without progression.
-LUMIERE rates every scan, and UCSF-ALPTDG supplies two consecutive scans per patient, of which only the second is
+LUMIERE rates every scan, and UCSF-ALPTDG supplies two consecutive scans per patient \citep{fields2024}, of which only the second is
 labelled. Because the labels differ, models are compared only within a cohort.
 
 At MU-Glioma-Post, the models were fitted on 181 labelled scans from 92 of the cohort's 126 grade 4 patients.
@@ -308,18 +307,19 @@ Enhancing volume alone & Log enhancing tumour volume, used directly & No \\
 % refs mahmoud2025, suter2022, fields2024, hatamizadeh2022, deverdier2024, ferreira2024.
 \paragraph*{Segmentation.} PRISM segments each scan with the winning model \citep{ferreira2024} of the BraTS 2024
 challenge for adult glioma after treatment \citep{deverdier2024} (Figure~\ref{fig:1}b). This model is an ensemble of nnU-Net
-\citep{isensee2021}, MedNeXt \citep{roy2023} and Swin UNETR networks, run with the BraTS orchestrator
-\citep{kofler2025}. It marks the enhancing tumour, necrosis, FLAIR hyperintensity and the resection cavity. The primary
-results use its outlines at all three centres, without the five measurements that need the cavity (Section~\ref{sec:3.3}). The challenge's training data include scans from UCSF and may include scans from MU,
+\citep{isensee2021}, MedNeXt \citep{roy2023} and Swin UNETR \citep{hatamizadeh2022} networks, run from the container distributed with the BraTS orchestrator
+\citep{kofler2025}. It marks the enhancing tumour, the non-enhancing tumour core (used here as necrosis), FLAIR
+hyperintensity and the resection cavity. The primary
+results use its outlines at all three centres, without the five measurements that need the cavity (Section~\ref{sec:3.3}). The challenge's data were contributed by centres including UCSF and the University of Missouri
+\citep{deverdier2024}, so its training data may include scans from UCSF-ALPTDG and MU-Glioma-Post,
 but the network learned outlines only, with no progression label.
 
 The masks supplied with each dataset are the reference (Table~\ref{tab:1}). At MU-Glioma-Post and UCSF-ALPTDG, they
-mark the same four regions. At LUMIERE, they are DeepBraTumIA masks with three labels \citep{suter2022}, which count
-the cavity as necrosis.
+mark the same four regions. At LUMIERE, they are DeepBraTumIA masks with three labels (necrosis, contrast enhancement and oedema) \citep{suter2022}; on inspection, the cavity falls within
+the necrosis label.
 
-PRISM runs both of its networks with their public weights and settings, and neither was tuned on our cohorts. The
-second network is compared as an alternative segmentation stage. It is the Swin UNETR \citep{hatamizadeh2022}
-released for BraTS 2021 (fold 1), a network of 62 million parameters. It marks the enhancing tumour, the tumour core
+PRISM runs both of its networks with their public weights, and neither was tuned on our cohorts. The
+second network is compared as an alternative segmentation stage. It is the Swin UNETR \citep{hatamizadeh2022} released in MONAI \citep{cardoso2022monai} for BraTS 2021 (fold 1), a network of 62 million parameters. It marks the enhancing tumour, the tumour core
 and the whole tumour. It takes FLAIR, T1c, T1 and T2, each
 scaled to zero mean and unit variance over the brain, in blocks of $128^3$ voxels that overlap by half. A voxel
 belongs to a region when its probability exceeds 0.5. Necrosis is the core outside the enhancing tumour, and FLAIR
@@ -356,8 +356,7 @@ Neither external centre records the full treatment course (Table~\ref{tab:1}). A
 therefore applies reduced models, fitted on MU with only the inputs that all three cohorts record (inputs in
 Table~\ref{tab:models}). Both reduced models take a flag for scans in the first 12 weeks after radiotherapy. At MU the
 flag is computed from the end of radiotherapy. At LUMIERE it is the rater's mark for scans taken less than three
-months after radiotherapy. At UCSF-ALPTDG it marks scans 42 to 125 days after the start of radiotherapy, which assumes
-a six-week course.
+months after radiotherapy. At UCSF-ALPTDG it marks scans 42 to 125 days after the start of radiotherapy, which assumes the standard six-week course \citep{stupp2005}.
 
 With PRISM's segmenter, the full imaging model is applied at both external centres, and the reduced combined model
 takes its 22 measurements. At UCSF-ALPTDG the one earlier scan in the dataset is the previous scan. With the supplied
@@ -384,8 +383,8 @@ validation. For the external cohorts it was done once, on all MU training patien
 thresholds were applied without retraining. The combined score's set is the primary one.
 
 The 80\% holds on average over scans when new patients are exchangeable with the calibration patients, meaning that
-swapping them would not change the joint distribution of their data \citep{romano2020,barber2021limits,mehrtens2023}.
-Because patients contribute different numbers of scans, weighting by patient makes the guarantee approximate.
+swapping them would not change the joint distribution of their data \citep{romano2020,barber2021limits,mehrtens2023}. When patients contribute several scans, the pooled scans are not exchangeable \citep{dunn2023}, and because patients contribute different numbers of scans, weighting by patient makes the
+guarantee approximate.
 
 % Sources: METHODS_PLAN.md M2; Supplementary Section S10.
 We also computed group-conditional (Mondrian) sets. These compute $\hat q$ separately within each group of scans, so
@@ -393,7 +392,8 @@ that the 80\% target applies to each group as well as to the whole cohort \citep
 time window after radiotherapy with the state of the enhancing tumour: absent (below 0.1\,cc), present with no
 previous scan to compare, increased since the previous scan by at least 1\,cc and 40\%, or not increased. Small calibration
 groups make the thresholds conservative \citep{johansson2015}. Groups with fewer than 10 calibration patients therefore
-fall back to a coarser level \citep{ding2023}. Part of any gain in
+fall back to a coarser level, much as rare classes fall back to one pooled threshold in clustered conformal
+prediction \citep{ding2023}. Part of any gain in
 coverage within a group can come from larger sets alone. To separate the two, we compared the group sets at MU with
 ordinary sets at the $\alpha$ (0.155) that gives the same share of sets holding both outcomes (exploratory).
 
@@ -424,7 +424,7 @@ to two decimals, volumes to one). Wording that can be fixed in advance, such as 
 agreement, each change in volume and the reason for each flag, is stored as a sentence for the language model to
 copy. The record holds no outcome label.
 
-\paragraph*{Report and checks.} A local open-weight language model, Qwen3.8-27B, writes the report's prose from the record alone.
+\paragraph*{Report and checks.} A local open-weight language model, Qwen3.8-27B \citep{qwen2026}, writes the report's prose from the record alone.
 It runs offline on one GPU of the computer that runs PRISM, served with the vLLM library \citep{kwon2023}, so the
 record never leaves that computer. Decoding is greedy (the model always takes its most likely next word), so the report does not depend on random
 sampling. The prompt asks for sentences in a fixed order, from the scan's timing to one sentence for each raised flag. It tells the model to copy every number as digits and every fixed phrase exactly, and to add no diagnosis, response
@@ -435,9 +435,9 @@ key exists or that the text agrees with it. The checks below test both.
 
 Fixed code fills in the rest of the report page: the tables of volumes and scores, the conformal sets, the card, the
 flags, the segmentation slices and a fixed paragraph of limitations. The language model only turns record entries into
-prose. This division of work is also used to write brain tumour reports from extracted image features
+prose. This division of work is also used to write brain tumour reports from extracted image features and demographics
 \citep{herasrivera2026}. The page carries the history, comparison and change elements of the BT-RADS follow-up
-template \citep{weinberg2018}, whose adoption was followed by higher ratings of report consistency \citep{gore2019}.
+template \citep{btradsweb,weinberg2018}, whose adoption was followed by higher ratings of report consistency \citep{gore2019}.
 It leaves out the template's category and advice, because PRISM makes no decision. Because
 the enhancing volume varies between scans taken close together (Section~\ref{sec:3.3}), the report calls all volumes
 indicative.
@@ -761,7 +761,7 @@ and (d) did not progress with the models disagreeing at one scan or more.}
 All evaluation reports passed the checker (Figure~\ref{fig:5} shows one). Every report for a scan with few or no comparable
 cases said so. The tests below were run on the reports from the supplied masks. When one record entry was changed in
 30 records, 28 of the 30 reports followed the change. Of six other local language models given
-the same prompt, only Gemma-4 31B had every report pass (Figure~\ref{fig:llm}).
+the same prompt, only Gemma-4 31B \citep{gemma2026} had every report pass (Figure~\ref{fig:llm}).
 
 % Sources: NUMBERS.md section 11 (Fig 5b); REPORT_V3_1.md. Panel (a) drawn by scripts/fig5_report.py (PRISM_MASKS=brats24_22)
 % from the record and the language model's output for MU PatientID_0014 Timepoint 6 (report v3.2, accepted by the checker).
@@ -769,8 +769,8 @@ the same prompt, only Gemma-4 31B had every report pass (Figure~\ref{fig:llm}).
 \centering
 \figslot{fig5_report.pdf}{0.92\textheight}{One report PRISM wrote for a held-out scan.}
 \caption{\textbf{The report PRISM writes.} The report for the progression scan of the patient in strip (a) of
-Figure~\ref{fig:cases}, written for a patient not used to develop the prompt and accepted by the checker. The page
-follows the order of the BT-RADS follow-up template: the scan's timing and the flags raised; the attached
+Figure~\ref{fig:cases}, written for a patient not used to develop the prompt and accepted by the checker. Like the BT-RADS follow-up template \citep{btradsweb}, the page starts from the history and timing. It shows, in
+order: the scan's timing and the flags raised; the attached
 segmentation slices and the volumes; the two models' scores against their cohort medians, then the combined score,
 with their conformal sets; the reliability card; the language model's sentences verbatim; and the fixed limitations.
 Every value comes from the scan's record.
@@ -784,7 +784,8 @@ BT-RADS denotes the Brain Tumor Reporting and Data System.}
 \figslot{fig_llm_checker.pdf}{0.25\textheight}{Reports passing the checker for seven local language models.}
 \caption{\textbf{Reports passing the checker, by local language model.} The share of reports from the supplied masks
 that passed the checker for each of seven local language models given the same prompt with no per-model
-tuning (Qwen3.5 2B, 4B and 9B, Gemma-4 E4B and 31B, Qwen3.8-27B used in PRISM, and Qwen3.5-35B-A3B). Dark bars show
+tuning (Qwen3.5 2B, 4B and 9B \citep{qwen2026b}, Gemma-4 E4B and 31B \citep{gemma2026}, Qwen3.8-27B used in PRISM
+\citep{qwen2026}, and Qwen3.5-35B-A3B \citep{qwen2026b}). Dark bars show
 models for which at least 95\% passed in every cohort; the size of each model's weights is in the second column.}
 \label{fig:llm}
 \end{figure}
@@ -853,8 +854,9 @@ But a good AUC does not say why a model ranks scans well, so PRISM breaks the sc
 clinical-history scores are computed separately, and each score splits into the parts that come from each group of
 inputs. The reader can therefore see what the score rests on. At MU-Glioma-Post the treatment course and dates made up
 a median of 44\% of the combined score, the largest single group, and the image inputs together 43\%
-(Section~\ref{sec:3.2}). Earlier studies also found that a model of clinical data alone can match one using MRI
-\citep{gomaa2025}, and that the interval between scans affects models in this setting \citep{tarek2026}. A clinician
+(Section~\ref{sec:3.2}). Earlier studies also found that a model of clinical data alone matched one using MRI alone in an external test of 20
+patients \citep{gomaa2025}, and that the interval between
+scans influenced a model built on the RANO rules at LUMIERE \citep{tarek2026}. A clinician
 already knows when a scan was taken. PRISM shows how much of its score that knowledge supplies and how much the images
 add.
 
@@ -872,22 +874,21 @@ scans after treatment, kept the imaging score closer to its value on the supplie
 so PRISM runs end to end from the MRI.
 
 PRISM's reports can be checked line by line. Other systems use language models to extract clinical variables from
-notes, which rules then combine with tumour volumes to assign a BT-RADS category \citep{jabal2026}. Others use them to
-write reports from features of the images alone \citep{herasrivera2026}. In PRISM, the clinical history is stored as
+notes, which rules then combine with tumour volumes to assign a BT-RADS category \citep{jabal2026}. Others use them to write reports before surgery from extracted image features and demographics
+\citep{herasrivera2026}. In PRISM, the clinical history is stored as
 data in the record. The language model only writes from that record, and every number it writes is traced back to its
 source. Other checks for clinical text either forbid numbers \citep{pham2026} or trace them without reporting a test
 of the check itself \citep{mansour2026}. PRISM's checks were tested by planting errors in correct reports
 (Section~\ref{sec:3.5}).
 
 The combined score's 80\% sets held their target across each cohort, but not in every small group of scans, such as
-later scans with increased enhancement (Section~\ref{sec:3.4}). This is expected, because the guarantee holds on
-average over scans rather than within each group \citep{mehrtens2023}. A hospital using PRISM could recalibrate the sets
+later scans with increased enhancement (Section~\ref{sec:3.4}). This is expected, because the guarantee holds on average over scans rather than within each group
+\citep{barber2021limits,mehrtens2023}. A hospital using PRISM could recalibrate the sets
 on its own scans.
 
 This study has limitations. PRISM was developed on one public cohort, and the two external cohorts are small, so their
 intervals are wide. Progression is taken as each centre recorded it, without biopsy or panel confirmation. The
-supplied masks and the segmenters' outlines are references, not ground truth. The BraTS 2024 training data
-include scans from UCSF. At UCSF-ALPTDG the time after radiotherapy had to be estimated from its start date. No cohort
+supplied masks and the segmenters' outlines are references, not ground truth. The BraTS 2024 data include scans contributed by UCSF \citep{deverdier2024}. At UCSF-ALPTDG the time after radiotherapy had to be estimated from its start date. No cohort
 included perfusion or diffusion imaging, which help separate progression from treatment effects in other studies
 \citep{taylor2022}. Future work includes a reader study in which neuroradiologists judge the reports against the
 scans, further cohorts such as Burdenko \citep{zolotova2023burdenko} and UCSD-PTGBM \citep{gagnon2026} to fill the

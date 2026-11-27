@@ -228,3 +228,7 @@ Add each new reaction as a dated one-line rule.
   sources when each carries only part. Name every tool, dataset, model and method with its reference. A reworded
   citing sentence is checked against the source again before it is committed, and `paper/build.sh` refuses a cited
   bibliography entry still marked CHECK.
+- 2026-11-27: a source cited in several sentences is checked in each one separately, and a tone or wording pass that
+  touches a citing sentence re-opens its source. A study's scope stays in the sentence (one cohort, chest radiographs,
+  pre-operative reports, US figures); "can", "models" and "such" do not generalise one study. Language models used or
+  compared are cited by their model card's own citation.
