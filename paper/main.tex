@@ -35,7 +35,7 @@ built a new framework, PRISM (Progression Reading with Independent Scores and Me
 computer. It segments each scan with the winning BraTS 2024 post-treatment model, scores it from image measurements,
 clinical history and both with three logistic regressions and conformal sets, and uses a local language model to write a
 checked report of what each score rests on. On MU-Glioma-Post, the combined model reached an AUC of 0.82 in repeated
-cross validation, and 0.85 on the held-out set of an earlier study on this cohort, against 0.80 reported. Unlike most
+cross validation, and 0.85 on the grade 4 patients of an earlier study's held-out set on this cohort, against 0.80 reported. Unlike most
 earlier models, PRISM was tested without retraining at two other centres, reaching 0.79 at LUMIERE and 0.81 at
 UCSF-ALPTDG, against a pooled AUC of 0.81 for earlier models tested at another centre.
 \end{abstract}
@@ -188,7 +188,7 @@ without retraining on LUMIERE and UCSF-ALPTDG.
 \subsection{Cohorts and label}\label{sec:2.1}
 
 % Sources: TABLE1_COHORT.md; UCSF_DATA.md; UCSF_PLAN.md; DETECTION_TASK.md; INTENDED_USE.md; NUMBERS.md 2.2.
-We used three public cohorts of patients followed with MRI after treatment for glioma. PRISM is developed on
+We used three publicly available cohorts of patients followed with MRI after treatment for glioma. PRISM is developed on
 MU-Glioma-Post (MU) \citep{mahmoud2025,yaseen2025tcia} and tested without retraining on LUMIERE \citep{suter2022} and UCSF-ALPTDG
 \citep{fields2024} (Table~\ref{tab:1}). In all three, the primary population was grade 4 glioma \citep{louis2021}, as
 recorded by each dataset.
@@ -216,8 +216,7 @@ progression scan.}
 \label{fig:patient}
 \end{figure}
 
-At MU-Glioma-Post, the models were fitted on 181 labelled scans from 92 of the 126 grade 4 patients with a scan after
-treatment and before progression.
+At MU-Glioma-Post, the models were fitted on 181 labelled scans from 92 grade 4 patients.
 Performance was measured on the 146 of these scans (80 patients) taken after radiotherapy had started. This is the setting
 in which PRISM is meant to be used. The external evaluation sets held 178 scans from 79 patients at LUMIERE and 69 scans
 from 69 patients at UCSF-ALPTDG (Figure~\ref{fig:cohorts}). The 120-day rule leaves out scans followed by progression within 120 days and scans with shorter follow-up.
@@ -358,9 +357,7 @@ challenge for adult glioma after treatment \citep{deverdier2024} (Figure~\ref{fi
 \citep{isensee2021}, MedNeXt \citep{roy2023} and Swin UNETR \citep{hatamizadeh2022} networks, run from the container distributed with the BraTS orchestrator
 \citep{kofler2025}. It marks the enhancing tumour, the non-enhancing tumour core (used here as necrosis), FLAIR
 hyperintensity and the resection cavity. PRISM uses
-its outlines at all three centres. The challenge's data were contributed by centres including UCSF and the University of Missouri
-\citep{deverdier2024}, so its training data may include scans from UCSF-ALPTDG and MU-Glioma-Post,
-but the network learned outlines only, with no progression label.
+its outlines at all three centres. 
 
 The masks supplied with each dataset are the reference (Table~\ref{tab:1}). At MU-Glioma-Post and UCSF-ALPTDG, they mark the same four regions \citep{mahmoud2025,fields2024}. At LUMIERE, we used the supplied DeepBraTumIA masks, which have three labels (necrosis, contrast enhancement and oedema) \citep{suter2022}; on inspection, the cavity falls within
 the necrosis label.
@@ -992,8 +989,9 @@ This study has limitations. PRISM was developed on one public cohort, and UCSF-A
 so its intervals are wide. Progression is taken as each centre recorded it, from the clinical record at MU, one neuroradiologist's
 rating at LUMIERE and a multidisciplinary consensus at UCSF-ALPTDG, without biopsy confirmation, and the labels
 therefore differ between cohorts. Applied without recalibration, the probabilities were poorly calibrated at the
-external centres, so the scores rank scans and are not probabilities for the patient. Neither the supplied masks nor the segmenters' outlines are ground truth. The BraTS 2024 data include scans contributed by UCSF and the University of Missouri
-\citep{deverdier2024}, so the segmenter may have seen UCSF-ALPTDG and MU-Glioma-Post patients. LUMIERE records no radiotherapy dates, and at UCSF-ALPTDG the time after radiotherapy had to be estimated from its
+external centres, so the scores rank scans and are not probabilities for the patient. Neither the supplied masks nor the segmenters' outlines are ground truth. The BraTS 2024 training data drew on the UCSF dataset that
+UCSF-ALPTDG comes from and on scans from the University of Missouri \citep{deverdier2024}, so the segmenter may have
+been trained on scans of UCSF-ALPTDG and MU-Glioma-Post patients; it learned outlines only, with no progression label. LUMIERE records no radiotherapy dates, and at UCSF-ALPTDG the time after radiotherapy had to be estimated from its
 start date. No cohort
 included perfusion or diffusion imaging, which help separate progression from treatment effects in other studies
 \citep{taylor2022}. Future work includes a reader study in which neuroradiologists judge the reports against the

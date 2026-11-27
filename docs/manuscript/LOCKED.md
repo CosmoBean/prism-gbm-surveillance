@@ -9,7 +9,7 @@ it here and in the paper in the same commit.
 ## Abstract (approved 2026-11-26; numbers updated to PRISM's segmenter 2026-11-27)
 
 ```locked
-Models for glioma follow-up MRI report high accuracy, but a single AUC cannot show what drives their predictions. We built a new framework, PRISM (Progression Reading with Independent Scores and Measurements), running on one local computer. It segments each scan with the winning BraTS 2024 post-treatment model, scores it from image measurements, clinical history and both with three logistic regressions and conformal sets, and uses a local language model to write a checked report of what each score rests on. On MU-Glioma-Post, the combined model reached an AUC of 0.82 in repeated cross validation, and 0.85 on the held-out set of an earlier study on this cohort, against 0.80 reported. Unlike most earlier models, PRISM was tested without retraining at two other centres, reaching 0.79 at LUMIERE and 0.81 at UCSF-ALPTDG, against a pooled AUC of 0.81 for earlier models tested at another centre.
+Models for glioma follow-up MRI report high accuracy, but a single AUC cannot show what drives their predictions. We built a new framework, PRISM (Progression Reading with Independent Scores and Measurements), running on one local computer. It segments each scan with the winning BraTS 2024 post-treatment model, scores it from image measurements, clinical history and both with three logistic regressions and conformal sets, and uses a local language model to write a checked report of what each score rests on. On MU-Glioma-Post, the combined model reached an AUC of 0.82 in repeated cross validation, and 0.85 on the grade 4 patients of an earlier study's held-out set on this cohort, against 0.80 reported. Unlike most earlier models, PRISM was tested without retraining at two other centres, reaching 0.79 at LUMIERE and 0.81 at UCSF-ALPTDG, against a pooled AUC of 0.81 for earlier models tested at another centre.
 ```
 
 ## Sentences and phrases
@@ -23,7 +23,7 @@ the author's approvals of 2026-11-26 and 2026-11-27.
 \item External validation is performed without retraining.
 \item Report is generated with deterministic verification.
 The remainder of this paper is organized as follows.
-We used three public cohorts of patients followed with MRI after treatment for glioma.
+We used three publicly available cohorts of patients followed with MRI after treatment for glioma.
 PRISM is developed on
 We present PRISM (Progression Reading with Independent Scores and Measurements), a new system for glioma follow-up MRI that runs on one local computer.
 PRISM works from conventional MRI and the clinical record, both part of every
