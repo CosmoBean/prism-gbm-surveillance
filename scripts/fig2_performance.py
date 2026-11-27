@@ -39,7 +39,7 @@ APPROX = {"UCSF-ALPTDG"}   # cohorts where the time-and-enhancement model uses t
 SETTING = {"MU-Glioma-Post": "Development, cross validation",
            "LUMIERE": "External, locked MU models",
            "UCSF-ALPTDG": "External, locked MU models"}
-RADIOMICS_MU = (0.579, 0.499, 0.656)   # CHRISTODOULOU_REPLICATION.md, on the released masks
+RADIOMICS_MU = (0.580, 0.502, 0.662)   # authors' code (christodoulou_faithful/auc.csv, arm CHF), supplied masks
 
 ROOT = Path(__file__).resolve().parents[1]
 RES = ROOT / "outputs/results/analyses"

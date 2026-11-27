@@ -18,8 +18,14 @@ UCSF-ALPTDG (69 scans, 29 progression, 69 patients):
 | clinical history | 0.56 (0.42-0.69) | 0.55 (0.42-0.69) | 0.43 (0.33-0.54) |
 
 Check: the unchanged combined fit reproduces the paper (0.81, 0.70-0.90).
-LUMIERE: not run. `data/lumiere` points to a deleted folder and figshare refuses this cluster (403); needs
-LUMIERE-ExpertRating-v202211.csv and LUMIERE-Demographics_Pathology.csv in /project/community/sbandred/lumiere/.
+LUMIERE (178 scans, 73 progression, 79 patients; data restored 2026-11-27, see /project/community/sbandred/lumiere/PROVENANCE.txt:
+the pipeline reproduces all 178 saved LUMIERE scores exactly):
+
+| model | unchanged from MU | fine-tuned | trained at LUMIERE |
+|---|---|---|---|
+| combined | 0.79 (0.71-0.86) | 0.80 (0.71-0.87); +0.005 (-0.03 to +0.04) | 0.76 (0.68-0.84); -0.03 (-0.10 to +0.04) |
+| imaging | 0.69 (0.61-0.77) | 0.69 (0.61-0.77) | 0.68 (0.60-0.77) |
+| clinical history | 0.69 (0.60-0.79) | 0.70 (0.62-0.79) | 0.66 (0.59-0.75) |
 
 Literature: pooled AUC 0.91 at the developing institution, 0.81 at another (zhang2026meta).
 
