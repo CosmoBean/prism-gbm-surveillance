@@ -138,7 +138,7 @@ predictions of each repeat.
 \item \textbf{Bootstrap.} Patient-cluster bootstrap, 1,000 draws; each draw resamples patients once and
 recomputes the mean-over-repeats statistic of every model on that draw, so differences are paired. $\Delta$AUC
 is the point estimate (not the bootstrap mean) with the bootstrap CI.
-\item \textbf{Analyses with 2,000 draws.} The time-and-enhancement model, the AUC split, the group-conditional sets,
+\item \textbf{Analyses with 2,000 draws.} The time-and-enhancement model, the group-conditional sets,
 the segmentation comparison, and the analyses of calibration, of all scans before progression and of unknown marker
 status use 2,000 draws.
 \item \textbf{Selection inside folds.} Standardisation, imputation and the choice of penalty are all inside the
@@ -220,7 +220,7 @@ document in \code{docs/results/}. \flag{[PENDING: public code release and tag.]}
 \paragraph{Analysis plans.} Each plan was committed to the repository before the analysis it describes was run.
 Plans and the dates they were committed: detection at the scan (2026-10-21); UCSF-ALPTDG (2026-10-25); the system
 (2026-10-25); the report evaluation (2026-10-25); the checker test (2026-11-13); the rerun with restored data
-(2026-11-13); the AUC split, the group-conditional sets and the verifier (2026-11-15); the timing-and-enhancement baseline
+(2026-11-13); the group-conditional sets and the verifier (2026-11-15); the time-and-enhancement model
 (2026-11-15); the run of the published approach and the mask sensitivity analysis (2026-11-16); the run of the
 published approach on the second masks (2026-11-16); and the calibration, spectrum and marker-coding analyses
 (2026-11-17).
@@ -436,7 +436,7 @@ card that counts the scan it describes and the lack of a template baseline, and 
 model names used in this paper. The rules were written before the run. They are not part of the earlier
 registered plans and carry a dagger in the main text. The UCSF-ALPTDG images were not available for this rerun, so
 every result is for MU-Glioma-Post and LUMIERE. Before any new analysis, every registered score, AUC, coverage and
-error rate of these two cohorts was rebuilt from the raw data and matched the published values.
+error rate of these two cohorts was rebuilt from the raw data and matched the earlier values.
 
 \paragraph{Conformal sets from the displayed score.} The planned set refits the combined model on 70\% of the training
 patients. Here the calibration scores are held out predictions of the same model from fivefold cross validation
@@ -771,7 +771,7 @@ a correct report, and in the other 165 the mutant is rejected. One blind spot re
 word. The template and the language model were caught at the same rate on every operator.
 
 The planted errors above were written by us alongside the verifier. As an exploratory check, not in the plan, a
-separate agent that had not seen the code of the checker or the verifier wrote new errors on the 52 synthetic records
+separate language model that had not seen the code of the checker or the verifier wrote new errors on the 52 synthetic records
 (Table S16). Binding a value to its quantity generalised to these errors, with every value placed under the wrong
 quantity rejected and no correct paraphrase rejected. Binding the direction catches only the direction words on its
 list, so two thirds of the direction errors written in other words passed. Neither rule covers the side of a score
@@ -783,7 +783,7 @@ direction error in this set states a false decrease.
 \renewcommand{\thetable}{S16}\renewcommand{\theHtable}{S16}
 \centering
 \caption{\textbf{Exploratory. Independently written errors rejected by the frozen checker, the verifier and its
-binding rules alone.} The errors were written on the 52 synthetic records by an agent that had not seen the code of
+binding rules alone.} The errors were written on the 52 synthetic records by a separate language model that had not seen the code of
 the checker or the verifier. Each cell gives the share of mutants rejected.}
 \label{tab:S26g}
 \footnotesize
@@ -913,7 +913,7 @@ timing alone includes a ridge model on the days since the end of radiotherapy, t
 diagnosis and the 12-week flag. Externally, where these dates are missing, the unfitted timing score is the days
 since surgery at LUMIERE and the days since the start of radiotherapy at UCSF-ALPTDG.
 
-\subsection{Published radiomics pipeline}\label{sec:S30.3}
+\subsection{Published radiomics model}\label{sec:S30.3}
 
 We ran the authors' extraction on all 594 MU scans with four sequences and a mask: N4 bias correction \citep{tustison2010} within the mask,
 resampling to 1\,mm with B-spline interpolation, scaling to zero mean and unit variance within the mask, and one
@@ -934,16 +934,16 @@ The first analysis (Swin UNETR at MU, with the supplied cavity kept) required ev
 second and third (Swin UNETR and the BraTS 2024 model at all three centres) required every paired CI to include zero
 or lie above it, so that a segmenter may raise a score but not lower it. All three required the combined model's gain
 over the time-and-enhancement model to be read the same way under both mask sets, at MU in the first analysis and at
-MU and LUMIERE in the others. The published pipeline also had to rank below PRISM's imaging model on the Swin UNETR
+MU and LUMIERE in the others. The published radiomics model also had to rank below PRISM's imaging model on the Swin UNETR
 masks, or the comparison would be limited to the supplied masks.
 
 \FloatBarrier
 \section{Further results}\label{sec:S31}
 
 % Sources: CHRISTODOULOU_REPLICATION.md; TIMING_ONLY.md; STRATIFIED_OFFSET.md; IMAGING_S3.md.
-\subsection{Published radiomics pipeline}\label{sec:S31.1}
+\subsection{Published radiomics model}\label{sec:S31.1}
 
-The pipeline's tuning AUC within the training folds averaged 0.70 and did not carry to the held-out folds. An earlier
+The radiomics model's tuning AUC within the training folds averaged 0.70 and did not carry to the held-out folds. An earlier
 re-implementation from the published description used original-image features only, selected the 256 by univariate
 AUC and ran 40 search trials. It also reached 0.58 (0.50 to 0.66) in the intended use, and a logistic regression on
 its 256 features reached 0.64 (exploratory).

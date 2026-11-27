@@ -113,7 +113,7 @@ variables from the notes, and rules combine them with automated tumour volumes t
 \citep{jabal2026}. PRISM's language model makes no decision: it writes up values
 computed elsewhere, so every sentence it writes can be checked. Our contributions are:
 \begin{enumerate}
-\item A new local pipeline is developed, which segments the tumour on each scan with the top-ranked model of the
+\item A new local system is developed, which segments the tumour on each scan with the top-ranked model of the
 BraTS 2024 post-treatment challenge \citep{ferreira2024}, used without fine-tuning, and compares it with Swin UNETR
 trained on BraTS 2021 \citep{hatamizadeh2022} and with the masks supplied with each dataset. From each segmentation,
 PRISM derives 22 measurements of tumour volume, shape, intensity and change from earlier scans, without patient data
@@ -145,7 +145,7 @@ Section~\ref{sec:4} discusses what the results mean and their limits.
 
 \section{Methods}\label{sec:2}
 
-Figure~\ref{fig:1} gives an overview of this section. PRISM reads each follow-up MRI scan of a patient treated for glioma (Figure~\ref{fig:1}a) and returns three scores of progression with a written report. Section~\ref{sec:2.1} describes the three cohorts and the label. Section~\ref{sec:2.2} describes PRISM's six stages (Figure~\ref{fig:1}c): segmentation of the tumour regions by a fixed network (Figure~\ref{fig:1}b), measurements from the masks with the clinical-history inputs, three models (imaging, clinical history and combined), confidence statements, a record of every value, and a report written by a local language model and checked by rule-based programs. Section~\ref{sec:2.3} describes how PRISM was developed on MU-Glioma-Post and tested without retraining on LUMIERE and UCSF-ALPTDG (Figure~\ref{fig:1}d).
+Figure~\ref{fig:1} gives an overview of this section. PRISM reads each follow-up MRI scan of a patient treated for glioma (Figure~\ref{fig:1}a) and returns three scores of progression with a written report. Section~\ref{sec:2.1} describes the three cohorts and the label. Section~\ref{sec:2.2} describes PRISM's six stages (Figure~\ref{fig:1}c): segmentation of the tumour regions by a fixed network (Figure~\ref{fig:1}b), measurements from the masks with the clinical-history inputs, three models (imaging, clinical history and combined), evidence for each score, a record of every value, and a report written by a local language model and checked by rule-based programs. Section~\ref{sec:2.3} describes how PRISM was developed on MU-Glioma-Post and tested without retraining on LUMIERE and UCSF-ALPTDG (Figure~\ref{fig:1}d).
 
 % FIGURE REDESIGN (2026-11-18), modelled on Tak et al. 2025, NEJM AI, doi:10.1056/AIoa2400703; enlarged and split
 % over two pages 2026-11-26 (PI review: legible on paper). Each panel is drawn at its printed size (text width, fonts
@@ -279,7 +279,7 @@ patient.}
 \begin{table}[!htbp]
 \centering
 \caption[Inputs of each score]{\textbf{Inputs of each score.} Every fitted score except the published radiomics
-pipeline is a ridge logistic regression fitted on the training data. The reduced models are the forms applied at
+model is a ridge logistic regression fitted on the training data. The reduced models are the forms applied at
 LUMIERE and UCSF-ALPTDG. Unknown IDH or MGMT status is coded as wildtype and unmethylated; coding it as its own
 category moved no AUC by more than 0.04, and every paired CI included zero. A missing measurement is replaced by the
 training median, with an indicator that it was missing.}
@@ -297,7 +297,7 @@ Images from one scan & The 19 measurements of the current scan (supplied masks, 
 Combined model & Inputs of the clinical-history and imaging models & Yes \\
 Reduced combined model & Reduced clinical-history inputs; whether there was a previous scan, and the interval since it; the 22 measurements (with the supplied masks, log volumes of the enhancing tumour, necrosis with cavity, and FLAIR hyperintensity, and the change in each since the previous scan) & Yes \\
 \addlinespace
-Published radiomics pipeline & 256 of 4,892 radiomic features of the current scan, selected within training (the authors' code \citep{christodoulou2026}) & No \\
+Published radiomics model & 256 of 4,892 radiomic features of the current scan, selected within training (the authors' code \citep{christodoulou2026}) & No \\
 Time-and-enhancement model & Time window after radiotherapy (externally the 12-week flag and whether a previous scan exists); log enhancing volume and its change since the previous scan & Yes \\
 Timing alone & Days since the end of radiotherapy, or visit number, used directly; or a ridge model on these, days since diagnosis and the 12-week flag & Yes \\
 Enhancing volume alone & Log enhancing tumour volume, used directly & No \\
@@ -330,7 +330,7 @@ belongs to a region when its probability exceeds 0.5. Necrosis is the core outsi
 hyperintensity is the rest of the whole tumour. BraTS 2021 contains scans taken before surgery \citep{baid2021}, so this network has no
 resection-cavity label and supplies 22 of the 27 measurements (Supplementary Section~S13.1).
 
-\paragraph*{Measurements and clinical-history inputs.} From the masks and the T1c and FLAIR images, PRISM computes 27
+\paragraph*{Measurements.} From the masks and the T1c and FLAIR images, PRISM computes 27
 measurements (Supplementary Table~S7). Nineteen describe the current scan: six log volumes and measures of composition,
 shape, position and intensity. Eight describe change since the previous scan and since the patient's smallest volume.
 Change uses earlier scans only and is zero at a patient's first scan. Five measurements need the cavity, so the
@@ -345,7 +345,7 @@ the diagnosis date (Supplementary Section~S2).
 
 % Sources: prism/models/formulations.py; prism/experiments/c3_radiomics.py (BASE_PRE); NUMBERS.md 2.1;
 % DETECTION_TASK.md (External test); SYSTEM_RESULTS.md (Deviations item 1).
-\paragraph*{Three models.} The imaging, clinical-history and combined models are ridge logistic regressions \citep{lecessie1992} on the
+\paragraph*{Models.} The imaging, clinical-history and combined models are ridge logistic regressions \citep{lecessie1992} on the
 inputs listed in Table~\ref{tab:models}. Logistic regression turns a weighted sum of the inputs into a probability of
 progression, and the ridge (L2) penalty pulls the weights towards zero, which keeps them stable with many correlated
 inputs and few patients.
@@ -370,7 +370,7 @@ scans with no previous scan a model of the three current volumes is used instead
 
 % Sources: prism/audit/conformal.py; METHODS_PLAN.md M2; RELIABILITY_CARD.md; REVISION_DATA.md R2; refs
 % angelopoulos2023, vovk2022book, romano2020, barber2021limits, johansson2015, ding2023, mehrtens2023, mitchell2019.
-\paragraph*{Confidence statements.} For each score, PRISM computes an 80\% split-conformal set
+\paragraph*{Evidence.} For each score, PRISM computes an 80\% split-conformal set
 \citep{angelopoulos2023}, with its threshold taken from calibration patients that the model was not fitted on. Write $\hat p(1) = \hat p$ for a scan's score and $\hat p(0) = 1 - \hat p$. For each calibration scan $i$
 with outcome $y_i$, the nonconformity score $s_i = 1 - \hat p_i(y_i)$ is the probability that the model did not give
 to the true outcome. Each calibration scan is weighted by one over the number of its patient's calibration scans, so
@@ -428,7 +428,7 @@ to two decimals, volumes to one). Wording that can be fixed in advance, such as 
 agreement, each change in volume and the reason for each flag, is stored as a sentence for the language model to
 copy. The record holds no outcome label.
 
-\paragraph*{Report.} A local open-weight language model, Qwen3.8-27B, writes the report's prose from the record alone.
+\paragraph*{Report and checks.} A local open-weight language model, Qwen3.8-27B, writes the report's prose from the record alone.
 It runs offline on one GPU of the computer that runs PRISM, served with the vLLM library \citep{kwon2023}, so the
 record never leaves that computer. Decoding is greedy (the model always takes its most likely next word), so the report does not depend on random
 sampling. The prompt asks for sentences in a fixed order, from the scan's timing to one sentence for each raised flag (Supplementary Section~S13.4). It tells the model to copy every number as digits and every fixed phrase exactly, and to add no diagnosis, response
@@ -446,7 +446,7 @@ It leaves out the template's category and advice, because PRISM makes no decisio
 the enhancing volume varies between scans taken close together (Section~\ref{sec:3.3}), the report calls all volumes
 indicative.
 
-\paragraph*{Checks.} Two rule-based programs, neither using a language model, then compare the report with its
+Two rule-based programs, neither using a language model, then compare the report with its
 record. They test whether the report agrees with the record, and do not test whether the record is clinically
 correct. The first, the checker, rejects a report that cannot be parsed, cites a key that is not in the record, or
 writes a number that matches no cited entry up to the rounding written. It also rejects a report that leaves out or
@@ -511,28 +511,28 @@ weight times value. A group's share of the score is the size of its part over th
 (exploratory).
 
 
-\paragraph*{Published radiomics pipeline.} We ran the radiomics pipeline published on MU-Glioma-Post
+\paragraph*{Published radiomics model.} We ran the radiomics model published on MU-Glioma-Post
 \citep{christodoulou2026} with its authors' public code and settings, on the same patients, masks, label and folds as
-PRISM, and compared it with PRISM's imaging model. The pipeline computes 4,892 radiomic features of the current scan
+PRISM, and compared it with PRISM's imaging model. It computes 4,892 radiomic features of the current scan
 with PyRadiomics \citep{vangriethuysen2017}, keeps the 256 best ranked within each training set, and fits a gradient
 boosted tree model (LightGBM, \citealp{ke2017}; Supplementary Section~S14.3).
 
 The authors' code labels every scan of a patient who ever progressed as progression. We kept PRISM's label, so the
 comparison is between two methods on one task and does not replicate the published estimate. The plan, fixed before
-the run, required the pipeline to rank below the imaging model for that comparison to be reported as a difference.
+the run, required the radiomics model to rank below the imaging model for that comparison to be reported as a difference.
 
 \paragraph*{Segmentation comparison.} Three planned analyses replaced the supplied masks with a segmenter's and
 refitted the models in the same folds: Swin UNETR at MU, with the supplied cavity kept; Swin UNETR alone at all three
 centres (22 measurements), fitted on MU and applied without retraining; and the BraTS 2024 model in the same way,
 which then became PRISM's segmentation stage (Section~\ref{sec:2.2}). The
-published pipeline was also run on the Swin UNETR masks at MU. Each score is compared with its value on the supplied
+published radiomics model was also run on the Swin UNETR masks at MU. Each score is compared with its value on the supplied
 masks by the paired difference in AUC, under the rules in Table~\ref{tab:2} (Supplementary Section~S14.4).
 Agreement with the supplied masks is measured by the Dice overlap \citep{dice1945}, and the noise of the enhancing volume by its median
 fold change between consecutive scans at most 30 days apart, at MU and LUMIERE.
 
 \paragraph*{Tests fixed in advance.} Table~\ref{tab:2} lists each planned test, its rule and its outcome. The primary
 results are the external AUCs, the gain over the time-and-enhancement model and the comparison with the published
-pipeline. The other tests answer separate questions, each with its own rule, and no correction was made for multiple
+radiomics model. The other tests answer separate questions, each with its own rule, and no correction was made for multiple
 testing. Analyses not fixed in advance are marked exploratory.
 
 
@@ -562,10 +562,10 @@ before it was run, and the outcome. Differences are in AUC, with 95\% CIs.}
 \toprule
 Test & Rule fixed in advance & Outcome & Section \\
 \midrule
-Published radiomics pipeline against the clinical-history model on MU folds & Estimate only & $-$0.24 ($-$0.34 to $-$0.15) & \ref{sec:3.1} \\
-Published radiomics pipeline below the imaging model on MU folds & Otherwise the comparison is withdrawn & \textbf{Yes}. $-$0.13 ($-$0.23 to $-$0.02) & \ref{sec:3.1} \\
+Published radiomics model against the clinical-history model on MU folds & Estimate only & $-$0.24 ($-$0.34 to $-$0.15) & \ref{sec:3.1} \\
+Published radiomics model below the imaging model on MU folds & Otherwise the comparison is withdrawn & \textbf{Yes}. $-$0.13 ($-$0.23 to $-$0.02) & \ref{sec:3.1} \\
 MU results unchanged with Swin UNETR masks (supplied cavity kept) & Every paired CI includes 0, time-and-enhancement reading unchanged & \textbf{No} for the imaging model's AUC. \textbf{Yes} for the combined model, the time-and-enhancement model and the reading & \ref{sec:3.3} \\
-Published radiomics pipeline below the imaging model on the Swin UNETR masks & Otherwise the claim is limited to the supplied masks & \textbf{Yes} & \ref{sec:3.1} \\
+Published radiomics model below the imaging model on the Swin UNETR masks & Otherwise the claim is limited to the supplied masks & \textbf{Yes} & \ref{sec:3.1} \\
 Results at three centres unchanged with PRISM's Swin UNETR stage & Every paired CI includes 0 or lies above it, gain reading unchanged at MU and LUMIERE & \textbf{No} for the MU imaging model. \textbf{Yes} for the other eight scores and the reading & \ref{sec:3.3} \\
 Results at three centres unchanged with the BraTS 2024 stage & As for Swin UNETR & \textbf{No} for the MU time-and-enhancement model, $-$0.02 ($-$0.04 to $-$0.003), and the LUMIERE gain reading. \textbf{Yes} for the other eight scores & \ref{sec:3.3} \\
 Image measurements and schedule inputs add to the clinical-history model on MU & Gain $\geq$ 0.03, CI above 0 & \textbf{No}. $+$0.02 ($-$0.03 to $+$0.06) & \ref{sec:3.2} \\
@@ -618,7 +618,7 @@ Figure S1). At MU the calibration slopes were 0.77 to 0.83, with CIs including 1
 PRISM's three models and the time-and-enhancement model (dashed) for detecting the scan at which progression was
 documented, with 95\% bands from bootstrap samples of patients; at MU the curves are averaged over the five repeats of
 cross validation. Middle, the AUC with 95\% CI for the same scores, the combined model on the supplied masks
-(reference), log enhancing volume alone and, at MU, the published radiomics pipeline run with its authors' code on
+(reference), log enhancing volume alone and, at MU, the published radiomics model run with its authors' code on
 the supplied masks with PRISM's label and folds. MU used repeated cross validation
 in the intended use. LUMIERE and UCSF used models fitted once on MU and applied unchanged, with the reduced
 clinical-history inputs. Right, the gain of each model over the time-and-enhancement model with its paired 95\% CI.
@@ -633,12 +633,12 @@ uses the 171 scans with a segmented volume. The dashed grey line marks chance.}
 
 % Sources: CHRISTODOULOU_REPLICATION.md (faithful run; first re-implementation: Reading, 100 splits; faithful run on
 % the BraTS21 masks); METHODS_RESULTS.md E4.
-On the supplied masks, the published radiomics pipeline reached 0.58 (0.50--0.66) at MU, below PRISM's imaging model
+On the supplied masks, the published radiomics model reached 0.58 (0.50--0.66) at MU, below PRISM's imaging model
 on the same masks by 0.13 (0.02--0.23) and below the time-and-enhancement model (Figure~\ref{fig:2}). Enhancing volume alone reached 0.61 (exploratory).
-With Swin UNETR masks, the pipeline reached 0.53 and ranked below the imaging model on the same masks by 0.10
+With Swin UNETR masks, the radiomics model reached 0.53 and ranked below the imaging model on the same masks by 0.10
 (0.01--0.19; Supplementary Section~S15.1).
 
-On single held-out sets, an earlier re-implementation of the pipeline ranged from 0.32 to 0.88 (mean 0.63) on the
+On single held-out sets, an earlier re-implementation of the radiomics model ranged from 0.32 to 0.88 (mean 0.63) on the
 intended-use scans, over 100 random sets of 18 of the 92 grade 4 patients. On 100 sets drawn the same way, PRISM's
 combined model reached up to 1.00, and 0.84 on average, with 95\% of sets between 0.68 and 0.96 (exploratory).
 

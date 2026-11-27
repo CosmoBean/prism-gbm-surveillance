@@ -77,8 +77,8 @@ the detail behind each step, is left for reviewers in [RESERVE.md](RESERVE.md), 
 selection, not concealment.
 
 **Always in the main text:**
-- the timing-and-enhancement baseline, next to any model that uses timing;
-- the AUC split by time window, inside the audit trail, never in the abstract;
+- the time-and-enhancement model, next to any model that uses timing;
+- the contribution of each group of inputs to the score (share of the score, fall in AUC when left out);
 - the planned tests and their outcomes (Table of planned tests), stated neutrally and framed by the argument;
 - which analyses were planned and which exploratory, in one word where it applies. A pass rate measured after a
   revision prompted by evaluation failures is called exploratory;
@@ -92,7 +92,7 @@ selection, not concealment.
   never in the abstract or a heading;
 - method statements that do not match the current code. Check against the code, not an older audit.
 
-**The abstract** carries no radiomics comparison and no AUC split. It holds one or two numbers per claim.
+**The abstract** carries no radiomics comparison. It holds one or two numbers per claim.
 
 The test for every sentence: *does the reader need this here to follow or believe the argument?* If not, move it to
 the reserve, or cut it. Every result in the main text must answer "so what?".
@@ -209,6 +209,7 @@ the next. Agree on the story ([OUTLINE.md](OUTLINE.md)) before writing prose.
 | The pitch "beat radiomics by 0.24" in the abstract; the methods-first framing (three technical contributions C1–C3) | Radiomics comparison in Results only; the system spine |
 | "Private local agentic report" | One schema-bound writing step, never an agent |
 | The example report drawn as a segmentation strip, never a patient image | A real held-out report page with the cohort's images |
+| The AUC split by time window (2026-11-26: the data do not support a time-window argument) | Each group of inputs' contribution to the score (section 3) |
 | VOICE.md, STORY.md and the council rounds as guides | This file, [OUTLINE.md](OUTLINE.md), [RESERVE.md](RESERVE.md) |
 
 ## 10. Reactions since consolidation
