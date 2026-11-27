@@ -26,11 +26,12 @@ time-and-enhancement model (MU, LUMIERE).
 
 ![Figure 3](figures/fig2_performance.png?v=2026-11-20-0810)
 
-### Figure 4. Where the ranking comes from
-`scripts/generate_methods_figures.py`: AUC within one time window and across windows, per score and cohort.
-Candidate for the supplement.
+### Figure 4. What each score rests on
+`scripts/fig3_contributions.py` (data: `scripts/prism_feature_contributions.py`): each input group's share of the
+score and the fall in AUC when it is left out, three models at MU (exploratory). Replaced the AUC split by time window
+on 2026-11-26 (author: the cohorts do not support the time-window argument).
 
-![Figure 4](figures/fig3_context_split.png?v=2026-11-20-0810)
+![Figure 4](figures/fig3_contributions.png?v=2026-11-26)
 
 ### Figure 5. Coverage within groups of comparable scans
 `scripts/generate_methods_figures.py`: coverage of the combined score's 80% sets by group, marginal and

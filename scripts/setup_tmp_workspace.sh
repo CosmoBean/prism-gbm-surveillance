@@ -11,7 +11,7 @@ mkdir -p "$W"; cd "$W"
 export UV_CACHE_DIR="$W/uv-cache"
 [ -x venv/bin/python ] || uv venv -q --python 3.11 venv
 uv pip install -q --python venv/bin/python matplotlib==3.10.8 numpy==2.2.6 nibabel==5.4.2 pandas==2.3.3 \
-  scipy openpyxl scikit-learn pillow
+  scipy==1.17.1 scikit-learn==1.7.2 SimpleITK==2.5.3 openpyxl pillow threadpoolctl
 [ -d repo ] || git clone -q --branch "$BRANCH" "$(git -C "$NFS" remote get-url origin)" repo
 cd repo
 ln -sfn "$NFS/data" data; ln -sfn "$NFS/outputs" outputs

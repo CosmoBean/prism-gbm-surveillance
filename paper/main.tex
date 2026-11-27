@@ -122,9 +122,8 @@ clinical history, and from the two combined. Each score is accompanied by the se
 calibrated to contain the true outcome in 80\% of scans, a statement of whether the imaging
 and clinical-history scores agree, and the models' performance on comparable earlier scans.
 \item PRISM provides an evaluation of what each score adds to what the clinician already knows. Each score is compared with a
-reference model based on the time since radiotherapy and the enhancing tumour volume, and its AUC is split into a part
-from pairs of scans in the same time window after radiotherapy and a part from pairs in different windows
-\citep{kallus2019}.
+reference model based on the time since radiotherapy and the enhancing tumour volume, and the contribution of each group of inputs to the score is measured, as its share of each scan's
+score and as the fall in AUC when it is left out.
 \item External validation is performed without retraining. The models were fitted once, on 181 scans from 92 patients in
 MU-Glioma-Post, and applied unchanged to 178 scans from 79 patients in LUMIERE and 69 scans from 69 patients in
 UCSF-ALPTDG, using both the masks supplied with each dataset and PRISM's own segmentation.
@@ -241,7 +240,7 @@ Role & Development & External test & External test \\
 How models were applied & Five repeats of fivefold cross validation grouped by patient, then fitted once on all detection scans & MU models applied unchanged, once & MU models applied unchanged, once \\
 Scan with progression & First scan on or after the documented progression date & First scan rated as progressive disease & Second of the patient's two scans, with progression dated within 30 days \\
 Scan without progression & Followed by at least 120 days without progression & Scan rated stable or responding, before any scan rated progressive disease & Second scan followed by at least 120 days without progression \\
-Time-and-enhancement model, AUC split, group calibration & Run & Run & AUC split and group calibration with the approximated window; time-and-enhancement model in the segmentation comparison only \\
+Time-and-enhancement model, group calibration & Run & Run & Group calibration with the approximated window; time-and-enhancement model in the segmentation comparison only \\
 \bottomrule
 \end{tabularx}
 \end{table}
@@ -490,17 +489,14 @@ approximated, it was used only in the segmentation comparison. Each score is com
 difference in AUC. Scans were also ranked by timing alone, by the days since the end of radiotherapy and by the visit
 number (exploratory; Table~\ref{tab:models}; Supplementary Section~S14.2).
 
-\paragraph*{Splitting the AUC by time window.} The AUC is the share of pairs, one scan with progression and one
-without, that a score ranks correctly. We split these pairs into pairs from the same time window, which the window
-cannot separate, and pairs from different windows, which the window alone can often order. With $A_W$ and $A_B$ the
-AUC over the pairs within and across windows, and $w$ the share of pairs within a window,
-\begin{equation}
-\mathrm{AUC} = w\, A_W + (1 - w)\, A_B .
-\end{equation}
-This is the decomposition of Kallus and Zhou \citep{kallus2019} with the pairs grouped in two, and $A_W$ is a
-pair-weighted analogue of the covariate-adjusted AUC \citep{janes2008,janes2009}. The window is the time window at MU
-and the 12-week flag externally. A window-only score, the share of training scans with progression in the scan's
-window, shows how much of $A_B$ the window alone supplies (Supplementary Section~S10.1).
+\paragraph*{Contribution of each group of inputs.} To show what each score rests on, the inputs were divided into
+six groups: the patient's characteristics; the treatment course and dates; the volumes; composition, shape and
+position; intensity; and change since earlier scans (Table~\ref{tab:models}; Supplementary Section~S10.1). Each group
+was left out in turn, the model was refitted in the same folds, and its AUC was compared with the full model's in the
+same bootstrap samples. Because each model is a weighted sum of standardised inputs, the linear part of each scan's
+score also splits into one part per group, the sum over the group's inputs and their missing-value indicators of
+weight times value. A group's share of the score is the size of its part over the sum of the sizes of all parts
+(exploratory).
 
 
 \paragraph*{Published radiomics pipeline.} We ran the radiomics pipeline published on MU-Glioma-Post
@@ -638,7 +634,7 @@ at MU and 0.73 (0.64--0.81) at LUMIERE.
 At MU, the time since the end of radiotherapy alone ranked scans at 0.77, and a ridge model on every timestamp at
 0.76 (0.66--0.84; both exploratory; Supplementary Section~S15.2). Scans with and without progression were taken at
 different times after radiotherapy (Table~\ref{tab:1}). The patient's characteristics alone, without dates, reached
-0.53 (0.45--0.61), so the clinical-history model's ranking comes from the dates.
+0.53 (0.45--0.61).
 
 % Sources: SKELETON_2026-11-20.md timestamp-only check (LUMIERE days since surgery, UCSF days from RT start, UCSF days
 % since previous scan); UCSF_AUDIT.md sections 3--6; UCSF_RESULTS.md Part C; NUMBERS.md 4, 5, 12C; SEGMENTER_STAGE.md P1.
@@ -651,38 +647,28 @@ $0.05$; Figure~\ref{fig:2}c). UCSF-ALPTDG rated enhancement as increased at 27 o
 dated progression a median of 7 days after the scan. Scans with progression also came sooner after the previous scan.
 Ranking scans by a shorter interval since the previous scan, an input of the reduced combined model, reached 0.72.
 
-% Sources: METHODS_RESULTS.md M1, E1, E4 and UCSF section; SKELETON_2026-11-20.md (all timestamps within window).
-Within a time window at MU, the imaging model ranked 0.68 (0.58--0.77) of pairs correctly, against 0.73 across
-windows, a difference whose interval includes zero (Figure~\ref{fig:3}). The ridge model on timestamps ranked pairs
-within a window at 0.49 (0.37--0.60), at chance. Within a window, the imaging model differed from the
-time-and-enhancement model by $+$0.10 ($-$0.04 to $+$0.26; Supplementary Section~S10.1).
-
-The clinical-history model ranked mainly across windows, with 0.93 (0.88--0.97) of those pairs correct against 0.64
-(0.51--0.78) within one. The window-only score also reached 0.93 across windows. The combined
-model followed the clinical-history model (0.65 within, 0.92 across). Adding clinical history to images raised the AUC by 0.11 (0.03--0.19)
-at MU and 0.12 (0.04--0.21) at LUMIERE, and at both centres the whole gain lay in pairs across windows.
-
-% Sources: METHODS_RESULTS.md M1 (LUMIERE, UCSF).
-At LUMIERE, the imaging model ranked scans better within a window (0.71) than across (0.51). At UCSF-ALPTDG most
-pairs fell within one window, so the AUCs within a window are close to the overall ones (Supplementary Section~S10.1).
-
-% Sources: STRATIFIED_OFFSET.md Q1, Q2; IMAGING_S3.md (exploratory design analyses, 2026-11-20).
-None of four changes to the design of the imaging model raised its AUC within a window at MU (exploratory; Supplementary Section~S15.3).
+% Sources: scripts/prism_feature_contributions.py; outputs/results/analyses/feature_contributions (2026-11-26).
+At MU, the treatment course and dates made up the largest part of the combined score, a median of 44\% (IQR 36--54\%)
+of each scan's score, and leaving them out lowered its AUC by 0.10 (0.02--0.18; Figure~\ref{fig:3}). The image inputs
+together made up a median of 44\% (34--53\%), and more than half of the score at a third of scans. Leaving out any
+other single group changed the combined model's AUC by at most 0.02. In the clinical-history model, leaving out the
+treatment course and dates lowered the AUC by 0.24 (0.13--0.35), and leaving out the patient's characteristics by
+0.02 ($-$0.01 to $+$0.06). In the imaging model, intensity and change since earlier scans made up the largest shares
+(medians 39\% and 33\%), and leaving out either lowered its AUC by 0.04 and 0.05, with intervals reaching zero
+($-$0.00 to $+$0.08 and $-$0.00 to $+$0.11; all exploratory; Supplementary Section~S10.1). Adding clinical history to images raised the AUC by 0.11
+(0.03--0.19) at MU and 0.12 (0.04--0.21) at LUMIERE.
 
 
-% Sources: scripts/generate_methods_figures.py; METHODS_RESULTS.md M1.
+% Drawn by scripts/fig3_contributions.py from outputs/results/analyses/feature_contributions.
 \begin{figure}[!htbp]
 \centering
-\figslot{fig3_context_split.pdf}{0.42\textheight}{For each score and cohort, the AUC within one time window and
-across time windows with 95\% CIs, and the overall AUC.}
-\caption{\textbf{Where the ranking comes from.} For each score, the AUC over pairs of scans from the same time
-window after radiotherapy (filled circles), over pairs from different windows (open squares) and over all pairs
-(ticks), at MU-Glioma-Post (time window from the treatment dates), LUMIERE (the rater's flag for the first three
-months) and UCSF-ALPTDG (from the radiotherapy start, assuming a six week course). The overall AUC is the weighted mean of the other two. The window-only score ranks scans by the
-progression rate of their window in the training folds (externally, MU's rate for the matching window). Its AUC
-within a window is omitted, because at LUMIERE and UCSF it ties all such pairs and at MU it reflects only how the rates vary between training folds. At LUMIERE enhancing volume alone
-is evaluated on the 163 of 178 scans with a recorded enhancing volume. 95\% CIs from 2,000 bootstrap
-samples of patients.}
+\figslot{fig3_contributions.pdf}{0.42\textheight}{For each of PRISM's three models at MU, each input group's share of
+the score and the fall in AUC when the group is left out.}
+\caption{\textbf{What each score rests on.} PRISM's three models at MU-Glioma-Post, on the 146 evaluation scans in five
+repeats of fivefold cross validation. (a) Each group's share of a scan's score, the size of the group's part of the
+linear score over the sum of the sizes of all parts, averaged over the repeats; median and IQR over scans. (b) The
+fall in AUC when the group is left out and the model refitted in the same folds, with paired 95\% CIs from 2,000
+bootstrap samples of patients. Each model shows only the groups it uses. Exploratory.}
 \label{fig:3}
 \end{figure}
 
@@ -903,17 +889,17 @@ and a single split of a small cohort gives unstable estimates \citep{an2021,varo
 ranged from 0.32 to 0.88 over random held-out sets (Section~\ref{sec:3.1}). PRISM was evaluated by
 repeated cross validation and at two external centres instead.
 
-A good AUC, however, does not say why a model ranks scans well, so PRISM breaks the score down. Because the imaging
-and clinical-history scores are computed separately, and each AUC is split into scans taken at a similar time and
-scans taken at different times, the reader can see where the ranking comes from. At MU-Glioma-Post much of it came
-from the time since radiotherapy, which the follow-up schedule ties to the label, and at the external centres more
-of it came from the enhancing tumour (Section~\ref{sec:3.2}). Earlier studies also found that the time since treatment
+A good AUC, however, does not say why a model ranks scans well, so PRISM breaks the score down. Because the imaging and clinical-history scores are computed separately, and each
+score splits into the parts that come from each group of inputs, the reader can see what the score rests on. At
+MU-Glioma-Post the treatment course and dates made up the largest part of the combined score, and the image inputs a
+median of 44\% of it (Section~\ref{sec:3.2}). Earlier studies also found that the time since treatment
 \citep{gomaa2025} and the interval between scans \citep{tarek2026} affect models in this setting. A clinician already
 knows when a scan was taken. PRISM shows how much of its score that knowledge supplies and how much the images add.
 
-These two checks can be applied to any model in this field. Comparing a score with a simple model of what the clinician
-already knows \citep{beaulieujones2021}, here the time since radiotherapy and the enhancing tumour, and splitting its AUC by time window
-\citep{kallus2019,janes2008}, need only the date of each scan relative to treatment. We suggest that studies of
+These two checks can be applied to other models in this field. Comparing a score with a simple model of what the clinician
+already knows \citep{beaulieujones2021}, here the time since radiotherapy and the enhancing tumour, needs only the date
+of each scan relative to treatment, and the share of the score from each group of inputs needs only the model's
+weights. We suggest that studies of
 progression models report both beside the AUC.
 
 PRISM's combined score kept its ranking when PRISM's own segmenter replaced the masks supplied with the datasets, while
@@ -945,9 +931,9 @@ the small groups of scans, and a wider test of the report checks.
 
 \subsection*{Conclusion}
 
-We built PRISM so that a reader can see, at each follow-up scan, what its score rests on. Keeping the scores separate
-showed that the same models ranked scans mainly through the time since radiotherapy at the development centre and more
-through the enhancing tumour at the external centres, a difference that a single AUC does not reveal. A PRISM report
+We built PRISM so that a reader can see, at each follow-up scan, what its score rests on. Keeping the scores separate, and splitting each into the parts from its inputs,
+showed how much of the combined score came from the treatment dates and how much from the images, which a single AUC
+does not reveal. A PRISM report
 places the imaging score beside the clinical-history score, states how certain each is, and lets every number in it be
 traced to the scan's record.
 

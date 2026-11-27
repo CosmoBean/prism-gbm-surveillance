@@ -500,116 +500,86 @@ Fixed template & 114 & 162 & 90 of 90 & 413 & 39.4 \\
 
 % Sources: docs/results/METHODS_PLAN.md (before any run); METHODS_RESULTS.md; aggregate CSVs of
 % prism/analyses/methods.py and prism/analyses/verifier_mutation.py.
-These analyses were written down before any of them was run or coded. None is confirmatory. All are
+Except for Section~S10.1, added at review, these analyses were written down before any of them was run or coded. None is confirmatory. All are
 descriptive estimates with 95\% intervals from 2000 resamples of patients (seed 20261115), and at MU each resample
 averages over the five repeats of cross validation. The UCSF-ALPTDG images were not available, so every result is for
 the public development cohort (MU grade 4 intended use, 146 scans) and LUMIERE (178 scans).
 
-\subsection{AUC split by context}\label{sec:S26.1}
+\subsection{Contribution of each group of inputs}\label{sec:S26.1}
 
-For each score we split the pairs of one progression and one other scan into pairs from the same context and pairs
-from different contexts, and computed the AUC within each set. With $w$ the share of pairs from the
-same context, $A_W$ the AUC within contexts and $A_B$ the AUC across them, the AUC equals $w A_W + (1-w) A_B$ exactly,
-and this held to $10^{-12}$ on every resample. At MU the context is the time after radiotherapy from the treatment
-dates. The strata held 2 progression and 1 other scan during radiotherapy, 4 and 51 early after it (up to 12 weeks
-after its end) and 56 and 32 later. At LUMIERE the context is the rater's flag for a scan within 3 months after
-radiotherapy, with 1 progression and 27 other scans flagged and 72 and 78 not flagged. The MU values of $A_W$
-reproduced the registered audit within each time window (0.64 and 0.68 for the clinical-history and imaging models).
+% Sources: scripts/prism_feature_contributions.py; outputs/results/analyses/feature_contributions (2026-11-26).
+This analysis was added at review and is exploratory. It uses the label, folds and 146 evaluation scans of the main
+analysis at MU, where the full models reached 0.82 (combined), 0.71 (imaging) and 0.82 (clinical history). The inputs
+fall into six groups. The patient's characteristics are age, sex, IDH and MGMT status, a biopsy before resection and a
+previous brain tumour. The treatment course and dates are the days since diagnosis, surgery and the end of
+radiotherapy; the start, duration, dose and fractions of radiotherapy and whether it was hypofractionated; whether
+radiotherapy and chemotherapy had started and radiotherapy had ended; the 12-week flag and its product with MGMT
+status; unknown radiotherapy dates; and the visit index. The volumes are the six log volumes; composition, shape and
+position the eight measures of Table~S7 that describe them; intensity the five relative intensities; and change since
+earlier scans the six log ratios to the previous scan and the two volumes relative to the patient's smallest. A
+missing-value indicator belongs to the group of its input.
 
-Formally, with $P$ and $N$ the scans with and without progression, $s$ a score and $c$ the context,
-\begin{equation*}
-\mathrm{AUC} = \frac{1}{|P||N|}\sum_{i\in P}\sum_{j\in N} K(s_i,s_j), \qquad K(a,b) = \mathbb{1}[a>b] +
-\tfrac12\mathbb{1}[a=b],
-\end{equation*}
-and the pairs within one context are $W = \{(i,j): c_i = c_j\}$, with $B$ its complement. $A_W$ and $A_B$ are the same
-sum restricted to $W$ and to $B$. Externally the context only score takes MU's share of progression scans for the
-matching context, and MU's overall share for scans without a dated course of radiotherapy. Scans without a value of a
-score are left out of that score's pairs.
-
-At LUMIERE the context is the rater's flag, and only one of the 28 flagged scans had progression. The reduced models
-take the flag as an input, so the across-context AUC of the clinical-history model (0.96, against 0.59 within one
-context; Table S10) shows mainly how much the flag carries. When the UCSF-ALPTDG data were restored, the split was
-also run there, with the window approximated from the start of radiotherapy. Nearly nine in ten UCSF-ALPTDG pairs
-($w$ = 0.88, 0.76 to 0.98) fell within one window, almost all later than 12 weeks after radiotherapy, so the pairs
-across windows are too few to read and the within-window AUCs are close to the overall ones.
+Table~S10 gives the AUC of each model refitted without each group, and Table~S11 each group's share of the score. A
+share is the size of the group's part of the linear score over the sum of the sizes of all parts, averaged over the
+five repeats for each held-out scan.
 
 \begin{table}[!htbp]
 \renewcommand{\thetable}{S10}\renewcommand{\theHtable}{S10}
 \centering
-\caption{\textbf{AUC split into pairs within one context and pairs across contexts.} The context is the time window
-after radiotherapy at MU and the rater's 3 month flag at LUMIERE. The context only score gives each scan the
-progression rate of its stratum (at MU from the training folds, at LUMIERE from the matching MU stratum). The lower
-panel gives the combined model minus each single model.}
+\caption{\textbf{Exploratory. Each group of inputs left out at MU.} AUC of the model refitted without the group in the
+same folds, averaged over the five repeats, and the fall from the full model with its paired 95\% interval from 2,000
+bootstrap samples of patients.}
 \label{tab:S26a}
 \footnotesize
-\begin{tabularx}{\linewidth}{@{}LR{2.6cm}R{2.6cm}R{2.6cm}R{2.6cm}@{}}
+\begin{tabularx}{\linewidth}{@{}R{2.4cm}LR{2.2cm}R{3.4cm}@{}}
 \toprule
- & AUC & $A_W$, within & $A_B$, across & $A_B - A_W$ \\
+Model & Group left out & AUC without & Fall in AUC \\
 \midrule
-\multicolumn{5}{@{}l}{\textit{MU, share of pairs within one time window $w$ = 0.38 [0.28, 0.48]}} \\
-Clinical-history model & 0.82 [0.75, 0.89] & 0.64 [0.51, 0.78] & 0.93 [0.88, 0.97] & 0.29 [0.16, 0.43] \\
-Imaging model & 0.71 [0.63, 0.78] & 0.68 [0.58, 0.77] & 0.73 [0.64, 0.81] & 0.05 [$-$0.04, 0.14] \\
-Combined model & 0.82 [0.75, 0.89] & 0.65 [0.52, 0.78] & 0.92 [0.88, 0.96] & 0.27 [0.15, 0.40] \\
-Context only score & 0.70 [0.60, 0.80] & 0.34$^{a}$ & 0.93 [0.86, 0.98] & -- \\
-Enhancing volume alone & 0.62 [0.53, 0.71] & 0.68 [0.54, 0.80] & 0.59 [0.49, 0.69] & $-$0.09 [$-$0.22, 0.05] \\
-\multicolumn{5}{@{}l}{\textit{LUMIERE, share of pairs within one context $w$ = 0.74 [0.59, 0.84]}} \\
-Clinical-history model & 0.69 [0.60, 0.80] & 0.59 [0.49, 0.71] & 0.96 [0.89, 1.00] & 0.37 [0.23, 0.49] \\
-Imaging model & 0.65 [0.57, 0.73] & 0.71 [0.60, 0.80] & 0.51 [0.39, 0.63] & $-$0.20 [$-$0.34, $-$0.04] \\
-Combined model & 0.77 [0.68, 0.86] & 0.72 [0.60, 0.82] & 0.93 [0.86, 0.99] & 0.22 [0.12, 0.34] \\
-Context only score & 0.62 [0.57, 0.70] & 0.50 & 0.96 [0.88, 1.00] & -- \\
-Enhancing volume alone & 0.56 [0.43, 0.68] & 0.61 [0.46, 0.75] & 0.41 [0.29, 0.53] & $-$0.21 [$-$0.36, $-$0.04] \\
-\midrule
- & Change in AUC & Change in $A_W$ & Change in $A_B$ & \\
-\midrule
-MU, combined minus clinical-history & 0.00 [$-$0.05, 0.05] & 0.01 [$-$0.09, 0.12] & $-$0.01 [$-$0.04, 0.02] & \\
-MU, combined minus imaging & 0.11 [0.03, 0.19] & $-$0.02 [$-$0.15, 0.10] & 0.20 [0.12, 0.27] & \\
-LUMIERE, combined minus clinical-history & 0.08 [$-$0.01, 0.16] & 0.12 [0.00, 0.23] & $-$0.03 [$-$0.07, 0.01] & \\
-LUMIERE, combined minus imaging & 0.12 [0.04, 0.21] & 0.01 [$-$0.08, 0.10] & 0.42 [0.30, 0.55] & \\
+Combined & Patient characteristics & 0.81 & $+$0.01 ($-$0.01 to $+$0.03) \\
+Combined & Treatment course and dates & 0.72 & $+$0.10 ($+$0.02 to $+$0.18) \\
+Combined & Volumes & 0.83 & $-$0.01 ($-$0.02 to $+$0.00) \\
+Combined & Composition, shape and position & 0.83 & $-$0.01 ($-$0.03 to $-$0.00) \\
+Combined & Intensity & 0.81 & $+$0.01 ($-$0.01 to $+$0.04) \\
+Combined & Change since earlier scans & 0.84 & $-$0.01 ($-$0.03 to $-$0.00) \\
+\addlinespace
+Imaging & Volumes & 0.72 & $-$0.01 ($-$0.02 to $+$0.00) \\
+Imaging & Composition, shape and position & 0.73 & $-$0.02 ($-$0.03 to $-$0.00) \\
+Imaging & Intensity & 0.67 & $+$0.04 ($-$0.00 to $+$0.08) \\
+Imaging & Change since earlier scans & 0.66 & $+$0.05 ($-$0.00 to $+$0.11) \\
+\addlinespace
+Clinical history & Patient characteristics & 0.80 & $+$0.02 ($-$0.01 to $+$0.06) \\
+Clinical history & Treatment course and dates & 0.58 & $+$0.24 ($+$0.13 to $+$0.35) \\
 \bottomrule
 \end{tabularx}
-
-\raggedright\scriptsize $^{a}$ Not 0.50 as the plan expected, see the note below the table.
 \end{table}
-
-The plan said that $A_W$ of the context only score is 0.50 by construction, and this holds at LUMIERE. At MU it is
-0.34, which is a deviation from the plan and an artefact of how the score was built. The stratum rates were computed
-again in each training fold, so scans of one stratum in different folds received slightly different rates, and a fold
-whose test part held more progression scans had a lower training rate. The value says nothing about the context, and
-the quantity of interest for this score is $A_B$.
-
-Two exploratory checks, not in the plan, followed from the internal review (Table S11). With the stratum rates
-computed once on all labelled MU scans, the context only score has $A_W$ of 0.50, as every pair within a window is a
-tie, $A_B$ of 0.94 and an AUC of 0.77. The time window alone thus ranks pairs across windows as well as the
-clinical-history model does. Within each window the three models differ most early after radiotherapy, where the
-imaging and combined models rank well, but this window holds only 4 progression scans. The later window holds 1,792
-of the 1,998 pairs within a window (90\%), so $A_W$ is close to the AUC of the later window.
 
 \begin{table}[!htbp]
 \renewcommand{\thetable}{S11}\renewcommand{\theHtable}{S11}
 \centering
-\caption{\textbf{Exploratory. Context only score with rates computed once, and the AUC within each time window at
-MU.} The upper panel gives the context only score with the progression rate of each window computed once on all
-labelled MU scans, instead of in each training fold as in Table S10. The lower panel gives the AUC within each window,
-the mean over the five repeats of cross validation. Early means up to 12 weeks after the end of radiotherapy.}
+\caption{\textbf{Exploratory. Each group's share of the score at MU.} Median (IQR) over the 146 evaluation scans, and
+the median over scans with and without progression.}
 \label{tab:S26e}
 \footnotesize
-\begin{tabularx}{\linewidth}{@{}LR{1.6cm}R{1.6cm}R{2.0cm}R{1.4cm}R{1.6cm}@{}}
+\begin{tabularx}{\linewidth}{@{}R{2.4cm}LR{2.4cm}R{1.8cm}R{1.8cm}@{}}
 \toprule
-\multicolumn{6}{@{}l}{\textit{Context only score, rates computed once}} \\
- & & & AUC & $A_W$ & $A_B$ \\
+Model & Group & Share & Progression & No progression \\
 \midrule
-Context only score & & & 0.77 & 0.50 & 0.94 \\
-\midrule
-\multicolumn{6}{@{}l}{\textit{AUC within each time window}} \\
-Time window & Progression & No progression & Clinical-history & Imaging & Combined \\
-\midrule
-Later after radiotherapy & 56 & 32 & 0.64 & 0.65 & 0.62 \\
-Early after radiotherapy & 4 & 51 & 0.66 & 0.92 & 0.93 \\
-During radiotherapy & 2 & 1 & -- & -- & -- \\
+Combined & Patient characteristics & 9\% (5--14\%) & 8\% & 9\% \\
+Combined & Treatment course and dates & 44\% (36--54\%) & 46\% & 43\% \\
+Combined & Volumes & 8\% (4--14\%) & 7\% & 8\% \\
+Combined & Composition, shape and position & 6\% (4--9\%) & 6\% & 6\% \\
+Combined & Intensity & 15\% (10--24\%) & 17\% & 15\% \\
+Combined & Change since earlier scans & 8\% (5--12\%) & 9\% & 7\% \\
+\addlinespace
+Imaging & Volumes & 12\% (8--18\%) & 12\% & 12\% \\
+Imaging & Composition, shape and position & 13\% (9--19\%) & 14\% & 13\% \\
+Imaging & Intensity & 39\% (26--49\%) & 39\% & 38\% \\
+Imaging & Change since earlier scans & 33\% (19--42\%) & 28\% & 33\% \\
+\addlinespace
+Clinical history & Patient characteristics & 21\% (13--34\%) & 16\% & 23\% \\
+Clinical history & Treatment course and dates & 79\% (66--87\%) & 84\% & 77\% \\
 \bottomrule
 \end{tabularx}
-
-\raggedright\scriptsize Dashes mark the window during radiotherapy, which has too few scans for an AUC to be read.
 \end{table}
 
 \subsection{Group-conditional conformal sets}\label{sec:S26.2}
@@ -988,38 +958,6 @@ four clinical inputs. Over 100 held-out sets of 30 patients, it averaged 0.75.
 \subsection{Timing alone}\label{sec:S31.2}
 
 At MU the visit number alone ranked scans at 0.78 (exploratory).
-
-\subsection{Changes to the design of the imaging model}\label{sec:S31.3}
-
-Four changes to the imaging model were tested at MU (exploratory; Table~S17). An imaging model fitted with a separate
-intercept for each time window, so that only differences within a window inform the image terms, kept the AUC within
-a window at MU and lowered the AUC across windows by 0.06 ($-$0.12 to $-$0.01). A wider penalty grid changed the AUC within a window by $+$0.004.
-Letting the enhancing volume carry a different weight in the first 12 weeks after radiotherapy changed it by
-$-$0.01. A combined model that adds the image and clinical terms to the time-and-enhancement model as a fixed offset
-ranked scans as the combined model did at all three centres; at LUMIERE its overall AUC differed by $-$0.02 ($-$0.07
-to $+$0.02). The AUC within a window of about 0.68 is what these
-measurements carry once timing is held fixed, in a cohort of 62 scans with progression.
-
-\begin{table}[!htbp]
-\renewcommand{\thetable}{S17}\renewcommand{\theHtable}{S17}
-\centering
-\caption{\textbf{Exploratory. Changes to the design of the imaging model.} Paired differences from the current model
-(the combined model for the offset model) with 95\% intervals from 2,000 bootstrap samples of patients. Within, the
-AUC over pairs within one time window (the rater's flag at LUMIERE). Dashes mark values not computed.}
-\label{tab:S31a}
-\footnotesize
-\begin{tabularx}{\linewidth}{@{}LR{2.6cm}R{2.6cm}R{2.6cm}R{2.6cm}@{}}
-\toprule
-Change & MU, within & MU, AUC & LUMIERE, within & UCSF-ALPTDG, AUC \\
-\midrule
-Separate intercept per window & $-$0.00 ($-$0.09 to $+$0.08) & $-$0.04 ($-$0.10 to $+$0.02) & $-$0.01 ($-$0.07 to $+$0.04) & $+$0.04 ($-$0.00 to $+$0.09) \\
-Wider penalty grid & $+$0.004 ($-$0.005 to $+$0.014) & -- & $+$0.000 ($-$0.001 to $+$0.001) & -- \\
-Separate intercepts, wider grid & $-$0.011 ($-$0.095 to $+$0.069) & -- & $-$0.011 ($-$0.064 to $+$0.037) & -- \\
-Separate intercepts, enhancement weighted by window & $-$0.013 ($-$0.098 to $+$0.067) & -- & $-$0.011 ($-$0.065 to $+$0.036) & $+$0.066 ($+$0.014 to $+$0.123) \\
-Offset combined model & $-$0.04 ($-$0.09 to $+$0.01) & $-$0.01 ($-$0.05 to $+$0.03) & $-$0.02 ($-$0.09 to $+$0.03) & $+$0.01 ($-$0.05 to $+$0.08) \\
-\bottomrule
-\end{tabularx}
-\end{table}
 
 \FloatBarrier
 \bibliography{refs}
