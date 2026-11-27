@@ -9,7 +9,7 @@ it here and in the paper in the same commit.
 ## Abstract (approved 2026-11-26; numbers updated to PRISM's segmenter 2026-11-27)
 
 ```locked
-Models for glioma follow-up MRI report high accuracy, but a single AUC cannot show what drives their predictions. We built a new framework, PRISM (Progression Reading with Independent Scores and Measurements), running on one local computer. It segments each scan with the winning BraTS 2024 post-treatment model, scores it from image measurements, clinical history and both with three logistic regressions and conformal sets, and has a local language model write a checked report of what each score rests on. On MU-Glioma-Post, the combined model reached an AUC of 0.82 in repeated cross validation, and up to 1.00 (mean 0.84) on single held-out splits, the design of earlier studies. Unlike most earlier models, PRISM was tested without retraining at two other centres, reaching 0.79 at LUMIERE and 0.81 at UCSF-ALPTDG, against a pooled AUC of 0.81 for earlier models tested at another centre.
+Models for glioma follow-up MRI report high accuracy, but a single AUC cannot show what drives their predictions. We built a new framework, PRISM (Progression Reading with Independent Scores and Measurements), running on one local computer. It segments each scan with the winning BraTS 2024 post-treatment model, scores it from image measurements, clinical history and both with three logistic regressions and conformal sets, and has a local language model writing a checked report of what each score rests on. On MU-Glioma-Post, the combined model reached an AUC of 0.82 in repeated cross validation, and up to 1.00 (mean 0.84) on single held-out splits, the design of earlier studies. Unlike most earlier models, PRISM was tested without retraining at two other centres, reaching 0.79 at LUMIERE and 0.81 at UCSF-ALPTDG, against a pooled AUC of 0.81 for earlier models tested at another centre.
 ```
 
 ## Sentences and phrases
@@ -41,17 +41,19 @@ PRISM's combined model ranked scans with an AUC of 0.82 at MU and held that leve
 \subsection{The combined score's sets held their coverage}
 ```
 
-## PI's Figure 1 requests (marked copy 2026-11-23, items 22, 25, 28, 29; restored 2026-11-27)
+## PI's Figure 1 requests (marked copy 2026-11-23, items 22, 25, 28, 29; restored 2026-11-27; revised by her marked copy of
+## 2026-11-27: Figure 1 split into Figures 1, 3, 4 and 5, overview without figure references, 'writing', 'system PRISM is', 'b,a')
 
 ```locked
-Figure~\ref{fig:1} gives an overview of PRISM and of this section. PRISM reads each follow-up MRI scan of a patient treated for glioma (Figure~\ref{fig:1}a) and returns three scores of progression with a written report. Section~\ref{sec:2.1} describes the cohorts and the label. Section~\ref{sec:2.2} describes PRISM's segmenter (Figure~\ref{fig:1}b) and its six stages (Figure~\ref{fig:1}c). Section~\ref{sec:2.3} describes how PRISM was developed on MU-Glioma-Post and tested without retraining on LUMIERE and UCSF-ALPTDG (Figure~\ref{fig:1}d).
-The task was to distinguish the scan at which progression was documented from scans without progression (Figure~\ref{fig:1}a).
-On MU, every model was evaluated by five repeats of fivefold cross validation grouped by patient (Figure~\ref{fig:1}d).
+PRISM reads each follow-up MRI scan of a patient treated for glioma and returns three scores of progression with a written report. Section~\ref{sec:2.1} describes the cohorts and the label. Section~\ref{sec:2.2} describes PRISM's segmenter and its six stages. Section~\ref{sec:2.3} describes how PRISM was developed on MU-Glioma-Post and tested without retraining on LUMIERE and UCSF-ALPTDG.
+The task was to distinguish the scan at which progression was documented from scans without progression (Figure~\ref{fig:patient}).
+On MU, every model was evaluated by five repeats of fivefold cross validation grouped by patient (Figure~\ref{fig:evaluation}).
 \paragraph*{Segmentation (Stage 1).}
 \paragraph*{Measurements (Stage 2).}
 \paragraph*{Models (Stage 3).}
 \paragraph*{Evidence (Stage 4).}
 \paragraph*{Record (Stage 5).}
 \paragraph*{Report and checks (Stage 6).}
-\item A new local system is developed, which segments
+\item A new local system PRISM is developed, which segments
+Yongjie Jessica Zhang\textsuperscript{b,a}
 ```

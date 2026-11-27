@@ -172,9 +172,9 @@ class Canvas:
     def chevron(self, x, y, s=3.0, colour=BLACK, lw=1.2):
         self.line([x, x + s * 0.7, x], [y + s, y, y - s], colour, lw)
 
-    def header(self, letter, heading):
-        self.ax.text(0.5, self.H - 0.5, letter, fontsize=11, weight="bold", ha="left", va="top", color=st.INK)
-        self.ax.text(6.0, self.H - 0.9, heading, fontsize=T_HEAD, weight="bold", ha="left", va="top", color=st.INK)
+    def header(self, heading):
+        # each panel is now its own figure (PI 2026-11-27), so the panel letters are gone
+        self.ax.text(0.5, self.H - 0.9, heading, fontsize=T_HEAD, weight="bold", ha="left", va="top", color=st.INK)
 
     def stage(self, x0, x1, y, number, name):
         """A numbered stage heading over a hairline (panel c)."""
@@ -360,7 +360,7 @@ HA = 70.0
 def panel_a(scans) -> Canvas:
     c = Canvas(HA)
     top = HA
-    c.header("a", "MU-Glioma-Post: one patient's follow-up after radiotherapy")
+    c.header("MU-Glioma-Post: one patient's follow-up after radiotherapy")
     n = len(scans)
     iw, gap, ix0 = 22.0, 5.0, 28.0
     xs = [ix0 + k * (iw + gap) for k in range(n)]
@@ -423,7 +423,7 @@ def panel_b(seq) -> Canvas:
     from matplotlib.colors import to_rgb
     c = Canvas(HB)
     top = HB
-    c.header("b", "PRISM's segmenter: the BraTS 2024 post-treatment ensemble, applied to every scan")
+    c.header("PRISM's segmenter: the BraTS 2024 post-treatment ensemble, applied to every scan")
     rows = [top - 25.0, top - 39.0, top - 53.0]           # three architectures
     base = rows[1]
     # ---- inputs: the four sequences stacked along a diagonal
@@ -519,7 +519,7 @@ COLS = [(1.0, 51.0), (55.0, 104.0), (108.0, 158.0)]
 def panel_c(scans) -> Canvas:
     c = Canvas(HC)
     top = HC
-    c.header("c", "PRISM at one follow-up scan, in six stages")
+    c.header("PRISM at one follow-up scan, in six stages")
     # two rows of three stages; three lanes per row: imaging, combined, clinical history
     r1, r2 = top - 10.5, top - 78.0
     lane = lambda r: (r - 12.5, r - 30.0, r - 47.5)
@@ -666,7 +666,7 @@ HD = 44.0
 def panel_d() -> Canvas:
     c = Canvas(HD)
     top = HD
-    c.header("d", "Evaluation")
+    c.header("Evaluation")
     y = top - 17.0
     c.database(6.0, y + 1.0, 8.0, 11.0)
     c.text(0.8, y - 6.6, "MU-Glioma-\nPost", size=T_NOTE, weight="bold")

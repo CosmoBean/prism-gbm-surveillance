@@ -18,7 +18,7 @@
 
 \author{
 \name{Sri Datta Ganesh Bandreddi\textsuperscript{a}\thanks{CONTACT Sri Datta Ganesh Bandreddi. Email: sbandred@andrew.cmu.edu; ORCID: 0009-0004-3617-6734}
-  and Yongjie Jessica Zhang\textsuperscript{b}}
+  and Yongjie Jessica Zhang\textsuperscript{b,a}}
 \affil{\textsuperscript{a}Department of Biomedical Engineering, Carnegie Mellon University, Pittsburgh, PA, USA;\\
 \textsuperscript{b}Department of Mechanical Engineering, Carnegie Mellon University, Pittsburgh, PA, USA}
 }
@@ -33,7 +33,7 @@
 Models for glioma follow-up MRI report high accuracy, but a single AUC cannot show what drives their predictions. We
 built a new framework, PRISM (Progression Reading with Independent Scores and Measurements), running on one local
 computer. It segments each scan with the winning BraTS 2024 post-treatment model, scores it from image measurements,
-clinical history and both with three logistic regressions and conformal sets, and has a local language model write a
+clinical history and both with three logistic regressions and conformal sets, and has a local language model writing a
 checked report of what each score rests on. On MU-Glioma-Post, the combined model reached an AUC of 0.82 in repeated
 cross validation, and up to 1.00 (mean 0.84) on single held-out splits, the design of earlier studies. Unlike most
 earlier models, PRISM was tested without retraining at two other centres, reaching 0.79 at LUMIERE and 0.81 at
@@ -106,34 +106,6 @@ numbers they report \citep{wiseman2017}. Automatic measures of factual accuracy 
 often cannot leave the hospital, so the model should also run locally. Open-weight models run on site can label chest radiograph reports \citep{mukherjee2023} and extract their findings
 comparably to closed models \citep{nowak2025}.
 
-% Figure 1 is placed here so that its float pages come before its first mention, in the Methods.
-% FIGURE REDESIGN (2026-11-18), modelled on Tak et al. 2025, NEJM AI, doi:10.1056/AIoa2400703; enlarged and split
-% over two pages 2026-11-26 (PI review: legible on paper). Each panel is drawn at its printed size (text width, fonts
-% 7 pt or larger) by scripts/fig1_prism.py, which reads the MU images from data/mu-glioma-post (patient
-% PatientID_0204; labels by the paper's rule, computed in the script).
-\begin{figure}[p]
-\centering
-\figslot{fig1a.pdf}{0.40\textheight}{One MU patient's follow-up on real scans.}\\[4pt]
-\figslot{fig1b.pdf}{0.50\textheight}{PRISM's segmenter.}
-\caption{\textbf{The workflow of PRISM.} (a) One MU-Glioma-Post patient's scans after radiotherapy, by weeks after
-its end, with the enhancing tumour outlined by PRISM's segmenter (solid) and by the supplied mask (dashed); volumes are
-the segmenter's, with the supplied mask's in brackets. Scans followed by at least 120 days without progression are
-labelled no progression, and the first scan after documented progression, at 40.9 weeks, is the progression scan.
-(b) PRISM's segmenter, the first-place BraTS 2024 post-treatment ensemble of six models, each trained with five-fold cross-validation
-\citep{ferreira2024}, shown on that scan. Panels (c) and (d) follow on the next page.}
-\label{fig:1}
-\end{figure}
-
-\begin{figure}[p]
-\centering
-\figslot{fig1c.pdf}{0.62\textheight}{The method in six stages.}\\[4pt]
-\figslot{fig1d.pdf}{0.22\textheight}{The evaluation protocol.}
-\addtocounter{figure}{-1}
-\caption{\textbf{The workflow of PRISM (continued).} (c) The six stages of PRISM at one scan
-(Section~\ref{sec:2.2}). (d) Development on MU-Glioma-Post and testing without retraining at LUMIERE and UCSF-ALPTDG
-(Section~\ref{sec:2.3}).}
-\end{figure}
-
 We present PRISM (Progression Reading with Independent Scores and Measurements), a new system for glioma follow-up MRI
 that runs on one local computer. PRISM works from conventional MRI and the clinical record, both part of every
 routine follow-up. In another recent system, a language-model agent extracts clinical variables from the notes, and
@@ -141,7 +113,7 @@ rules combine them with automated tumour volumes to assign a BT-RADS category \c
 model makes no decision. It writes up values computed elsewhere, so every sentence it writes can be checked. Our
 contributions are:
 \begin{enumerate}
-\item A new local system is developed, which segments the tumour on each scan with the top-ranked model of the BraTS 2024
+\item A new local system PRISM is developed, which segments the tumour on each scan with the top-ranked model of the BraTS 2024
 post-treatment challenge \citep{ferreira2024}, used without fine-tuning. We compare this segmenter with Swin UNETR
 trained on BraTS 2021 \citep{hatamizadeh2022} and with the masks supplied with each dataset. From each segmentation,
 PRISM derives 22 measurements of tumour volume, shape, intensity and change from earlier scans. No patient data leave
@@ -173,11 +145,10 @@ segmentation, and the conformal sets and report checks. Section~\ref{sec:4} disc
 limits.
 \section{Methods}\label{sec:2}
 
-Figure~\ref{fig:1} gives an overview of PRISM and of this section. PRISM reads each follow-up MRI scan of a patient
-treated for glioma (Figure~\ref{fig:1}a) and returns three scores of progression with a written report.
-Section~\ref{sec:2.1} describes the cohorts and the label. Section~\ref{sec:2.2} describes PRISM's segmenter
-(Figure~\ref{fig:1}b) and its six stages (Figure~\ref{fig:1}c). Section~\ref{sec:2.3} describes how PRISM was developed
-on MU-Glioma-Post and tested without retraining on LUMIERE and UCSF-ALPTDG (Figure~\ref{fig:1}d).
+PRISM reads each follow-up MRI scan of a patient treated for glioma and returns three scores of progression with a
+written report. Section~\ref{sec:2.1} describes the cohorts and the label. Section~\ref{sec:2.2} describes PRISM's
+segmenter and its six stages. Section~\ref{sec:2.3} describes how PRISM was developed on MU-Glioma-Post and tested
+without retraining on LUMIERE and UCSF-ALPTDG.
 
 \subsection{Cohorts and label}\label{sec:2.1}
 
@@ -187,11 +158,26 @@ MU-Glioma-Post \citep{mahmoud2025,yaseen2025tcia} and tested without retraining 
 \citep{fields2024} (Table~\ref{tab:1}). In all three, the primary population was grade 4 glioma.
 
 The task was to distinguish the scan at which progression was documented from scans without progression
-(Figure~\ref{fig:1}a). Each cohort
+(Figure~\ref{fig:patient}). Each cohort
 records progression differently, so the label follows each cohort's own data (Table~\ref{tab:eval}). At
 MU-Glioma-Post and UCSF-ALPTDG, a scan without progression must be followed by at least 120 days without progression.
 LUMIERE rates every scan, and UCSF-ALPTDG supplies two consecutive scans per patient \citep{fields2024}, of which only the second is
 labelled. Because the labels differ, models are compared only within a cohort.
+
+% Figures 1 and 3-5 were one two-page figure until 2026-11-27 (PI: split it into four, one per subsection). Each is
+% drawn at its printed size (text width, fonts 7 pt or larger) by scripts/fig1_prism.py, modelled on Tak et al. 2025,
+% NEJM AI, doi:10.1056/AIoa2400703; the MU images are from data/mu-glioma-post (patient PatientID_0204; labels by the
+% paper's rule, computed in the script).
+\begin{figure}[!htbp]
+\centering
+\figslot{fig1a.pdf}{0.40\textheight}{One MU patient's follow-up on real scans.}
+\caption{\textbf{One patient's follow-up and its labels.} One MU-Glioma-Post patient's scans after radiotherapy, by
+weeks after its end, with the enhancing tumour outlined by PRISM's segmenter (solid) and by the supplied mask (dashed);
+volumes are the segmenter's, with the supplied mask's in brackets. Scans followed by at least 120 days without
+progression are labelled no progression, and the first scan after documented progression, at 40.9 weeks, is the
+progression scan.}
+\label{fig:patient}
+\end{figure}
 
 At MU-Glioma-Post, the models were fitted on 181 labelled scans from 92 of the cohort's 126 grade 4 patients.
 Performance was measured on the 146 of these scans (80 patients) taken after radiotherapy had started. This is the setting
@@ -259,7 +245,7 @@ Scan without progression & Followed by at least 120 days without progression & S
 \subsection{PRISM}\label{sec:2.2}
 
 % Sources: SYSTEM_PLAN.md section 1; scripts/fig1_prism.py (panel c).
-PRISM processes each scan in six stages (Figure~\ref{fig:1}c). Table~\ref{tab:models} lists the inputs of each score, including the reference scores PRISM is compared with.
+PRISM processes each scan in six stages. The first segments the tumour (Figure~\ref{fig:segmenter}), and Figure~\ref{fig:stages} shows all six at one scan. Table~\ref{tab:models} lists the inputs of each score, including the reference scores PRISM is compared with.
 
 % Sources: OUTLINE.md (Fig 1); SYSTEM_PLAN.md section 1.
 
@@ -277,6 +263,22 @@ at the edge and counted. Each point is one scan (filled, progression; open, no p
 marks the median. MU shows the 146 scans taken after radiotherapy had started, and UCSF the second scan of each grade 4
 patient.}
 \label{fig:cohorts}
+\end{figure}
+
+\begin{figure}[!htbp]
+\centering
+\figslot{fig1b.pdf}{0.50\textheight}{PRISM's segmenter.}
+\caption{\textbf{PRISM's segmenter (Stage 1).} The first-place BraTS 2024 post-treatment ensemble of six models, each
+trained with five-fold cross-validation \citep{ferreira2024}, shown on the progression scan of
+Figure~\ref{fig:patient}.}
+\label{fig:segmenter}
+\end{figure}
+
+\begin{figure}[!htbp]
+\centering
+\figslot{fig1c.pdf}{0.62\textheight}{The method in six stages.}
+\caption{\textbf{The workflow of PRISM.} PRISM at one follow-up scan, in six stages (Section~\ref{sec:2.2}).}
+\label{fig:stages}
 \end{figure}
 
 % Sources: NUMBERS.md 2.1, 3, 4; DETECTION_TASK.md; UCSF_PLAN.md; CLINICIAN_BASELINE_PLAN.md; CHRISTODOULOU_REPLICATION.md;
@@ -311,7 +313,7 @@ Enhancing volume alone & Log enhancing tumour volume, used directly & No \\
 % SEGMENTER_BRATS24_PLAN.md; prism/features/reseg.py, reseg_brats24.py, measurements.py; ucsf_imaging.model_inputs;
 % refs mahmoud2025, suter2022, fields2024, hatamizadeh2022, deverdier2024, ferreira2024.
 \paragraph*{Segmentation (Stage 1).} PRISM segments each scan with the winning model \citep{ferreira2024} of the BraTS 2024
-challenge for adult glioma after treatment \citep{deverdier2024} (Figure~\ref{fig:1}b). This model is an ensemble of nnU-Net
+challenge for adult glioma after treatment \citep{deverdier2024} (Figure~\ref{fig:segmenter}). This model is an ensemble of nnU-Net
 \citep{isensee2021}, MedNeXt \citep{roy2023} and Swin UNETR \citep{hatamizadeh2022} networks, run from the container distributed with the BraTS orchestrator
 \citep{kofler2025}. It marks the enhancing tumour, the non-enhancing tumour core (used here as necrosis), FLAIR
 hyperintensity and the resection cavity. PRISM uses
@@ -480,13 +482,21 @@ tier, the agreement, the change in enhancing volume, the out-of-range flag and t
 \subsection{Evaluation}\label{sec:2.3}
 
 \paragraph*{Development and external testing.} On MU, every model was evaluated by five repeats of fivefold cross
-validation grouped by patient (Figure~\ref{fig:1}d). In each repeat, a model was fitted on four folds of patients and scored the scans of the
+validation grouped by patient (Figure~\ref{fig:evaluation}). In each repeat, a model was fitted on four folds of patients and scored the scans of the
 fifth. The AUC was computed over the held-out scores of the 146 evaluation scans (Section~\ref{sec:2.1}) and averaged
 over the five repeats, because a single split of a small cohort gives an estimate with a wide error
 \citep{an2021,varoquaux2018}. Each model was then fitted once on all 181 MU training scans and applied to LUMIERE and
 UCSF-ALPTDG without retraining or recalibration. For comparison with studies evaluated on
 one held-out split \citep{christodoulou2026}, the combined model was also fitted and scored on 100 random held-out sets
 of 18 of the 92 grade 4 patients, drawn as in an earlier re-implementation of that study (exploratory).
+
+\begin{figure}[!htbp]
+\centering
+\figslot{fig1d.pdf}{0.22\textheight}{The evaluation protocol.}
+\caption{\textbf{Evaluation.} Development on MU-Glioma-Post and testing without retraining at LUMIERE and UCSF-ALPTDG
+(Section~\ref{sec:2.3}).}
+\label{fig:evaluation}
+\end{figure}
 
 \paragraph*{Time-and-enhancement model.} A ridge logistic regression was fitted on the time window after radiotherapy,
 the log enhancing volume and its log ratio to the previous scan, in the same folds as PRISM's models. It serves as a
