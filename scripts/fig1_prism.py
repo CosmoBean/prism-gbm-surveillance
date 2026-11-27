@@ -406,8 +406,8 @@ def panel_a(scans) -> Canvas:
     c.line([1.0, 5.0], [ly, ly], CONTOUR, 1.4)
     c.text(6.0, ly + 1.6, "PRISM's segmenter", size=T_NOTE, colour=st.MUTED)
     c.line([31.0, 35.0], [ly, ly], RELEASED, 1.1, ls="--")
-    c.text(36.0, ly + 1.6, "released mask", size=T_NOTE, colour=st.MUTED)
-    c.text(W - 1.0, ly + 1.6, "under each scan: enhancing volume, segmenter (released mask)", size=T_NOTE,
+    c.text(36.0, ly + 1.6, "supplied mask", size=T_NOTE, colour=st.MUTED)
+    c.text(W - 1.0, ly + 1.6, "under each scan: enhancing volume, segmenter (supplied mask)", size=T_NOTE,
            colour=st.MUTED, ha="right")
     return c
 
@@ -599,7 +599,7 @@ def panel_c(scans) -> Canvas:
     # ---- 4 evidence statements, each a small icon
     x0, x1 = COLS[0]
     ev = [(e_img, "Conformal set", "80% set: {0}, {1} or {0, 1}"),
-          (e_comb, "Model agreement", "imaging and clinical-history\nscores, each against its\ncohort median"),
+          (e_comb, "Agreement statement", "imaging and clinical-history\nscores, each against its\ncohort median"),
           (e_hist, "Reliability card", "results measured in this\ntime window and\nenhancement state")]
     for k, (y, title, body) in enumerate(ev):
         c.box(x0 + 2.6, y - 3.0, x0 + 8.6, y + 3.0, edge=BLACK, r=0.7, z=4)
@@ -648,7 +648,7 @@ def panel_c(scans) -> Canvas:
            size=T_BODY)
     c.arrow((lx, e_img - 4.8), (lx, e_comb + 5.4), BLACK, 0.8, ms=6)
     c.shield(lx, e_comb + 1.4, 3.6)
-    c.text(lx + 7.0, e_comb + 5.0, "Deterministic checker", size=T_TITLE, weight="bold")
+    c.text(lx + 7.0, e_comb + 5.0, "Checker and verifier", size=T_TITLE, weight="bold")
     c.text(lx + 7.0, e_comb + 1.3, "every number in a cited field;\nflags stated; the verifier ties\n"
                                    "each number to its region", size=T_BODY)
     c.arrow((lx, e_comb - 4.0), (lx, e_hist + 10.2), BLACK, 0.8, ms=6)

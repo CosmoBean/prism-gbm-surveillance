@@ -392,14 +392,14 @@ swapping them would not change the joint distribution of their data \citep{roman
 guarantee approximate.
 
 % Sources: METHODS_PLAN.md M2; Supplementary Section S10.
-We also computed group-conditional (Mondrian) sets. These compute $\hat q$ separately within each group of scans, so
+Besides these ordinary sets, we also computed group-conditional (Mondrian) sets. These compute $\hat q$ separately within each group of scans, so
 that the 80\% target applies to each group as well as to the whole cohort \citep{vovk2022book}. A group combines the
 time window after radiotherapy with the state of the enhancing tumour: absent (below 0.1\,cc), present with no
 previous scan to compare, increased since the previous scan by at least 1\,cc and 40\%, or not increased. Small calibration
 groups make the thresholds conservative \citep{johansson2015}. Groups with fewer than 10 calibration patients therefore
 fall back to a coarser level, much as rare classes fall back to one pooled threshold in clustered conformal
 prediction \citep{ding2023}. Part of any gain in
-coverage within a group can come from larger sets alone. To separate the two, we compared the group sets at MU with
+coverage within a group can come from larger sets alone. To separate the two, we compared the group-conditional sets at MU with
 ordinary sets at the $\alpha$ (0.155) that gives the same share of sets holding both outcomes (exploratory).
 
 The agreement statement compares each of the clinical-history and imaging scores with the median of that model's
@@ -710,20 +710,20 @@ UCSF-ALPTDG, and named a single outcome in 73\%, 78\% and 77\% of scans. Coverag
 progression. At MU, later scans with increased enhancement were covered at 70\% (57\% to 82\%).
 
 Computing the sets separately for each group raised the coverage of these later MU scans to 84\%
-(Figure~\ref{fig:4}). Making the ordinary sets larger by the same amount gave 79\%. The group-wise sets mostly moved
+(Figure~\ref{fig:4}). Making the ordinary sets larger by the same amount gave 79\%. The group-conditional sets mostly moved
 coverage to the later groups from early scans, which the ordinary sets over-covered (99\% of early scans with no
-previous scan, against 80\% group-wise). They named both outcomes in 36\% of MU scans, against 26\% for the ordinary
+previous scan, against 80\% with group-conditional sets). They named both outcomes in 36\% of MU scans, against 26\% for the ordinary
 sets, and left 5\% empty. At UCSF-ALPTDG they did not help the least covered
 group, later scans without increased enhancement (64\% with both kinds of set).
 
 % Sources: scripts/generate_methods_figures.py; METHODS_RESULTS.md M2.
 \begin{figure}[!htbp]
 \centering
-\figslot{fig4_group_conformal.pdf}{0.50\textheight}{Coverage of the combined score's 80\% sets by group, marginal
+\figslot{fig4_group_conformal.pdf}{0.50\textheight}{Coverage of the combined score's 80\% sets by group, ordinary
 and group-conditional, MU, LUMIERE and UCSF.}
 \caption{\textbf{Coverage within groups of comparable scans.} Coverage of the combined score's 80\% conformal sets,
 overall, by outcome and in each group of time window and enhancement state that holds at least 9 evaluation scans, for
-the ordinary sets and for sets calibrated within groups. The dashed line marks the nominal 80\%. LUMIERE
+the ordinary and the group-conditional sets. The dashed line marks the nominal 80\%. LUMIERE
 records no radiotherapy dates, so its groups differ by enhancement state only; at UCSF the window assumes a six week
 course. 95\% CIs from 2,000 bootstrap samples of patients.}
 \label{fig:4}

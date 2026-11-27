@@ -95,7 +95,7 @@ def group_label(group: str, n: int) -> str:
 def group_conformal(agg: Path) -> None:
     df = pd.read_csv(agg / "m2_coverage.csv")
     df = df[df.model == "combined"]
-    sets = [("registered", "Marginal (planned)", True, "o", 4.0),
+    sets = [("registered", "Ordinary", True, "o", 4.0),
             ("mondrian", "Group-conditional", False, "s", 3.8)]
     rows = {}
     for cohort, _ in COHORTS:
