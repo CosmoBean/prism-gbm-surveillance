@@ -135,9 +135,8 @@ model reached 0.79 (0.72--0.86) at LUMIERE and 0.81 (0.70--0.90) at UCSF-ALPTDG,
 models tested at another institution \citep{zhang2026meta}.
 \item Report is generated with deterministic verification. The language model, Qwen3.8-27B served with vLLM
 \citep{kwon2023}, writes the report only from a structured record that holds each value with its source, and a
-rule-based checker and verifier test every number and direction against that record. All 276 MU and LUMIERE reports
-for held-out scans passed the checker, as did all 406 reports from the supplied masks, and both programs were tested
-with 24 types of planted error.
+rule-based checker and verifier test every number and direction against that record. All reports for held-out scans
+passed the checker, and both programs were tested with 24 types of planted error.
 \end{enumerate}
 
 The remainder of this paper is organized as follows. Section~\ref{sec:2} describes the cohorts, PRISM's stages and the evaluation. Section~\ref{sec:3} reports the results
@@ -814,10 +813,8 @@ did not progress with the models disagreeing at one scan or more.}
 % Sources: REPORT_V3_1.md (S5--S7); REPORT_V3.md; NUMBERS.md 7 and 16 (R4).
 \subsection{The reports and their checks}\label{sec:3.5}
 
-All 276 evaluation reports passed the checker (114 at MU and 162 at LUMIERE; Figure~\ref{fig:5} shows one). With
-the supplied masks, all 406 passed, including 130 at UCSF-ALPTDG, the only reports written there. These pass rates
-were measured after the one revision of the prompt (Section~\ref{sec:2.2}) and are exploratory. Each of the 83
-reports for scans with few or no comparable cases said so. The tests below were run on the reports from the supplied
+All evaluation reports passed the checker (Figure~\ref{fig:5} shows one). This pass rate was measured after the one
+revision of the prompt (Section~\ref{sec:2.2}) and is exploratory. Every report for a scan with few or no comparable cases said so. The tests below were run on the reports from the supplied
 masks. When one record entry was changed in 30 records, 28 reports followed the change, against a planned minimum of
 27. Of six other local language models given the same prompt, only Gemma-4 31B had every report pass
 (Figure~\ref{fig:llm}).
