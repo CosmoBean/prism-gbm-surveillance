@@ -37,7 +37,7 @@ At MU-Glioma-Post, the combined model reached an AUC of 0.82 (0.76--0.89) in rep
 The combined model reached 0.79 (0.72--0.86) at LUMIERE and 0.81 (0.70--0.90) at UCSF-ALPTDG, against a pooled AUC of 0.81 for earlier models tested at another institution \citep{zhang2026meta}.
 All reports for held-out scans passed the checker, and both programs were tested with 24 types of planted error.
 All evaluation reports passed the checker (Figure~\ref{fig:5} shows one).
-Without retraining, PRISM's combined model ranked scans at the two external centres nearly as well as at MU, and the treatment dates made up the largest part of its score.
-\subsection{The treatment dates are the largest part of the score}
+PRISM's combined model ranked scans with an AUC of 0.82 at MU and held that level without retraining at both external centres, with 0.79 at LUMIERE and 0.81 at UCSF-ALPTDG. Splitting each score into its inputs showed what this ranking rests on: the treatment course and the image measurements each made up about two fifths of the combined score. The results held with PRISM's own segmenter, the conformal sets kept their 80\% coverage in every cohort, and every report passed the checker.
+\subsection{Treatment history and images carry the combined score in near-equal parts}
 \subsection{The combined score's sets held their coverage}
 ```

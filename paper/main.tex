@@ -538,8 +538,11 @@ summarised by the calibration intercept and slope \citep{vancalster2019}.
 
 \section{Results}\label{sec:3}
 
-Without retraining, PRISM's combined model ranked scans at the two external centres nearly as well as at MU, and
-the treatment dates made up the largest part of its score.
+PRISM's combined model ranked scans with an AUC of 0.82 at MU and held that level without retraining at both
+external centres, with 0.79 at LUMIERE and 0.81 at UCSF-ALPTDG. Splitting each score into its inputs showed what this
+ranking rests on: the treatment course and the image measurements each made up about two fifths of the combined
+score. The results held with PRISM's own segmenter, the conformal sets kept their 80\% coverage in every cohort, and
+every report passed the checker.
 
 \subsection{Performance at three centres}\label{sec:3.1}
 
@@ -587,7 +590,7 @@ Over 100 random held-out sets of 18 of the 92 grade 4 patients, an earlier re-im
 ranged from 0.32 to 0.88 (mean 0.63) on the evaluation scans. On 100 sets drawn the same way, PRISM's combined model
 reached up to 1.00, and 0.84 on average, with 95\% of sets between 0.68 and 0.96 (exploratory).
 
-\subsection{The treatment dates are the largest part of the score}\label{sec:3.2}
+\subsection{Treatment history and images carry the combined score in near-equal parts}\label{sec:3.2}
 
 % Sources: METHODS_RESULTS.md E4; NUMBERS.md 3 (single inputs, B0, P - B1); SKELETON_2026-11-20.md timestamp-only check
 % (exploratory, 2026-11-20); DETECTION_DEEP.md.
