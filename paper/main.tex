@@ -123,10 +123,14 @@ calibrated to contain the true outcome in 80\% of scans, a statement of whether 
 and clinical-history scores agree, and the models' performance on comparable earlier scans.
 \item PRISM provides an evaluation of what each score adds to what the clinician already knows. Each score is compared with a
 reference model based on the time since radiotherapy and the enhancing tumour volume, and the contribution of each group of inputs to the score is measured, as its share of each scan's
-score and as the fall in AUC when it is left out.
+score and as the fall in AUC when it is left out. At MU-Glioma-Post, the combined model reached an AUC of 0.82
+(0.74--0.89) in repeated cross validation, and up to 1.00 (mean 0.84) on single held-out splits of 18 patients, the
+design of earlier studies on this cohort \citep{christodoulou2026}.
 \item External validation is performed without retraining. The models were fitted once, on 181 scans from 92 patients in
 MU-Glioma-Post, and applied unchanged to 178 scans from 79 patients in LUMIERE and 69 scans from 69 patients in
-UCSF-ALPTDG, using both the masks supplied with each dataset and PRISM's own segmentation.
+UCSF-ALPTDG, using both the masks supplied with each dataset and PRISM's own segmentation. The combined model
+reached 0.77 (0.68--0.86) at LUMIERE and 0.86 (0.76--0.93) at UCSF-ALPTDG, against a pooled AUC of 0.81 for earlier
+models tested at another institution \citep{zhang2026meta}.
 \item Report is generated with deterministic verification. The language model, Qwen3.8-27B served with vLLM
 \citep{kwon2023}, writes the report only from a structured record that holds each value with its source, and a
 rule-based checker and verifier test every number and direction against that record. All reports for held-out scans
@@ -579,7 +583,7 @@ model at UCSF (0.70) did not meet the coverage rule.
 \subsection{Performance at three centres}\label{sec:3.1}
 
 % Sources: DETECTION_TASK.md; UCSF_RESULTS.md Part A--C; NUMBERS.md 3, 4, 12F, 15; METHODS_RESULTS.md E6a, E6d.
-Without retraining, the combined model reached an AUC of 0.77 at LUMIERE and 0.86 (0.76--0.93) at
+Without retraining, the combined model reached an AUC of 0.77 (0.68--0.86) at LUMIERE and 0.86 (0.76--0.93) at
 UCSF-ALPTDG, against 0.82 (0.74--0.89) at MU (Figure~\ref{fig:2}). The reduced combined model reached 0.80 at MU. The imaging model reached 0.71 (0.63--0.78) at MU, 0.65 (0.56--0.73;
 exploratory) at LUMIERE and 0.73 (0.60--0.84) at UCSF-ALPTDG. At UCSF-ALPTDG, the images from one scan alone reached
 0.80 (0.69--0.89).
