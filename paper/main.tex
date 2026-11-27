@@ -25,19 +25,18 @@
 
 \maketitle
 
-% Unstructured abstract, 100--150 words (journal instructions). Locked 2026-11-18 (LOCKED.md).
-% Sources: METHODS_RESULTS.md E4 (0.80, no clear gain); NUMBERS.md 4 (0.77, 0.86); NUMBERS.md 7 (406);
-% Section 4.5 and Table 5 (verifier: every value under the wrong region rejected).
+% Unstructured abstract, 100--150 words (journal instructions). Rewritten 2026-11-26 (PI review: the last sentences
+% set PRISM against earlier work; no comparison with the earlier MU radiomics model here, by the author's choice).
+% Sources: NUMBERS.md 3, 4 (0.82, 0.77, 0.86); SINGLE_SPLITS.md (1.00, mean 0.84); zhang2026meta (0.81).
 \begin{abstract}
-Machine learning models for glioma follow-up MRI report high accuracy, but a single AUC cannot show what drives a
-model's predictions. We built a new framework, PRISM (Progression Reading with Independent Scores and Measurements),
-running on one local computer. The first-place ensemble of the BraTS 2024 post-treatment challenge segments each scan; three logistic regressions score it from its image measurements, its clinical history and the two
-combined, each with a conformal prediction set; and a local large language model writes a
-report whose every number is checked against its source. On MU-Glioma-Post, the combined model reached an AUC of
-0.82 in five repeats of fivefold cross validation; on a single held-out split, the design of earlier studies, it reached
-up to 1.00, and 0.84 on average over 100 such splits. Without retraining, it reached 0.77 at LUMIERE and 0.86 at UCSF-ALPTDG. For each scan,
-PRISM reports what its score rests on: the image and clinical-history scores, whether they agree, and how the models
-performed on comparable scans.
+Models for glioma follow-up MRI report high accuracy, but a single AUC cannot show what drives their predictions. We
+built a new framework, PRISM (Progression Reading with Independent Scores and Measurements), running on one local
+computer. It segments each scan with the winning BraTS 2024 post-treatment model, scores it from image measurements,
+clinical history and both with three logistic regressions and conformal sets, and has a local language model write a
+checked report of what each score rests on. On MU-Glioma-Post, the combined model reached an AUC of 0.82 in repeated
+cross validation, and up to 1.00 (mean 0.84) on single held-out splits, the design of earlier studies. Unlike most
+earlier models, PRISM was tested without retraining at two other centres, reaching 0.77 at LUMIERE and 0.86 at
+UCSF-ALPTDG, against a pooled AUC of 0.81 for earlier models tested at another centre.
 \end{abstract}
 
 \begin{keywords}
@@ -68,7 +67,8 @@ were developed on. Studies of treatment response have small samples and a high r
 studies in neuro-oncology, nine in ten of them on glioma, were validated externally \citep{park2020}, and 3 of 20 studies of automated response assessment
 considered clinical characteristics \citep{shi2025}. Single splits of small cohorts give unstable estimates
 \citep{an2021}, and most deep learning algorithms for radiological diagnosis lose performance on external data
-\citep{yu2022}. A radiomics model published on MU-Glioma-Post, the cohort used in this study, was
+\citep{yu2022}. In a meta-analysis of 31 studies, models tested at another institution reached a pooled AUC of 0.81,
+against 0.91 at the institution that developed them \citep{zhang2026meta}. A radiomics model published on MU-Glioma-Post, the cohort used in this study, was
 evaluated on a single held-out set of 30 patients (AUC 0.80) \citep{christodoulou2026}.
 
 A single AUC does not show what drives a model's predictions. Models learn shortcuts, signals that predict the label
