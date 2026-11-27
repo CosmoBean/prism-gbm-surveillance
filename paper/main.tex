@@ -148,7 +148,7 @@ PRISM derives 22 measurements of tumour volume, shape, intensity and change from
 the computer.
 \item PRISM separates imaging and clinical-history scores, each reported with its uncertainty. Three ridge logistic
 regressions \citep{lecessie1992} score each scan: from the image measurements alone, which contain no dates; from the
-clinical history; and from the two combined. Each score comes with the set of outcomes it cannot exclude
+clinical history; and from the two combined. Each score comes with a conformal prediction set
 \citep{angelopoulos2023}, calibrated to contain the true outcome in 80\% of scans. It also comes with a statement of
 whether the imaging and clinical-history scores agree, and with the models' performance on comparable earlier scans.
 \item PRISM provides an evaluation of what each score adds to what the clinician already knows. We compare each score with a reference
@@ -173,7 +173,8 @@ segmentation, and the conformal sets and report checks. Section~\ref{sec:4} disc
 limits.
 \section{Methods}\label{sec:2}
 
-Figure~\ref{fig:1} gives an overview of this section. PRISM reads each follow-up MRI scan of a patient treated for glioma (Figure~\ref{fig:1}a) and returns three scores of progression with a written report. Section~\ref{sec:2.1} describes the cohorts and the label, Section~\ref{sec:2.2} PRISM's six stages (Figure~\ref{fig:1}b, c), and Section~\ref{sec:2.3} the evaluation (Figure~\ref{fig:1}d).
+PRISM reads each follow-up MRI scan of a patient treated for glioma and returns three scores of progression with a
+written report (Figure~\ref{fig:1}).
 
 \subsection{Cohorts and label}\label{sec:2.1}
 
@@ -309,8 +310,8 @@ Enhancing volume alone & Log enhancing tumour volume, used directly & No \\
 challenge for adult glioma after treatment \citep{deverdier2024} (Figure~\ref{fig:1}b). This model is an ensemble of nnU-Net
 \citep{isensee2021}, MedNeXt \citep{roy2023} and Swin UNETR \citep{hatamizadeh2022} networks, run from the container distributed with the BraTS orchestrator
 \citep{kofler2025}. It marks the enhancing tumour, the non-enhancing tumour core (used here as necrosis), FLAIR
-hyperintensity and the resection cavity. The primary
-results use its outlines at all three centres, without the five measurements that need the cavity (Section~\ref{sec:3.3}). The challenge's data were contributed by centres including UCSF and the University of Missouri
+hyperintensity and the resection cavity. PRISM uses
+its outlines at all three centres. The challenge's data were contributed by centres including UCSF and the University of Missouri
 \citep{deverdier2024}, so its training data may include scans from UCSF-ALPTDG and MU-Glioma-Post,
 but the network learned outlines only, with no progression label.
 
@@ -319,7 +320,7 @@ mark the same four regions. At LUMIERE, they are DeepBraTumIA masks with three l
 the necrosis label.
 
 PRISM runs both of its networks with their public weights, and neither was tuned on our cohorts. The
-second network is compared as an alternative segmentation stage. It is the Swin UNETR \citep{hatamizadeh2022} released in MONAI \citep{cardoso2022monai} for BraTS 2021 (fold 1), a network of 62 million parameters. It marks the enhancing tumour, the tumour core
+second network is compared as an alternative segmentation stage. It is the Swin UNETR \citep{hatamizadeh2022} released in MONAI \citep{cardoso2022monai} for BraTS 2021. It marks the enhancing tumour, the tumour core
 and the whole tumour. It takes FLAIR, T1c, T1 and T2, each
 scaled to zero mean and unit variance over the brain, in blocks of $128^3$ voxels that overlap by half. A voxel
 belongs to a region when its probability exceeds 0.5. Necrosis is the core outside the enhancing tumour, and FLAIR
@@ -329,8 +330,8 @@ no resection-cavity label and supplies 22 of the 27 measurements.
 \paragraph*{Measurements.} From the masks and the T1c and FLAIR images, PRISM computes 27
 measurements. Nineteen describe the current scan: six log volumes and measures of composition,
 shape, position and intensity. Eight describe change since the previous scan and since the patient's smallest volume.
-Change uses earlier scans only and is zero at a patient's first scan. Five measurements need the cavity. The
-primary results therefore use the other 22. With the supplied masks, all 27 are used.
+Change uses earlier scans only and is zero at a patient's first scan. Five measurements need a resection cavity.
+PRISM uses the other 22, which both of its segmenters supply. With the supplied masks, all 27 are used.
 
 PRISM computes the clinical-history inputs from the treatment course as of the scan day and from the patient's
 characteristics, including IDH mutation and MGMT promoter methylation status (Table~\ref{tab:models}). PRISM also places each scan in a
@@ -348,7 +349,7 @@ correlated inputs and few patients.
 
 Each model is fitted with scikit-learn \citep{pedregosa2011}. Each missing input is set to its training median,
 with an extra input marking that it was missing, and every input is standardised. The inverse penalty strength $C$ is
-chosen from 0.01, 0.03, 0.1, 0.3, 1 and 3. The chosen value gives the lowest mean log loss in threefold cross
+chosen from six values from 0.01 to 3. The chosen value gives the lowest mean log loss in threefold cross
 validation within the training data, grouped by patient. The model is then refitted with that value on all training
 scans.
 
@@ -406,21 +407,20 @@ that fall in the same group as the scan, and counts those with and without progr
 group is in the tested tier. The card then also gives the three models' AUCs with 95\% CIs from 1,000 bootstrap
 samples of patients. With fewer, the tier is few cases and the card gives only the counts.
 With no scans, the tier is not tested. The record carries the tier of the scan's own cohort. The card fits no model.
-It reads results already measured, including those for the scan it describes. The agreement and tier rules were set after the first
-results at the three cohorts had been seen.
+It reads results already measured, including those for the scan it describes.
 
 % Sources: prism/report/facts_v3_1.py; prism/report/prompts_v3_1.py; prism/report/checker.py;
 % prism/report/verifier.py; REPORT_V3.md; REPORT_V3_1.md; METHODS_RESULTS.md M3; CHECKER_MUTATION.md;
 % REVISION_DATA.md R3/R4; refs kwon2023, herasrivera2026, weinberg2018, gore2019, zeba2026, wiseman2017, gabriel2021,
 % rao2025rexerr.
 \paragraph*{Record.} PRISM writes everything it computes for a scan into one structured record, a flat list of named
-entries. Each entry has a key, such as \code{meas.enhancing\_cc}, and holds one value or one fixed sentence. The
+entries. Each entry has a key and holds one value or one fixed sentence. The
 entries give the time after radiotherapy, the volumes and their change since the previous scan, each model's score
 with its cohort median and the inputs it is based on, the conformal sets, the agreement statement, the reliability
 card and four flags. The flags mark disagreement between the two models, unknown IDH or MGMT status or an input outside
 the 1st to 99th percentile of its training values, a card with few cases or none, and an 80\% set that holds both
 outcomes. Numbers are rounded as the record is built (scores
-to two decimals, volumes to one). Wording that can be fixed in advance, such as the tier, each conformal set, the
+to two decimals, volumes to one). Fixed wording, such as the tier, each conformal set, the
 agreement, each change in volume and the reason for each flag, is stored as a sentence for the language model to
 copy. The record holds no outcome label.
 
@@ -448,22 +448,22 @@ correct. The first, the checker, rejects a report that cannot be parsed, cites a
 writes a number that matches no cited entry up to the rounding written. It also rejects a report that leaves out or
 misstates required content, or uses words the prompt forbids or words of certainty. Similar rule-based checks test generated text against its source record \citep{zeba2026}.
 A learned extractor does so for text generated from tables \citep{wiseman2017}. The checker was fixed before any
-evaluation report was generated. A rejected report is not edited or written again.
+evaluation report was generated, and every report is counted as it was first written.
 
 The prompt was developed on 58 reports for 40 patients (20 MU, 10 LUMIERE and 10 UCSF-ALPTDG), and the evaluation
-used the remaining patients, with the checker fixed in advance.
+used the remaining patients. The tests of the reports below use the reports written from the supplied masks for the
+276 MU and LUMIERE evaluation scans.
 
 The checker accepts a number that equals a number in any cited entry. It does not read direction words. The second program, the verifier, runs the
 checker and adds two rules that tie each number and direction word to what it describes. It splits each sentence into clauses and assigns
 each number and direction word to the nearest tumour region or score named in its clause. Each such number must equal,
 up to its written rounding, a value that the cited entries give for that region or score. Each direction word on a
 fixed list (larger, increased, grew, rose, higher, and their opposites) must agree with the direction that the cited
-entries give for that region. The verifier was run on the 276 MU and
-LUMIERE evaluation reports from the supplied masks.
+entries give for that region.
 
 To measure what the two programs catch, we planted one error at a time in correct reports, using 24 kinds of error. Planted errors are also used to evaluate other factuality checks
 \citep{gabriel2021}. The correct reports came from test code (52 synthetic records), the language model (the 276 MU and
-LUMIERE evaluation records from the supplied masks) and a fixed template applied to the same records. Three kinds of
+LUMIERE evaluation reports) and a fixed template applied to the same records. Three kinds of
 error were held out while the rules were written: two that place a value under the wrong region or score, and one that
 reverses the direction of a change. We wrote both the rules and these errors. A separate language model that
 had not seen the rules therefore also rewrote the synthetic reports with errors in its own words, with correct paraphrases as
@@ -519,14 +519,15 @@ Swin UNETR alone at all three centres (22 measurements), fitted on MU and applie
 the BraTS 2024 model in the same way, which is PRISM's segmentation stage (Section~\ref{sec:2.2}).
 The published radiomics model was also run on the Swin UNETR masks at MU. Each score is compared with its value on the
 supplied masks by the paired difference in AUC. A segmenter was taken to preserve PRISM's results when no score fell,
-that is, when every paired CI included zero or lay above it.
+that is, when every paired CI included zero or lay above it, and the gain over the time-and-enhancement model was read
+the same way.
 Agreement with the supplied masks
 is measured by the Dice overlap \citep{dice1945}. At MU and LUMIERE, the noise of the enhancing volume is measured by
 its median fold change between consecutive scans at most 30 days apart.
 
-\paragraph*{Analyses specified in advance.} The main analyses were specified before they were run: the external
-AUCs, the gain over the time-and-enhancement model and the comparison with the published radiomics model. No
-correction was made for multiple testing. Other analyses are marked exploratory.
+\paragraph*{Primary analyses.} The primary analyses were the external AUCs, the gain over the time-and-enhancement
+model and the comparison with the published radiomics model. No correction was made for multiple testing. Other
+analyses are marked exploratory.
 
 
 
@@ -622,7 +623,7 @@ other single group changed the combined model's AUC by at most 0.01. In the clin
 treatment course and dates lowered the AUC by 0.24 (0.13--0.35), and leaving out the patient's characteristics by
 0.02 ($-$0.01 to $+$0.06). In the imaging model, intensity and change since earlier scans made up the largest shares
 (medians 36\% and 33\%). Leaving out change lowered its AUC by 0.07 (0.02--0.13), and leaving out intensity by 0.02
-($-$0.02 to $+$0.07; exploratory). Adding clinical history to images raised the AUC
+($-$0.02 to $+$0.07). Adding clinical history to images raised the AUC
 by 0.11 (0.04--0.18) at MU and 0.10 (0.05--0.15) at LUMIERE.
 
 
@@ -631,11 +632,10 @@ by 0.11 (0.04--0.18) at MU and 0.10 (0.05--0.15) at LUMIERE.
 \centering
 \figslot{fig3_contributions.pdf}{0.42\textheight}{For each of PRISM's three models at MU, each input group's share of
 the score and the fall in AUC when the group is left out.}
-\caption{\textbf{What each score rests on.} PRISM's three models at MU-Glioma-Post, on the 146 evaluation scans in five
-repeats of fivefold cross validation, with the 22 measurements from PRISM's segmenter. (a) Each group's share of a scan's score, the size of the group's part of the
+\caption{\textbf{What each score rests on.} PRISM's three models at MU-Glioma-Post. (a) Each group's share of a scan's score, the size of the group's part of the
 linear score over the sum of the sizes of all parts, averaged over the repeats; median and IQR over scans. (b) The
 fall in AUC when the group is left out and the model refitted in the same folds, with paired 95\% CIs from 2,000
-bootstrap samples of patients. Each model shows only the groups it uses. Exploratory.}
+bootstrap samples of patients. Each model shows only the groups it uses.}
 \label{fig:3}
 \end{figure}
 
@@ -661,13 +661,12 @@ The BraTS 2024 model agreed with the supplied cavity at a median Dice of 0.92 at
 UCSF-ALPTDG (other Dice in Table~\ref{tab:seg}). With its outlines, the MU imaging model changed by $-$0.03 ($-$0.07
 to $+$0.02). This was a smaller loss than with Swin UNETR, and its interval includes zero. At LUMIERE the BraTS 2024
 model agreed less with the supplied masks (enhancing tumour Dice 0.64). Its enhancing volume there changed by a median
-factor of 14.4 between scans at most 30 days apart, against 2.6 with the supplied masks on the same 15 pairs.
+factor of 14.4 between scans at most 30 days apart, against 2.6 with the supplied masks on the 15 pairs it was run on.
 
-With the BraTS 2024 outlines, two results changed. The MU time-and-enhancement model lost 0.02 ($-$0.04 to
+With the BraTS 2024 outlines and all 27 measurements, two results fell outside this rule. The MU time-and-enhancement model lost 0.02 ($-$0.04 to
 $-$0.003). At LUMIERE the same model rose by 0.07 with the BraTS 2024 enhancing volume, and the combined model ranked
 below it by 0.06 (0.002--0.12). Without the five cavity measurements, the BraTS 2024 outlines
-gave an MU imaging AUC of 0.71, as on the supplied masks, and a LUMIERE combined AUC of 0.79. These 22 measurements
-give PRISM's primary results (Section~\ref{sec:2.2}).
+gave an MU imaging AUC of 0.71, as on the supplied masks, and a LUMIERE combined AUC of 0.79.
 
 % Sources: SEGMENTER_STAGE.md P1 and P2 (s1_p1.csv, s1_p2_dice.csv); SEGMENTER_BRATS24_PLAN.md.
 \begin{table}[!htbp]
@@ -676,7 +675,7 @@ give PRISM's primary results (Section~\ref{sec:2.2}).
 segmenter's enhancing tumour (ET) and whole tumour (WT) against the supplied masks, over every scan with a defined
 Dice, and the paired AUC difference of each score, segmenter minus supplied masks, with 95\% CIs from 2,000
 bootstrap samples of patients. The combined model is the reduced combined model at every centre. Swin UNETR supplies
-22 measurements (no cavity), and the BraTS 2024 model all 27 in this comparison. PRISM's primary results use its 22 without the cavity. At LUMIERE the supplied masks have no separate cavity, and
+22 measurements (no cavity), and the BraTS 2024 model all 27 in this comparison. At LUMIERE the supplied masks have no separate cavity, and
 at UCSF-ALPTDG the time-and-enhancement model uses the approximated window. BraTS 2024 Dice is over the scans it was run on (every scan of the evaluated patients).}
 \label{tab:seg}
 \footnotesize
@@ -706,7 +705,7 @@ The combined score's 80\% sets contained the true outcome in 82\%, 82\% and 80\%
 UCSF-ALPTDG, and named a single outcome in 73\%, 78\% and 77\% of scans. Coverage was lower in some groups of scans. At UCSF-ALPTDG the sets covered 90\% of scans with progression but 73\% (58\% to 86\%) of scans without
 progression. At MU, later scans with increased enhancement were covered at 70\% (57\% to 82\%).
 
-Computing the sets separately for each group raised the coverage of these 27 later MU scans to 84\%
+Computing the sets separately for each group raised the coverage of these later MU scans to 84\%
 (Figure~\ref{fig:4}). Making the ordinary sets larger by the same amount gave 79\%. The group-wise sets mostly moved
 coverage to the later groups from early scans, which the ordinary sets over-covered (99\% of early scans with no
 previous scan, against 80\% group-wise). They named both outcomes in 36\% of MU scans, against 26\% for the ordinary
@@ -746,7 +745,7 @@ same axial T1c slice at each evaluation scan (the slice with most enhancing tumo
 enhancement, most lesion), with the enhancing tumour outlined by PRISM's segmenter (solid) and the supplied mask
 (dashed) and an arrow at the lesion. It also gives the weeks after the end of radiotherapy and between scans. Under
 each scan are the clinical-history, imaging and combined scores (shade follows the score), the combined score's 80\%
-conformal set (the outcomes it keeps) and whether the clinical-history and imaging models fall on the same side of
+conformal set and whether the clinical-history and imaging models fall on the same side of
 their cohort medians. Scores are out of fold, from the first of the five repeats of cross validation, and rank scans;
 they are not probabilities for the patient. Among grade 4 patients with at least three evaluation scans, each strip
 shows the first patient in identifier order who (a) progressed with the models agreeing at every scan, (b) did not
@@ -759,7 +758,7 @@ and (d) did not progress with the models disagreeing at one scan or more.}
 \subsection{The reports and their checks}\label{sec:3.5}
 
 All evaluation reports passed the checker (Figure~\ref{fig:5} shows one). Every report for a scan with few or no comparable
-cases said so. The tests below were run on the reports from the supplied masks. When one record entry was changed in
+cases said so. When one record entry was changed in
 30 records, 28 of the 30 reports followed the change. Of six other local language models given
 the same prompt, only Gemma-4 31B \citep{gemma2026} had every report pass (Figure~\ref{fig:llm}).
 
@@ -782,7 +781,7 @@ BT-RADS denotes the Brain Tumor Reporting and Data System.}
 \begin{figure}[!htbp]
 \centering
 \figslot{fig_llm_checker.pdf}{0.25\textheight}{Reports passing the checker for seven local language models.}
-\caption{\textbf{Reports passing the checker, by local language model.} The share of reports from the supplied masks
+\caption{\textbf{Reports passing the checker, by local language model.} The share of evaluation reports
 that passed the checker for each of seven local language models given the same prompt with no per-model
 tuning (Qwen3.5 2B, 4B and 9B \citep{qwen2026b}, Gemma-4 E4B and 31B \citep{gemma2026}, Qwen3.8-27B used in PRISM
 \citep{qwen2026}, and Qwen3.5-35B-A3B \citep{qwen2026b}). Dark bars show
@@ -799,7 +798,7 @@ model, it rejected every misplaced value and no correct paraphrase. It missed mo
 outside its list, such as ``regressed'' or ``receded''.
 
 % Sources: METHODS_RESULTS.md M3; NUMBERS.md 16 (R3).
-Among the 276 MU and LUMIERE reports from the supplied masks, the verifier rejected one written by the language
+Among the 276 MU and LUMIERE reports, the verifier rejected one written by the language
 model and none written by the fixed template. That report was correct. It copied the record's phrase ``not increased
 since the previous scan'', and the verifier's direction rule read ``increased'' without its negation.
 
@@ -808,7 +807,7 @@ since the previous scan'', and the verifier's direction rule read ``increased'' 
 \centering
 \caption[Planted errors]{\textbf{Planted errors rejected by the checker and the verifier.} Each cell gives the share
 of reports with one planted error that the checker rejected, then the share the verifier rejected, with the number of
-reports in brackets. Real reports are the MU and LUMIERE evaluation reports of each writer from the supplied masks.
+reports in brackets. Real reports are the 276 MU and LUMIERE evaluation reports of each writer.
 Absent: the error's pattern never occurs in these reports.}
 \label{tab:verifier}
 \footnotesize
@@ -833,7 +832,7 @@ Correct paraphrase (control) & 0, 0 (104) & & \\
 \bottomrule
 \end{tabularx}
 
-\smallskip{\footnotesize * Not used while the rules were written.}
+\smallskip{\footnotesize * Held out while the rules were written.}
 \end{table}
 
 % =====================================================================================================
@@ -841,14 +840,13 @@ Correct paraphrase (control) & 0, 0 (104) & & \\
 
 PRISM ranked follow-up scans better than the radiomics model of \citet{christodoulou2026}, previously published
 on the same cohort. On the same patients, masks, label and folds, PRISM's imaging model reached an AUC of 0.71
-against 0.58 for that model, and its clinical-history model reached 0.82 (Section~\ref{sec:3.1}). PRISM's models also
+against 0.58 for that model (Section~\ref{sec:3.1}). PRISM's models also
 kept their ranking at two hospitals whose scans they had never seen, without retraining. Most models in this field are
 built on the image alone \citep{booth2022,shi2025} and tested only within the cohort they were developed on
 \citep{booth2022,park2020,shi2025}.
 A single split of a small cohort gives unstable estimates \citep{an2021,varoquaux2018}. An earlier re-implementation of
 that model ranged from 0.32 to 0.88 over random held-out sets. PRISM's combined model reached up to 1.00 (mean 0.84) on
-sets drawn the same way (Section~\ref{sec:3.1}). PRISM was evaluated by repeated cross validation and at two external
-centres instead.
+sets drawn the same way (Section~\ref{sec:3.1}). PRISM was evaluated by repeated cross validation and at two external centres.
 
 But a good AUC does not say why a model ranks scans well, so PRISM breaks the score down. The imaging and
 clinical-history scores are computed separately, and each score splits into the parts that come from each group of
@@ -860,7 +858,7 @@ scans influenced a model built on the RANO rules at LUMIERE \citep{tarek2026}. A
 already knows when a scan was taken. PRISM shows how much of its score that knowledge supplies and how much the images
 add.
 
-These two checks can be applied to other models in this field. Comparing a score with a simple model of what the
+These two analyses can be applied to other models in this field. Comparing a score with a simple model of what the
 clinician already knows \citep{beaulieujones2021}, here the time since radiotherapy and the enhancing tumour, needs only
 the date of each scan relative to treatment. The share of the score from each group of inputs needs only the model's
 weights. We suggest that studies of progression models report both beside the AUC.
@@ -869,9 +867,7 @@ PRISM's combined score kept its ranking when PRISM's segmenter replaced the supp
 more on the outlines (Section~\ref{sec:3.3}). The combined score rests largely on the treatment dates, which no
 segmenter changes, and on the enhancing volume, which changed little between segmenters at MU but more at LUMIERE. The
 imaging score also uses the shape and intensity of the outline. Outlines of the same tumour differ between experts
-\citep{hoebel2024} and are harder to draw after treatment \citep{deverdier2024}. The BraTS 2024 model, trained on
-scans after treatment, kept the imaging score closer to its value on the supplied masks than the older Swin UNETR did,
-so PRISM runs end to end from the MRI.
+\citep{hoebel2024} and are harder to draw after treatment \citep{deverdier2024}. 
 
 PRISM's reports can be checked line by line. Other systems use language models to extract clinical variables from
 notes, which rules then combine with tumour volumes to assign a BT-RADS category \citep{jabal2026}. Others use them to write reports before surgery from extracted image features and demographics
@@ -914,7 +910,7 @@ language model (Qwen3.8-27B) to write reports from derived structured records; s
 evaluated with the same prompt. All models ran offline on the authors' computing cluster. Claude (Anthropic) assisted,
 under the authors' direction, with analysis code and manuscript drafting and editing. It also generated synthetic
 planted report errors without access to the verifier's rules. Claude worked mainly with aggregate results; it also
-read derived records, reports and images of individual patients from the public MU-Glioma-Post cohort. Gemma-4 31B was used as an automatic judge during that development. The authors
+read derived records, reports and images of individual patients from the public MU-Glioma-Post cohort. Gemma-4 31B rated draft reports against a fixed rubric while the prompt was developed; no reported result depends on these ratings. The authors
 reviewed all code, results and text and take full responsibility for the article.
 
 \section*{Funding}
