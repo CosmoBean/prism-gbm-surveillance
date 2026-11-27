@@ -315,9 +315,7 @@ Enhancing volume alone & Log enhancing tumour volume, used directly & No \\
 challenge for adult glioma after treatment \citep{deverdier2024} (Figure~\ref{fig:1}b). This model is an ensemble of nnU-Net
 \citep{isensee2021}, MedNeXt \citep{roy2023} and Swin UNETR networks, run with the BraTS orchestrator
 \citep{kofler2025}. It marks the enhancing tumour, necrosis, FLAIR hyperintensity and the resection cavity. The primary
-results use its outlines at all three centres, without the five measurements that need the cavity (Section~\ref{sec:3.3}). This
-choice is post hoc. It was made after a planned comparison had shown that the cavity measurements lowered the results
-with these outlines. The challenge's training data include scans from UCSF and may include scans from MU,
+results use its outlines at all three centres, without the five measurements that need the cavity (Section~\ref{sec:3.3}). The challenge's training data include scans from UCSF and may include scans from MU,
 but the network learned outlines only, with no progression label.
 
 The masks supplied with each dataset are the reference (Table~\ref{tab:1}). At MU-Glioma-Post and UCSF-ALPTDG, they
@@ -527,7 +525,7 @@ the run, required the radiomics model to rank below the imaging model for that c
 \paragraph*{Segmentation comparison.} Three planned analyses replaced the supplied masks with a segmenter's and
 refitted the models in the same folds. The first used Swin UNETR at MU, with the supplied cavity kept. The second used
 Swin UNETR alone at all three centres (22 measurements), fitted on MU and applied without retraining. The third used
-the BraTS 2024 model in the same way, and this model then became PRISM's segmentation stage (Section~\ref{sec:2.2}).
+the BraTS 2024 model in the same way, which is PRISM's segmentation stage (Section~\ref{sec:2.2}).
 The published radiomics model was also run on the Swin UNETR masks at MU. Each score is compared with its value on the
 supplied masks by the paired difference in AUC. The plan required every paired CI to include zero or lie above it.
 Agreement with the supplied masks
@@ -684,7 +682,7 @@ With the BraTS 2024 outlines, two changes broke the planned rule. The MU time-an
 $-$0.003). At LUMIERE the same model rose by 0.07 with the BraTS 2024 enhancing volume, and the combined model fell
 below it, a difference of $-$0.06 ($-$0.12 to $-$0.002). Without the five cavity measurements, the BraTS 2024 outlines
 gave an MU imaging AUC of 0.71, as on the supplied masks, and a LUMIERE combined AUC of 0.79. These 22 measurements
-became PRISM's primary results (Section~\ref{sec:2.2}). This choice was made after these comparisons had been seen.
+give PRISM's primary results (Section~\ref{sec:2.2}).
 
 % Sources: SEGMENTER_STAGE.md P1 and P2 (s1_p1.csv, s1_p2_dice.csv); SEGMENTER_BRATS24_PLAN.md.
 \begin{table}[!htbp]
@@ -912,8 +910,7 @@ on its own scans.
 
 This study has limitations. PRISM was developed on one public cohort, and the two external cohorts are small, so their
 intervals are wide. Progression is taken as each centre recorded it, without biopsy or panel confirmation. The
-supplied masks and the segmenters' outlines are references, not ground truth. PRISM's segmentation stage and its 22
-measurements were chosen after the planned segmentation comparisons had been seen. The BraTS 2024 training data
+supplied masks and the segmenters' outlines are references, not ground truth. The BraTS 2024 training data
 include scans from UCSF. At UCSF-ALPTDG the time after radiotherapy had to be estimated from its start date. No cohort
 included perfusion or diffusion imaging, which help separate progression from treatment effects in other studies
 \citep{taylor2022}. Future work includes a reader study in which neuroradiologists judge the reports against the

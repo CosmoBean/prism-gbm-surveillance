@@ -69,3 +69,6 @@ Recorded before any rerun.
   the 30-record perturbation test, the seven-model comparison, the radiomics comparison.
 - Note: with the segmenter the imaging model's gain over the time-and-enhancement model has CIs below 0 at LUMIERE
   and UCSF, and the combined model's at UCSF (approximated window).
+- 2026-11-27, author's decision: the paper no longer labels the 22-input choice as post hoc. The facts stay visible in
+  Section 3.3 (the planned 27-input comparison and its rule breaks, then the 22-input results); Methods state the 22
+  inputs and the BraTS 2024 training overlap with UCSF.
