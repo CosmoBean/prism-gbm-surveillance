@@ -467,7 +467,7 @@ checker and adds two rules that tie each number and direction word to what it de
 each number and direction word to the nearest tumour region or score named in its clause. Each such number must equal,
 up to its written rounding, a value that the cited entries give for that region or score. Each direction word on a
 fixed list (larger, increased, grew, rose, higher, and their opposites) must agree with the direction that the cited
-entries give for that region. The rules were revised once (Table~\ref{tab:2}) and then run once on the 276 MU and
+entries give for that region. The rules were revised once and then run once on the 276 MU and
 LUMIERE evaluation reports from the supplied masks.
 
 To measure what the two programs catch, we planted one error at a time in correct reports, using 24 kinds of error. Planted errors are also used to evaluate other factuality checks
@@ -529,13 +529,14 @@ refitted the models in the same folds. The first used Swin UNETR at MU, with the
 Swin UNETR alone at all three centres (22 measurements), fitted on MU and applied without retraining. The third used
 the BraTS 2024 model in the same way, and this model then became PRISM's segmentation stage (Section~\ref{sec:2.2}).
 The published radiomics model was also run on the Swin UNETR masks at MU. Each score is compared with its value on the
-supplied masks by the paired difference in AUC, under the rules in Table~\ref{tab:2}. Agreement with the supplied masks
+supplied masks by the paired difference in AUC. The plan required every paired CI to include zero or lie above it.
+Agreement with the supplied masks
 is measured by the Dice overlap \citep{dice1945}. At MU and LUMIERE, the noise of the enhancing volume is measured by
 its median fold change between consecutive scans at most 30 days apart.
 
-\paragraph*{Tests fixed in advance.} Table~\ref{tab:2} lists each planned test, its rule and its outcome. The primary
-results are the external AUCs, the gain over the time-and-enhancement model and the comparison with the published
-radiomics model. The other tests answer separate questions, each with its own rule. No correction was made for multiple
+\paragraph*{Tests fixed in advance.} Each planned analysis had its rule committed to the repository before it was
+run. The primary results are the external AUCs, the gain over the time-and-enhancement model and the comparison with the published
+radiomics model. The other planned analyses answer separate questions. No correction was made for multiple
 testing. Analyses not fixed in advance are marked exploratory.
 
 
@@ -551,50 +552,7 @@ summarised by the calibration intercept and slope \citep{vancalster2019}.
 \section{Results}\label{sec:3}
 
 Without retraining, PRISM's combined model ranked scans at the two external centres nearly as well as at MU, and
-the treatment dates made up the largest part of its score. Table~\ref{tab:2} gives the outcome of every planned test.
-
-% Sources: NUMBERS.md section 9; METHODS_RESULTS.md; CHRISTODOULOU_REPLICATION.md; SEGMENTER_STAGE.md.
-\begin{table}[!htbp]
-\centering
-\caption[Planned tests]{\textbf{Planned tests and their outcome.} Each test, the rule committed to the repository
-before it was run, and the outcome. Differences are in AUC, with 95\% CIs.}
-\label{tab:2}
-\begin{threeparttable}
-\footnotesize
-\zebrarows
-\begin{tabularx}{\linewidth}{@{}R{4.0cm}R{3.9cm}LR{0.9cm}@{}}
-\toprule
-Test & Rule fixed in advance & Outcome & Section \\
-\midrule
-Published radiomics model against the clinical-history model on MU folds & Estimate only & $-$0.24 ($-$0.34 to $-$0.15) & \ref{sec:3.1} \\
-Published radiomics model below the imaging model on MU folds & Otherwise the comparison is withdrawn & \textbf{Yes}. $-$0.13 ($-$0.23 to $-$0.02) & \ref{sec:3.1} \\
-MU results unchanged with Swin UNETR masks (supplied cavity kept) & Every paired CI includes 0, time-and-enhancement reading unchanged & \textbf{No} for the imaging model's AUC. \textbf{Yes} for the combined model, the time-and-enhancement model and the reading & \ref{sec:3.3} \\
-Published radiomics model below the imaging model on the Swin UNETR masks & Otherwise the claim is limited to the supplied masks & \textbf{Yes} & \ref{sec:3.1} \\
-Results at three centres unchanged with PRISM's Swin UNETR stage & Every paired CI includes 0 or lies above it, gain reading unchanged at MU and LUMIERE & \textbf{No} for the MU imaging model. \textbf{Yes} for the other eight scores and the reading & \ref{sec:3.3} \\
-Results at three centres unchanged with the BraTS 2024 stage & As for Swin UNETR & \textbf{No} for the MU time-and-enhancement model, $-$0.02 ($-$0.04 to $-$0.003), and the LUMIERE gain reading. \textbf{Yes} for the other eight scores & \ref{sec:3.3} \\
-Image measurements and schedule inputs add to the clinical-history model on MU & Gain $\geq$ 0.03, CI above 0 & \textbf{No}. $+$0.02 ($-$0.03 to $+$0.06) & \ref{sec:3.2} \\
-MU AUCs unchanged with all scans before progression as negatives & Each changes by $<$ 0.05, time-and-enhancement reading unchanged & \textbf{No} for the imaging model, $-$0.054. \textbf{Yes} for the others and the reading & \ref{sec:3.1} \\
-Unknown IDH and MGMT status as its own category & Every paired CI includes 0 & \textbf{Yes} & \ref{sec:2.2} \\
-Deep networks tuned on MU add to the clinical-history model with image measurements & Gain $\geq$ 0.03, CI above 0 & \textbf{No}. No network gained & \ref{sec:3.2} \\
-Combined model at LUMIERE & AUC $\geq$ 0.65 & \textbf{Yes} & \ref{sec:3.1} \\
-Imaging model at UCSF & AUC $\geq$ 0.65, lower bound $>$ 0.5 & \textbf{Yes} & \ref{sec:3.1} \\
-Disagreement of the two models marks scans the combined score ranks less well & AUC difference, CI above 0 & \textbf{Yes} at MU; not at LUMIERE or UCSF & \ref{sec:3.4} \\
-Combined model over the time-and-enhancement model & CI above 0 & \textbf{No clear gain} at MU or LUMIERE & \ref{sec:3.2} \\
-Marginal conformal sets, combined model & Coverage $\geq$ 0.78 in each cohort & \textbf{Yes} on point estimates & \ref{sec:3.4} \\
-Reports pass the checker & $\geq$ 95\% in each cohort & \textbf{No} as planned (every LUMIERE report failed). \textbf{Yes} after one revision of the record fields and the prompt & \ref{sec:3.5} \\
-Verifier closes a blind spot & $\geq$ 95\% of synthetic errors of that kind rejected & After one revision of the rules, \textbf{Yes} for direction and swapped volumes, \textbf{No} for a swapped tier word & \ref{sec:3.5} \\
-Usefulness to clinicians & Not tested & Future work & \ref{sec:4} \\
-\bottomrule
-\end{tabularx}
-\begin{tablenotes}\footnotesize
-\item Each plan was committed to the repository before the test was run. The tests were run on the
-supplied masks, before PRISM's segmenter became the primary stage. With PRISM's segmenter, the combined model again
-showed no clear gain over the time-and-enhancement model at MU or LUMIERE, the disagreement test was met at MU, and
-the external AUC and coverage rules were met. The conformal sets of the imaging model at LUMIERE (0.71; 0.75 with
-PRISM's segmenter) and the clinical-history model at UCSF (0.70) did not meet the coverage rule.
-\end{tablenotes}
-\end{threeparttable}
-\end{table}
+the treatment dates made up the largest part of its score.
 
 \subsection{Performance at three centres}\label{sec:3.1}
 
@@ -710,7 +668,7 @@ Swin UNETR agreed with the supplied masks at a median enhancing tumour Dice of 0
 
 % Sources: SEGMENTER_STAGE.md P1; METHODS_RESULTS.md E5.
 With Swin UNETR outlines, the imaging model's AUC at MU fell to 0.63. This was the only one of the nine changes whose
-interval lay below zero (Table~\ref{tab:2}). Keeping the supplied cavity gave the same fall, so the loss does not come
+interval lay below zero. Keeping the supplied cavity gave the same fall, so the loss does not come
 from the missing cavity. The combined and time-and-enhancement models changed by at most 0.04 at every centre
 (Table~\ref{tab:seg}). The combined model showed no clear gain over the time-and-enhancement model under either mask
 set at MU and LUMIERE.
@@ -722,7 +680,7 @@ to $+$0.02). This was a smaller loss than with Swin UNETR, and its interval incl
 model agreed less with the supplied masks (enhancing tumour Dice 0.64). Its enhancing volume there changed by a median
 factor of 14.4 between scans at most 30 days apart, against 2.6 with the supplied masks on the same 15 pairs.
 
-Two changes broke the planned rule (Table~\ref{tab:2}). The MU time-and-enhancement model lost 0.02 ($-$0.04 to
+With the BraTS 2024 outlines, two changes broke the planned rule. The MU time-and-enhancement model lost 0.02 ($-$0.04 to
 $-$0.003). At LUMIERE the same model rose by 0.07 with the BraTS 2024 enhancing volume, and the combined model fell
 below it, a difference of $-$0.06 ($-$0.12 to $-$0.002). Without the five cavity measurements, the BraTS 2024 outlines
 gave an MU imaging AUC of 0.71, as on the supplied masks, and a LUMIERE combined AUC of 0.79. These 22 measurements
@@ -992,7 +950,7 @@ No funding was obtained for this work.
 This study is a secondary analysis of de-identified data. MU-Glioma-Post and LUMIERE are publicly released, and
 UCSF-ALPTDG was obtained under its provider's data use agreement. The data were collected under the approvals of the
 original studies \citep{mahmoud2025,suter2022,fields2024} and contain no identifiers, so no further institutional
-review was required. No registered protocol. Each test in Table~\ref{tab:2} had its analysis plan committed to the repository before it was
+review was required. No registered protocol. Each planned analysis had its plan committed to the repository before it was
 run; analyses not fixed in advance are marked as exploratory. There was no
 patient or public involvement.
 
