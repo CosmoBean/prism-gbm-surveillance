@@ -547,7 +547,8 @@ summarised by the calibration intercept and slope (\citealp{vancalster2019}; Sup
 
 \section{Results}\label{sec:3}
 
-Table~\ref{tab:2} gives the outcome of every planned test, and the sections below report the findings.
+Without retraining, PRISM's combined model ranked scans at the two external centres nearly as well as at MU, and
+the treatment dates made up the largest part of its score. Table~\ref{tab:2} gives the outcome of every planned test.
 
 % Sources: NUMBERS.md section 9; METHODS_RESULTS.md; CHRISTODOULOU_REPLICATION.md; SEGMENTER_STAGE.md.
 \begin{table}[!htbp]
@@ -642,7 +643,7 @@ On single held-out sets, an earlier re-implementation of the radiomics model ran
 intended-use scans, over 100 random sets of 18 of the 92 grade 4 patients. On 100 sets drawn the same way, PRISM's
 combined model reached up to 1.00, and 0.84 on average, with 95\% of sets between 0.68 and 0.96 (exploratory).
 
-\subsection{What the ranking rests on}\label{sec:3.2}
+\subsection{The treatment dates are the largest part of the score}\label{sec:3.2}
 
 % Sources: METHODS_RESULTS.md E4; NUMBERS.md 3 (single inputs, B0, P - B1); SKELETON_2026-11-20.md timestamp-only check
 % (exploratory, 2026-11-20); DETECTION_DEEP.md.
@@ -752,7 +753,7 @@ UCSF-ALPTDG & 0.91 [0.85--0.94] & 0.92 [0.90--0.95] & $+$0.08 ($+$0.01 to $+$0.1
 \end{tabularx}
 \end{table}
 
-\subsection{How certain the scores are}\label{sec:3.4}
+\subsection{The combined score's sets held their coverage}\label{sec:3.4}
 
 % Sources: outputs/results/analyses/system_brats24_22/conformal.csv; methods_brats24_22/m2_coverage.csv, m2_levels.csv,
 % extra_m2.csv (size-matched sets run 2026-11-27); Supplementary Section S10.
