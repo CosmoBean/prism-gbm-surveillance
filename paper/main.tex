@@ -33,7 +33,7 @@
 Models for glioma follow-up MRI report high accuracy, but a single AUC cannot show what drives their predictions. We
 built a new framework, PRISM (Progression Reading with Independent Scores and Measurements), running on one local
 computer. It segments each scan with the winning BraTS 2024 post-treatment model, scores it from image measurements,
-clinical history and both with three logistic regressions and conformal sets, and has a local language model writing a
+clinical history and both with three logistic regressions and conformal sets, and uses a local language model to write a
 checked report of what each score rests on. On MU-Glioma-Post, the combined model reached an AUC of 0.82 in repeated
 cross validation, and up to 1.00 (mean 0.84) on single held-out splits, the design of earlier studies. Unlike most
 earlier models, PRISM was tested without retraining at two other centres, reaching 0.79 at LUMIERE and 0.81 at
@@ -109,13 +109,16 @@ comparably to closed models \citep{nowak2025}.
 We present PRISM (Progression Reading with Independent Scores and Measurements), a new system for glioma follow-up MRI
 that runs on one local computer. PRISM works from conventional MRI and the clinical record, both part of every
 routine follow-up. In another recent system, a language-model agent extracts clinical variables from the notes, and
-rules combine them with automated tumour volumes to assign a BT-RADS category \citep{jabal2026}. PRISM's language
-model makes no decision. It writes up values computed elsewhere, so every sentence it writes can be checked. Our
+rules combine them with automated tumour volumes to assign a BT-RADS category \citep{jabal2026}. PRISM is built to support
+the clinician's decision, not to make it. Its language model writes up values computed elsewhere, so every sentence
+it writes can be checked. Our
 contributions are:
 \begin{enumerate}
 \item A new local system PRISM is developed, which segments the tumour on each scan with the top-ranked model of the BraTS 2024
 post-treatment challenge \citep{ferreira2024}, used without fine-tuning. We compare this segmenter with Swin UNETR
-trained on BraTS 2021 \citep{hatamizadeh2022} and with the masks supplied with each dataset. From each segmentation,
+trained on BraTS 2021 \citep{hatamizadeh2022} and with the masks supplied with each dataset. It agreed closely with the
+supplied masks at MU-Glioma-Post and UCSF-ALPTDG (median enhancing tumour Dice 0.94 and 0.91) and gave the same
+imaging AUC at MU (0.71), whereas Swin UNETR lowered it to 0.63. From each segmentation,
 PRISM derives 22 measurements of tumour volume, shape, intensity and change from earlier scans. No patient data leave
 the computer.
 \item PRISM separates imaging and clinical-history scores, each reported with its uncertainty. Three ridge logistic
