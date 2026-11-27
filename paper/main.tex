@@ -166,10 +166,10 @@ tested at another institution \citep{zhang2026meta}.
 \item Report is generated with deterministic verification. The language model, Qwen3.8-27B served with vLLM
 \citep{kwon2023}, writes the report only from a structured record that holds each value with its source. A rule-based
 checker and verifier test every number and direction against that record. All reports for held-out scans passed the
-checker. We tested both programs with 24 types of planted error.
+checker, and both programs were tested with 24 types of planted error.
 \end{enumerate}
 
-The rest of this paper is organized as follows. Section~\ref{sec:2} describes the cohorts, PRISM's stages and the
+The remainder of this paper is organized as follows. Section~\ref{sec:2} describes the cohorts, PRISM's stages and the
 evaluation. Section~\ref{sec:3} reports the results at the three centres, what the scores rest on, the effect of
 segmentation, and the conformal sets and report checks. Section~\ref{sec:4} discusses what the results mean and their
 limits.
@@ -645,7 +645,7 @@ masks. On the supplied masks it reached 0.58 (0.50--0.66), below the imaging mod
 
 Over 100 random held-out sets of 18 of the 92 grade 4 patients, an earlier re-implementation of the radiomics model
 ranged from 0.32 to 0.88 (mean 0.63) on the intended-use scans. On 100 sets drawn the same way, PRISM's combined model
-reached up to 1.00 and 0.84 on average, with 95\% of sets between 0.68 and 0.96 (exploratory).
+reached up to 1.00, and 0.84 on average, with 95\% of sets between 0.68 and 0.96 (exploratory).
 
 \subsection{The treatment dates are the largest part of the score}\label{sec:3.2}
 

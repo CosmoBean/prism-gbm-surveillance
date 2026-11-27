@@ -10,6 +10,9 @@ command -v "$TECTONIC" >/dev/null 2>&1 || { echo "ERROR: tectonic not found at $
 OUT="${PRISM_BUILD_DIR:-/tmp/$USER-prism/paper-build}"
 mkdir -p "$OUT"
 
+# wording the author approved (docs/manuscript/LOCKED.md) must still be in main.tex
+python3 ../scripts/check_locked.py || { echo "ERROR: locked wording changed (see docs/manuscript/LOCKED.md)" >&2; exit 1; }
+
 status=0
 for doc in main supplement; do
   echo "==> building $doc.tex"

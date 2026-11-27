@@ -1,13 +1,43 @@
 # Locked text
 
-Passages the author has approved. They are not changed without the author's explicit approval, not even for
-polish. If a later result or a number check makes a locked passage wrong, flag it to the author and propose the
-smallest edit; do not rewrite it.
+Wording the author or the PI has approved. It is not changed without the author's explicit approval, not even for
+polish or a tone pass. If a later result makes a locked passage wrong, flag it to the author and propose the smallest
+edit. `paper/build.sh` runs `scripts/check_locked.py`, which fails the build when a line of the list below is no
+longer in `paper/main.tex` (whitespace and line breaks are ignored). To change locked wording with approval, change
+it here and in the paper in the same commit.
 
-## Abstract (approved 2026-11-20; 145 words; replaces the 2026-11-18 version)
+## Abstract (approved 2026-11-26; numbers updated to PRISM's segmenter 2026-11-27)
 
-Follow-up MRI after glioma treatment is difficult because progression and treatment effects can look alike. We developed PRISM, a local system for follow-up MRI. PRISM includes a Swin UNETR segmenter; primary analyses used the masks released with each cohort. It measures tumour volume and change from the current and earlier masks. Three ridge logistic-regression models separately score imaging measurements, clinical history, and their combination. The combined score receives a split-conformal uncertainty set. A local language model writes a report from the structured record, and deterministic rules check its claims against the source fields. On MU-Glioma-Post, time after radiotherapy and enhancing tumour carried most of the ranking, and the combined model added no clear gain over the timing-and-enhancement baseline (AUC 0.80). Applied unchanged, the reduced combined model reached 0.77 at LUMIERE and 0.86 at UCSF-ALPTDG. All 406 held-out reports passed the record check.
+```locked
+Models for glioma follow-up MRI report high accuracy, but a single AUC cannot show what drives their predictions. We built a new framework, PRISM (Progression Reading with Independent Scores and Measurements), running on one local computer. It segments each scan with the winning BraTS 2024 post-treatment model, scores it from image measurements, clinical history and both with three logistic regressions and conformal sets, and has a local language model write a checked report of what each score rests on. On MU-Glioma-Post, the combined model reached an AUC of 0.82 in repeated cross validation, and up to 1.00 (mean 0.84) on single held-out splits, the design of earlier studies. Unlike most earlier models, PRISM was tested without retraining at two other centres, reaching 0.79 at LUMIERE and 0.81 at UCSF-ALPTDG, against a pooled AUC of 0.81 for earlier models tested at another centre.
+```
 
-Sources: METHODS_RESULTS.md E4 (0.80, no clear gain); NUMBERS.md 4 (0.77, 0.86); NUMBERS.md 7 (406, patients not
-used to develop the prompt); Section 4.5, Table 5 (verifier). Development history (the prompt revision) belongs in
-Methods, not the abstract.
+## Sentences and phrases
+
+Source of each item: the PI's marked copy of 2026-11-23 (commit 28e245b), the evaluation wording kept in 12f83d1, and
+the author's approvals of 2026-11-26 and 2026-11-27.
+
+```locked
+\item A new local system is developed
+\item PRISM separates imaging and clinical-history scores, each reported with its uncertainty.
+\item PRISM provides an evaluation of what each score adds to what the clinician already knows.
+\item External validation is performed without retraining.
+\item Report is generated with deterministic verification.
+The remainder of this paper is organized as follows.
+We used three public cohorts of patients followed with MRI after treatment for glioma.
+PRISM is developed on
+We present PRISM (Progression Reading with Independent Scores and Measurements), a new system for glioma follow-up MRI that runs on one local computer.
+PRISM works from conventional MRI and the clinical record, both part of every
+\caption{\textbf{The workflow of PRISM.}
+averaged over the five repeats, because a single split of a small cohort gives an estimate with a wide error
+In a meta-analysis of 31 studies, models tested at another institution reached a pooled AUC of 0.81, against 0.91 at the institution that developed them \citep{zhang2026meta}.
+For comparison with studies evaluated on one held-out split \citep{christodoulou2026}, the combined model was also fitted and scored on 100 random held-out sets of 18 of the 92 grade 4 patients, drawn as in an earlier re-implementation of that study (exploratory).
+On 100 sets drawn the same way, PRISM's combined model reached up to 1.00, and 0.84 on average, with 95\% of sets between 0.68 and 0.96 (exploratory).
+At MU-Glioma-Post, the combined model reached an AUC of 0.82 (0.76--0.89) in repeated cross validation, and up to 1.00 (mean 0.84) on single held-out splits of 18 patients, the design of earlier studies on this cohort \citep{christodoulou2026}.
+The combined model reached 0.79 (0.72--0.86) at LUMIERE and 0.81 (0.70--0.90) at UCSF-ALPTDG, against a pooled AUC of 0.81 for earlier models tested at another institution \citep{zhang2026meta}.
+All reports for held-out scans passed the checker, and both programs were tested with 24 types of planted error.
+All evaluation reports passed the checker (Figure~\ref{fig:5} shows one).
+Without retraining, PRISM's combined model ranked scans at the two external centres nearly as well as at MU, and the treatment dates made up the largest part of its score.
+\subsection{The treatment dates are the largest part of the score}
+\subsection{The combined score's sets held their coverage}
+```
