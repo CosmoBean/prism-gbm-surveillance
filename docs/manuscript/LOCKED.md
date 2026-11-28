@@ -57,4 +57,6 @@ On MU, every model was evaluated by five repeats of fivefold cross validation gr
 \paragraph*{Report and checks (Stage 6).}
 \item A new local system PRISM is developed, which segments
 Yongjie Jessica Zhang\textsuperscript{b,a}
+PRISM was developed on MU-Glioma-Post and tested without retraining at LUMIERE and UCSF-ALPTDG.
+(1) Segmentation: PRISM's
 ```
