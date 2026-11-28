@@ -535,7 +535,7 @@ def panel_c(scans) -> Canvas:
         sx = x0 + k * 17.0
         c.scan(sx, y_img - 7.5, 15.5, scans[k - 2])
         c.text(sx + 7.75, y_img - 8.2, label, size=T_NOTE, colour=st.MUTED, ha="center")
-    c.text(x0 + 35.0, y_img + 7.5, "four MRI\nsequences;\nsegmenter\nmasks (b)", size=T_NOTE)
+    c.text(x0 + 35.0, y_img + 7.5, "four MRI\nsequences;\nsegmenter\nmasks", size=T_NOTE)
     c.document(x0 + 1.0, y_hist - 6.0, 10.0, 13.0, st.HIST, lines=5)
     c.text(x0 + 13.5, y_hist + 6.5, "treatment course as of\nthe scan day; age, sex,\nIDH and MGMT status",
            size=T_BODY)
